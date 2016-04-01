@@ -1,0 +1,16 @@
+@article Scheme
+
+The "Scheme" essence defines overall scheme of used data records and their
+fields. It contains an indexed list of data records and provides quick access
+to them. It also provides information about implementation of services, that
+are used in specific system (SubscriptionFilterFactory, HistorySubscriptionFilter,
+QDErrorHandler). Scheme is represented by some class that implements
+com.devexperts.qd.DataScheme interface.
+
+To define specific scheme one can use JVM option "scheme" ("java -Dscheme=<scheme> ...").
+Most of QDS tools take <scheme> as their first parameter (if it was not already
+defined as JVM option only). Here <scheme> has a form of [[<jar-file>]!][<scheme-class>]
+or just <jar-file> (must end with '.jar' then). <jar-file>! is optional if
+<scheme-class> is in classpath. <scheme-class> is optional if <jar-file>
+defines default scheme. If default scheme is in classpath then just '!'
+can be used.

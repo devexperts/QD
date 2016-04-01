@@ -1,0 +1,6 @@
+@article Time
+@tool-summary
+
+This tool tracks time in various JVMs via periodic multicast in
+local network and shows error if this JVM's time has drifted too far
+away (> 3 sec) from median time in this local network.

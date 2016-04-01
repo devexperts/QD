@@ -1,0 +1,55 @@
+@article NetTest
+@tool-summary
+
+This tool is used to test network throughput. It is quite similar to
+TestThroughput tool from qd.sample, but it provides larger functionality
+in network testing and is integrated into Tools framework.
+
+The NetTest tool can be run in one of two modes: producer-side and
+consumer-side. In each mode it creates one or several collectors and
+connects them to specified address via MessageConnector.
+
+When using NetTest as producer-side special generator thread is created
+for every collector and it feeds the collector with randomly-generated
+'Quote' records (and collector then gives them outside via connector). When using
+as consumer-side each collector receives records from connector.
+
+In both cases the number of generated/received records is counted
+and throughput in records per second is logged to a console.
+
+By default one connection (entity) from each side is created,
+but their number can be changed using --connections option. A separate
+collector is created for each entity.
+
+Each producing entity continuously generates random records with symbols from
+preliminarily generated symbols list. Each consumer entity is subscribed to some
+records. Total number of symbols is defined by --symbols option (100000 by default).
+If the second part of --symbols option is omitted then each entity will
+use all symbols from the list. Otherwise one can define average number of
+symbols (randomly selected from global symbol list) interesting per one
+entity, i.e. number of symbols produced by single producer entity or number
+of symbols which was single consumer entity subscribed to (see examples below).
+
+The frequency of dumping throughput to a screen can be set using --stat option
+(every 10 seconds by default).
+
+Examples:
+
+To start producer side on some server 'samplehost' at port 5555 one can run:
+	NetTest p :5555
+@br;It will randomly generate records about 100000 random symbols.
+
+Then one can run consumer side on some other machine:
+	nettest c samplehost:5555 -C 100 -S 100000/100
+@br;This will create 100 connections. Each of them will subscribe to 'Quote'
+record about roughly 100 symbols of 100000 randomly generated. Now one can
+track the number of records received by these connections per second.
+
+Note, that it is possible to connect multiple producers and multiple consumers with
+each other via multiplexor. To do this one can start multiplexor on some server
+'samplehost' using scheme SampleScheme:
+	Multiplexor com.devexperts.qd.sample.SampleScheme :5555 :6666 --collector ticker
+
+Then it is possible to run consumers and producers:
+	NetTest p samplehost:5555 -C 10 -S 10000/1000
+    NetTest c samplehost:6666 -C 10 -S 10000/1000

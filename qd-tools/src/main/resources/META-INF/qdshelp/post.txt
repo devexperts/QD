@@ -1,0 +1,16 @@
+@article Post
+@tool-summary
+
+This tool is used to post data from console to specific address. The data
+is read in text format (see @link{text format}). Collector type headers
+(==QD_TICKER_DATA, ==QD_STREAM_DATA, ==QD_HISTORY_DATA, ==QD_RAW_DATA) and
+record descriptions (=<record> Symbol <fields>) are also supported, so one can
+just redirect a data file in text format (for example, taped by connect tool
+earlier) to an input of this tool, instead of typing records manually.
+Default data format is QD_RAW_DATA.
+
+Some additional commands besides common text format syntax are supported:
+	?             - Shows commands usage summary.
+	? *           - Lists all record names in data scheme.
+	? <record>... - Lists fields for specified record(s).
+	.             - Quits.

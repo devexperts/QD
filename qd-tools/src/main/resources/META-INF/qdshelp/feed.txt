@@ -1,0 +1,13 @@
+@article Feed
+@tool-summary
+
+This tool multiplexes two addresses. It is quite similar to Multiplexor tool
+(see @link{Multiplexor}). Its main difference from multiplexor is the fact
+that it uses wildcard stream subscription to its data providers (instead of
+passing his clients' subscriptions each time). Thus, it always receives all data
+and if some client subscribes for new record it would start receiving it
+immediately even if the feed tool is working in delaying mode. On the other hand
+it means that a lot of memory is consumed regardless of the number of client
+connections and their subscriptions.
+
+Also it doesn't support data dropping feature unlike multiplexor.

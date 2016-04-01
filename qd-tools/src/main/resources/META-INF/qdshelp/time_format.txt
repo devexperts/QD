@@ -1,0 +1,85 @@
+@article Time format
+
+Many QDS tools handle dates, times and periods as values of their arguments,
+options or some input or output values. A common flexible format exists for
+parsing and formatting date-times and time-periods and it is used almost
+everywhere.
+
+Dates and times can be parsed from one of the following forms:
+
+	'-'<period>
+@br;It is parsed as current system time - <period>. Description of acceptable
+time-period format follows below.
+
+	<value-in-milliseconds>
+@br;This is a standart java representation of time as a single long number.
+Value of msecs is measured from 1970-01-01. Here the value should be positive
+and have at least 9 digits (otherwise it could not be distinguished from date
+in format 'yyyyMMdd'). Each date since 1970-01-03 can be represented in this
+form.
+
+	<date>[('T'|'t'|'-'|' ')<time>][<timezone>]
+@br;This is the most formal way to represent a date-time. If time is missing
+it is supposed to be '00:00:00'.
+
+	['T'|'t']<time>[<timezone>]
+@br;In this case current date is used.
+
+Here <date> is one of:
+	yyyy-MM-dd
+	yyyyMMdd
+@br;<time> is one of:
+	HH:mm:ss
+	HHmmss
+	HH:mm
+	HHmm
+	HH
+@br;<timezone> is a timezone in RFC 822 format: <sign>hhmm (shift relatively to GMT
+timezone). Some standart abbreviations, such as GMT, UTC, MSK, EDT etc. are also
+acceptable.
+
+Examples of valid date-times:
+	2007-11-02-12:34:56
+	20070101-123456
+	2007-11-02-123456
+	t12:34:56
+	2005-12-31 21:00:00
+	2007-11-02
+	2007-12-12t123456
+	20071212-12:34
+	2007-12-12T12MSK
+	20000101 2200
+	01:01
+	12:12:12 +0300
+	-P1234DT12H30M0S
+	-123456   // -period
+	12		  // hh
+	1234      // hhmm
+	123456    // hhmmss
+	20010101  // yyyymmdd
+	123456789 // long
+	12+1200
+	1234+1234 // 12:34:00 +1234
+
+The general format for time periods is based on ISO8601 duration format:
+"P<d>DT<h>H<m>M<s>S" (which means a period of <d> days, <h> hours, <m> minutes,
+<s> seconds) Also little simplifications and modifications available:
+	* Letters are case insensitive.
+	* Letters 'P' and 'T' can be omitted.
+	* Letter 'S' can be also omitted. In this case last number will be supposed
+to be seconds.
+	* Number of seconds can be fractional. So it is possible to define duration
+accurate within milliseconds.
+	* Every part can be omitted. In this case it is supposed that it's value is
+zero.
+
+Examples of valid time-periods:
+	P1234DT12H30M0S
+    p1
+    t239
+    PT0S
+   	1.5
+    436243.2346
+    1m
+    1h2s
+    p1dt
