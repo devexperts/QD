@@ -11,6 +11,7 @@ package com.devexperts.qd.tools;
 import java.beans.*;
 import java.io.*;
 import java.lang.reflect.Method;
+import java.net.URL;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -38,7 +39,9 @@ public class Help extends AbstractTool {
 	public static final int MIN_WIDTH = 10;
 	public static final int DEFAULT_WIDTH = 120;
 
-	private static final String HELP_DATA_RESOURCE = "qdshelp.txt";
+	private static final String HELP_FOLDER = "/META-INF/qdshelp/";
+	private static final String HELP_FILE_SUFFIX = ".txt";
+	private static final String WHOLE_HELP_FILENAME = "_whole";
 	private static final char SPECIAL_SYMBOL = '@';
 
 	private static final String COMMENT_MARKER = SPECIAL_SYMBOL + "#";
@@ -77,69 +80,80 @@ public class Help extends AbstractTool {
 
 		String caption = null;
 		for (String word : args) {
-			caption = (caption == null) ? word : caption + " " + word;
+			caption = (caption == null) ? word : caption + "_" + word;
 		}
-		BufferedReader dataReader = new BufferedReader(new InputStreamReader(getHelpData()));
+		showArticle(caption.trim());
+	}
+
+	private static BufferedReader getHelpReader(String caption) {
+		URL contentLink = Help.class.getResource(HELP_FOLDER + caption + HELP_FILE_SUFFIX);
 		try {
-			showArticle(dataReader, caption);
-		} finally {
-			try {
-				dataReader.close();
-			} catch (IOException ignored) {}
+			return (contentLink != null) ? new BufferedReader(new InputStreamReader(contentLink.openStream())) : null;
+		} catch (IOException e) {
+			return null;
 		}
 	}
 
-	private static InputStream getHelpData() {
-		InputStream content = Help.class.getResourceAsStream(HELP_DATA_RESOURCE);
-		if (content == null)
-			throw new RuntimeException("Couldn't find the help data resource.");
-		return content;
-	}
-
-	private void showArticle(BufferedReader reader, String caption) {
+	private void showArticle(String caption) {
 		if (caption.equalsIgnoreCase("Contents")) {
-		    printHelpContents(reader);
+			BufferedReader reader = getHelpReader(WHOLE_HELP_FILENAME);
+			if (reader == null) {
+				throw new RuntimeException("Couldn't find the help data resource.");
+			}
+			try {
+				printHelpContents(reader);
+			} finally {
+				try {
+					reader.close();
+				} catch (IOException ignored) {}
+			}
 			return;
 		}
 		if (caption.equalsIgnoreCase("All")) {
-			printAllArticles(reader);
+			BufferedReader reader = getHelpReader(WHOLE_HELP_FILENAME);
+			if (reader == null) {
+				throw new RuntimeException("Couldn't find the help data resource.");
+			}
+			try {
+				printAllArticles(reader);
+			} finally {
+				try {
+					reader.close();
+				} catch (IOException ignored) {}
+			}
 			return;
 		}
 
+		BufferedReader reader = getHelpReader(caption.toLowerCase());
 		try {
-			// Skip until caption met
-			while (true) {
-				String line = reader.readLine();
-				if (line == null) {
-					AbstractTool tool = Tools.getTool(caption);
-					if (tool != null) {
-						printCaption(caption);
-						System.out.print(tool.generateHelpSummary(width));
-					} else
-						printFormat("No help article found for \"" + caption + "\"");
-					return;
+			if (reader == null) {
+				AbstractTool tool = Tools.getTool(caption);
+				if (tool != null) {
+					printCaption(caption);
+					System.out.print(tool.generateHelpSummary(width));
+				} else {
+					printFormat("No help article found for \"" + caption.replace(' ', '_') + "\"");
 				}
-				if (line.startsWith(ARTICLE_CAPTION_MARKER)) {
-					line = line.substring(ARTICLE_CAPTION_MARKER.length()).trim();
-					if (line.equalsIgnoreCase(caption)) {
-						caption = line;
-						break;
-					}
-				}
+				return;
 			}
+
+			String line = reader.readLine();
+			line = line.substring(ARTICLE_CAPTION_MARKER.length()).trim();
+			caption = line;
 
 			List<String> lines = new ArrayList<String>();
 			// Reading the article
-			while (true) {
-				String line = reader.readLine();
-				if ((line == null) || (line.startsWith(ARTICLE_CAPTION_MARKER)))
-					break;
+			while ((line = reader.readLine()) != null) {
 				lines.add(line);
 			}
 			printArticle(caption, lines);
 		} catch (IOException e) {
 			System.err.println("IO error occurred while reading help data:");
 			e.printStackTrace();
+		} finally {
+			try {
+				reader.close();
+			} catch (IOException ignored) {}
 		}
 	}
 
