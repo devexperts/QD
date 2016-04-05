@@ -39,7 +39,7 @@ public class Help extends AbstractTool {
 	public static final int MIN_WIDTH = 10;
 	public static final int DEFAULT_WIDTH = 120;
 
-	private static final String HELP_FOLDER = "/META-INF/qdshelp/";
+	private static final String HELP_FOLDER = "META-INF/qdshelp/";
 	private static final String HELP_FILE_SUFFIX = ".txt";
 	private static final String WHOLE_HELP_FILENAME = "_whole";
 	private static final char SPECIAL_SYMBOL = '@';
@@ -86,7 +86,10 @@ public class Help extends AbstractTool {
 	}
 
 	private static BufferedReader getHelpReader(String caption) {
-		URL contentLink = Help.class.getResource(HELP_FOLDER + caption + HELP_FILE_SUFFIX);
+		if (!caption.endsWith(HELP_FILE_SUFFIX)) {
+			caption += HELP_FILE_SUFFIX;
+		}
+		URL contentLink = Help.class.getResource("/" + HELP_FOLDER + caption);
 		try {
 			return (contentLink != null) ? new BufferedReader(new InputStreamReader(contentLink.openStream())) : null;
 		} catch (IOException e) {
@@ -96,17 +99,7 @@ public class Help extends AbstractTool {
 
 	private void showArticle(String caption) {
 		if (caption.equalsIgnoreCase("Contents")) {
-			BufferedReader reader = getHelpReader(WHOLE_HELP_FILENAME);
-			if (reader == null) {
-				throw new RuntimeException("Couldn't find the help data resource.");
-			}
-			try {
-				printHelpContents(reader);
-			} finally {
-				try {
-					reader.close();
-				} catch (IOException ignored) {}
-			}
+			printHelpContents();
 			return;
 		}
 		if (caption.equalsIgnoreCase("All")) {
@@ -124,19 +117,18 @@ public class Help extends AbstractTool {
 			return;
 		}
 
-		BufferedReader reader = getHelpReader(caption.toLowerCase());
-		try {
-			if (reader == null) {
-				AbstractTool tool = Tools.getTool(caption);
-				if (tool != null) {
-					printCaption(caption);
-					System.out.print(tool.generateHelpSummary(width));
-				} else {
-					printFormat("No help article found for \"" + caption.replace(' ', '_') + "\"");
-				}
-				return;
+		BufferedReader reader = getHelpReader(caption.toLowerCase(Locale.US));
+		if (reader == null) {
+			AbstractTool tool = Tools.getTool(caption);
+			if (tool != null) {
+				printCaption(caption);
+				System.out.print(tool.generateHelpSummary(width));
+			} else {
+				printFormat("No help article found for \"" + caption.replace(' ', '_') + "\"");
 			}
-
+			return;
+		}
+		try {
 			String line = reader.readLine();
 			line = line.substring(ARTICLE_CAPTION_MARKER.length()).trim();
 			caption = line;
@@ -236,33 +228,42 @@ public class Help extends AbstractTool {
 		return result;
 	}
 
-	private void printHelpContents(BufferedReader reader) {
-		// List all help article names
-		ArrayList<String> captions = new ArrayList<String>();
-		Set<String> lowerCaptions = new HashSet<String>();
-		try {
-			while (true) {
-				String line = reader.readLine();
-				if (line == null)
-					break;
-				if (line.startsWith(ARTICLE_CAPTION_MARKER)) {
-					line = line.substring(ARTICLE_CAPTION_MARKER.length()).trim();
-					captions.add(line);
-					lowerCaptions.add(line.toLowerCase(Locale.US));
-				}
+	private void printHelpContents() {
+		ArrayList<String> captions = new ArrayList<>();
+		Set<String> lowerCaptions = new HashSet<>();
+
+		URL url = Help.class.getClassLoader().getResource(HELP_FOLDER);
+		File[] helpFiles = new File(url.getPath()).listFiles(new UnspecialHelpFileFilter());
+		for (File helpFile : helpFiles) {
+			BufferedReader reader = getHelpReader(helpFile.getName());
+			if (reader == null) {
+				System.out.println("Couldn't open file: " + helpFile.getName());
+				continue;
 			}
-		} catch (IOException e) {
-			System.err.println("IO error occurred while reading help data:");
-			e.printStackTrace();
+
+			try {
+				String caption = reader.readLine().substring(ARTICLE_CAPTION_MARKER.length()).trim();
+				captions.add(caption);
+				lowerCaptions.add(caption.toLowerCase(Locale.US));
+			} catch (IOException e) {
+				System.out.println("Couldn't read the first line from file: " + helpFile.getName());
+			} finally {
+				try {
+					reader.close();
+				} catch (IOException ignored) {}
+			}
 		}
-		// Add all tool names to the list if specific article not found.
-		for (String tool : Tools.getToolNames())
-			if (!lowerCaptions.contains(tool.toLowerCase(Locale.US)))
+
+		for (String tool : Tools.getToolNames()) {
+			if (!lowerCaptions.contains(tool.toLowerCase(Locale.US))) {
 				captions.add(tool);
+			}
+		}
 		Collections.sort(captions);
 		printFormat("Help articles:");
-		for (String s : captions)
+		for (String s : captions) {
 			System.out.println("    " + s);
+		}
 	}
 
 	private void printArticle(String caption, List<String> lines) {
@@ -545,6 +546,14 @@ public class Help extends AbstractTool {
 
 	private ClassLoader getHelpClassLoader() {
 		return Help.class.getClassLoader();
+	}
+
+	private static class UnspecialHelpFileFilter implements FileFilter {
+		@Override
+		public boolean accept(File file) {
+			String pathname = file.getName();
+			return !pathname.startsWith("_") && pathname.endsWith(HELP_FILE_SUFFIX);
+		}
 	}
 
 	public static void main(String[] args) {
