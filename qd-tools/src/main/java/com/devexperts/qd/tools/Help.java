@@ -41,7 +41,6 @@ public class Help extends AbstractTool {
 
 	private static final String HELP_FOLDER = "META-INF/qdshelp/";
 	private static final String HELP_FILE_SUFFIX = ".txt";
-	private static final String WHOLE_HELP_FILENAME = "_whole";
 	private static final char SPECIAL_SYMBOL = '@';
 
 	private static final String COMMENT_MARKER = SPECIAL_SYMBOL + "#";
@@ -86,6 +85,7 @@ public class Help extends AbstractTool {
 	}
 
 	private static BufferedReader getHelpReader(String caption) {
+		caption = caption.toLowerCase(Locale.US);
 		if (!caption.endsWith(HELP_FILE_SUFFIX)) {
 			caption += HELP_FILE_SUFFIX;
 		}
@@ -103,21 +103,11 @@ public class Help extends AbstractTool {
 			return;
 		}
 		if (caption.equalsIgnoreCase("All")) {
-			BufferedReader reader = getHelpReader(WHOLE_HELP_FILENAME);
-			if (reader == null) {
-				throw new RuntimeException("Couldn't find the help data resource.");
-			}
-			try {
-				printAllArticles(reader);
-			} finally {
-				try {
-					reader.close();
-				} catch (IOException ignored) {}
-			}
+			printAllArticles();
 			return;
 		}
 
-		BufferedReader reader = getHelpReader(caption.toLowerCase(Locale.US));
+		BufferedReader reader = getHelpReader(caption);
 		if (reader == null) {
 			AbstractTool tool = Tools.getTool(caption);
 			if (tool != null) {
@@ -133,7 +123,7 @@ public class Help extends AbstractTool {
 			line = line.substring(ARTICLE_CAPTION_MARKER.length()).trim();
 			caption = line;
 
-			List<String> lines = new ArrayList<String>();
+			List<String> lines = new ArrayList<>();
 			// Reading the article
 			while ((line = reader.readLine()) != null) {
 				lines.add(line);
@@ -149,39 +139,62 @@ public class Help extends AbstractTool {
 		}
 	}
 
-	private void printAllArticles(BufferedReader reader) {
-		try {
-			char[] sep = new char[width];
-			Arrays.fill(sep, '-');
-			String articleSeparator = new String(sep);
+	private void printAllArticles() {
+		URL url = Help.class.getClassLoader().getResource(HELP_FOLDER);
+		File[] helpFiles = new File(url.getPath()).listFiles(new UnspecialHelpFileFilter());
 
-			String caption = null;
-			List<String> lines = new ArrayList<String>();
-			do {
-				lines.clear();
-				String newCaption;
-				while (true) {
-					String line = reader.readLine();
-					if ((line == null) || (line.startsWith(ARTICLE_CAPTION_MARKER))) {
-						newCaption = (line == null) ?
-							null :
-							line.substring(ARTICLE_CAPTION_MARKER.length()).trim();
-						break;
-					}
-					lines.add(line);
-				}
-				if (caption != null)
-					printArticle(caption, lines);
-				caption = newCaption;
+		printArticleSeparator();
 
-				System.out.println();
-				System.out.println(articleSeparator);
-				System.out.println();
-			} while (caption != null);
-		} catch (IOException e) {
-			System.err.println("IO error occurred while reading help data:");
-			e.printStackTrace();
+		if (printHelpFile("Tools")) {
+			printArticleSeparator();
 		}
+
+		for (File helpFile : helpFiles) {
+			String filename = helpFile.getName();
+			if (!filename.equals("tools.txt") && printHelpFile(filename)) {
+				printArticleSeparator();
+			}
+		}
+	}
+
+	private boolean printHelpFile(String filename) {
+		try (BufferedReader reader = getHelpReader(filename)) {
+			if (reader == null) {
+				System.out.println("Couldn't open file: " + filename);
+				return false;
+			}
+
+			List<String> lines = new ArrayList<>();
+			String line = reader.readLine();
+			if (line == null || !line.startsWith(ARTICLE_CAPTION_MARKER)) {
+				return false;
+			}
+			String caption = line.substring(ARTICLE_CAPTION_MARKER.length()).trim();
+
+			while (true) {
+				line = reader.readLine();
+				if (line == null) {
+					break;
+				}
+				lines.add(line);
+			}
+
+			printArticle(caption, lines);
+			return true;
+		} catch (IOException e) {
+			System.err.println("Couldn't read the file: " + filename);
+			return false;
+		}
+	}
+
+	private void printArticleSeparator() {
+		char[] sep = new char[width];
+		Arrays.fill(sep, '-');
+		String articleSeparator = new String(sep);
+
+		System.out.println();
+		System.out.println(articleSeparator);
+		System.out.println();
 	}
 
 	private void printMessageConnectorHelpSummary(Class<? extends MessageConnector> connector) {
@@ -234,23 +247,19 @@ public class Help extends AbstractTool {
 
 		URL url = Help.class.getClassLoader().getResource(HELP_FOLDER);
 		File[] helpFiles = new File(url.getPath()).listFiles(new UnspecialHelpFileFilter());
-		for (File helpFile : helpFiles) {
-			BufferedReader reader = getHelpReader(helpFile.getName());
-			if (reader == null) {
-				System.out.println("Couldn't open file: " + helpFile.getName());
-				continue;
-			}
 
-			try {
+		for (File helpFile : helpFiles) {
+			try (BufferedReader reader = getHelpReader(helpFile.getName())) {
+				if (reader == null) {
+					System.out.println("Couldn't open file: " + helpFile.getName());
+					continue;
+				}
+
 				String caption = reader.readLine().substring(ARTICLE_CAPTION_MARKER.length()).trim();
 				captions.add(caption);
 				lowerCaptions.add(caption.toLowerCase(Locale.US));
 			} catch (IOException e) {
-				System.out.println("Couldn't read the first line from file: " + helpFile.getName());
-			} finally {
-				try {
-					reader.close();
-				} catch (IOException ignored) {}
+				System.err.println("Couldn't read the file: " + helpFile.getName());
 			}
 		}
 
