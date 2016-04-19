@@ -111,13 +111,21 @@ public class Help extends AbstractTool {
 		if (reader == null) {
 			AbstractTool tool = Tools.getTool(caption);
 			if (tool != null) {
-				printCaption(caption);
-				System.out.print(tool.generateHelpSummary(width));
+				Class<? extends AbstractTool> toolClass = tool.getClass();
+				if (toolClass.isAnnotationPresent(ToolHelpArticle.class)) {
+					reader = new BufferedReader(new StringReader(toolClass.getAnnotation(ToolHelpArticle.class).value()));
+				} else {
+					caption = tool.getClass().getSimpleName();
+					printCaption(caption);
+					System.out.print(tool.generateHelpSummary(width));
+					return;
+				}
 			} else {
-				printFormat("No help article found for \"" + caption.replace(' ', '_') + "\"");
+				printFormat("No help article found for \"" + caption.replace('_', ' ') + "\"");
+				return;
 			}
-			return;
 		}
+
 		try {
 			String line = reader.readLine();
 			line = line.substring(ARTICLE_CAPTION_MARKER.length()).trim();
@@ -151,7 +159,7 @@ public class Help extends AbstractTool {
 
 		for (File helpFile : helpFiles) {
 			String filename = helpFile.getName();
-			if (!filename.equals("tools.txt") && printHelpFile(filename)) {
+			if (!filename.equals("META-INF/qdshelp/tools.txt") && printHelpFile(filename)) {
 				printArticleSeparator();
 			}
 		}
