@@ -16,6 +16,7 @@ import com.devexperts.qd.qtp.*;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.tools.*;
 
 
 /**
@@ -29,7 +30,7 @@ import com.devexperts.services.ServiceProvider;
 	}
 )
 @ServiceProvider
-public class Forward extends AbstractTool {
+public class Forward extends AbstractQDTool {
 	private final OptionLog logfile = OptionLog.getInstance();
 	private final OptionName name = new OptionName("forward");
 	private final OptionForward forward = new OptionForward();

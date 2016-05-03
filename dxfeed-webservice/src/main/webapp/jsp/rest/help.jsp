@@ -14,11 +14,11 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <html>
 <head>
-  <title>dxFeed REST API Help</title>
+  <title>dxFeed REST API com.devexperts.tools.Help</title>
   <link rel="stylesheet" href="../css/style.css"/>
 </head>
 <body>
-<h1>dxFeed REST API Help</h1>
+<h1>dxFeed REST API com.devexperts.tools.Help</h1>
 dxFeed REST API contains the following resources:
 
 <ul><%

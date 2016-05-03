@@ -19,12 +19,12 @@ import com.devexperts.services.ServiceProvider;
 	}
 )
 @ServiceProvider
-public class SchemeDump extends AbstractTool {
+public class SchemeDump extends AbstractQDTool {
 	@Override
 	protected void executeImpl(String[] args) {
 		if (args.length > 1)
 			wrongNumberOfArguments();
-		for (DataRecord record : Tools.parseRecords(args.length == 0 ? "*" : args[0], QDFactory.getDefaultScheme()))
+		for (DataRecord record : QDTools.parseRecords(args.length == 0 ? "*" : args[0], QDFactory.getDefaultScheme()))
 			printRecord(record);
 	}
 

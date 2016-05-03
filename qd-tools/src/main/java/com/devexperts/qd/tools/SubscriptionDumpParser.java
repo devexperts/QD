@@ -17,6 +17,7 @@ import com.devexperts.logging.Logging;
 import com.devexperts.qd.*;
 import com.devexperts.qd.impl.matrix.SubscriptionDumpVisitor;
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.tools.OptionString;
 import com.devexperts.util.TimeFormat;
 
 /**
@@ -30,7 +31,7 @@ import com.devexperts.util.TimeFormat;
 	}
 )
 @ServiceProvider
-public class SubscriptionDumpParser extends AbstractTool {
+public class SubscriptionDumpParser extends AbstractQDTool {
 	private static final Logging log = Logging.getLogging(SubscriptionDumpParser.class);
 
 	private static final String DEFAULT_COLUMNS = "sRa";

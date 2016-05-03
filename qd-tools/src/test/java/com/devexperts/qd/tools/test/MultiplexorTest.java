@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
 import com.devexperts.logging.Logging;
-import com.devexperts.qd.tools.Tools;
+import com.devexperts.tools.Tools;
 import com.devexperts.rmi.*;
 import com.devexperts.rmi.task.*;
 import com.devexperts.test.ThreadCleanCheck;

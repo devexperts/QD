@@ -6,20 +6,31 @@
  * If a copy of the MPL was not distributed with this file, You can obtain one at
  * http://mozilla.org/MPL/2.0/.
  */
-package com.devexperts.qd.tools;
+package com.devexperts.tools;
 
 import java.lang.annotation.*;
 
 /**
- * Allows to write a help article of module
- * into it's source code.
+ * Describes QDS tool usage and arguments.
  */
+@SuppressWarnings({"JavaDoc"})
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-public @interface ToolHelpArticle {
+public @interface ToolSummary {
 	/**
-	 * Text of the article.
+	 * Short description of a tool.
 	 */
-	String value();
+	String info();
+
+	/**
+	 * Argument string pattern(s).
+	 */
+	String[] argString();
+
+	/**
+	 * Tool arguments with their descriptions.
+	 * Use "--" to separate argument names from their descriptions.
+	 */
+	String[] arguments();
 }

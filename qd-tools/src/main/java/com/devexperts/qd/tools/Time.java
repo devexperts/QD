@@ -12,6 +12,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.tools.OptionLog;
 
 @ToolSummary(
 	info = "Tracks time in various JVMs.",
@@ -19,7 +20,7 @@ import com.devexperts.services.ServiceProvider;
 	arguments = {}
 )
 @ServiceProvider
-public class Time extends AbstractTool {
+public class Time extends AbstractQDTool {
 	private final Option request = new Option('R', "request", "Request all peers to report deltas.");
 	private final Option verbose = new Option('v', "verbose", "Print info for all peers (multiple per host).");
 	private final OptionLog logfile = OptionLog.getInstance();

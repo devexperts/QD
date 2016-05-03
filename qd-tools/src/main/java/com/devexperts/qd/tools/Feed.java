@@ -15,6 +15,7 @@ import com.devexperts.logging.Logging;
 import com.devexperts.qd.QDLog;
 import com.devexperts.qd.qtp.*;
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.tools.*;
 
 /**
  * Feed tool.
@@ -28,7 +29,7 @@ import com.devexperts.services.ServiceProvider;
 	}
 )
 @ServiceProvider
-public class Feed extends AbstractTool {
+public class Feed extends AbstractQDTool {
 	private final OptionLog logfile = OptionLog.getInstance();
 	private final OptionCollector collector = new OptionCollector("all");
 	private final OptionFile file = new OptionFile();
@@ -62,7 +63,7 @@ public class Feed extends AbstractTool {
 		}
 
 		if (delay.isSet() != buffer.isSet()) {
-			throw new BadToolParametersException("Options \"" + delay + "\" and \"" + buffer + "\" shall be used only together");
+			throw new BadToolParametersException("com.devexperts.tools.Options \"" + delay + "\" and \"" + buffer + "\" shall be used only together");
 		}
 
 		Logging log = QDLog.log;

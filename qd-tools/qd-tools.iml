@@ -15,6 +15,7 @@
     <orderEntry type="library" scope="TEST" name="Maven: org.aspectj:aspectjrt:1.8.2" level="project" />
     <orderEntry type="module" module-name="dxlib" />
     <orderEntry type="module" module-name="dxlib-qd-sandbox" />
+    <orderEntry type="module" module-name="dxtools" />
     <orderEntry type="module" module-name="mars" />
     <orderEntry type="module" module-name="qds-monitoring" />
     <orderEntry type="module" module-name="qds" />

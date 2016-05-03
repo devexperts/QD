@@ -1,6 +1,6 @@
 @# ========================================================================== #@
 @# QDS HELP ARTICLES                                                          #@
-@# This file is processed by QDS Help tool.                                   #@
+@# This file is processed by QDS com.devexperts.tools.Help tool.                                   #@
 @# ========================================================================== #@
 @#                                                                            #@
 @#   Special tags (markers) used in this file:                                #@
@@ -9,7 +9,7 @@
 @#                                                                            #@
 @#   @article                  - starts new article                           #@
 @#   @todo                     - todo (highlighted by IDEA since version 7)   #@
-@#                               and not processed by Help tool)              #@
+@#                               and not processed by com.devexperts.tools.Help tool)              #@
 @#   @#                        - line comment                                 #@
 @#   @list-tools               - insert list of all QDS tools                 #@
 @#   @list-connectors          - insert list of all MessageConnectors         #@
@@ -28,23 +28,23 @@
 @#
 @#
 @# ====== SPECIAL ARTICLES =====================================================
-@article Tools
+@article com.devexperts.tools.Tools
 Available tools are:
 @list-tools
-@br;To get detailed help on some tool use "Help <tool name>".
+@br;To get detailed help on some tool use "com.devexperts.tools.Help <tool name>".
 @br;To get information about executing several tools under one JVM see @link{Batch}.
 @# -----------------------------------------------------------------------------
 @article Connectors
 Available MessageConnectors are:
 @list-connectors
-To get detailed help on some MessageConnector use "Help <connector name>".
+To get detailed help on some MessageConnector use "com.devexperts.tools.Help <connector name>".
 @br;See also: @link{Address}.
 @# ====== ARTICLES ABOUT QDS TOOLS =============================================
-@article Help
+@article com.devexperts.tools.Help
 @tool-summary
-@br;To see help on some topic type "Help <topic>".
-@br;To see list of all articles type "Help contents".
-@br;Use "Help all" to generate all existing help articles.
+@br;To see help on some topic type "com.devexperts.tools.Help <topic>".
+@br;To see list of all articles type "com.devexperts.tools.Help contents".
+@br;Use "com.devexperts.tools.Help all" to generate all existing help articles.
 @# -----------------------------------------------------------------------------
 @article Connect
 @tool-summary
@@ -391,7 +391,7 @@ away (> 3 sec) from median time in this local network.
 
 This tool is used to test network throughput. It is quite similar to
 TestThroughput tool from qd.sample, but it provides larger functionality
-in network testing and is integrated into Tools framework.
+in network testing and is integrated into com.devexperts.tools.Tools framework.
 
 The NetTest tool can be run in one of two modes: producer-side and
 consumer-side. In each mode it creates one or several collectors and
@@ -571,7 +571,7 @@ are also allowed, so [key1=val1,key2=val2] has the same meaning as
 Available connectors are:
 @list-connectors
 To get detailed information about address format and available properties of some
-message connector use "Help <connector name>".
+message connector use "com.devexperts.tools.Help <connector name>".
 @# ====== VARIOUS ARTICLES =====================================================
 @article Scheme
 

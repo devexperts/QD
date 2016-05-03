@@ -12,6 +12,8 @@ import java.util.StringTokenizer;
 
 import com.devexperts.qd.DataField;
 import com.devexperts.qd.DataScheme;
+import com.devexperts.tools.OptionParseException;
+import com.devexperts.tools.OptionString;
 import com.devexperts.util.InvalidFormatException;
 
 public class OptionFields extends OptionString {

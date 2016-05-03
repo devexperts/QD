@@ -14,6 +14,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.tools.*;
 import com.devexperts.util.TimeFormat;
 
 /**
@@ -27,7 +28,7 @@ import com.devexperts.util.TimeFormat;
 	}
 )
 @ServiceProvider
-public class GCTimeTransformer extends AbstractTool {
+public class GCTimeTransformer extends AbstractQDTool {
 	private final OptionString time = new OptionString('t', "time", "time", "Start time.");
 	private final OptionString output = new OptionString('o', "output", "<file>", "Output file, by default 'gctimes.txt'.");
 	private final Matcher dateTimeMatcher = Pattern.compile(".*(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}).*").matcher("");

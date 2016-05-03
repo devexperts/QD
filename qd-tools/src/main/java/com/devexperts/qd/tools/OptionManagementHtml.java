@@ -10,6 +10,7 @@ package com.devexperts.qd.tools;
 
 import com.devexperts.qd.monitoring.JMXEndpoint;
 import com.devexperts.qd.qtp.QDEndpoint;
+import com.devexperts.tools.OptionInteger;
 
 public class OptionManagementHtml extends OptionInteger implements EndpointOption {
 	private static OptionManagementHtml instance;

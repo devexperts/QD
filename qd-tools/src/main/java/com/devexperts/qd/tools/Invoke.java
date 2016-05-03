@@ -21,6 +21,7 @@ import com.devexperts.rmi.message.*;
 import com.devexperts.rmi.task.RMIServiceDescriptor;
 import com.devexperts.rmi.task.RMIServiceId;
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.tools.*;
 import com.devexperts.util.ConfigUtil;
 import com.dxfeed.promise.Promise;
 
@@ -40,7 +41,7 @@ import com.dxfeed.promise.Promise;
 	}
 )
 @ServiceProvider
-public class Invoke extends AbstractTool {
+public class Invoke extends AbstractQDTool {
 	private final OptionLog logfile = OptionLog.getInstance();
 	private final Logging log = QDLog.log;
 

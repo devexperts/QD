@@ -11,6 +11,7 @@ package com.devexperts.qd.tools;
 import java.util.Locale;
 
 import com.devexperts.qd.qtp.MessageType;
+import com.devexperts.tools.OptionEnum;
 
 public class OptionPostCollector extends OptionEnum {
 	public static final String TICKER = "ticker";

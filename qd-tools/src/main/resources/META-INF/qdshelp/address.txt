@@ -26,4 +26,4 @@ are also allowed, so [key1=val1,key2=val2] has the same meaning as
 Available connectors are:
 @list-connectors
 To get detailed information about address format and available properties of some
-message connector use "Help <connector name>".
+message connector use "com.devexperts.tools.Help <connector name>".
