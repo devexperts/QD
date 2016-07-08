@@ -121,13 +121,27 @@ public class QDHelpProvider implements HelpProvider {
 		return captions;
 	}
 
+	@Override
+	public String getMetaTag(String name) {
+		switch (name) {
+		case "list-connectors":
+			return listConnectors();
+		case "list-specific-filters":
+			return listSpecificFilters();
+		case "list-tools":
+			return listAllTools(width);
+		default:
+			return null;
+		}
+	}
+
 
 	private static BufferedReader getHelpReader(String caption) {
 		caption = caption.toLowerCase(Locale.US);
 		if (!caption.endsWith(HELP_FILE_SUFFIX)) {
 			caption += HELP_FILE_SUFFIX;
 		}
-		URL contentLink = Help.class.getResource("/" + HELP_FOLDER + caption);
+		URL contentLink = Help.class.getResource("/" + HELP_FOLDER + caption.replaceAll(" ", "_"));
 		try {
 			return (contentLink != null) ? new BufferedReader(new InputStreamReader(contentLink.openStream())) : null;
 		} catch (IOException e) {
@@ -136,13 +150,13 @@ public class QDHelpProvider implements HelpProvider {
 	}
 
 	private String printCaption(String caption) {
-		return caption + caption.replaceAll(".", "=");
+		return caption + "\n" + caption.replaceAll(".", "=") + "\n";
 	}
 
 	private String printArticle(String caption, List<String> lines) {
-		printCaption(caption);
 		StringBuilder small = new StringBuilder();
 		StringBuilder big = new StringBuilder();
+		big.append(printCaption(caption));
 		for (String line : lines) {
 			if (line.trim().equalsIgnoreCase(TOOL_SUMMARY_MARKER)) {
 				flush(small, big);
@@ -162,27 +176,14 @@ public class QDHelpProvider implements HelpProvider {
 				}
 			} else if (line.trim().equalsIgnoreCase(LIST_SPECIFIC_FILTERS_MARKER)) {
 				flush(small, big);
-				printSubscriptionFilters(QDFactory.getDefaultScheme().getService(QDFilterFactory.class), big);
+				big.append(listSpecificFilters()).append("\n");
 			} else if (line.trim().equalsIgnoreCase(LIST_TOOLS)) {
 				flush(small, big);
 				// List all tools
-				listAllTools(big, width);
+				big.append(listAllTools(width)).append("\n");
 			} else if (line.trim().equalsIgnoreCase(LIST_CONNECTORS)) {
 				flush(small, big);
-				ArrayList<String[]> table = new ArrayList<>();
-				table.add(new String[]{"  ", "[name]", "[address format]", "[description]"});
-				for (Class<? extends MessageConnector> connector : MessageConnectors.listMessageConnectors(getHelpClassLoader())) {
-					MessageConnectorSummary annotation = connector.getAnnotation(MessageConnectorSummary.class);
-					String name = getConnectorName(connector);
-					String address = "";
-					String description = "";
-					if (annotation != null) {
-						address = annotation.addressFormat();
-						description = annotation.info();
-					}
-					table.add(new String[]{"", name, address, description});
-				}
-				big.append(formatTable(table, width, "  ")).append("\n");
+				big.append(listConnectors()).append("\n");
 			} else if (line.trim().isEmpty()) {
 				// New paragraph
 				flush(small, big);
@@ -198,6 +199,7 @@ public class QDHelpProvider implements HelpProvider {
 			}
 		}
 		flush(small, big);
+//		System.out.println("That's what we've got: \"" + big + "\"");
 		return big.toString();
 	}
 
@@ -311,7 +313,7 @@ public class QDHelpProvider implements HelpProvider {
 		}
 	}
 
-	private void printSubscriptionFilters(QDFilterFactory filterFactory, StringBuilder out) {
+	private String printSubscriptionFilters(QDFilterFactory filterFactory) {
 		ArrayList<String[]> table = new ArrayList<>();
 		table.add(new String[]{"[name]", "[description]"});
 		if (filterFactory != null) {
@@ -322,13 +324,13 @@ public class QDHelpProvider implements HelpProvider {
 			}
 		}
 		if (table.size() > 1) {
-			out.append(formatTable(table, width, "  ")).append("\n");
+			return formatTable(table, width, "  ");
 		} else {
-			printFormat("--- No project-specific filters found ---", out);
+			return format("--- No project-specific filters found ---", width);
 		}
 	}
 
-	private static void listAllTools(StringBuilder out, int width) {
+	private static String listAllTools(int width) {
 		ArrayList<String[]> table = new ArrayList<>();
 		for (String toolName : Tools.getToolNames()) {
 			Class<? extends AbstractTool> toolClass = Tools.getTool(toolName).getClass();
@@ -338,7 +340,7 @@ public class QDHelpProvider implements HelpProvider {
 				annotation.info();
 			table.add(new String[]{"   ", toolName, "-", toolDescription});
 		}
-		out.append(formatTable(table, width, " "));
+		return formatTable(table, width, " ");
 	}
 
 	private ClassLoader getHelpClassLoader() {
@@ -445,5 +447,26 @@ public class QDHelpProvider implements HelpProvider {
 			// just ignore a return empty result
 		}
 		return result;
+	}
+
+	private String listConnectors() {
+		ArrayList<String[]> table = new ArrayList<>();
+		table.add(new String[]{"  ", "[name]", "[address format]", "[description]"});
+		for (Class<? extends MessageConnector> connector : MessageConnectors.listMessageConnectors(getHelpClassLoader())) {
+			MessageConnectorSummary annotation = connector.getAnnotation(MessageConnectorSummary.class);
+			String name = getConnectorName(connector);
+			String address = "";
+			String description = "";
+			if (annotation != null) {
+				address = annotation.addressFormat();
+				description = annotation.info();
+			}
+			table.add(new String[]{"", name, address, description});
+		}
+		return formatTable(table, width, "  ");
+	}
+
+	private String listSpecificFilters() {
+		return printSubscriptionFilters(QDFactory.getDefaultScheme().getService(QDFilterFactory.class));
 	}
 }

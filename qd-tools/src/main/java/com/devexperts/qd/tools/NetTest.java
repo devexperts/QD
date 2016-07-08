@@ -9,8 +9,7 @@
 package com.devexperts.qd.tools;
 
 import com.devexperts.services.ServiceProvider;
-import com.devexperts.tools.OptionLog;
-import com.devexperts.tools.OptionString;
+import com.devexperts.tools.*;
 import com.devexperts.util.TimePeriod;
 
 /**

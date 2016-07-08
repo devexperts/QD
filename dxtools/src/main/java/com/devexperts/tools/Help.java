@@ -8,6 +8,7 @@
  */
 package com.devexperts.tools;
 
+import java.io.PrintStream;
 import java.util.*;
 
 import com.devexperts.services.ServiceProvider;
@@ -25,8 +26,8 @@ import com.devexperts.services.Services;
 )
 @ServiceProvider
 public class Help extends AbstractTool {
-	private static final int MIN_WIDTH = 10;
-	private static final int DEFAULT_WIDTH = 120;
+	public static final int MIN_WIDTH = 10;
+	public static final int DEFAULT_WIDTH = 120;
 
 	private final OptionInteger widthOpt = new OptionInteger('w', "width", "<n>", "Screen width (default is " + DEFAULT_WIDTH + ")");
 
@@ -52,7 +53,7 @@ public class Help extends AbstractTool {
 
 		String caption = null;
 		for (String word : args) {
-			caption = (caption == null) ? word : caption + "_" + word;
+			caption = (caption == null) ? word : caption + " " + word;
 		}
 		showArticle(caption.trim());
 	}
@@ -83,8 +84,24 @@ public class Help extends AbstractTool {
 			String article = getArticle(caption);
 			if (article == null) {
 				printFormat("No help article found for \"" + caption + "\"");
+			} else {
+				System.out.println(article);
 			}
 		}
+	}
+
+	static void listAllTools(PrintStream out, int width) {
+		ArrayList<String[]> table = new ArrayList<>();
+		for (String toolName : Tools.getToolNames()) {
+			System.out.println("calling getTool from listAllTools: name = " + toolName);
+			Class<? extends AbstractTool> toolClass = Tools.getTool(toolName).getClass();
+			ToolSummary annotation = toolClass.getAnnotation(ToolSummary.class);
+			String toolDescription = (annotation == null) ?
+				"" :
+				annotation.info();
+			table.add(new String[]{"   ", toolName, "-", toolDescription});
+		}
+		out.print(formatTable(table, width, " "));
 	}
 
 	private static SortedSet<String> getContents() {
@@ -145,7 +162,7 @@ public class Help extends AbstractTool {
 	}
 
 
-	private static String formatParagraph(String paragraph, int width) {
+	protected static String formatParagraph(String paragraph, int width) {
 		if (paragraph.length() <= width) {
 			return paragraph;
 		}
@@ -179,6 +196,87 @@ public class Help extends AbstractTool {
 			sb.append('\n').append(r);
 		}
 		return sb.toString();
+	}
+
+	/**
+	 * Formats a table by given screen width.
+	 * @param rows rows of a table.
+	 * @param screenWidth screen width
+	 * @param separator string used to separate columns
+	 * @return a String with formatted table.
+	 * @throws IllegalArgumentException if rows have different lengths.
+	 */
+	static String formatTable(List<String[]> rows, int screenWidth, String separator) {
+		if (rows.isEmpty())
+			return "";
+		int n = rows.get(0).length;
+		int[] w = new int[n];
+		for (String[] row : rows) {
+			if (row.length != n)
+				throw new IllegalArgumentException("Rows in a table have different lengths");
+			for (int i = 0; i < n; i++) {
+				int l = row[i].length();
+				if (w[i] < l)
+					w[i] = l;
+			}
+		}
+
+		int totalWidth = separator.length() * (n - 1);
+		for (int wid : w)
+			totalWidth += wid;
+		int allExceptLastWidth = totalWidth - w[n - 1];
+
+		StringBuilder result = new StringBuilder();
+		if (screenWidth - allExceptLastWidth < MIN_WIDTH) {
+			// Width is too small. Don't try to format it beautifully.
+			StringBuilder sb = new StringBuilder();
+			for (String[] row : rows) {
+				sb.setLength(0);
+				for (String cell : row) {
+					if (sb.length() != 0)
+						sb.append(separator);
+					sb.append(cell);
+				}
+				result.append(format(sb.toString(), screenWidth));
+			}
+		} else {
+			int lastColumnWidth = screenWidth - allExceptLastWidth;
+
+			char[] c = new char[allExceptLastWidth];
+			Arrays.fill(c, ' ');
+			int pos = 0;
+			char[] sepChars = separator.toCharArray();
+			for (int i = 0; i < n - 1; i++) {
+				pos += w[i];
+				System.arraycopy(sepChars, 0, c, pos, sepChars.length);
+				pos += sepChars.length;
+			}
+			String empty = String.valueOf(c);
+
+			for (String[] row : rows) {
+				Arrays.fill(c, ' ');
+				pos = 0;
+				for (int i = 0; i < n - 1; i++) {
+					char[] cell = row[i].toCharArray();
+					System.arraycopy(cell, 0, c, pos, cell.length);
+					pos += w[i];
+					System.arraycopy(sepChars, 0, c, pos, sepChars.length);
+					pos += sepChars.length;
+				}
+
+				String[] lastCell = format(row[n - 1], lastColumnWidth).split("\n");
+				boolean first = true;
+				for (String s : lastCell) {
+					if (first) {
+						result.append(c);
+						first = false;
+					} else
+						result.append(empty);
+					result.append(s).append('\n');
+				}
+			}
+		}
+		return result.toString();
 	}
 
 	public static void main(String[] args) {

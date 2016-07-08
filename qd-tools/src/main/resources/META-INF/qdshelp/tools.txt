@@ -1,4 +1,4 @@
-@article com.devexperts.tools.Tools
+@article Tools
 Available tools are:
 @list-tools
 @br;To get detailed help on some tool use "com.devexperts.tools.Help <tool name>".

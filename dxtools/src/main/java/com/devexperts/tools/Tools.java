@@ -18,6 +18,7 @@ import com.devexperts.util.InvalidFormatException;
 
 public class Tools {
 	private static final List<Class<? extends AbstractTool>> TOOLS = Services.loadServiceClasses(AbstractTool.class, null);
+	private static final List<Class<? extends AbstractTools>> TOOLHELPERS = Services.loadServiceClasses(AbstractTools.class, null);
 
 	private static class ToolArgs {
 		private final AbstractTool tool;
@@ -158,7 +159,7 @@ public class Tools {
 	 */
 	public static AbstractTool getTool(String name) {
 		for (Class<? extends AbstractTool> tool : TOOLS) {
-			if (name.equalsIgnoreCase(tool.getSimpleName()))
+			if (name.equalsIgnoreCase(tool.getSimpleName())) {
 				try {
 					return tool.newInstance();
 				} catch (InstantiationException e) {
@@ -166,6 +167,20 @@ public class Tools {
 				} catch (IllegalAccessException e) {
 					return null;
 				}
+			}
+		}
+		for (Class<? extends AbstractTools> toolHelperClass : TOOLHELPERS) {
+			try {
+				AbstractTools toolHelper = toolHelperClass.newInstance();
+				AbstractTool tool = toolHelper.getToolForParent(name);
+				if (tool != null) {
+					return tool;
+				}
+			} catch (InstantiationException e) {
+				return null;
+			} catch (IllegalAccessException e) {
+				return null;
+			}
 		}
 		return null;
 	}

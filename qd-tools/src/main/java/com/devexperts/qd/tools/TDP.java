@@ -12,8 +12,7 @@ import java.io.*;
 import java.util.*;
 
 import com.devexperts.services.ServiceProvider;
-import com.devexperts.tools.OptionDouble;
-import com.devexperts.tools.OptionString;
+import com.devexperts.tools.*;
 import com.devexperts.util.IndexedSet;
 
 /**

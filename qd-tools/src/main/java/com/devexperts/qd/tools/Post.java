@@ -12,8 +12,7 @@ import java.util.List;
 
 import com.devexperts.qd.qtp.*;
 import com.devexperts.services.ServiceProvider;
-import com.devexperts.tools.OptionLog;
-import com.devexperts.tools.OptionName;
+import com.devexperts.tools.*;
 
 @ToolSummary(
 	info = "Sends records to an agent.",

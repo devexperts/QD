@@ -24,7 +24,7 @@ import com.devexperts.services.Services;
 import com.devexperts.tools.*;
 import com.devexperts.util.InvalidFormatException;
 
-public class QDTools extends Tools {
+public class QDTools implements AbstractTools {
 	private static final List<Class<? extends AbstractQDTool>> TOOLS = Services.loadServiceClasses(AbstractQDTool.class, null);
 
 	private static class ToolArgs {
@@ -185,6 +185,11 @@ public class QDTools extends Tools {
 				}
 		}
 		return null;
+	}
+
+	@Override
+	public AbstractQDTool getToolForParent(String name) {
+		return getTool(name);
 	}
 
 	//======== Some static util methods ========

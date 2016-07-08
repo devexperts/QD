@@ -8,13 +8,6 @@
  */
 package com.devexperts.tools;
 
-import java.util.List;
-
-import com.devexperts.services.Service;
-
-@Service
-public interface HelpProvider {
-	String getArticle(String name);
-	List<String> getArticles();
-	String getMetaTag(String name);
+public interface AbstractTools {
+	AbstractTool getToolForParent(String name);
 }

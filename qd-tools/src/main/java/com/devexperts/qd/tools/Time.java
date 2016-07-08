@@ -12,7 +12,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import com.devexperts.services.ServiceProvider;
-import com.devexperts.tools.OptionLog;
+import com.devexperts.tools.*;
 
 @ToolSummary(
 	info = "Tracks time in various JVMs.",

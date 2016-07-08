@@ -8,6 +8,8 @@
  */
 package com.devexperts.qd.tools;
 
+import com.devexperts.tools.Tools;
+import com.devexperts.tools.ToolSummary;
 import com.devexperts.qd.*;
 import com.devexperts.services.ServiceProvider;
 
