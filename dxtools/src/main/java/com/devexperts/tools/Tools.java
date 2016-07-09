@@ -10,15 +10,33 @@ package com.devexperts.tools;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.*;
 
 import com.devexperts.services.Services;
 import com.devexperts.util.InvalidFormatException;
 
-public class Tools {
+public final class Tools extends AbstractToolHelper {
+	private static final List<Class<? extends AbstractToolHelper>> TOOLHELPERS = Services.loadServiceClasses(AbstractToolHelper.class, null);
 	private static final List<Class<? extends AbstractTool>> TOOLS = Services.loadServiceClasses(AbstractTool.class, null);
-	private static final List<Class<? extends AbstractTools>> TOOLHELPERS = Services.loadServiceClasses(AbstractTools.class, null);
+
+	private static final Tools instance;
+
+	static {
+		instance = new Tools();
+	}
+
+	private Tools() {}
+
+	public static Tools getSingleton() {
+		return instance;
+	}
+
+	@Override
+	protected List<Class<? extends AbstractTool>> getToolsList() {
+		return TOOLS;
+	}
 
 	private static class ToolArgs {
 		private final AbstractTool tool;
@@ -158,28 +176,20 @@ public class Tools {
 	 * find such tool or failed to create instance.
 	 */
 	public static AbstractTool getTool(String name) {
-		for (Class<? extends AbstractTool> tool : TOOLS) {
-			if (name.equalsIgnoreCase(tool.getSimpleName())) {
-				try {
-					return tool.newInstance();
-				} catch (InstantiationException e) {
-					return null;
-				} catch (IllegalAccessException e) {
-					return null;
-				}
-			}
-		}
-		for (Class<? extends AbstractTools> toolHelperClass : TOOLHELPERS) {
+		for (Class<? extends AbstractToolHelper> toolHelperClass : TOOLHELPERS) {
 			try {
-				AbstractTools toolHelper = toolHelperClass.newInstance();
-				AbstractTool tool = toolHelper.getToolForParent(name);
+				Method getSingleton = toolHelperClass.getMethod("getSingleton");
+				AbstractToolHelper toolHelper = (AbstractToolHelper) getSingleton.invoke(null);
+				AbstractTool tool = toolHelper.getToolFromHelper(name);
 				if (tool != null) {
 					return tool;
 				}
-			} catch (InstantiationException e) {
-				return null;
+			} catch (NoSuchMethodException e) {
+				continue;
+			} catch (InvocationTargetException e) {
+				continue;
 			} catch (IllegalAccessException e) {
-				return null;
+				continue;
 			}
 		}
 		return null;
@@ -190,9 +200,22 @@ public class Tools {
 	 * @return all available tool names.
 	 */
 	public static String[] getToolNames() {
-		String[] names = new String[TOOLS.size()];
-		for (int i = 0; i < TOOLS.size(); i++)
-			names[i] = TOOLS.get(i).getSimpleName();
-		return names;
+		List<String> names = new ArrayList<>();
+		for (Class<? extends AbstractToolHelper> toolHelperClass : TOOLHELPERS) {
+			try {
+				Method getSingleton = toolHelperClass.getMethod("getSingleton");
+				AbstractToolHelper toolHelper = (AbstractToolHelper) getSingleton.invoke(null);
+				names.addAll(Arrays.asList(toolHelper.getToolNamesFromHelper()));
+			} catch (NoSuchMethodException e) {
+				continue;
+			} catch (InvocationTargetException e) {
+				continue;
+			} catch (IllegalAccessException e) {
+				continue;
+			}
+		}
+		return names.toArray(new String[] {});
 	}
+
+
 }

@@ -199,7 +199,6 @@ public class QDHelpProvider implements HelpProvider {
 			}
 		}
 		flush(small, big);
-//		System.out.println("That's what we've got: \"" + big + "\"");
 		return big.toString();
 	}
 

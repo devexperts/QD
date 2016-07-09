@@ -24,8 +24,27 @@ import com.devexperts.services.Services;
 import com.devexperts.tools.*;
 import com.devexperts.util.InvalidFormatException;
 
-public class QDTools implements AbstractTools {
-	private static final List<Class<? extends AbstractQDTool>> TOOLS = Services.loadServiceClasses(AbstractQDTool.class, null);
+public final class QDTools extends AbstractToolHelper {
+	private static final List<Class<? extends AbstractQDTool>> QDTOOLS = Services.loadServiceClasses(AbstractQDTool.class, null);
+
+	private static final QDTools instance;
+
+	static {
+		instance = new QDTools();
+	}
+
+	public static QDTools getSingleton() {
+		return instance;
+	}
+
+	@Override
+	protected List<Class<? extends AbstractTool>> getToolsList() {
+		List<Class<? extends AbstractTool>> tools = new ArrayList<>();
+		for (Class<? extends AbstractQDTool> qdToolClass : QDTOOLS) {
+			tools.add(qdToolClass);
+		}
+		return tools;
+	}
 
 	private static class ToolArgs {
 		private final AbstractTool tool;
@@ -167,14 +186,8 @@ public class QDTools implements AbstractTools {
 		}
 	}
 
-	/**
-	 * Creates and returns new instance of a tool with specified name.
-	 * @param name tool name.
-	 * @return new instance of a tool with specified name, or null if couldn't
-	 * find such tool or failed to create instance.
-	 */
-	public static AbstractQDTool getTool(String name) {
-		for (Class<? extends AbstractQDTool> tool : TOOLS) {
+	private static AbstractQDTool getTool(String name) {
+		for (Class<? extends AbstractQDTool> tool : QDTOOLS) {
 			if (name.equalsIgnoreCase(tool.getSimpleName()))
 				try {
 					return tool.newInstance();
@@ -185,11 +198,6 @@ public class QDTools implements AbstractTools {
 				}
 		}
 		return null;
-	}
-
-	@Override
-	public AbstractQDTool getToolForParent(String name) {
-		return getTool(name);
 	}
 
 	//======== Some static util methods ========

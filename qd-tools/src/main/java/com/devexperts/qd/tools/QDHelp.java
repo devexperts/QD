@@ -29,7 +29,7 @@ import com.devexperts.services.ServiceProvider;
  * com.devexperts.tools.Help tool.
  */
 @ToolSummary(
-	info = "com.devexperts.tools.Help tool.",
+	info = "QD-specific help tool.",
 	argString = "[<article>]",
 	arguments = {
 		"<article> -- help article to show."
@@ -357,7 +357,7 @@ public class QDHelp extends AbstractQDTool {
 		flush(sb);
 	}
 
-	static void listAllTools(PrintStream out, int width) {
+	private static void listAllTools(PrintStream out, int width) {
 		ArrayList<String[]> table = new ArrayList<>();
 		for (String toolName : Tools.getToolNames()) {
 			Class<? extends AbstractTool> toolClass = Tools.getTool(toolName).getClass();
@@ -414,7 +414,7 @@ public class QDHelp extends AbstractQDTool {
 	 * @return a String with formatted table.
 	 * @throws IllegalArgumentException if rows have different lengths.
 	 */
-	static String formatTable(List<String[]> rows, int screenWidth, String separator) {
+	private static String formatTable(List<String[]> rows, int screenWidth, String separator) {
 		if (rows.isEmpty())
 			return "";
 		int n = rows.get(0).length;
