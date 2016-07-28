@@ -10,7 +10,6 @@ com.devexperts.qd.tools.Invoke
 com.devexperts.qd.tools.Multiplexor
 com.devexperts.qd.tools.NetTest
 com.devexperts.qd.tools.Post
-com.devexperts.qd.tools.QDHelp
 com.devexperts.qd.tools.Services
 com.devexperts.qd.tools.SchemeDump
 com.devexperts.qd.tools.SubscriptionDumpParser
