@@ -1,5 +1,0 @@
-@article Help
-@tool-summary
-@br;To see help on some topic type "com.devexperts.tools.Help <topic>".
-@br;To see list of all articles type "com.devexperts.tools.Help contents".
-@br;Use "com.devexperts.tools.Help all" to generate all existing help articles.

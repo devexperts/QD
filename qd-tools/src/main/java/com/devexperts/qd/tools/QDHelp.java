@@ -29,7 +29,7 @@ import com.devexperts.services.ServiceProvider;
  * com.devexperts.tools.Help tool.
  */
 @ToolSummary(
-	info = "QD-specific help tool.",
+	info = "QD-specific Help tool.",
 	argString = "[<article>]",
 	arguments = {
 		"<article> -- help article to show."

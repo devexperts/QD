@@ -74,7 +74,7 @@
 </div>
 
 <div class="panel" style="width: 100%" id="resultPanel">
-	<h2><a href="#" class="close"></a><span id="resultHeader">com.devexperts.tools.Help</span></h2>
+	<h2><a href="#" class="close"></a><span id="resultHeader">Help</span></h2>
 	<div>
 		<iframe id="resultIFrame" src="rest/help" width="100%" height="800px"></iframe>
 	</div>

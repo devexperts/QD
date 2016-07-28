@@ -1,5 +1,5 @@
 @article Connectors
 Available MessageConnectors are:
 @list-connectors
-To get detailed help on some MessageConnector use "com.devexperts.tools.Help <connector name>".
+To get detailed help on some MessageConnector use "Help <connector name>".
 @br;See also: @link{Address}.

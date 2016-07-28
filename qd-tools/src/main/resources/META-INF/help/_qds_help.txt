@@ -1,6 +1,6 @@
 @# ========================================================================== #@
 @# QDS HELP ARTICLES                                                          #@
-@# This file is processed by QDS com.devexperts.tools.Help tool.                                   #@
+@# This file is processed by QDS main Help tool.                                   #@
 @# ========================================================================== #@
 @#                                                                            #@
 @#   Special tags (markers) used in this file:                                #@

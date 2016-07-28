@@ -10,6 +10,8 @@ package com.devexperts.tools;
 
 import java.io.PrintStream;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.devexperts.services.ServiceProvider;
 import com.devexperts.services.Services;
@@ -18,7 +20,7 @@ import com.devexperts.services.Services;
  * com.devexperts.tools.Help tool.
  */
 @ToolSummary(
-	info = "com.devexperts.tools.Help tool.",
+	info = "Main Help tool.",
 	argString = "[<article>]",
 	arguments = {
 		"<article> -- help article to show."
@@ -29,11 +31,23 @@ public class Help extends AbstractTool {
 	public static final int MIN_WIDTH = 10;
 	public static final int DEFAULT_WIDTH = 120;
 
+	private static final char SPECIAL_SYMBOL = '@';
+
+	private static final String COMMENT_MARKER = SPECIAL_SYMBOL + "#";
+	private static final String TODO_MARKER = SPECIAL_SYMBOL + "todo";
+	private static final String LIST_TOOLS = SPECIAL_SYMBOL + "list-tools";
+
+	private static final String AT_MARKER = SPECIAL_SYMBOL + "at;"; // to be replaced with @
+	private static final String LINK_MARKER = SPECIAL_SYMBOL + "link";
+	private static final String LINEBREAK_MARKER = SPECIAL_SYMBOL + "br;";
+
 	private final OptionInteger widthOpt = new OptionInteger('w', "width", "<n>", "Screen width (default is " + DEFAULT_WIDTH + ")");
 
 	private int width = DEFAULT_WIDTH;
 
 	private static final List<Class<? extends HelpProvider>> PROVIDERS = Services.loadServiceClasses(HelpProvider.class, null);
+
+	private HelpProvider finder;
 
 	@Override
 	protected Option[] getOptions() {
@@ -76,53 +90,105 @@ public class Help extends AbstractTool {
 				if (article == null) {
 					System.err.println("Couldn't print an article: " + caption1);
 				} else {
-					System.out.println(article);
+					printArticle(article);
+					printArticleSeparator();
 				}
 			}
 			return;
 		} else {
 			String article = getArticle(caption);
 			if (article == null) {
-				printFormat("No help article found for \"" + caption + "\"");
+				printFormat("No help article found for \"" + caption + "\"", System.out, width);
 			} else {
-				System.out.println(article);
+				printArticle(article);
 			}
 		}
 	}
 
-	static void listAllTools(PrintStream out, int width) {
+	private void printArticle(String article) {
+		String[] lines = article.split("\n");
+		String caption = lines[0];
+		printCaption(caption);
+
+		StringBuilder small = new StringBuilder();
+		for (int i = 1; i < lines.length; i++) {
+			String line = lines[i].trim();
+			if (line.equalsIgnoreCase(LIST_TOOLS)) {
+				flush(small);
+				System.out.print(listAllTools(width));
+			} else if (line.isEmpty()) {
+				flush(small);
+				System.out.println();
+			} else if (!line.startsWith(COMMENT_MARKER) && !line.startsWith(TODO_MARKER)) {
+				if (line.startsWith("" + SPECIAL_SYMBOL)) {
+					String specialLine = finder.getMetaTag(line.substring(1), caption, width);
+					if (specialLine != null) {
+						flush(small);
+						System.out.print(specialLine);
+						continue;
+					}
+				}
+				if (lines[i].startsWith("\t") || lines[i].startsWith(" ")) {
+					flush(small);
+					small.append('\t');
+				} else if (small.length() > 0) {
+					small.append(' ');
+				}
+				small.append(line);
+			}
+		}
+		flush(small);
+	}
+
+	private void flush(StringBuilder in) {
+		if (in.length() != 0) {
+			printFormat(in.toString(), System.out, width);
+			in.setLength(0);
+		}
+	}
+
+	private void printCaption(String caption) {
+		System.out.println(caption);
+		System.out.println(caption.replaceAll(".", "="));
+	}
+
+	static String listAllTools(int width) {
 		ArrayList<String[]> table = new ArrayList<>();
 		for (String toolName : Tools.getToolNames()) {
-			System.out.println("calling getTool from listAllTools: name = " + toolName);
 			Class<? extends AbstractTool> toolClass = Tools.getTool(toolName).getClass();
+			if (!toolClass.isAnnotationPresent(ToolHelpArticle.class) && !toolClass.isAnnotationPresent(ToolSummary.class)) {
+				continue;
+			}
 			ToolSummary annotation = toolClass.getAnnotation(ToolSummary.class);
 			String toolDescription = (annotation == null) ?
 				"" :
 				annotation.info();
 			table.add(new String[]{"   ", toolName, "-", toolDescription});
 		}
-		out.print(formatTable(table, width, " "));
+		return formatTable(table, width, " ");
 	}
 
 	private static SortedSet<String> getContents() {
-		SortedSet<String> contents = new TreeSet<>();
+		SortedSet<String> captions = new TreeSet<>();
 		for (Class<? extends HelpProvider> provider : PROVIDERS) {
 			try {
-				contents.addAll(provider.newInstance().getArticles());
+				captions.addAll(provider.newInstance().getArticles());
 			} catch (InstantiationException e) {
 				continue;
 			} catch (IllegalAccessException e) {
 				continue;
 			}
 		}
-		return contents;
+		return captions;
 	}
 
-	private static String getArticle(String caption) {
-		for (Class<? extends HelpProvider> provider : PROVIDERS) {
+	private String getArticle(String caption) {
+		for (Class<? extends HelpProvider> providerClass : PROVIDERS) {
 			try {
-				String article = provider.newInstance().getArticle(caption);
+				HelpProvider provider = providerClass.newInstance();
+				String article = provider.getArticle(caption);
 				if (article != null) {
+					this.finder = provider;
 					return article;
 				}
 			} catch (InstantiationException e) {
@@ -144,15 +210,15 @@ public class Help extends AbstractTool {
 		System.out.println();
 	}
 
-	private void printFormat(String paragraph) {
-		System.out.print(format(paragraph, width));
+	public static void printFormat(String paragraph, PrintStream out, int width) {
+		out.print(format(paragraph, width));
 	}
 
-	static String format(String text, int width) {
+	public static String format(String text, int width) {
 		if (width < MIN_WIDTH) {
 			throw new IllegalArgumentException("Width must not be less, than " + MIN_WIDTH + ".");
 		}
-		text = text.replace("\t", "    ");
+		text = replaceSpecialMarkers(text);
 		String[] paragraphs = text.split("\n");
 		StringBuilder sb = new StringBuilder();
 		for (String p : paragraphs) {
@@ -162,7 +228,29 @@ public class Help extends AbstractTool {
 	}
 
 
-	protected static String formatParagraph(String paragraph, int width) {
+	private static String replaceSpecialMarkers(String text) {
+		// process '@link{...}'
+		StringBuilder sb = new StringBuilder();
+		Pattern pattern = Pattern.compile(LINK_MARKER + "\\{[^\\}]*\\}");
+		Matcher matcher = pattern.matcher(text);
+		int pos = 0;
+		while (matcher.find()) {
+			sb.append(text.substring(pos, matcher.start()));
+			String linkText = matcher.group().substring(LINK_MARKER.length() + 1);
+			linkText = linkText.substring(0, linkText.length() - 1);
+			sb.append("\"Help ").append(linkText).append("\"");
+			pos = matcher.end();
+		}
+		sb.append(text.substring(pos));
+		text = sb.toString();
+
+		text = text.replace("\t", "    "); // in order to be able to measure line width correctly
+		text = text.replace(LINEBREAK_MARKER, "\n");
+		text = text.replace(AT_MARKER, "@");
+		return text;
+	}
+
+	private static String formatParagraph(String paragraph, int width) {
 		if (paragraph.length() <= width) {
 			return paragraph;
 		}
@@ -206,7 +294,7 @@ public class Help extends AbstractTool {
 	 * @return a String with formatted table.
 	 * @throws IllegalArgumentException if rows have different lengths.
 	 */
-	static String formatTable(List<String[]> rows, int screenWidth, String separator) {
+	public static String formatTable(List<String[]> rows, int screenWidth, String separator) {
 		if (rows.isEmpty())
 			return "";
 		int n = rows.get(0).length;

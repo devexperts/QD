@@ -109,11 +109,11 @@ public class QDOptions extends Options {
 
 		StringBuilder sb = new StringBuilder();
 		sb.append("com.devexperts.tools.Options:\n");
-		sb.append(QDHelpProvider.formatTable(table, screenWidth, " "));
+		sb.append(Help.formatTable(table, screenWidth, " "));
 
 		if (!deprecated.isEmpty()) {
 			sb.append("\nDeprecated options:\n");
-			sb.append(QDHelpProvider.formatTable(deprecated, screenWidth, " "));
+			sb.append(Help.formatTable(deprecated, screenWidth, " "));
 		}
 
 		return sb.toString();

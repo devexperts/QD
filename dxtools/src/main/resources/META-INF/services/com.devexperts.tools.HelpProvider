@@ -1,1 +1,2 @@
-com.devexperts.qd.tools.QDHelpProvider
+com.devexperts.tools.CommonHelpProvider
+qcom.devexperts.qd.tools.QDHelpProvider

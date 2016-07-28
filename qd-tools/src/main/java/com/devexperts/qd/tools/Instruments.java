@@ -43,19 +43,19 @@ public class Instruments extends AbstractQDTool {
 		"Use OSI symbology, implicit after OSI conversion, applicable only to OCC.xml file.");
 	private final OptionMultiString read = new OptionMultiString('r', "read", "<source>",
 		"Source of instruments - network address, IPF file, OCC FIXML file or CME MO.dat file. " +
-		"com.devexperts.tools.Option can be specified several times to concatenate several sources.");
+		"Option can be specified several times to concatenate several sources.");
 	private final Option products = new Option('p', "products",
 		"Create products for futures and add them to the end. " +
 		"Ignores existing products. " +
 		"Use 'merge' command to merge new products with existing products.");
 	private final OptionMultiString transform = new OptionMultiString('t', "transform", "<transform>",
 		"Direct transform, URL or file with transform to be applied to instruments. " +
-		"com.devexperts.tools.Option can be specified several times to apply several transforms.");
+		"Option can be specified several times to apply several transforms.");
 	private final Option merge = new Option('m', "merge",
 		"Merge data using symbol as a unique identifier.");
 	private final OptionMultiString exclude = new OptionMultiString('e', "exclude", "<source>",
 		"Exclude instruments by symbol from the source - network address, IPF file, OCC FIXML file or CME MO.dat file. " +
-		"com.devexperts.tools.Option can be specified several times to exclude several sources.");
+		"Option can be specified several times to exclude several sources.");
 	private final Option check = new Option('c', "check",
 		"Perform data consistency check.");
 	private final Option sort = new Option('s', "sort",
@@ -65,7 +65,7 @@ public class Instruments extends AbstractQDTool {
 		"In the later server mode case, <source> can be IPF file in simple format only or a live service URL. " +
 		"In server mode, merge is implied, and bizdate, osi, check, sort, and script are not supported.");
 	private final OptionMultiString script = new OptionMultiString('i', "script", "<script>",
-		"Execute command script. com.devexperts.tools.Option can be specified several times to execute several scripts.");
+		"Execute command script. Option can be specified several times to execute several scripts.");
 	private final OptionInteger performance = new OptionInteger('n', "performance", "<n>", "Run read/transform performance test n times.");
 
 	InstrumentProfileServer server;

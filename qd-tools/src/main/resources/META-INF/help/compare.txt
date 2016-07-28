@@ -4,7 +4,7 @@
 This tool compares two data sources and provides comparison information (about
 data delays, dropped data percentage, etc.) to a screen and to MARS system.
 It's general usage format is quite similar to Connect tool format (see
-@lik{Connect}).
+@link{Connect}).
 
 An alternative data source to compare with is specified using --other-address,
 --other-collector, and --other-record options which can be combined in arbitrary way.

@@ -87,7 +87,7 @@ public class Options {
 		}
 
 		StringBuilder sb = new StringBuilder();
-		sb.append("QDOptions:\n");
+		sb.append("Options:\n");
 		sb.append(Help.formatTable(table, screenWidth, " "));
 
 		if (!deprecated.isEmpty()) {

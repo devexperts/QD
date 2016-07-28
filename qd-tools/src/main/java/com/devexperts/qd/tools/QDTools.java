@@ -24,28 +24,7 @@ import com.devexperts.services.Services;
 import com.devexperts.tools.*;
 import com.devexperts.util.InvalidFormatException;
 
-public final class QDTools extends AbstractToolHelper {
-	private static final List<Class<? extends AbstractQDTool>> QDTOOLS = Services.loadServiceClasses(AbstractQDTool.class, null);
-
-	private static final QDTools instance;
-
-	static {
-		instance = new QDTools();
-	}
-
-	public static QDTools getSingleton() {
-		return instance;
-	}
-
-	@Override
-	protected List<Class<? extends AbstractTool>> getToolsList() {
-		List<Class<? extends AbstractTool>> tools = new ArrayList<>();
-		for (Class<? extends AbstractQDTool> qdToolClass : QDTOOLS) {
-			tools.add(qdToolClass);
-		}
-		return tools;
-	}
-
+public final class QDTools {
 	private static class ToolArgs {
 		private final AbstractTool tool;
 		private final String[] args;
@@ -130,11 +109,20 @@ public final class QDTools extends AbstractToolHelper {
 		return true; // success
 	}
 
+	private static AbstractQDTool getTool(String name) {
+		AbstractTool tool = Tools.getTool(name);
+		if (tool instanceof AbstractQDTool) {
+			return (AbstractQDTool) tool;
+		} else {
+			return null;
+		}
+	}
+
 	private static void handleToolError(QDTools.ToolArgs ta, Throwable t) {
 		String name = ta.tool.getClass().getSimpleName();
 		if (t instanceof NoArgumentsException) {
 			// Special signal to print detailed help
-			System.err.println(name + ": " + ta.tool.generateHelpSummary(QDHelpProvider.DEFAULT_WIDTH));
+			System.err.println(name + ": " + ta.tool.generateHelpSummary(Help.DEFAULT_WIDTH));
 			System.err.println("Use \"com.devexperts.tools.Help " + name + "\" for more detailed help.");
 		} else if (t instanceof InvalidFormatException) {
 			// Log with stack trace first, then show help message on the screen as last line
@@ -184,20 +172,6 @@ public final class QDTools extends AbstractToolHelper {
 				QDLog.log.error("Failed to close " + closeable, e);
 			}
 		}
-	}
-
-	private static AbstractQDTool getTool(String name) {
-		for (Class<? extends AbstractQDTool> tool : QDTOOLS) {
-			if (name.equalsIgnoreCase(tool.getSimpleName()))
-				try {
-					return tool.newInstance();
-				} catch (InstantiationException e) {
-					return null;
-				} catch (IllegalAccessException e) {
-					return null;
-				}
-		}
-		return null;
 	}
 
 	//======== Some static util methods ========
