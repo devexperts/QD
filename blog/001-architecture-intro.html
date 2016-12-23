@@ -1,0 +1,61 @@
+<h1>Introduction into QDS architecture</h1>
+
+<p>dxFeed Market Data services are built on top of QDS core &mdash; the open source, high-performance messaging solution that
+was designed from the ground up to deliver millions of quotes on hundreds of thousands financial instruments to virtually
+unlimited number of destinations in a scalable way, while supporting fully individual subscription for each recipient.
+
+<p>The QDS core is an integral part of dxFeed API, hidden behind top-level easy-to-use object-oriented API of dxFeed.
+
+<p><img style="display: block; margin-left: auto; margin-right: auto;"
+        src="architecture-overview.png" alt="QDS/dxFeed Architecture Overview" />
+
+<p>The key function that is being performed by QDS core is message multiplexing. It collects messages from a number of
+data sources that are called <em>distributors</em> in QDS parlance, and forwards those messages to data consumers,
+that are called <em>agents</em>. Each agent has its own subscription to the data items that it is interested in. This
+subscription is collected by QDS core into a <em>total subscription</em> that is made available to distributors.
+QDS core is also known as <em>collector</em>.
+
+<p><img style="display: block; margin-left: auto; margin-right: auto;"
+        src="qds-core-data-flow.png" alt="QDS core data flow" />
+
+<p>The key to QDS core performance is very careful memory management that is incorporated into every aspect of its design.
+Modern computer architectures are notoriously known for multi-level cache hierarchies with a relatively slow main memory
+compared to the main CPU speed. The amount of memory consumed to encode the data and <em>memory locality</em> are very
+important for ultimate performance. QDS core address memory consumption and memory locality aspects with several
+design decisions.
+
+<p>First of all, data items are grouped into <em>data records</em>. Those data fields that typically change together
+are grouped together. A trade on the exchanges changes last trade price, last trade size, etc, so all those fields are
+grouped into a <em>trade record</em>. Best bid and best offer information are grouped into a <em>quote record</em>, and so on.
+Data records are not atomic, they are still composed from the number of individual fields. However, data records are atomic
+units of subscription and atomic units of data update. By tracking subscription and data update on the per record level,
+instead of per field level, the amount of bookkeeping is reduced multiple-fold, with a corresponding reduction in memory
+consumption for all the data structures that QDS core has to maintain.
+
+<p>Second, is the compact representation of most numerical values. QDS uses custom-designed <em>decimal</em> format that
+is build for the specific purpose of representing prices of financial instruments. This domain-specific representation is
+based on the observation that financial instruments are traded mostly in decimals with a limited number of significant
+digits. Volatility of financial instruments is mostly scale-free, so exchanges tend to limit price precision of
+expensive instruments, but allow more digits after decimal point for cheaper ones. Those observations had allowed to
+design a decimal representation in QDS that takes only 4 bytes per price.
+
+<p>Third, is the use of <em>data buffers</em> to transmit data from distributors to QDS core and to agents.
+While it is easier to design a system where each data item is be represented by an object and transfer collections
+of those objects around, this kind of design results in a poor memory locality and poor performance. QDS follows
+a different approach. Data transfers are performed via contiguous regions of memory also known as data buffers.
+Data buffers naturally map into data packages that has to be sent over the network, thus the process of
+serializing and deserializing data for network transfer requires only sequential access to memory &mdash; the fastest
+possible kind of memory access pattern.
+
+<p>Last, but not the least, is that all data transfers in QDS are <em>garbage-free</em>. Having dispensed with
+individual small objects to represent data items, it is easy to reuse data buffers. The overall result is that
+there are no object allocations in the normal data transfer path from distributors to agents. It means no
+garbage collection pauses and enables QDS to transfer millions of records per second.
+
+<p>This design for performance comes with the price of complex QDS API. That is why, for the end-users of dxFeed quote services,
+there is a layer on top of QDS API that is called dxFeed API. It creates Trade, Quote, and other <em>event objects</em> that
+have easy-to-use API, where values are represented with double precision floating point numbers and can be directly used
+via regular getter methods. This layer makes it easier to evolve the actual encoding of market data in QDS,
+tracing the changing trends in market data, while maintaining compatibility with existing code that uses dxFeed API.
+QDS records and their decimal-enconded fields serve as a low-level representation of market data,
+while dxFeed API provides a high-level API to it.

@@ -1,0 +1,163 @@
+<head>
+<script type="text/javascript" src="scripts/shCore.js"></script>
+<script type="text/javascript" src="scripts/shBrushJava.js"></script>
+<link href="styles/shCore.css" rel="stylesheet" type="text/css" />
+<link href="styles/shThemeDefault.css" rel="stylesheet" type="text/css" />
+<style type="text/css">
+.syntaxhighlighter { overflow-y: hidden !important; }
+</style>
+</head>
+
+</head>
+
+<h1 tags="dxFeed API, tutorial">dxFeed API Tutorial. Part 1: Basics</h1>
+
+<p>This tutorial covers the basics of dxFeed Java API: how to create a connection to a data source,
+how to create a subscription to market data events and how to receive them.
+
+<h2>Prerequisites</h2>
+
+<p>dxFeed API works under Java SE 1.5 or later version.
+The latest version of Java SE is recommended for the best performance.
+You need to download the latest release of dxFeed Java API from dxFeed site via
+<a href="http://www.dxfeed.com/downloads/api/java/latest-release/">this link</a>. Download
+"api-dxfeed-qds-xxx.zip" file (where xxx is the version number) and unpack it to any directory.
+Inside this zip file you'll find a file named "qds.jar" which contains both QDS core code and
+dxFeed API implementation that is used in this tutorial.
+
+<p>Getting the latest version opens access to all the latest features of API, but there is no need to
+update each time the new version comes out, unless you want to use some of the newer features. The binary QDS transfer protocol
+(QTP) is stable and compatible across all QDS and dxFeed API releases.
+
+<h2>Sample code walkthrough</h2>
+
+<p>The simplest sample code for dxFeed API is shown below in its completeness. Cut-and-paste this piece
+of code into a file named "PrintQuoteEvents.java" and you get a program that connects to the specified data source
+address and prints quotes for the specified market symbol on the console.
+
+<pre class="brush: java">
+import java.util.*;
+
+import com.dxfeed.api.*;
+import com.dxfeed.event.market.*;
+
+public class PrintQuoteEvents {
+    public static void main(String[] args) throws InterruptedException {
+        String address = args[0];
+        String symbol = args[1];
+        DXFeed feed = DXEndpoint.create().connect(address).getFeed();
+        DXFeedSubscription&lt;Quote&gt; sub = feed.createSubscription(Quote.class);
+        sub.addEventListener(new DXFeedEventListener&lt;Quote&gt;() {
+            public void eventsReceived(List&lt;Quote&gt; events) {
+                for (Quote quote : events)
+                    System.out.println(quote);
+            }
+        });
+        sub.addSymbols(symbol);
+        while (!Thread.interrupted())
+            Thread.sleep(1000);
+    }
+}
+</pre>
+
+<p><a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/api/DXEndpoint.html">DXEndpoint</a> object
+is created on line 10. It is the object that manages network connections and the lifecycle of
+the corresponding resources.
+It is instructed to connect to the address that was specified as the first program argument
+via
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/api/DXEndpoint.html#connect(java.lang.String)">connet</a>
+method and the reference to the
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/api/DXFeed.html">DXFeed</a>
+object is retrieved.
+DXFeed is the object that represents the data feed in your application.
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/api/DXFeedSubscription.html">DXFeedSubscription</a>
+for
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/event/market/Quote.html">Quote</a>
+events is created on line 11.
+A single DXFeed
+instance can have multiple subscriptions attached to it. A typical modular application
+has a single instance of DXFeed and multiple subscriptions. Each module has its own
+subscription for the market data that it needs. dxFeed API implements each
+subscription via a separate agent in QDS core collector as explained in
+"<a href="http://www.dxfeed.com/blog/2011/12/5/introduction-into-qds-architecture.html">Introduction into QDS architecture</a>".
+The core aggregates all subscription requests and a total subscription is sent to the upstream
+data provider when connection is established. Incoming data is multiplexed to all interested agents.
+A typical GUI application creates a separate subscription for each individual graphical component that needs marked data.
+A typical web-based application creates a separate subscription for each session and keeps a reference to the corresponding subscription
+object in the session object. DXFeedSubscription is
+<a href="http://docs.oracle.com/javase/1.5.0/docs/api/java/io/Serializable.html">Serializable</a>
+to facilitate session replication in highly available web-server configurations.
+
+<p>A listener for incoming events is installed on lines 12-17.
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/api/DXFeedEventListener.html#eventsReceived(java.util.List)">eventReceived</a>
+method on line 13 is invoked in a separate background thread that is
+provided from dxFeed API thread pool by default.
+You can customize thread pool with
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/api/DXEndpoint.html#executor(java.util.concurrent.Executor)">DXEndpoint.executor</a>
+method. It is Ok to have long-running or blocking operations in eventReceived method.
+The next batch of events for a given subscription is not delivered until a previous batch was processed,
+but events for different subscriptions are delivered concurrently as long as there are free threads in the pool.
+
+<p>Quote is an example of
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/event/LastingEvent.html">LastingEvent</a>.
+They are never queued inside QDS code and your code is guaranteed to always get the most recent quote.
+Stale quotes are dropped as soon as newer quotes arrive, so your implementation of eventsReceived method never
+has to deal with multiple quotes for the same market symbol in the same batch of events. The other feature of lasting events,
+is that you receive the snapshot of the most recent event as soon as you subscribe to it. That is why it is important
+to install subscription listener first (line 12) and then subscribe to a particular symbol (line 18) with
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/api/DXFeedSubscription.html#addSymbols(java.lang.Object...)">addSymbols</a> method.
+
+<p>Lines 19-20 are there to simply keep this simple program running forever.
+If you run this program with <code>demo.dxfeed.com:7300 SPY</code> arguments, you'll see a number of
+log lines indicating the intialization of QDS, connection process, and quotes
+from the dxFeed free demo feed for SPDR S&P 500 ETF that are printed with a statement on line 15.
+
+<h2>Asynchronous behavior and error handling</h2>
+
+<p>There is no error-handling code in the above sample, because none is needed. All necessary error-handling is fully encapsulated
+in dxFeed API. QTP network connections use periodic heartbeat messages to detect connectivity problems. If connectivity
+problem is detected then an automated reconnection routine is initiated. As soon as new connection is established, all subscriptions
+are automatically sent to the remote data provider node and the most recent market information (quote in our example) is received.
+Data listeners are notified on new events only if data had actually changed while connection was lost.
+
+<p>That's why the
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/api/DXEndpoint.html#connect(java.lang.String)">DXEndpoint.connect</a>
+method, for example, does not declare any exceptions. It throws an unchecked runtime exception
+(an instance of <a href="http://docs.oracle.com/javase/1.5.0/docs/api/java/lang/IllegalArgumentException.html">IllegalArgumentException</a>)
+if the syntax of the specified address string is invalid, which likely indicates a configuration problem with the software.
+However, it does not declare any checked exceptions
+(like <a href="http://docs.oracle.com/javase/1.5.0/docs/api/java/io/IOException.html">IOException</a>)
+to indicate a failure to connect to the data source, because the invocation of this method
+only initiates the connection. This method does not block.
+DNS lookup, connection and reconnection process proceeds in the background
+and automatically recovers from any errors it encounters.
+
+<p>The subscription if handled in an asynchronous way, too, so an invocation of
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/api/DXFeedSubscription.html#addSymbols(java.lang.Object...)">DXFeedSubscription.addSymbols</a>
+method on line 18 only initiates a process to subscribe to specified symbols.
+It does not block and does not throw exceptions. Event listeners get immediate notification when this event is already available
+locally because some other subscription has subscribed to it, but otherwise the event will come at some later time.
+If you subscribe to non-existing or invalid symbol this notification never arrives.
+
+<h2>Symbology</h2>
+
+<p>Applications that are using dxFeed API typically
+perform some application-specific steps to retrieve a list of valid market symbol, like
+reading them from a configuration file or to their symbol or portfolio database.
+dxFeed symbology is explained in
+"<a href="http://www.dxfeed.com/downloads/documentation/dxFeed_Symbol_Guide.pdf">dxFeed Symbol Guide</a>"
+and is based on symbols that are assigned by a specific exchanges, with a goal to keep world-wide
+recognizable symbols of US stocks, ETFs and indices intact.
+So, subscribing on "IBM" symbol gets you market data for International Business Machines,
+"GOOG" for Google, "SPX" for S&P 500 index, etc.
+
+<p>dxFeed provides comprehensive lists of all available symbols from all available exchanges in Instrument Profile Files (.ipf).
+The corresponding file format is explained in detail in
+"<a href="http://www.dxfeed.com/downloads/documentation/dxFeed_Instrument_Profile_Format.pdf">dxFeed Instrument Profile Format</a>"
+document. There is a corresponding <a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/ipf/package-summary.html">Instrument Profile API</a>
+to compose and parse them.
+
+<script type="text/javascript">
+     SyntaxHighlighter.all()
+</script>
+

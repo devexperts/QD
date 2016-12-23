@@ -1,0 +1,133 @@
+Specification for DESCRIBE_PROTOCOL message.
+
+Each application communicating over DXP protocol SHOULD send one more
+DESCRIBE_PROTOCOL messages before sending any further message types.
+This message announces that application supports DXP protocol and
+advertises supported messages types and any additional capabilities.
+This message is a key to upwards and backwards compatibility between
+different versions of applications.
+
+Application advertises what message types it can read and what message
+types it can write as well as any additional properties. Each message
+type in DXP protocol has message id and message name. Message id is
+used in the subsequent stream to refer to the message (see "DXP.txt")
+while message name SHOULD uniquely refer to the internal structure of
+the message. Support for different versions of the same messages is
+facilitated by changing message name, while retaining old identifier.
+
+The structure of DESCRIBE_PROTOCOL message is:
+
+message_length :: COMPACT_INT       // message length in bytes
+message_type   :: COMPACT_INT == 1  // DESCRIBE_PROTOCOL message id
+magic          :: INT               // 4 bytes 'D', 'X', 'P', '3'
+properties     :: PROPERTIES        // see below
+sends          :: DESCRIPTORS       // see below
+receives       :: DESCRIPTORS       // see below
+... followed by extension bytes
+
+Application SHOULD terminate connection if DESCRIBE_PROTOCOL message
+has wrong magic or if it is malformed in other ways (negative counts,
+null keys or values, unexpectedly terminates, etc). Application MUST
+ignore any extra data in DESCRIBE_PROTOCOL message.
+
+where PROPERTIES is:
+
+count          :: COMPACT_INT       // MUST be non-negative
+... followed by count (key, value) pairs, where each (key, value) is:
+key            :: UTF_STRING
+value          :: UTF_STRING
+
+Keys and values MUST not be null, by may be empty. Keys SHOULD not
+repeat. In case of repeated key, the last value MUST take precedence.
+
+The PROPERTIES specified in DESCRIBE_PROTOCOL should not affect the
+actual protocol operations on the message level. They are designed to
+carry additional information for debugging, informative, and other
+non-functional purposes (including performance optimization).
+Unsupported keys and values MUST be ignored by application and it is
+always safe to ignore the properties altogether. However, there are
+several well-known key names in properties:
+
+version -- Specifies the implementation code's version in a free text
+           form. This information SHOULD NOT be used to determined
+           compatibility or supported feature set. It MAY be used for
+           those reasons only if specific implementation contains
+           known bugs that should be worked around.
+filter  -- Specifies the connection filter in a free text form. This
+           information MAY be used to determine the kind of data that
+           the remote application will ignore and avoid sending it
+           in the first place for performance reasons.
+
+Sends and receives DESCRIPTORS contain the description of messages
+that application is planning to send over connection and is willing to
+receive and process correspondingly. Each DESCRIPTORS is:
+
+count          :: COMPACT_INT       // MUST be non-negative
+... followed by count DESCRIPTOR descriptions, where each DESCRIPTOR is:
+message_id     :: COMPACT_INT
+message_name   :: UTF_STRING
+properties     :: PROPERTIES
+
+Properties specify additional message-specific properties that are
+also always safe to ignore. Any message-specific property supercedes
+PROTOCOL_DESCRIPTOR-wide property with the same key and the same usage
+policies apply.
+
+Application SHOULD advertise any message id and type it is planning to
+send before sending any message of that type, even if it is a
+well-known type that is explained in this document. Application SHOULD
+NOT advertise any message that it will not be sending.
+
+WELL-KNOWN MESSAGE TYPES
+
+id   name
+---  ---------------------
+0 *  HEARTBEAT
+1 *  DESCRIBE_PROTOCOL
+2    DESCRIBE_RECORDS
+4    PART
+5    RAW_DATA
+10   TICKER_DATA
+11   TICKER_ADD_SUBSCRIPTION
+12   TICKER_REMOVE_SUBSCRIPTION
+15   STREAM_DATA
+16   STREAM_ADD_SUBSCRIPTION
+17   STREAM_REMOVE_SUBSCRIPTION
+20   HISTORY_DATA
+21   HISTORY_ADD_SUBSCRIPTION
+22   HISTORY_REMOVE_SUBSCRIPTION
+50   RMI_DESCRIBE_SUBJECT
+51   RMI_DESCRIBE_OPERATION
+52   RMI_REQUEST
+53   RMI_CANCEL
+54   RMI_RESULT
+55   RMI_ERROR
+
+* Message types HEARTBEAT and DESCRIBE_PROTOCOL MUST be supported by
+any DXP implementation and SHOULD NOT be described in either sends on
+receives descriptors.
+
+The match of both id and name with a predefined message type indicates
+the support of the corresponding message type by application. Name
+change is used for extensions of predefined message types. For
+example, if new version of DESCRIBE_RECORDS is defined in the future,
+then it will retain message id of 2, but will change name to
+DESCRIBE_RECORDS2. Application can then describe both versions in its
+receives descriptor but MUST specify only on in its sends. It can wait
+form protocol descriptor from remote side before declaring which
+version it is going to send.
+
+All the message ids from 0 to 63 and all negative message ids are
+reserved for futures extensions of DXP protocol. Applications can
+dynamically allocate message ids 64 and above and use them in
+application-specific ways. The names of of such dynamically allocated
+message types SHOULD start with "X_".
+
+MULTIPLE DESCRIBE_PROTOCOL
+
+Application MAY send multiple DESCRIBE_PROTOCOL messages and MUST be
+able to process multiple messages. Each subsequent DESCRIBE_PROTOCOL
+needed not specify the full lists of properties, send and receive
+message types. Second and subsequence DESCRIBE_PROTOCOL adds to a set
+of send and received message types as well as appends new properties
+(or overrides old ones on a key-by-key basis).

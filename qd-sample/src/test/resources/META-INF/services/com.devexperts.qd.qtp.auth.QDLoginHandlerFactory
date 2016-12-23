@@ -1,0 +1,4 @@
+com.devexperts.rmi.test.auth.LoginFactory
+com.devexperts.rmi.samples.SampleLoginFactory
+com.devexperts.rmi.test.auth.AuthorizationTest$CloseLoginHandlerFactory
+com.devexperts.rmi.test.auth.AuthorizationTest$FixedUsersLoginHandlerFactory

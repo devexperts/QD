@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module org.jetbrains.idea.maven.project.MavenProjectsManager.isMavenModule="true" type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_8" inherit-compiler-output="false">
+    <output url="file://$MODULE_DIR$/target/classes" />
+    <output-test url="file://$MODULE_DIR$/target/test-classes" />
+    <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/../dxfeed-api/target/classes" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" scope="TEST" name="Maven: com.devexperts.timetest:timetest:1.1.1" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.aspectj:aspectjrt:1.8.2" level="project" />
+    <orderEntry type="module" module-name="dxlib" />
+    <orderEntry type="module" module-name="dxfeed-api" />
+    <orderEntry type="module" module-name="dxfeed-promise" />
+    <orderEntry type="module" module-name="qds" />
+    <orderEntry type="module" module-name="qd-core" />
+    <orderEntry type="module" module-name="dxlib-qd-sandbox" />
+    <orderEntry type="module" module-name="auth" />
+    <orderEntry type="module" module-name="proto" />
+    <orderEntry type="module" module-name="proto-ssl" />
+    <orderEntry type="module" module-name="qd-rmi" />
+    <orderEntry type="module" module-name="dxfeed-impl" />
+    <orderEntry type="module" module-name="dxfeed-ipf-filter" />
+    <orderEntry type="module" module-name="mars" />
+    <orderEntry type="module" module-name="qds-monitoring" />
+    <orderEntry type="library" name="Maven: com.sun.jdmk:jmxtools:1.2.8" level="project" />
+    <orderEntry type="module" module-name="qds-tools" />
+    <orderEntry type="module" module-name="qds-file" />
+    <orderEntry type="module" module-name="qd-logger" />
+    <orderEntry type="module" module-name="qd-stripe" />
+    <orderEntry type="module" module-name="qd-nio" />
+    <orderEntry type="module" module-name="qd-servlet" />
+    <orderEntry type="library" name="Maven: javax.servlet:javax.servlet-api:3.1.0" level="project" />
+    <orderEntry type="module" module-name="qd-tools" />
+    <orderEntry type="module" module-name="dxfeed-ondemand" />
+    <orderEntry type="module" module-name="dxfeed-tools" />
+    <orderEntry type="module" module-name="qd-samplecert" />
+    <orderEntry type="module" module-name="dxfeed-news" />
+    <orderEntry type="library" scope="TEST" name="Maven: junit:junit:4.12" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.hamcrest:hamcrest-core:1.3" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.aspectj:aspectjweaver:1.8.2" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: com.google.code.findbugs:jsr305:3.0.0" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: com.devexperts.dgen:dgen:1.0" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.antlr:antlr4-runtime:4.5" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.abego.treelayout:org.abego.treelayout.core:1.0.1" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: com.devexperts.timetest:agent:1.1.1" level="project" />
+  </component>
+</module>

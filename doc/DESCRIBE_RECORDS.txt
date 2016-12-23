@@ -1,0 +1,129 @@
+Specification for DESCRIBE_RECORDS message.
+
+Each application communicating over QTP protocol SHOULD send one or
+more DESCRIBE_RECORDS message before sending any data that references
+specific record identifiers. Communication in each direction is
+independent. For example, consider application that subscribes to
+ticker data via TICKER_ADD_SUBSCRIPTION message. Before sending
+subscription application shall crate DESCRIBE_RECORDS packet with all
+the record identifiers. One or multiple DESCRIBE_RECORDS MAY be sent.
+They MAY be sent only as needed or in advance right after
+establishment of connection. Subsequent DESCRIBE_RECORDS message MAY
+replace previously assigned record identifiers with new ones.
+
+Application that responds to TICKER_ADD_SUBSCRIPTION message with
+TICKER_DATA message SHOULD send its own DESCRIBE_RECORDS message that
+MAY establish different correspondence for record identifiers in
+TICKER_DATA messages that is will be sending.
+
+The structure of DESCRIBE_RECORDS message is:
+
+message_length :: COMPACT_INT       // message length in bytes
+message_type   :: COMPACT_INT == 2  // DESCRIBE_RECORDS message id
+... followed by zero or more record descriptors
+
+The structure of each record descriptor is:
+
+record_id      :: COMPACT_INT       // may not be negative
+record_name    :: UTF_STRING        // may not be null or empty
+record_fcount  :: COMPACT_INT       // may not be negative
+... followed by record_fcount field descriptors
+
+The structure of each field descriptor is:
+field_name     :: UTF_STRING       // may not be null or empty
+field_type     :: COMPACT_INT      // must be from 0 to 255 inclusive
+
+Lowest (least significant) 4 bits of field_type denote a
+serialization type of the corresponding field:
+
+0     -- VOID           // no bytes are serialized
+1     -- BYTE           // exactly one byte
+2     -- UTF_CHAR       // from 1 to 4 bytes
+3     -- SHORT          // exactly 2 bytes
+4     -- INT            // exactly 4 bytes
+5,6,7 -- reserved       // invalid
+8     -- COMPACT_INT    // from 1 to 9 bytes (may be long)
+9     -- BYTE_ARRAY     // COMPACT_INT size followed by BYTEs
+10    -- UTF_CHAR_ARRAY // COMPACT_INT size followed by UTF_CHARs
+11-15 -- reserved       // invalid
+
+It is a protocol error if parsed contents of DESCRIBE_RECORDS message
+do not conform to the above requirements or contain reserved
+serialization types. Connection SHOULD be dropped in this case.
+
+Bits from 4th to 7th of field_type denote a representation of
+the corresponding field value. They affect value output for debugging
+purposes and interpretation of value by application.
+
+0x000  -- PLAIN         // applicable all field types
+0x010  -- DECIMAL       // applicable to all integral field types
+0x020  -- SHORT_STRING  // applicable to all integral field types
+0x030  -- TIME          // applicable to all integral field types
+0x040  -- SEQUENCE      // applicable to all integral field types
+0x050  -- DATE          // applicable to all integral field types
+0x080  -- STRING        // applicable to BYTE_ARRAY
+0x0e0  -- CUSTOM_OBJECT // applicable to BYTE_ARRAY
+0x0f0  -- SERIAL_OBJECT // applicable to BYTE_ARRAY
+
+Unsupported values in those bits are reserved for backwards compatible
+extensions and MUST be ignored. Such field SHOULD be treated as PLAIN.
+
+Bits from 8th and above of field_type are reserved for non backwards compatible
+extensions. It is a protocol error if those bits are non-zero. Connection
+SHOULD be dropped in this case.
+
+* PLAIN fields SHOULD be treated according to their serialization
+type. BYTE, SHORT, INT, COMPACT_INT as signed integers, UTF_CHAR as
+character, BYTE_ARRAY as an arbitrary byte array, UTF_CHAR_ARRAY as a
+string of characters.
+
+* DECIMAL fields SHOULD be treated as decimal encoding of the floating
+point number into a integer. In decimal encoding lower 4 bits
+represent power of the exponent and the rest of the bits represent
+signed mantissa (see javadoc of com.devexperts.qd.util.Decimal class).
+
+* SHORT_STRING fields SHOULD be treated as an encoding of a string
+with up to 4 8-bit characters into an integer.
+
+* TIME fields SHOULD be treated as a time in seconds since the
+beginning of the Unix epoch (unix time).
+
+* SEQUENCE fields SHOULD be treated as an integer with highest 10
+bits representing milliseconds of the preceding TIME field.
+
+* DATE fields SHOULD be treated as a day number since the beginning of
+the Unix epoch.
+
+* STRING fields should be treated as UTF8 encoding of a string into a
+byte array.
+
+* CUSTOM_OBJECT fields should be treated as custom
+application-specific serialization of some object into a byte array.
+
+* SERIAL_OBJECT fields should be treated as Java standard
+serialization of an object into a byte array.
+
+Application that subscribes for data SHOULD list all fields with their
+names and types that it expects to receive, but it MUST be prepared to
+receive and parse an arbitrary descriptor of the corresponding record
+from the data source. Having received the descriptors from the data
+source it MUST parse and store them, so that it can read all the
+described fields for each record according to their serialization
+type.
+
+Applications that expect numeric data in the fields (either integral
+or decimal) SHOULD be ready to parse and interpret all of the
+following serialization types:
+
+VOID        -- assume the received integer value is 0.
+BYTE        -- 1 byte signed integer.
+UTF_CHAR    -- 1 to 4 bytes unsigned integer.
+SHORT       -- 2 bytes signed integer.
+INT         -- 4 bytes signed integer.
+COMPACT_INT -- 1 to 9 bytes signed integer.
+
+Applications SHOULD also be ready to interpret the following
+representation types with all of the above serialization types:
+
+PLAIN       -- interpret integer as received
+DECIMAL     -- interpret as decimal-packed number

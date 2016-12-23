@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: org.cometd.javascript:cometd-javascript-jquery:war:3.0.4">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/cometd/javascript/cometd-javascript-jquery/3.0.4/cometd-javascript-jquery-3.0.4.war!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/org/cometd/javascript/cometd-javascript-jquery/3.0.4/cometd-javascript-jquery-3.0.4-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/cometd/javascript/cometd-javascript-jquery/3.0.4/cometd-javascript-jquery-3.0.4-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

@@ -1,0 +1,1 @@
+connect.bat Quote IBM

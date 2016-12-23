@@ -1,0 +1,50 @@
+<h1 tags="QDS, architecture, transport, networking">QDS transport and networking</h1>
+
+<p>In the previous blog entry titled
+"<a href="http://www.dxfeed.com/blog/2011/12/5/introduction-into-qds-architecture.html">Introduction into QDS architecture</a>"
+I gave a short overview of the overall QDS design. Today I'll explain the basics of QDS transport and networking architecture.
+
+
+<p>QDS transport layer uses quite non-standard design. In a typical enterprise application that is built in layers, the presentation
+layer is built on top of a business logic layer, which is built on top of transport, communication, and storage layers. That is, logic
+typically depends on the transport layer. In QDS this dependency is inverted. Transport layer is built on top of QDS core logic
+and depends on it.
+
+<p><img style="display: block; margin-left: auto; margin-right: auto;"
+        src="qds-connectors.png" alt="QDS transport and networking" />
+
+<p>The are various <em>connectors</em> that transfer data over the network. Connectors may come in different flavors depending on the
+underlying protocols, means of establishing connection, or technologies they use: server or client, synchronous or asynchronous, unicast or multicast, TCP/IP, UDP, HTTP, etc.
+There's even a <em>file connector</em> that does not actually work over the network, but reads pre-recorded messages from a file.
+
+<p>Each connector is responsible for establishing connections, and delivery/reception of
+the underlying messages over the network. Typically, there are two different roles in the communication. On one side data provider
+receives subscription and sends data while communicating with the data receiver on the other side. Connector on the data provider
+side creates <em>agent</em> in the QDS core to manage subscription and filter data that pertains to this subscription. Connector on the
+data receiver side creates <em>distributor</em> in the QDS core to feed the incoming data into the core and collect subscription from the core.
+This data will be ultimately delivered for processing to the core agents in the data receiver node.
+
+<p>The actual connector code works with agents or distributors though a special adapter whose purpose is to convert internal QDS core
+API into the message-based API that is suitable for network communication. Thus, there are agent and distributor adapters.
+For example, a combination of <em>ServerSocketConnector</em> with <em>AgentAdapter</em> creates a data provider node that listens
+for incoming TCP/IP connections. On the other side, <em>ClientSocketConnector</em> with <em>DistributorAdapter</em> creates a data
+receiver that can connect to the data provider via TCP/IP protocol. However, while data receiver node typically establishes connection
+to the data provider, it does not have to be always this way. The transport architecture is fully flexible from deployment perspective,
+so that, for example, data providers can establish connection to a central data receiver node instead.
+
+<p>This flexible transport and networking architecture makes it easy to deploy a <em>multiplexor</em> node.
+
+<p><img style="display: block; margin-left: auto; margin-right: auto;"
+        src="qds-multiplexor.png" alt="QDS multiplexor node" />
+
+
+<p>QDS multiplexor node contains QDS core and at least two connectors &mdash; one for agents and one for distributors. Multiplexor
+works as data receiver and data provider at the same time. It collects subscription from multiple data receivers and collectors
+data from multiple data providers, delivering this data to each data receiver based on their subscription.
+
+
+
+
+
+
+

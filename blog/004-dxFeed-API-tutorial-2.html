@@ -1,0 +1,103 @@
+<head>
+<script type="text/javascript" src="scripts/shCore.js"></script>
+<script type="text/javascript" src="scripts/shBrushJava.js"></script>
+<link href="styles/shCore.css" rel="stylesheet" type="text/css" />
+<link href="styles/shThemeDefault.css" rel="stylesheet" type="text/css" />
+<style type="text/css">
+.syntaxhighlighter { overflow-y: hidden !important; }
+</style>
+</head>
+
+</head>
+
+<h1 tags="dxFeed API, tutorial">dxFeed API Tutorial. Part 2: Quotes and Trades</h1>
+
+<p>This tutorial explains
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/event/market/Quote.html">Quote</a>,
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/event/market/Trade.html">Trade</a>,
+and
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/event/market/TimeAndSale.html">TimeAndSale</a>
+events.
+
+<h2>Quotes</h1>
+
+A quote in dxFeed represents snapshot of the best (top of book) bid and ask prices, and other fields that change with each quote.
+It is encapsulated in dxFeed API <a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/event/market/Quote.html">Quote</a> object.
+Two most important properties of the quote are bid and ask prices that can be retrieved with
+the corresponding
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/event/market/Quote.html#getBidPrice()">getBidPrice</a>
+and
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/event/market/Quote.html#getAskPrice()">getAskPrice</a>
+methods.
+Quotes are disseminated by exchanges based on the best active orders in their book for a given market symbol.
+Bid price is the highest price of the order to buy, and ask price is the lowest price of the order to sell.
+The size of orders to buy at the highest price and the size of orders to sell at the lowest price
+can be retrieve with
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/event/market/Quote.html#getBidSize()">getBidSize</a>
+and
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/event/market/Quote.html#getAskSize()">getAskSize</a>
+methods. dxFeed keeps last known bid and ask prices when market for the corresponding instrument closes,
+but their sizes are set to zero before the new trading day starts to distinguish fresh quotes on the new trading day
+from the stale ones on the previous trading day.
+
+<p>All tradable instruments typically have quotes, but indices and indicators typically don't have them. There are exceptions, though.
+For example, mutual funds can be traded, but are usually not quoted and provide only their net asset value per share &mdash;
+the price they can be traded at.
+Some <a href="http://www.dxfeed.com/cboe-mdi-indexes/">CBOE MDI indices</a>
+like "SPX" (Standard & Poors 500) cannot be traded directly (only their derivatives can), but do include bid and ask price
+computed by CBOE. However, the size of those
+prices is set zero, because they do not represent real buy and sell orders on the exchange.
+
+<p>A common approach to pricing options and other instruments that don't trade often, but have active market markers
+who maintain a small spread between bid and ask price,
+is to take an average between bid and ask price and use it as a proxy
+for a true market price of an instrument. This is also known as mid price.
+
+<h2>Trades</h2>
+
+A trade happens when an order to buy meets an order to sell at the same price. Information about
+the last trade is encapsulated in dxFeed API
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/event/market/Trade.html">Trade</a> object.
+Its most important property, the price of the last trade, can be retrieved with
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/event/market/Trade.html#getPrice()">getPrice</a>
+method. The last trade price is often cited as the price for the stock and serves as a basis for an official
+closing price for stocks. You'd see it on sites like
+<a href="http://finance.yahoo.com">Yahoo Finance</a>
+and
+<a href="http://finance.google.com">Google Finance</a>.
+Note, that just like a quote, it is a
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/event/LastingEvent.html">lasting event</a>
+in dxFeed API and represents a snapshot of the last known information.
+It is used to display or to process the most recent data like the finance web-sites above.
+If the task is to process or to display a table of all trades,
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/event/market/TimeAndSale.html">TimeAndSale</a>
+event in dxFeed API shall be used.
+It provides a continuos stream of all trade-like events that exchange reports together with
+an original exchange-specific conditions.
+
+<p>The difference between Trade and TimeAndSale is highlighted in a case when trade is busted by exchange.
+In this case, TimeAndSale reports a separate
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/event/market/TimeAndSale.html#isCancel()">cancel</a> event
+that refers to the TimeAndSale event that was canceled. At the same time, Trade event is updated. If the canceled
+trade was the last trade, then the last trade price reverts to the price of the previous trade.
+
+<h2>Exchange codes</h2>
+
+In US markets listed stocks and options trade on multiple exchanges. Quotes and trades that dxFeed provides for
+the corresponding symbols like "YHOO" and "GOOG" represent NBBO (national best bid and offer) and consolidated
+trade feed, correspondingly. Each exchange has a character codes as explained in
+"<a href="http://www.dxfeed.com/downloads/documentation/dxFeed_Symbol_Guide.pdf">dxFeed Symbol Guide</a>". This
+code is available for bid, ask, and last trade prices via
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/event/market/Quote.html#getBidExchangeCode()">getBidExchangeCode</a>,
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/event/market/Quote.html#getAskExchangeCode()">getAskExchangeCode</a>,
+and
+<a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/event/market/Trade.html#getExchangeCode()">getExchangeCode</a>
+methods correspondingly.
+
+
+
+<p>
+<script type="text/javascript">
+     SyntaxHighlighter.all()
+</script>
+

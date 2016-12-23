@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ QDS - Quick Data Signalling Library
+  ~ Copyright (C) 2002-2016 Devexperts LLC
+  ~
+  ~ This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+  ~ If a copy of the MPL was not distributed with this file, You can obtain one at
+  ~ http://mozilla.org/MPL/2.0/.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>QD</artifactId>
+        <groupId>com.devexperts.qd</groupId>
+        <version>3.250</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>dxfeed-webservice</artifactId>
+    <packaging>war</packaging>
+
+    <properties>
+        <deploy.file>${project.artifactId}-${project.version}.war</deploy.file>
+        <deploy.prefix>${project.artifactId}</deploy.prefix>
+        <deploy.extension>war</deploy.extension>
+        <!-- public module - deploy to Maven repo  -->
+        <deploy.skip>false</deploy.skip>
+    </properties>
+
+    <dependencies>
+        <!-- dependencies on other modules -->
+        <dependency>
+            <groupId>com.devexperts.qd</groupId>
+            <artifactId>qds</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.devexperts.qd</groupId>
+            <artifactId>qds-monitoring</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.devexperts.qd</groupId>
+            <artifactId>dxfeed-ondemand</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.devexperts.qd</groupId>
+            <artifactId>dxfeed-api</artifactId>
+            <type>zip</type>
+            <classifier>xsd</classifier>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.devexperts.qd</groupId>
+            <artifactId>dxfeed-api</artifactId>
+            <type>jar</type>
+            <classifier>javadoc</classifier>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.devexperts.qd</groupId>
+            <artifactId>dxlib</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- external dependencies -->
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>${servlet-api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- external dependencies - cross-origins filter -->
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlets</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+        <!-- external dependencies - JSP stuff -->
+        <dependency>
+            <groupId>org.eclipse.jetty.orbit</groupId>
+            <artifactId>org.apache.jasper.glassfish</artifactId>
+            <version>${jasper-glassfish.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.eclipse.jetty.orbit</groupId>
+                    <artifactId>javax.servlet</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- external dependencies (included anyway) -->
+        <dependency>
+            <groupId>org.cometd.java</groupId>
+            <artifactId>bayeux-api</artifactId>
+            <version>${cometd.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.cometd.javascript</groupId>
+            <artifactId>cometd-javascript-jquery</artifactId>
+            <version>${cometd.version}</version>
+            <type>war</type>
+        </dependency>
+        <dependency>
+            <groupId>org.cometd.java</groupId>
+            <artifactId>cometd-java-server</artifactId>
+            <version>${cometd.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.cometd.java</groupId>
+            <artifactId>cometd-java-annotations</artifactId>
+            <version>${cometd.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.cometd.java</groupId>
+            <artifactId>cometd-java-websocket-javax-server</artifactId>
+            <version>${cometd.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-jdk14</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <!-- Jackson JSON -->
+        <dependency>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-databind</artifactId>
+          <version>${jackson.version}</version>
+        </dependency>
+        <!-- JAXB Reference Implementation (will use its features) -->
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-impl</artifactId>
+            <version>${jaxb.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Unpack cometd libraries -->
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>unpack-cometd-js</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.cometd.javascript</groupId>
+                                    <artifactId>cometd-javascript-jquery</artifactId>
+                                    <version>${cometd.version}</version>
+                                    <type>war</type>
+                                </artifactItem>
+                            </artifactItems>
+                            <includes>**/*.js</includes>
+                            <outputDirectory>${project.build.directory}/cometd-js</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Minify JS files -->
+            <plugin>
+                <groupId>com.samaxes.maven</groupId>
+                <artifactId>minify-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>minify-dxfeed</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>minify</goal>
+                        </goals>
+                        <configuration>
+                            <charset>utf-8</charset>
+                            <jsEngine>closure</jsEngine>
+                            <webappSourceDir>${project.basedir}</webappSourceDir>
+                            <jsSourceDir>/</jsSourceDir>
+                            <jsSourceFiles>
+                                <jsSourceFile>target/cometd-js/org/cometd.js</jsSourceFile>
+                                <jsSourceFile>target/cometd-js/jquery/jquery.cometd.js</jsSourceFile>
+                                <jsSourceFile>src/main/webapp/js/dxfeed/dxfeed.cometd.js</jsSourceFile>
+                            </jsSourceFiles>
+                            <jsTargetDir>js/min</jsTargetDir>
+                            <jsFinalFile>dxfeed.cometd.all.inc.js</jsFinalFile>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>minify-dxfeed-ui</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>minify</goal>
+                        </goals>
+                        <configuration>
+                            <charset>utf-8</charset>
+                            <jsEngine>closure</jsEngine>
+                            <webappSourceDir>${project.basedir}</webappSourceDir>
+                            <jsSourceDir>/</jsSourceDir>
+                            <jsSourceFiles>
+                                <jsSourceFile>target/cometd-js/org/cometd.js</jsSourceFile>
+                                <jsSourceFile>target/cometd-js/jquery/jquery.cometd.js</jsSourceFile>
+                                <jsSourceFile>src/main/webapp/js/dxfeed/dxfeed.cometd.js</jsSourceFile>
+                                <jsSourceFile>src/main/webapp/js/dxfeed/dxfeed-ui.qtable.js</jsSourceFile>
+                            </jsSourceFiles>
+                            <jsTargetDir>js/min</jsTargetDir>
+                            <jsFinalFile>dxfeed-ui.cometd.all.inc.js</jsFinalFile>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Precompile JSP files -->
+            <plugin>
+                <groupId>com.devexperts.qd</groupId>
+                <artifactId>jspc-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>precompile-jsps</id>
+                        <goals>
+                            <goal>jspc</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Generate WAR file -->
+            <plugin>
+                <artifactId>maven-war-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <addMavenDescriptor>false</addMavenDescriptor>
+                    </archive>
+                    <outputFileNameMapping>@{artifactId}@@{dashClassifier?}@.@{extension}@</outputFileNameMapping>
+                    <!-- take web.xml from jspc output -->
+                    <webXml>${project.build.directory}/web.xml</webXml>
+                    <overlays>
+                        <overlay>
+                            <groupId>org.cometd.javascript</groupId>
+                            <artifactId>cometd-javascript-jquery</artifactId>
+                            <includes>
+                                <include>**/*.js</include>
+                            </includes>
+                            <excludes>
+                                <exclude>jquery/jquery-2.1.3.js</exclude>
+                            </excludes>
+                            <targetPath>/js/cometd</targetPath>
+                        </overlay>
+                        <!-- overlay XSDs -->
+                        <overlay>
+                            <groupId>com.devexperts.qd</groupId>
+                            <artifactId>dxfeed-api</artifactId>
+                            <type>zip</type>
+                            <classifier>xsd</classifier>
+                            <includes>
+                                <include>*.xsd</include>
+                            </includes>
+                            <targetPath>/xsd</targetPath>
+                        </overlay>
+                        <!-- overlay javadoc -->
+                        <overlay>
+                            <groupId>com.devexperts.qd</groupId>
+                            <artifactId>dxfeed-api</artifactId>
+                            <type>jar</type>
+                            <classifier>javadoc</classifier>
+                            <targetPath>/javadoc</targetPath>
+                        </overlay>
+                    </overlays>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

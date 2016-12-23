@@ -1,0 +1,1 @@
+fileparser.bat demo-sample.data Quote IBM

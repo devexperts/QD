@@ -1,0 +1,165 @@
+/*
+ * QDS - Quick Data Signalling Library
+ * Copyright (C) 2002-2016 Devexperts LLC
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the MPL was not distributed with this file, You can obtain one at
+ * http://mozilla.org/MPL/2.0/.
+ */
+
+/* --- basic font style --- */
+
+* {
+    font-family: Verdana, Arial, sans-serif;
+    font-size: small;
+}
+
+h1 {
+    font-size: large;
+}
+
+/* --- panel style --- */
+
+.panel {
+    float: left;
+    clear: both;
+    margin: 0 0 10px 0;
+    padding: 0;
+}
+
+.panel > h2 {
+    margin: 0;
+    padding: 5px;
+    border: 1px solid #aaaaaa;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    font-weight: normal;
+    background: rgb(239, 239, 239);
+}
+
+.panel > div {
+    margin: 0;
+    padding: 8px;
+    border: 1px solid #aaaaaa;
+    border-top: 0;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    background: rgb(252, 252, 252);
+}
+
+/* --- forms style --- */
+
+label.type {
+    display: block;
+}
+
+/* --- dataTable style --- */
+
+.dataTable {
+    margin: 3px;
+}
+
+.dataTable, .dataTable th, .dataTable td {
+    border: 1px solid rgb(34, 34, 34);
+    border-collapse: collapse;
+}
+
+.dataTable th, .dataTable td.v, .dataTable td.dx-bound {
+    font-weight: normal;
+    padding: 2px;
+    min-width: 6em;
+}
+
+.dataTable td.v, .dataTable td.dx-bound {
+    text-align: right;
+}
+
+/* --- highlight/blinking --- */
+
+.highlight {
+    background: rgb(200, 200, 255);
+}
+
+.up {
+    color: rgb(50, 200, 50);
+}
+
+.down {
+    color: rgb(200, 50, 50);
+}
+
+/* --- up and down arrows with CSS borders --- */
+
+.up-arrow:after {
+    content: "";
+    width: 0;
+    height: 0;
+    position: relative;
+    top: -10px;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 5px solid rgb(50, 200, 50);
+}
+
+.down-arrow:after {
+    content: "";
+    width: 0;
+    height: 0;
+    position: relative;
+    top: 10px;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid rgb(200, 50, 50);
+}
+
+/* --- vertical alignment --- */
+
+.v-helper {
+    display: inline-block;
+    height: 100%;
+    vertical-align: middle;
+}
+
+/* --- close button for popups --- */
+
+a.close {
+    float: right;
+    text-decoration: none;
+    margin-left: 1em;
+}
+
+a.close:before {
+    content: "Close \2715"
+}
+
+/* --- two-column layout --- */
+
+div.left {
+    float: left;
+    width: 30%;
+    margin: 0;
+    padding: 0;
+}
+
+div.right {
+    float: left;
+    width: 70%;
+    margin: 0;
+    padding: 0;
+}
+
+div.right > div {
+    margin-left: 10px;
+}
+
+/* --- frames --- */
+
+iframe, .frame {
+    border: 1px solid #aaaaaa;
+    margin: 0;
+    background: white;
+}
+
+.frame {
+    padding: 8px;
+}

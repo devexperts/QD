@@ -1,0 +1,581 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ QDS - Quick Data Signalling Library
+  ~ Copyright (C) 2002-2016 Devexperts LLC
+  ~
+  ~ This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+  ~ If a copy of the MPL was not distributed with this file, You can obtain one at
+  ~ http://mozilla.org/MPL/2.0/.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.devexperts.qd</groupId>
+    <artifactId>QD</artifactId>
+    <packaging>pom</packaging>
+    <version>3.250</version>
+
+    <organization>
+        <name>Devexperts</name>
+        <url>http://www.devexperts.com</url>
+    </organization>
+
+    <modules>
+        <!-- main deliverable modules -->
+        <module>dxlib</module>
+        <module>mars</module>
+        <module>qds</module>
+        <module>qds-file</module>
+        <module>qds-monitoring</module>
+        <module>qds-tools</module>
+        <module>qd-dataextractor</module>
+        <module>dxfeed-api</module>
+        <module>dxfeed-promise</module>
+        <module>dxfeed-samples</module>
+        <module>dxfeed-viewer-installer</module>
+        <module>dxfeed-bin</module>
+        <module>dxfeed-webservice</module>
+        <module>dxfeed-news</module>
+
+        <!-- additional modules with deliverable JavaDocs (shaded into qds.jar) -->
+        <module>qd-core</module>
+
+        <!-- other modules shaded into qds.jar -->
+        <module>dxlib-qd-sandbox</module>
+        <module>auth</module>
+        <module>proto</module>
+        <module>qd-rmi</module>
+        <module>dxfeed-impl</module>
+        <module>dxfeed-ipf-filter</module>
+
+        <!-- modules shaded into qds-tools.jar -->
+        <module>proto-ssl</module>
+        <module>qd-logger</module>
+        <module>qd-nio</module>
+        <module>qd-servlet</module>
+        <module>qd-stripe</module>
+        <module>qd-tools</module>
+        <module>qd-samplecert</module>
+        <module>dxfeed-tools</module>
+
+        <!-- other (internal) modules -->
+        <module>mars-sample</module>
+        <module>proto-sample</module>
+        <module>dxfeed-codegen</module>
+        <module>qd-sample</module>
+        <module>license</module>
+        <module>rt-api-builder</module>
+        <module>teamcity-version</module>
+        <module>dxfeed-codegen-verify</module>
+        <module>dxfeed-viewer</module>
+        <module>dxfeed-ondemand</module>
+
+        <!-- plugins are special - they have their own version -->
+        <module>jspc-maven-plugin</module>
+        <module>dxfeed-plotter</module>
+    </modules>
+
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+            <version>${aspectj.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+            <version>3.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.devexperts.dgen</groupId>
+            <artifactId>dgen</artifactId>
+            <version>1.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.devexperts.timetest</groupId>
+            <artifactId>agent</artifactId>
+            <version>1.1.1</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.devexperts.qd</groupId>
+                    <artifactId>dxlib</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+    </dependencies>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.build.timestamp.format>yyyyMMdd-HHmm</maven.build.timestamp.format>
+
+        <!-- The branch dir is set to deploy snapshot and release file into a separate branch subdirectory -->
+        <deploy.branch.dir.suffix />
+
+        <!-- The staging directory where modules install their deliverable artifacts
+             during install phase.
+        -->
+        <install.dir>../target/install</install.dir>
+        <deploy.extension>zip</deploy.extension>
+        <!-- profiles declare "deploy.dir" property to define where artifacts are deployed
+             and "deploy.suffix" property to define the suffix for file names.
+             Modules declare "deploy.file" and "deploy.prefix" properties if their need
+             their artifact copies to "deploy.dir".
+             Modules may overwrite "deploy.extension" if needed.
+        -->
+        <!-- Internal modules set it to true  -->
+        <deploy.skip>false</deploy.skip>
+        <!-- Most modules don't produce javadoc -->
+        <javadoc.skip>true</javadoc.skip>
+
+        <!-- version of Jetty for all web and servlet modules -->
+        <jetty.version>9.2.9.v20150224</jetty.version>
+        <!-- need to be in sync with servlet-api -->
+        <servlet-api.version>3.1.0</servlet-api.version>
+        <!-- need to be in sync with jetty -->
+        <jasper-glassfish.version>2.1.0.v201110031002</jasper-glassfish.version>
+        <!-- versions of frameworks and libraries to use -->
+        <log4j.version>1.1.3</log4j.version>
+        <jackson.version>2.4.3</jackson.version>
+        <jaxb.version>2.2.7</jaxb.version>
+        <cometd.version>3.0.4</cometd.version>
+        <slf4j.version>1.7.10</slf4j.version>
+        <aspectj.version>1.8.2</aspectj.version>
+        <junit.version>4.12</junit.version>
+        <!-- same version as used by cometd above -->
+    </properties>
+
+    <profiles>
+        <!-- Define deployment location for SNAPSHOT  -->
+        <profile>
+            <id>snapshot-profile</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <deploy.dir>//JAZZ/QD/Snapshot${deploy.branch.dir.suffix}</deploy.dir>
+                <deploy.suffix>${project.version}-${maven.build.timestamp}</deploy.suffix>
+            </properties>
+        </profile>
+        <!-- Define regular deployment location for release  -->
+        <profile>
+            <id>release-profile</id>
+            <activation>
+                <property>
+                    <name>performRelease</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <properties>
+                <deploy.dir>//JAZZ/QD/Release${deploy.branch.dir.suffix}</deploy.dir>
+                <deploy.suffix>${project.version}</deploy.suffix>
+            </properties>
+            <build>
+                <!-- Add additional execution to deploy release to S3 maven repository -->
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-deploy-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>deploy-to-bintray</id>
+                                <phase>deploy</phase>
+                                <goals>
+                                    <goal>deploy</goal>
+                                </goals>
+                                <configuration>
+                                    <altDeploymentRepository>bintray-dxfeed::default::https://api.bintray.com/maven/dxfeed/Maven/QD/;publish=1</altDeploymentRepository>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>deploy-to-s3</id>
+                                <phase>deploy</phase>
+                                <goals>
+                                    <goal>deploy</goal>
+                                </goals>
+                                <configuration>
+                                    <altDeploymentRepository>s3-maven-dxfeed::default::s3://maven.dxfeed.com/release</altDeploymentRepository>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <build>
+        <plugins>
+            <!-- Compile at Java 1.5 level -->
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <fork>true</fork>
+                </configuration>
+            </plugin>
+            <!-- Don't add Maven descriptor to jars, but add default Implementation & Specification -->
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <addMavenDescriptor>false</addMavenDescriptor>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathLayoutType>custom</classpathLayoutType>
+                            <!-- don't include version into class-path attribute -->
+                            <customClasspathLayout>$${artifact.artifactId}$${dashClassifier?}.$${artifact.extension}</customClasspathLayout>
+                            <customClasspathLayout>$${artifact.artifactId}$${dashClassifier?}.$${artifact.extension}</customClasspathLayout>
+                        </manifest>
+                        <manifestEntries>
+                            <Implementation-Title>${project.name}</Implementation-Title>
+                            <Implementation-Version>${deploy.suffix}</Implementation-Version>
+                            <Implementation-Vendor>${project.organization.name}</Implementation-Vendor>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            <!-- Attach sources for all modules -->
+            <plugin>
+                <artifactId>maven-source-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Default configuration for JavaDoc plugin.
+                 Modules that need JavaDoc explicitly define JavaDoc plugin execution
+             -->
+            <plugin>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <tags>
+                        <tag>
+                            <name>dgen.annotate</name>
+                            <!-- for all places -->
+                            <placement>a</placement>
+                        </tag>
+                    </tags>
+                    <excludePackageNames>*.impl:*.impl.*</excludePackageNames>
+                    <author>false</author>
+                    <use>true</use>
+                    <links>
+                        <link>http://docs.oracle.com/javase/8/docs/api/</link>
+                    </links>
+                    <stylesheetfile>${basedir}/../css/stylesheet.css</stylesheetfile>
+                    <additionalparam>-Xdoclint:none</additionalparam>
+                    <skip>${javadoc.skip}</skip>
+                </configuration>
+            </plugin>
+            <!-- Configuration for release -->
+            <plugin>
+                <groupId>com.devexperts.jgitflow</groupId>
+                <artifactId>jgitflow-maven-plugin</artifactId>
+                <version>1.0-m5.1-devexperts</version>
+                <configuration>
+                    <autoVersionSubmodules>true</autoVersionSubmodules>
+                    <flowInitContext>
+                        <versionTagPrefix>qd-qds-</versionTagPrefix>
+                    </flowInitContext>
+                    <squash>true</squash>
+                    <scmCommentPrefix>[release] </scmCommentPrefix>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-release-plugin</artifactId>
+                <configuration>
+                    <autoVersionSubmodules>true</autoVersionSubmodules>
+                    <tagNameFormat>qd-qds-@{version}</tagNameFormat>
+                </configuration>
+            </plugin>
+            <!-- Enforce specific JVM version and plugin versions -->
+            <plugin>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <configuration>
+                    <rules>
+                        <DependencyConvergence />
+                        <requireJavaVersion>
+                            <!-- require 1.8 JDK for compilation -->
+                            <version>[1.8,1.9)</version>
+                        </requireJavaVersion>
+                        <requirePluginVersions>
+                            <message>Best Practice is to always define plugin versions!</message>
+                            <banLatest>true</banLatest>
+                            <banRelease>true</banRelease>
+                            <banSnapshots>true</banSnapshots>
+                        </requirePluginVersions>
+                    </rules>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Deployment is controlled by a property -->
+            <plugin>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <configuration>
+                    <skip>${deploy.skip}</skip>
+                </configuration>
+            </plugin>
+            <!-- custom stuff with antrun plugin to upload key artifacts   -->
+            <!-- it is used by modules that define "deploy.file" and "deploy.prefix" properties -->
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <!-- During install phase copy artifact to local install.dir -->
+                        <id>install-artifact-file</id>
+                        <phase>install</phase>
+                        <configuration>
+                            <target if="deploy.file">
+                                <mkdir dir="${install.dir}" />
+                                <!-- delete previous files from install dir -->
+                                <delete>
+                                    <fileset dir="${install.dir}" includes="${deploy.prefix}-*.${deploy.extension}" />
+                                </delete>
+                                <!-- copy new file to install dir -->
+                                <copy file="${project.build.directory}/${deploy.file}" tofile="${install.dir}/${deploy.prefix}-${deploy.suffix}.${deploy.extension}" />
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <!-- During deploy phase upload artifact from local install.dir to deploy.dir -->
+                        <id>deploy-artifact-file</id>
+                        <phase>deploy</phase>
+                        <configuration>
+                            <target if="deploy.file" unless="deploy.copy.skip">
+                                <mkdir dir="${deploy.dir}/old" />
+                                <!-- delete previous snapshots (keep releases!) from old dir -->
+                                <delete failonerror="false">
+                                    <fileset dir="${deploy.dir}/old" includes="${deploy.prefix}-*-SNAPSHOT-*.${deploy.extension}" />
+                                </delete>
+                                <!-- move previous file to old dir -->
+                                <move todir="${deploy.dir}/old" failonerror="false">
+                                    <fileset dir="${deploy.dir}" includes="${deploy.prefix}-*.${deploy.extension}" />
+                                </move>
+                                <!-- copy new file from install dir -->
+                                <copy file="${install.dir}/${deploy.prefix}-${deploy.suffix}.${deploy.extension}" tofile="${deploy.dir}/${deploy.prefix}-${deploy.suffix}.${deploy.extension}" failonerror="false" />
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.19.1</version>
+                <configuration>
+                    <skipAfterFailureCount>42</skipAfterFailureCount>
+                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                </configuration>
+            </plugin>
+            <!-- maven-dependency-plugin is used to copy "timetest" agent into target directory -->
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-timetest-agent</id>
+                        <phase>process-test-classes</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>com.devexperts.timetest</groupId>
+                                    <artifactId>agent</artifactId>
+                                    <version>1.1.1</version>
+                                    <outputDirectory>${project.build.directory}</outputDirectory>
+                                    <destFileName>timetest.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+
+        <!-- Define versions of all plugins -->
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <artifactId>maven-clean-plugin</artifactId>
+                    <version>2.4.1</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.1</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>2.19.1</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-assembly-plugin</artifactId>
+                    <version>2.3</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>2.4.3</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>2.4</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>2.1.2</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-deploy-plugin</artifactId>
+                    <version>2.7</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-antrun-plugin</artifactId>
+                    <version>1.8</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-scm-plugin</artifactId>
+                    <version>1.9.5</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-release-plugin</artifactId>
+                    <version>2.5.1</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <version>1.2</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>2.7</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-install-plugin</artifactId>
+                    <version>2.3.1</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-site-plugin</artifactId>
+                    <version>3.0</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>2.8.1</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-war-plugin</artifactId>
+                    <version>2.3</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>2.6</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-plugin-plugin</artifactId>
+                    <version>3.3</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.mortbay.jetty</groupId>
+                    <artifactId>jetty-maven-plugin</artifactId>
+                    <version>${jetty.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>com.samaxes.maven</groupId>
+                    <artifactId>minify-maven-plugin</artifactId>
+                    <version>1.6</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>jaxb2-maven-plugin</artifactId>
+                    <version>1.6</version>
+                </plugin>
+                <plugin>
+                    <groupId>com.devexperts.qd</groupId>
+                    <artifactId>jspc-maven-plugin</artifactId>
+                    <version>3.250</version>
+                </plugin>
+                <plugin>
+                    <groupId>com.devexperts.qd</groupId>
+                    <artifactId>dxfeed-codegen</artifactId>
+                    <version>${project.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
+        <!-- Define wagon extension for S3 support -->
+        <extensions>
+            <extension>
+                <groupId>org.springframework.build</groupId>
+                <artifactId>aws-maven</artifactId>
+                <version>5.0.0.RELEASE</version>
+            </extension>
+        </extensions>
+    </build>
+
+    <repositories>
+        <repository>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <id>bintray-devexperts</id>
+            <name>bintray</name>
+            <url>http://dl.bintray.com/devexperts/Maven</url>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <id>bintray-devexperts</id>
+            <name>bintray-plugins</name>
+            <url>http://dl.bintray.com/devexperts/Maven</url>
+        </pluginRepository>
+        <pluginRepository>
+            <id>qd</id>
+            <url>https://maven.in.devexperts.com/content/repositories/qd/</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <scm>
+        <url>https://stash.in.devexperts.com/scm/mdd/qd.git</url>
+        <connection>scm:git:ssh://git@stash.in.devexperts.com:7999/mdd/qd.git</connection>
+	  <tag>HEAD</tag>
+  </scm>
+
+    <distributionManagement>
+        <repository>
+            <id>qd</id>
+            <url>https://maven.in.devexperts.com/content/repositories/qd/</url>
+        </repository>
+        <snapshotRepository>
+            <id>qd-snapshot</id>
+            <url>https://maven.in.devexperts.com/content/repositories/qd-snapshot/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+</project>

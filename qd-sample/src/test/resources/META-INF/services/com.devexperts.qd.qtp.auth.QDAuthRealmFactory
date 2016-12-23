@@ -1,0 +1,5 @@
+com.devexperts.rmi.test.auth.AuthFactory
+com.devexperts.rmi.samples.SampleAuthFactory
+com.devexperts.rmi.test.auth.AuthorizationTest$CloseCountAuthRealmFactory
+com.devexperts.rmi.test.auth.AuthorizationTest$RepeatAuthRealmFactory
+com.devexperts.rmi.test.auth.AuthorizationTest$FixedUsersAuthRealmFactory
