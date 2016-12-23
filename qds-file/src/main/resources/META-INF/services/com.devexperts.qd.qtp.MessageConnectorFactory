@@ -1,0 +1,2 @@
+com.devexperts.qd.qtp.file.FileConnectorFactory
+com.devexperts.qd.qtp.file.TapeConnectorFactory

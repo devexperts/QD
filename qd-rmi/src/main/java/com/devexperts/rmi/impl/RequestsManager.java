@@ -1,0 +1,106 @@
+/*
+ * QDS - Quick Data Signalling Library
+ * Copyright (C) 2002-2016 Devexperts LLC
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the MPL was not distributed with this file, You can obtain one at
+ * http://mozilla.org/MPL/2.0/.
+ */
+package com.devexperts.rmi.impl;
+
+import java.util.List;
+import javax.annotation.Nullable;
+
+import com.devexperts.logging.Logging;
+import com.devexperts.rmi.task.RMIServiceDescriptor;
+
+/**
+ * The client side of {@link RMIConnection}.
+ */
+class RequestsManager {
+	private static final Logging log = Logging.getLogging(RequestsManager.class);
+
+	private final OutgoingRequests outgoingRequests;
+	private final SentRequests sentRequests = new SentRequests();
+
+	private final RMIConnection connection;
+	// "true" when this connection is anonymous / legacy (not service descriptors are sent from the other side)
+	// assume anonymous (just in case) until describe protocol receive
+	private volatile boolean anonymous = true;
+
+	RequestsManager(RMIConnection connection) {
+		this.connection = connection;
+		outgoingRequests = new OutgoingRequests(connection.configuredServices);
+	}
+
+	void setAnonymousOnDescribeProtocol(boolean anonymous) {
+		this.anonymous = anonymous;
+		if (anonymous && connection.side.hasClient())
+			connection.endpoint.getClient().updateServiceDescriptors(null, connection);
+	}
+
+	public boolean isAnonymous() {
+		return anonymous;
+	}
+
+	//------------------------------ SentRequests methods ------------------------------
+
+	void addSentRequest(RMIRequestImpl<?> request) {
+		sentRequests.addSentRequest(request);
+	}
+
+	//if channelId = 0 => top-level request
+	RMIRequestImpl<?> removeSentRequest(long channelId, long curId, RMIMessageKind kind) {
+		return sentRequests.removeSentRequest(channelId, curId, kind);
+	}
+
+	RMIRequestImpl<?>[] getSentRequests(RMIRequestImpl<?>[] requests) {
+		return sentRequests.getSentRequests(requests);
+	}
+
+	//------------------------------ OutgoingRequests methods ------------------------------
+
+	// returns false if connection was already closed
+
+	// invoked under either RMIClientImpl.services lock or under RMIChannelImpl lock
+	void addOutgoingRequest(RMIRequestImpl<?> request) {
+		if (connection.closed)
+			return;
+		if (anonymous)
+			request.setTentativeTarget(null);
+		if (RMIEndpointImpl.RMI_TRACE_LOG)
+			log.trace("Add outgoing request " + request + " to " + connection);
+		request.assignConnection(connection);
+		outgoingRequests.add(request);
+		connection.messageAdapter.rmiMessageAvailable(RMIQueueType.REQUEST);
+	}
+
+	// descriptors are null when need to rebalanced anonymous connections only
+	@Nullable List<RMIRequestImpl<?>> getByDescriptorsAndRemove(@Nullable List<RMIServiceDescriptor> descriptors) {
+		if (descriptors == null && !anonymous)
+			return null;
+		return outgoingRequests.getByDescriptorsAndRemove(descriptors);
+	}
+
+	RMIRequestImpl<?> pollOutgoingRequest() {
+		return outgoingRequests.poll();
+	}
+
+	int outgoingRequestSize() {
+		return outgoingRequests.size();
+	}
+
+	boolean removeOutgoingRequest(RMIRequestImpl<?> request) {
+		return outgoingRequests.remove(request);
+	}
+
+	RMIRequestImpl<?>[] getOutgoingRequests(RMIRequestImpl<?>[] requests) {
+		return outgoingRequests.getRequests(requests);
+	}
+
+	//------------------------------ common methods ------------------------------
+
+	void close() {
+		sentRequests.close();
+	}
+}

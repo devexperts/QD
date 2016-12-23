@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding" useUTFGuessing="true" native2AsciiForPropertiesFiles="false">
+    <file url="file://$PROJECT_DIR$" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/auth" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxfeed-api" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxfeed-bin" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxfeed-codegen" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxfeed-codegen-verify" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxfeed-impl" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxfeed-ipf-filter" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxfeed-news" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxfeed-ondemand" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxfeed-plotter" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxfeed-promise" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxfeed-samples" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxfeed-tools" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxfeed-tos" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxfeed-viewer" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxfeed-viewer-installer" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxfeed-webservice" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxlib" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxlib-qd-sandbox" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/jspc-maven-plugin" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/license" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/mars" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/mars-sample" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/proto" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/proto-sample" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/proto-ssl" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qd-core" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qd-dataextractor" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qd-logger" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qd-nio" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qd-rmi" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qd-sample" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qd-samplecert" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qd-servlet" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qd-stripe" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qd-tools" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qds" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qds-file" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qds-monitoring" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/qds-tools" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/rt-api-builder" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/teamcity-version" charset="UTF-8" />
+    <file url="PROJECT" charset="UTF-8" />
+  </component>
+</project>

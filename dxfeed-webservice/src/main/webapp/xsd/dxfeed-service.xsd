@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  ~ QDS - Quick Data Signalling Library
+  ~ Copyright (C) 2002-2016 Devexperts LLC
+  ~
+  ~ This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+  ~ If a copy of the MPL was not distributed with this file, You can obtain one at
+  ~ http://mozilla.org/MPL/2.0/.
+  -->
+<xs:schema version="1.0" targetNamespace="http://schema.dxfeed.com/event" xmlns:tns="http://schema.dxfeed.com/event" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <xs:include schemaLocation="dxfeed-event.xsd"/>
+
+  <xs:element name="events" type="tns:events"/>
+
+  <xs:complexType name="events">
+    <xs:sequence>
+      <xs:any processContents="lax" namespace="http://schema.dxfeed.com/event" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="status" type="tns:events-status"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="events-status">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="OK"/>
+      <xs:enumeration value="TIMED_OUT"/>
+      <xs:enumeration value="NOT_SUBSCRIBED"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="subResponse" type="tns:subResponse"/>
+
+  <xs:complexType name="subResponse">
+    <xs:sequence>
+      <xs:element name="status" type="tns:subResponse-status"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="subResponse-status">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="OK"/>
+      <xs:enumeration value="SESSION_NOT_FOUND"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

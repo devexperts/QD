@@ -1,0 +1,4 @@
+com.dxfeed.event.market.MarketFactoryImpl
+com.dxfeed.event.candle.CandleFactoryImpl
+com.dxfeed.event.misc.MiscFactoryImpl
+com.dxfeed.event.option.OptionFactoryImpl

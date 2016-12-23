@@ -1,0 +1,1 @@
+java -jar lib\dxfeed-viewer.jar %*

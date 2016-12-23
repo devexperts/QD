@@ -1,0 +1,34 @@
+Specification of DXP Protocol.
+
+DXP is a message-oriented encapsulation protocol. It multiplexes
+various messages into a single byte stream for transfer over TCP/IP,
+HTTP, or for storage in files.
+
+DXP protocol stream is a sequence of messages. Each message has the
+following format:
+
+message_length :: COMPACT_INT          // message length in bytes
+message_body   :: byte[message_length] // message body
+
+Message length MUST NOT be negative. Connection SHOULD be dropped if
+negative message length is encountered.
+
+Zero message length is used as a one-byte heart-beat indicator
+(message body is empty) and MUST be skipped.
+
+When message length is positive, then message body has the following
+format:
+
+message_type   :: COMPACT_INT          // message type
+... followed by the rest of the message up to message_length
+
+The following two messages types are part of DXP amd MUST be always
+supported. Others application-specific.
+
+MESSAGE_HEARTBEAT         = 0
+MESSAGE_DESCRIBE_PROTOCOL = 1
+
+HEARTBEAT messages MUST be ignored.
+
+DESCRIBE_PROTOCOL message defines other message type that are being
+transferred in this stream. See "DESCRIBE_PROTOCOL.TXT"

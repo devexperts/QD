@@ -1,0 +1,68 @@
+/*
+ * QDS - Quick Data Signalling Library
+ * Copyright (C) 2002-2016 Devexperts LLC
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ * If a copy of the MPL was not distributed with this file, You can obtain one at
+ * http://mozilla.org/MPL/2.0/.
+ */
+package com.devexperts.rmi.message;
+
+import com.devexperts.io.*;
+import com.devexperts.rmi.*;
+import com.devexperts.rmi.impl.RMIRequestImpl;
+
+/**
+ * This immutable class encapsulated a failed competition response with <b>exceptionType</b>,
+ * <b>exceptionMessage</b>, and <b>exception</b> attributes.
+ * Marshalled form for this class using a strategy {@link RMIExceptionMarshaller}
+ * @see RMIRequestImpl
+ */
+public final class RMIErrorMessage extends RMIResponseMessage {
+
+	/**
+	 * Returns a specialized strategy to marshall {@link RMIException} instances.
+	 * @return a specialized strategy to marshall {@link RMIException} instances.
+	 */
+	public static Marshaller<RMIException> getExceptionMarshaller() {
+		return RMIExceptionMarshaller.INSTANCE;
+	}
+
+	/**
+	 * Creates error message.
+	 *
+	 * @param exceptionType exception type
+	 * @param cause <code>RMIException</code> cause
+	 * @param route route message. If the error was caused by the current {@link RMIEndpoint},
+	 * the route should be {@code null}
+	 * @throws MarshallingException if object cannot be converted to byte representation
+	 */
+	public RMIErrorMessage(RMIExceptionType exceptionType, Throwable cause, RMIRoute route) {
+		super(Marshalled.forObject(new RMIException(exceptionType, cause), getExceptionMarshaller()),
+			RMIResponseType.ERROR, route);
+		if (exceptionType == null)
+			throw new NullPointerException();
+	}
+
+	/**
+	 * Creates error message. It has to be marshalled with {@link #getExceptionMarshaller() exception marshaller}.
+	 *
+	 * @param exception exception in Marshalled form
+	 * @param route route message.
+	 * @throws IllegalArgumentException when exception's {@link Marshalled#getMarshaller() marshaller} is
+	 *            different from {@link #getExceptionMarshaller() exception marshaller}.
+	 */
+	public RMIErrorMessage(Marshalled<RMIException> exception, RMIRoute route) {
+		super(exception, RMIResponseType.ERROR, route);
+		if (exception.getMarshaller() != getExceptionMarshaller())
+			throw new IllegalArgumentException("used an incorrect marshaller");
+	}
+
+	@Override
+	public String toString() {
+		return "{" +
+			"error=" + getMarshalledResult() +
+			", route=" + route +
+			'}';
+	}
+}

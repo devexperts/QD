@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <option name="DEFAULT_COMPILER" value="Javac" />
+    <resourceExtensions>
+      <entry name=".+\.(properties|xml|html|dtd|tld)" />
+      <entry name=".+\.(gif|png|jpeg|jpg)" />
+    </resourceExtensions>
+    <wildcardResourcePatterns>
+      <entry name="!*.java" />
+    </wildcardResourcePatterns>
+    <annotationProcessing>
+      <profile default="true" name="Default" enabled="false">
+        <processorPath useClasspath="true" />
+      </profile>
+      <profile default="false" name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="true" />
+        <module name="auth" />
+        <module name="dxfeed-api" />
+        <module name="dxfeed-impl" />
+        <module name="dxfeed-ipf-filter" />
+        <module name="dxfeed-news" />
+        <module name="dxfeed-ondemand" />
+        <module name="dxfeed-plotter" />
+        <module name="dxfeed-promise" />
+        <module name="dxfeed-samples" />
+        <module name="dxfeed-tools" />
+        <module name="dxfeed-viewer" />
+        <module name="dxfeed-webservice" />
+        <module name="dxlib" />
+        <module name="dxlib-qd-sandbox" />
+        <module name="jspc-maven-plugin" />
+        <module name="license" />
+        <module name="mars" />
+        <module name="mars-sample" />
+        <module name="proto" />
+        <module name="proto-sample" />
+        <module name="proto-ssl" />
+        <module name="qd-core" />
+        <module name="qd-dataextractor" />
+        <module name="qd-logger" />
+        <module name="qd-nio" />
+        <module name="qd-rmi" />
+        <module name="qd-sample" />
+        <module name="qd-samplecert" />
+        <module name="qd-servlet" />
+        <module name="qd-stripe" />
+        <module name="qd-tools" />
+        <module name="qds" />
+        <module name="qds-file" />
+        <module name="qds-monitoring" />
+        <module name="qds-tools" />
+        <module name="rt-api-builder" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="auth" target="1.8" />
+      <module name="dxfeed-api" target="1.8" />
+      <module name="dxfeed-bin" target="1.8" />
+      <module name="dxfeed-codegen" target="1.8" />
+      <module name="dxfeed-codegen-verify" target="1.8" />
+      <module name="dxfeed-impl" target="1.8" />
+      <module name="dxfeed-ipf-filter" target="1.8" />
+      <module name="dxfeed-news" target="1.8" />
+      <module name="dxfeed-ondemand" target="1.8" />
+      <module name="dxfeed-plotter" target="1.8" />
+      <module name="dxfeed-promise" target="1.8" />
+      <module name="dxfeed-samples" target="1.8" />
+      <module name="dxfeed-tools" target="1.8" />
+      <module name="dxfeed-tos" target="1.8" />
+      <module name="dxfeed-viewer" target="1.8" />
+      <module name="dxfeed-viewer-installer" target="1.8" />
+      <module name="dxfeed-webservice" target="1.8" />
+      <module name="dxlib" target="1.8" />
+      <module name="dxlib-qd-sandbox" target="1.8" />
+      <module name="jspc-maven-plugin" target="1.8" />
+      <module name="license" target="1.8" />
+      <module name="mars" target="1.8" />
+      <module name="mars-sample" target="1.8" />
+      <module name="proto" target="1.8" />
+      <module name="proto-sample" target="1.8" />
+      <module name="proto-ssl" target="1.8" />
+      <module name="QD" target="1.8" />
+      <module name="qd-core" target="1.8" />
+      <module name="qd-dataextractor" target="1.8" />
+      <module name="qd-logger" target="1.8" />
+      <module name="qd-nio" target="1.8" />
+      <module name="qd-rmi" target="1.8" />
+      <module name="qd-sample" target="1.8" />
+      <module name="qd-samplecert" target="1.8" />
+      <module name="qd-servlet" target="1.8" />
+      <module name="qd-stripe" target="1.8" />
+      <module name="qd-tools" target="1.8" />
+      <module name="qds" target="1.8" />
+      <module name="qds-file" target="1.8" />
+      <module name="qds-monitoring" target="1.8" />
+      <module name="qds-tools" target="1.8" />
+      <module name="rt-api-builder" target="1.8" />
+      <module name="teamcity-version" target="1.8" />
+    </bytecodeTargetLevel>
+  </component>
+  <component name="EclipseCompilerSettings">
+    <option name="GENERATE_NO_WARNINGS" value="true" />
+    <option name="DEPRECATION" value="false" />
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_STRING" value="-source 1.8  -bootclasspath C:\Projects\QD.svn\lib\java-1.8-rt-api.jar" />
+    <option name="MAXIMUM_HEAP_SIZE" value="512" />
+  </component>
+</project>

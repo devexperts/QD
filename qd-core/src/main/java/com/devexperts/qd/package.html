@@ -1,0 +1,32 @@
+<!--
+  ~ QDS - Quick Data Signalling Library
+  ~ Copyright (C) 2002-2016 Devexperts LLC
+  ~
+  ~ This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+  ~ If a copy of the MPL was not distributed with this file, You can obtain one at
+  ~ http://mozilla.org/MPL/2.0/.
+  -->
+<body>
+This package contains basic interfaces and other API elements of QD system
+which shall be sufficient for the client application programmer.
+<p>
+The general API of QD falls into several categories:
+<ul>
+<li><b>Data definition API.</b> It includes {@link com.devexperts.qd.DataIntField}, {@link com.devexperts.qd.DataObjField},
+{@link com.devexperts.qd.DataRecord}, {@link com.devexperts.qd.DataScheme} and {@link com.devexperts.qd.SymbolCodec} (with {@link com.devexperts.qd.SymbolReceiver}).
+<li><b>Data transfer API.</b> It includes {@link com.devexperts.qd.DataIterator}, {@link com.devexperts.qd.DataVisitor},
+{@link com.devexperts.qd.DataConsumer}, {@link com.devexperts.qd.DataProvider} (with {@link com.devexperts.qd.DataListener}) and {@link com.devexperts.qd.DataBuffer}.
+<li><b>Subscription transfer API.</b> It includes {@link com.devexperts.qd.SubscriptionIterator}, {@link com.devexperts.qd.SubscriptionVisitor},
+{@link com.devexperts.qd.SubscriptionConsumer}, {@link com.devexperts.qd.SubscriptionProvider} (with {@link com.devexperts.qd.SubscriptionListener}) and {@link com.devexperts.qd.SubscriptionBuffer}.
+<li><b>Subscription filtering API.</b> It includes {@link com.devexperts.qd.SubscriptionFilter}.
+<li><b>Consumer representation API.</b> It includes {@link com.devexperts.qd.QDAgent}.
+<li><b>Provider representation API.</b> It includes {@link com.devexperts.qd.QDDistributor}.
+<li><b>QD component API.</b> It includes {@link com.devexperts.qd.QDCollector},
+{@link com.devexperts.qd.QDTicker}, {@link com.devexperts.qd.QDStream}, {@link com.devexperts.qd.QDHistory} and {@link com.devexperts.qd.QDFactory}.
+</ul>
+The specific APIs of QD required to create and operate specific subsystems
+are defined in other packages.
+<p>
+Most APIs have default implementations for common cases; these are placed according
+to their classification. See individual packages for details.
+</body>

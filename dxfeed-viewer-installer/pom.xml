@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ QDS - Quick Data Signalling Library
+  ~ Copyright (C) 2002-2016 Devexperts LLC
+  ~
+  ~ This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+  ~ If a copy of the MPL was not distributed with this file, You can obtain one at
+  ~ http://mozilla.org/MPL/2.0/.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<parent>
+		<artifactId>QD</artifactId>
+		<groupId>com.devexperts.qd</groupId>
+		<version>3.250</version>
+		<relativePath>../pom.xml</relativePath>
+	</parent>
+	<modelVersion>4.0.0</modelVersion>
+
+	<artifactId>dxfeed-viewer-installer</artifactId>
+	<packaging>pom</packaging>
+
+	<properties>
+		<deploy.skip>true</deploy.skip>
+	</properties>
+
+	<profiles>
+		<profile>
+			<id>install4j</id>
+			<activation>
+				<property>
+					<name>install4j</name>
+				</property>
+			</activation>
+
+			<dependencies>
+				<dependency>
+					<groupId>com.devexperts.qd</groupId>
+					<artifactId>dxfeed-viewer</artifactId>
+					<version>${project.version}</version>
+				</dependency>
+			</dependencies>
+
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-dependency-plugin</artifactId>
+
+						<executions>
+							<execution>
+								<id>unpack-resources</id>
+								<phase>generate-resources</phase>
+								<goals>
+									<goal>unpack-dependencies</goal>
+								</goals>
+
+								<configuration>
+									<classifier>assembly</classifier>
+									<type>zip</type>
+									<includeArtifactIds>dxfeed-viewer</includeArtifactIds>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+					<plugin>
+						<groupId>com.google.code.maven-install4j</groupId>
+						<artifactId>maven-install4j-plugin</artifactId>
+						<version>0.1.1</version>
+						<executions>
+							<execution>
+								<phase>compile</phase>
+								<goals>
+									<goal>compile</goal>
+								</goals>
+							</execution>
+						</executions>
+						<configuration>
+							<executable>${install4j}</executable>
+							<configFile>${basedir}/viewer.install4j</configFile>
+							<releaseId>${project.version}</releaseId>
+
+							<attach>false</attach>
+							<skipOnMissingExecutable>true</skipOnMissingExecutable>
+
+							<compilerVariables>
+								<property>
+									<name>version</name>
+									<value>${project.version}</value>
+								</property>
+							</compilerVariables>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+
+			<pluginRepositories>
+				<pluginRepository>
+					<id>googlecode-maven-install4j</id>
+					<name>googlecode-maven-install4j</name>
+					<url>http://maven-install4j.googlecode.com/svn/m2-repo</url>
+				</pluginRepository>
+			</pluginRepositories>
+		</profile>
+	</profiles>
+</project>

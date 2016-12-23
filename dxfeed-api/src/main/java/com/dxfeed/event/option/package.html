@@ -1,0 +1,103 @@
+<!--
+  ~ QDS - Quick Data Signalling Library
+  ~ Copyright (C) 2002-2016 Devexperts LLC
+  ~
+  ~ This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+  ~ If a copy of the MPL was not distributed with this file, You can obtain one at
+  ~ http://mozilla.org/MPL/2.0/.
+  -->
+<html>
+<body>
+Provides option-related market event classes.
+
+<h3><a name="model">The model</a></h3>
+
+<p>European call and put options of the same series and strike satisfy call-put parity equality of the following form:
+    \[ C - P = {U \over Q(\tau) + 1} - {K \over R(\tau) + 1} \]
+where:
+<ul>
+  <li> \( C \) is the call option price;</li>
+  <li> \( P \) is the corresponding put option price;</li>
+  <li> \( U \) is the underlying price;</li>
+  <li> \( K \) is the strike price;</li>
+  <li> \( Q(\tau) \) is the simple dividend return during the duration \(\tau\) of the option;</li>
+  <li> \( R(\tau) \) is the simple interest (risk-free) return during the duration \(\tau\) of the option.</li>
+</ul>
+
+<p>Non-standard or adjusted options
+(when the number of underlying deliverables per contract is different from the option price dollar value multiplier)
+strike price and/or option prices may be represented in different units that underlying price. For the purposes of
+the above formulae both strike price, call price, and put price has to be represented in the same units as the
+underlying price using an appropriate additional multipliers.
+
+<p>Here, the simple dividend return and interest return are related to the
+annualized continuously compounded dividend yield \(q\) and
+the annualized continuously compounded interest rate \(r\) via the following formulae:
+    \[ Q(\tau) = e^{q \tau} - 1 \]
+    \[ R(\tau) = e^{r \tau} - 1 \]
+where \(\tau\) is the duration of the option represented in fractions of a year.
+
+<h4>Forward price and cost of carry</h4>
+
+Forward price of the underlying \( F \) can be expressed in the terms of simple returns \( Q(\tau) \) and \( R(\tau) \):
+
+    \[ F = { R(\tau) + 1 \over Q(\tau) + 1 } U = e^{(r - q) \tau} U = e^{b \tau} U \]
+
+Here \(b\) is an annualized continuously compounded cost of carry which relates to dividend yield \(q\) and
+interest rate \(r\) via the following formula:
+
+    \[ b = r - q \]
+
+The discount factor \(D\) that ties underlying price to forward prices as \( U = D F \) can be expressed as:
+
+    \[ D = { Q(\tau) + 1 \over  R(\tau) + 1 } = e^{-b \tau} \]
+
+<h4>Futures as underlying</h4>
+
+Theoretically futures underlyings have zero cost of carry, so for an options on futures \( q = r \) and,
+correspondingly \( Q(\tau) = R(\tau) \) and \( U = F \).
+
+<h4>Black-Scholes</h4>
+
+<p>Black-Scholes formula can be directly expressed in the terms of simple returns \( Q(\tau) \) and \( R(\tau) \)
+    \[ C =  {U N(d_+) \over Q(\tau) + 1} - {K N(d_-) \over R(\tau) + 1}   = e^{-r \tau} (F N(d_+) - K N(d_-)) \]
+    \[ P =  {K N(-d_-) \over R(\tau) + 1} - {U N(-d_+) \over Q(\tau) + 1} = e^{-r \tau} (K N(-d_-) - F N(-d_+)) \]
+    \[ d_\pm = {1 \over \sigma(\tau)} ln \left[ {U (R(\tau) + 1) \over K (Q(\tau) + 1)} \right] \pm {1 \over 2} \sigma(\tau)
+             = {1 \over \sigma(\tau)} ln \left[ {F \over K } \right] \pm {1 \over 2} \sigma(\tau) \]
+where:
+<ul>
+  <li> \( N(\cdot) \) is the cumulative normal distribution function;</li>
+  <li>\( \sigma(\tau) \) is the time-depended Black-Scholes volatility of an option.</li>
+</ul>
+Here, the time-depended volatility \( \sigma(\tau) \) is related to the annualized volatility \(\sigma\) via a simple formula:
+    \[ \sigma(\tau) = \sigma \sqrt{\tau} \]
+
+<h4>Implied rates</h4>
+
+<p>Implied \( Q(\tau) \) and \( R(\tau) \) are computed by dxPrice for each option series and are distributed
+in {@link com.dxfeed.event.option.TheoPrice TheoPrice} event for each option and
+in {@link com.dxfeed.event.option.Series Series} event for each option series.
+Both of these values are not necessarily non-negative, because they represent a mix
+of different factors and correspond to effective dividends and interests experienced by option market makers,
+while include such factors as cost of carry for both the underlying instrument and for the underlying currency.</p>
+
+<p>Implied simple dividend rate \( Q(\tau) \) and interest rate \( R(\tau) \) are available via
+{@link com.dxfeed.event.option.TheoPrice#getDividend() TheoPrice.getDividend} and
+{@link com.dxfeed.event.option.TheoPrice#getInterest() TheoPrice.getInterest} or
+{@link com.dxfeed.event.option.Series#getDividend() Series.getDividend} and
+{@link com.dxfeed.event.option.Series#getInterest() Series.getInterest}
+methods correspondingly.
+
+<h4>American options</h4>
+
+<p>Call-put parity for American options is an inequality of the following form:
+    \[ C - P \ge U  - K  \]
+
+<p>Implied simple dividend return \( Q(\tau) \) and simple interest return \( R(\tau) \) are considered to be zero for
+American options.
+
+<script type="text/javascript"
+  src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML">
+</script>
+</body>
+</html>

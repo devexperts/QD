@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ QDS - Quick Data Signalling Library
+  ~ Copyright (C) 2002-2016 Devexperts LLC
+  ~
+  ~ This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+  ~ If a copy of the MPL was not distributed with this file, You can obtain one at
+  ~ http://mozilla.org/MPL/2.0/.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<parent>
+		<artifactId>QD</artifactId>
+		<groupId>com.devexperts.qd</groupId>
+		<version>3.250</version>
+	</parent>
+	<modelVersion>4.0.0</modelVersion>
+
+	<artifactId>qd-dataextractor</artifactId>
+	<packaging>war</packaging>
+
+	<properties>
+		<deploy.file>${project.artifactId}-${project.version}.war</deploy.file>
+		<deploy.prefix>${project.artifactId}</deploy.prefix>
+		<deploy.extension>war</deploy.extension>
+		<!-- public module - deploy to Maven repo  -->
+		<deploy.skip>false</deploy.skip>
+	</properties>
+
+	<dependencies>
+		<!-- dependencies on other modules -->
+		<dependency>
+			<groupId>com.devexperts.qd</groupId>
+			<artifactId>qds</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.devexperts.qd</groupId>
+			<artifactId>qds-file</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.devexperts.qd</groupId>
+			<artifactId>qds-monitoring</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<!-- external dependencies (provided) -->
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>${servlet-api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- external dependencies (included for tomcat) -->
+		<dependency>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-servlets</artifactId>
+			<version>${jetty.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.jetty.orbit</groupId>
+			<artifactId>org.apache.jasper.glassfish</artifactId>
+			<version>${jasper-glassfish.version}</version>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>com.devexperts.qd</groupId>
+				<artifactId>jspc-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>precompile-jsps</id>
+						<goals>
+							<goal>jspc</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<artifactId>maven-war-plugin</artifactId>
+				<configuration>
+					<archive>
+						<addMavenDescriptor>false</addMavenDescriptor>
+					</archive>
+					<outputFileNameMapping>@{artifactId}@@{dashClassifier?}@.@{extension}@</outputFileNameMapping>
+					<!-- take web.xml from jspc output -->
+					<webXml>${project.build.directory}/web.xml</webXml>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+</project>

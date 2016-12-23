@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="com.dxfeed.plotter.DXFeedMarketDataPlotter">
+  <tabbedpane id="f6cee" binding="tabbedPane">
+    <constraints>
+      <xy x="20" y="20" width="663" height="533"/>
+    </constraints>
+    <properties/>
+    <border type="none"/>
+    <children>
+      <grid id="49f86" layout-manager="GridBagLayout">
+        <constraints>
+          <tabbedpane title="Default view"/>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <grid id="b2ea7" layout-manager="GridBagLayout">
+            <constraints>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+              <gridbag weightx="1.0" weighty="1.0"/>
+            </constraints>
+            <properties/>
+            <border type="none"/>
+            <children>
+              <grid id="27dc6" binding="form" layout-manager="BorderLayout" hgap="0" vgap="0">
+                <constraints>
+                  <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                  <gridbag weightx="1.0" weighty="1.0"/>
+                </constraints>
+                <properties/>
+                <border type="none"/>
+                <children>
+                  <grid id="3c266" layout-manager="GridBagLayout">
+                    <constraints border-constraint="South"/>
+                    <properties/>
+                    <border type="none"/>
+                    <children>
+                      <grid id="10591" layout-manager="GridBagLayout">
+                        <constraints>
+                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="8" fill="2" indent="0" use-parent-layout="false"/>
+                          <gridbag weightx="6.0" weighty="0.0"/>
+                        </constraints>
+                        <properties>
+                          <toolTipText value="Feed address"/>
+                        </properties>
+                        <border type="none"/>
+                        <children>
+                          <component id="d99fb" class="javax.swing.JToolBar$Separator">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                              <gridbag weightx="0.0" weighty="0.0"/>
+                            </constraints>
+                            <properties/>
+                          </component>
+                          <component id="93cfd" class="javax.swing.JLabel" binding="currentTimeLabel">
+                            <constraints>
+                              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="4" fill="0" indent="0" use-parent-layout="false"/>
+                              <gridbag weightx="0.0" weighty="0.0"/>
+                            </constraints>
+                            <properties>
+                              <font size="10" style="0"/>
+                              <text value=""/>
+                            </properties>
+                          </component>
+                          <component id="2bc45" class="javax.swing.JSeparator">
+                            <constraints>
+                              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="6" hsize-policy="6" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                              <gridbag weightx="0.0" weighty="0.0"/>
+                            </constraints>
+                            <properties/>
+                          </component>
+                        </children>
+                      </grid>
+                      <component id="582db" class="javax.swing.JSeparator">
+                        <constraints>
+                          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="6" hsize-policy="6" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                          <gridbag weightx="0.0" weighty="0.0"/>
+                        </constraints>
+                        <properties>
+                          <orientation value="1"/>
+                        </properties>
+                      </component>
+                      <grid id="c4fb0" layout-manager="GridBagLayout">
+                        <constraints>
+                          <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                          <gridbag weightx="1.0" weighty="0.0"/>
+                        </constraints>
+                        <properties>
+                          <toolTipText value="Total events per second"/>
+                        </properties>
+                        <border type="none"/>
+                        <children>
+                          <component id="cb49c" class="javax.swing.JLabel" binding="mpsLabel">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
+                              <gridbag weightx="1.0" weighty="1.0"/>
+                            </constraints>
+                            <properties>
+                              <font size="10" style="0"/>
+                              <horizontalAlignment value="0"/>
+                              <horizontalTextPosition value="0"/>
+                              <text value=""/>
+                            </properties>
+                          </component>
+                        </children>
+                      </grid>
+                      <component id="553da" class="javax.swing.JSeparator">
+                        <constraints>
+                          <grid row="0" column="4" row-span="1" col-span="1" vsize-policy="6" hsize-policy="6" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                          <gridbag weightx="0.0" weighty="0.0"/>
+                        </constraints>
+                        <properties>
+                          <orientation value="1"/>
+                        </properties>
+                      </component>
+                      <grid id="4f92f" layout-manager="GridBagLayout">
+                        <constraints>
+                          <grid row="0" column="5" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                          <gridbag weightx="1.0" weighty="0.0"/>
+                        </constraints>
+                        <properties>
+                          <toolTipText value="Quote events per second"/>
+                        </properties>
+                        <border type="none"/>
+                        <children>
+                          <component id="1edb3" class="javax.swing.JLabel" binding="qpsLabel">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
+                              <gridbag weightx="1.0" weighty="1.0"/>
+                            </constraints>
+                            <properties>
+                              <font size="10" style="0"/>
+                              <horizontalAlignment value="0"/>
+                              <horizontalTextPosition value="0"/>
+                              <text value=""/>
+                            </properties>
+                          </component>
+                        </children>
+                      </grid>
+                      <grid id="2e898" binding="endpointLabelsPanel" layout-manager="GridBagLayout">
+                        <constraints>
+                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                          <gridbag weightx="0.0" weighty="0.0"/>
+                        </constraints>
+                        <properties/>
+                        <border type="none"/>
+                        <children/>
+                      </grid>
+                    </children>
+                  </grid>
+                  <grid id="8637c" layout-manager="GridBagLayout">
+                    <constraints border-constraint="Center"/>
+                    <properties/>
+                    <border type="none"/>
+                    <children>
+                      <grid id="f229" layout-manager="GridBagLayout">
+                        <constraints>
+                          <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                          <gridbag weightx="1.0" weighty="1.0"/>
+                        </constraints>
+                        <properties/>
+                        <border type="none"/>
+                        <children>
+                          <grid id="56db4" binding="tickChartPanel" layout-manager="GridBagLayout">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false">
+                                <preferred-size width="200" height="200"/>
+                              </grid>
+                              <gridbag weightx="1.0" weighty="1.0"/>
+                            </constraints>
+                            <properties>
+                              <preferredSize width="800" height="200"/>
+                            </properties>
+                            <border type="none"/>
+                            <children/>
+                          </grid>
+                        </children>
+                      </grid>
+                      <grid id="3e98c" layout-manager="GridBagLayout">
+                        <constraints>
+                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                          <gridbag weightx="1.0" weighty="0.0"/>
+                        </constraints>
+                        <properties/>
+                        <border type="none"/>
+                        <children>
+                          <toolbar id="2efdb" binding="addressToolbar">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="1" fill="1" indent="0" use-parent-layout="false">
+                                <preferred-size width="-1" height="20"/>
+                              </grid>
+                              <gridbag weightx="1.0" weighty="0.0"/>
+                            </constraints>
+                            <properties>
+                              <borderPainted value="true"/>
+                              <floatable value="false"/>
+                              <font size="9" style="0"/>
+                              <rollover value="false"/>
+                            </properties>
+                            <clientProperties>
+                              <JToolBar.isRollover class="java.lang.Boolean" value="false"/>
+                            </clientProperties>
+                            <border type="none"/>
+                            <children>
+                              <component id="5464c" class="javax.swing.JButton" binding="playButton">
+                                <constraints/>
+                                <properties>
+                                  <enabled value="false"/>
+                                  <icon value="com/dxfeed/plotter/icons/play-icon.png"/>
+                                  <inheritsPopupMenu value="true"/>
+                                  <text value=""/>
+                                  <toolTipText value="Connect/Replay"/>
+                                </properties>
+                                <clientProperties>
+                                  <hideActionText class="java.lang.Boolean" value="false"/>
+                                </clientProperties>
+                              </component>
+                              <component id="d2e7f" class="javax.swing.JButton" binding="pauseButton">
+                                <constraints/>
+                                <properties>
+                                  <icon value="com/dxfeed/plotter/icons/pause-icon.png"/>
+                                  <text value=""/>
+                                  <toolTipText value="Pause"/>
+                                </properties>
+                              </component>
+                              <component id="4445a" class="javax.swing.JToolBar$Separator">
+                                <constraints/>
+                                <properties/>
+                              </component>
+                              <component id="3cd1d" class="javax.swing.JLabel">
+                                <constraints/>
+                                <properties>
+                                  <font/>
+                                  <text value="Subscribe to: "/>
+                                </properties>
+                              </component>
+                              <component id="c40e9" class="javax.swing.JTextField" binding="subscribedSymbolsEdit">
+                                <constraints/>
+                                <properties>
+                                  <columns value="0"/>
+                                  <editable value="true"/>
+                                  <font/>
+                                  <foreground color="-1"/>
+                                  <toolTipText value="Connection address"/>
+                                </properties>
+                              </component>
+                            </children>
+                          </toolbar>
+                        </children>
+                      </grid>
+                    </children>
+                  </grid>
+                </children>
+              </grid>
+            </children>
+          </grid>
+        </children>
+      </grid>
+    </children>
+  </tabbedpane>
+</form>
