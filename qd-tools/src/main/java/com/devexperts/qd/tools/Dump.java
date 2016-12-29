@@ -21,6 +21,7 @@ import com.devexperts.qd.qtp.file.FileWriterImpl;
 import com.devexperts.qd.qtp.text.TextQTPComposer;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.tools.*;
 
 /**
  * Connects to specified address(es) and dumps all received data and subscription information.
@@ -34,7 +35,7 @@ import com.devexperts.services.ServiceProvider;
 	}
 )
 @ServiceProvider
-public class Dump extends AbstractTool {
+public class Dump extends AbstractQDTool {
 	private final OptionLog logfile = OptionLog.getInstance();
 	private final Option quiet = new Option('q', "quiet", "Be quiet (do not dump every incoming data record).");
 	private final OptionString tape = new OptionString('t', "tape", "<file>[<opts>]",

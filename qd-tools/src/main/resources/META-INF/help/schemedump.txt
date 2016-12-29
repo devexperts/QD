@@ -1,0 +1,5 @@
+@article SchemeDump
+@tool-summary
+
+This tool dumps descriptions of all records and their fields of
+defined scheme to a console.

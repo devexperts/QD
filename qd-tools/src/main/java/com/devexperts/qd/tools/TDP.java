@@ -12,6 +12,7 @@ import java.io.*;
 import java.util.*;
 
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.tools.*;
 import com.devexperts.util.IndexedSet;
 
 /**
@@ -26,7 +27,7 @@ import com.devexperts.util.IndexedSet;
 	}
 )
 @ServiceProvider
-public class TDP extends AbstractTool {
+public class TDP extends AbstractQDTool {
 	private final Option locks =
 		new Option('l', "locks", "Use full original stacktraces when concurrent lock in contended state.");
 	private final OptionInteger topdepth =

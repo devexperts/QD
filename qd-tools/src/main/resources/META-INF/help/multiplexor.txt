@@ -1,0 +1,33 @@
+@article Multiplexor
+@tool-summary
+
+This tool multiplexes two addresses. It can be used to merge data from
+several sources and provide it to multiple clients. All data providers connect
+to <distributor-address> and all clients connect to <agent-address>.
+
+Multiplexor creates a collector inside to store intermediate data (for all
+types of subscription by default). Then every time it receives a subscription from
+a client it stores it and also passes it to all of its data providers (connected
+to a <distributor-address>). Then after it starts receiving required data from
+providers it passes it to the client which subscribed on it. Thus, multiplexor
+receives and stores only data that its client connections are interested in
+(unlike Feed tool (see @link{Feed})).
+
+Multiplexor also gives opportunities to delay data by specified period and
+to drop some percent of data (by defining --delay and --drop options).
+
+Note, that delaying data for long periods causes some problems. First, it
+would consume lots of memory. Second, after some client subscribed on some new
+record (and no other client was subscribed on it yet) it would start receiving
+this records only after delay period. Even despite the fact that subscription
+is passed immediately earlier instances of this record wouldn't present in
+multiplexor's collector and the first one would be received after the moment
+of subscription and stored for delay period.
+
+Multiplexor tool (as well as Feed tool) can periodically dump records stored
+in its collector to a file in order to restart without long gap in data flow in
+case it was used to delay data and was restarted. The name of a storage file to
+use can be defined by --file option. When it is set this file is automatically
+loaded at startup. This option also allows to define filter of critical records
+that must be dumped to this file. --write option defines how often to update the
+storage file and must be used with the previous one.

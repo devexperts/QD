@@ -8,6 +8,8 @@
  */
 package com.devexperts.qd.tools;
 
+import com.devexperts.tools.Option;
+import com.devexperts.tools.OptionParseException;
 import com.devexperts.util.InvalidFormatException;
 import com.devexperts.util.TimePeriod;
 

@@ -30,6 +30,7 @@ dxfeed-webservice/overlays
 dxfeed-webservice/target
 dxlib-qd-sandbox/target
 dxlib/target
+dxtools/target
 jspc-maven-plugin/target
 license/target
 mars-sample/target

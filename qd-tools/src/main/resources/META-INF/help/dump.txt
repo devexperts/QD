@@ -1,0 +1,7 @@
+@article Dump
+@tool-summary
+
+This tool dumps all received data records and subscription items to a console.
+It can connect to any address including plain file. Note, that it doesn't
+send any subscription by itself, so if one connects it to some collector directly
+it wouldn't receive or dump any data.

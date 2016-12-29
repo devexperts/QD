@@ -18,6 +18,7 @@ import com.devexperts.qd.qtp.*;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.tools.*;
 
 /**
  * Multiplexor tool.
@@ -31,7 +32,7 @@ import com.devexperts.services.ServiceProvider;
 	}
 )
 @ServiceProvider
-public class Multiplexor extends AbstractTool {
+public class Multiplexor extends AbstractQDTool {
 	private final OptionLog logfile = OptionLog.getInstance();
 	private final OptionCollector collector = new OptionCollector("all");
 	private final OptionFile file = new OptionFile();

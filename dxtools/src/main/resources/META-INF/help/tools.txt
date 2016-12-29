@@ -1,0 +1,5 @@
+@article Tools
+Available tools are:
+@list-tools
+@br;To get detailed help on some tool use "Help <tool name>".
+@br;To get information about executing several tools under one JVM see @link{Batch}.

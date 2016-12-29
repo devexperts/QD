@@ -1,0 +1,84 @@
+@article Tape
+
+The --tape (-t) option of tool connect (see @link{connect}) is used to tape
+all incoming data into the specified file. Such files later can be read using
+FileConnector (see @link{FileConnector}).
+
+This option has several parameters:
+
+"format" parameter defines format of stored data. Its value can be one of
+"text" (see @link{Text format}), "binary" or "blob:<record>:<symbol>"
+(binary format is used by default). Blob is a special format that is used for
+compact store of a single-record, single-symbol data stream.
+
+"saveas" parameter overrides the type of stored messages. Data messages
+can be stored as "ticker_data", "stream_data", "history_data", or "raw_data".
+
+"split" parameter can be used to create multiple files with timestamped
+names. Its value is time period (see @link{time format}) determining how often
+must new files be created. When this parameter is defined a special '~' marker
+in file name must be used (it will be replaced with file timestamp).
+
+"time" parameter defines whether to create ".time" files. These files store
+information about when each piece of data was recorded and are used to read
+data from file in a realtime mode (keeping original time delays). ".time" file
+format is simple: it contains lines with records of kind "<timestamp>:<file-position>".
+The "time" parameter can be set into one of "none", "long" or "text".
+In the first case no ".time" files are created. Otherwise the value defines
+whether to write timestamps in ".time" files in old-style format (single
+long value in milliseconds) or in human-readable text format (see @link{time format}).
+By default ".time" files with old-style timestamps are created only if the file
+has ".data" extension.
+
+Two special parameters "storagesize" and "storagetime" are used to drop
+out-of-date taped files.
+
+"storagetime" parameter value is a time-period (see @link{Time format}).
+If this parameter is defined then all taped files which have timestamps less
+than current time minus "storagetime" value are deleted.
+
+"storagesize" parameter is a number followed by one-character suffix 'b'
+(bytes), 'k' (kilobytes), 'm' (megabytes), 'g' (gigabytes). If the suffix
+is omitted then value in bytes is supposed. If this parameter is defined then
+the total size of all existing taped files (not counting corresponding ".time"
+files) is kept at value not much greater than "storagesize" value (also by means
+of deleting older files).
+
+Both these parameters guarantee that at least specified amount
+of data is always stored, i.e. they define low boundary of stored data size.
+These two parameters can be useful if we are implementing data delay by taping
+data on disk.
+
+Note, that all files that match specified timestamped-file pattern
+are searched to be deleted when using these parameters (i.e. even if these files
+weren't actually taped by this execution of connect tool).
+
+Examples:
+
+	--tape quotes.log
+@br;will tape data into file "quotes.log" in binary format.
+No ".time" files will be created.
+
+	--tape quotes.log[saveas=ticker_data]
+@br;will tape data into file "quotes.log" with "ticker_data" messages regardless of the
+orignal type of the incoming data messages.
+
+	--tape log[time=long]
+@br;will tape data into file "log" and timestamps into
+file "log.time" as long values (old-style).
+
+	--tape log_~.txt[format=text,split=2m,time=text]
+@br;will tape data in text format. It will create files like
+	log_20071114-154214+0030.txt
+	log_20071114-154214+0030.time
+	log_20071114-154400+0300.txt
+	log_20071114-154400+0300.time
+	log_20071114-154600+0300.txt
+	log_20071114-154600+0300.time
+    ...
+@br;creating new pair of ".txt" and ".time" files every 2 minutes.
+
+	--tape log_~.dat[split=2m,time=text,storagesize=100k,storagetime=30m]
+@br;will act similar to a previous sample (except it will create ".dat" files and
+store data in binary format). Moreover it will keep only files taped during last
+30 minutes and total size of these files will be not much more than 100 kb.

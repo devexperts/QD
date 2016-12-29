@@ -17,6 +17,7 @@ import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
 import com.devexperts.rmi.task.RMIServiceDescriptor;
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.tools.*;
 
 /**
  * Forward tool.
@@ -30,7 +31,7 @@ import com.devexperts.services.ServiceProvider;
 )
 
 @ServiceProvider
-public class Services extends AbstractTool {
+public class Services extends AbstractQDTool {
 
 
 	private final OptionName name = new OptionName("services");

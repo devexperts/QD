@@ -17,6 +17,7 @@ import com.devexperts.qd.ng.*;
 import com.devexperts.qd.qtp.*;
 import com.devexperts.qd.util.SymbolObjectMap;
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.tools.*;
 import com.devexperts.util.TimeFormat;
 
 /**
@@ -35,7 +36,7 @@ import com.devexperts.util.TimeFormat;
 	}
 )
 @ServiceProvider
-public class Compare extends AbstractTool {
+public class Compare extends AbstractQDTool {
 	private final OptionLog logfile = OptionLog.getInstance();
     private final OptionCollector collector = new OptionCollector("ticker");
 	private final OptionString otherAddress = new OptionString('A', "other-address", "<address>", "Another address to compare with.");
@@ -88,8 +89,8 @@ public class Compare extends AbstractTool {
 		if (args.length > 4)
 			dateTimeStr += "-" + args[4];
 
-		DataRecord[] records = Tools.parseRecords(recordList, scheme);
-		String[] symbols = Tools.parseSymbols(symbolList, scheme);
+		DataRecord[] records = QDTools.parseRecords(recordList, scheme);
+		String[] symbols = QDTools.parseSymbols(symbolList, scheme);
 		long millis = dateTimeStr == null ? 0 : TimeFormat.DEFAULT.parse(dateTimeStr).getTime();
 		
 		ConnectorRecordsSymbols connector1 = new ConnectorRecordsSymbols(records, symbols, millis);

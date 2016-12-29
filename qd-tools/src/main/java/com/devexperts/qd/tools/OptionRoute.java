@@ -16,6 +16,7 @@ import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.RMIServer;
 import com.devexperts.rmi.impl.RMIConnectorInitializer;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
+import com.devexperts.tools.Option;
 
 public class OptionRoute extends Option implements Closeable {
 	private RMIEndpointImpl client;

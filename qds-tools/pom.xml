@@ -43,7 +43,7 @@
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
 									<manifestEntries>
-										<Main-Class>com.devexperts.qd.tools.Tools</Main-Class>
+										<Main-Class>com.devexperts.tools.Tools</Main-Class>
 										<Class-Path>qds.jar qds-file.jar qds-monitoring.jar</Class-Path>
 									</manifestEntries>
 								</transformer>

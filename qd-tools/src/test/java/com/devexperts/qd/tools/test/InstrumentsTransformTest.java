@@ -10,7 +10,7 @@ package com.devexperts.qd.tools.test;
 
 import java.io.*;
 
-import com.devexperts.qd.tools.Tools;
+import com.devexperts.tools.Tools;
 import junit.framework.TestCase;
 
 /**

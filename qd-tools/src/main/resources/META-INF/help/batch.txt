@@ -1,0 +1,18 @@
+@article Batch
+
+It is possible to run several tools under one JVM. In order to do this one
+can pass multiple tools initialization srtings separated by '+' sign. Each
+executing tool receives its own parameters and options, but there are several
+common options, that can be set only once (and would be available in all tools).
+Such options are: -s|--stats, -l|--log, -h|--html-management and
+-r|--rmi-management.
+
+For example, it is possible to implement data delaying by running something
+like: "java -jar -Dscheme=<...> qds-tools.jar Connect somehost:7777 SomeRecord
+ASYMBOL --quiet --tape buffer~.dat[split=10m,storagetime=1h] --log log.txt +
+Feed file:sample~.dat[start=-20m] :1234". This command will start Connect and
+Feed tools running inside one JVM. Connect tool will tape data into buffer~.dat
+files (where '~' is a timestamp), and Feed tool will read these files with 20
+minute delay and send data to port 1234. Note, that both tools would use
+log.txt to log information and errors (despite the fact that --log option was
+set only in the first tool).

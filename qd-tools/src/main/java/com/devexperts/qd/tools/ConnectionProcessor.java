@@ -10,6 +10,7 @@ package com.devexperts.qd.tools;
 
 import java.io.Closeable;
 
+import com.devexperts.tools.BadToolParametersException;
 import com.devexperts.qd.*;
 import com.devexperts.qd.ng.*;
 import com.devexperts.qd.qtp.*;

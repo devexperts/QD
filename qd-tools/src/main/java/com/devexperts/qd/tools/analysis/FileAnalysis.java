@@ -20,6 +20,7 @@ import com.devexperts.qd.qtp.file.*;
 import com.devexperts.qd.qtp.file.FileReader;
 import com.devexperts.qd.tools.*;
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.tools.*;
 import com.devexperts.transport.stats.ConnectionStats;
 import com.devexperts.util.GlobListUtil;
 
@@ -31,7 +32,7 @@ import com.devexperts.util.GlobListUtil;
 	}
 )
 @ServiceProvider
-public class FileAnalysis extends AbstractTool {
+public class FileAnalysis extends AbstractQDTool {
 	private final Option symbols = new Option('s', "symbols", "Analyze symbols and their character distributions");
 	private final OptionString groups = new OptionString('g', "group", "<group-file>",
 		"Define custom field groups. Supplied file is a property file with <group-name>=<pattern> lines, " +

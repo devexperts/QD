@@ -19,7 +19,7 @@ import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.qtp.HeartbeatPayload;
 import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.qtp.file.FileWriterImpl;
-import com.devexperts.qd.tools.Tools;
+import com.devexperts.tools.Tools;
 import com.devexperts.test.ThreadCleanCheck;
 import com.devexperts.util.TimeFormat;
 import com.dxfeed.event.market.impl.QuoteMapping;

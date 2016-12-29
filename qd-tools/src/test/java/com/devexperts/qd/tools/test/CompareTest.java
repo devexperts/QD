@@ -12,7 +12,7 @@ import java.util.Arrays;
 import java.util.Random;
 
 import com.devexperts.mars.common.MARSNode;
-import com.devexperts.qd.tools.Tools;
+import com.devexperts.tools.Tools;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.event.market.Quote;
 import junit.framework.TestCase;

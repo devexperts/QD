@@ -1,0 +1,47 @@
+@article Filters
+
+Filters are used to define subscription. They are specified in a special format.
+
+Filters can be either simple or composite. Simple filters in their turn
+divide into pattern filters, built-in filters and project-specific filters.
+
+Pattern filters use simple glob-like format to specify matching symbols.
+The easiest way to define one symbol filter is just to use it's name, like
+"MSFT" (here and further quotes for clarity). If the pattern ends with * then
+it will match all the symbols with specified prefix (for examlpe "NA*" will
+accept all symbols that start with NA, and ".*" will accept all option symbols).
+Whildcard (*) is only allowed in the end of a pattern.
+
+Char classes are also allowed in pattern filters. They are grouped using
+'[' and ']' and can be used in any part of a pattern. Several characters or
+character intervals can be listed inside a char class. For example "[AC-FI-L]"
+means one of A, B, C, F, I, J or K character. '^' as the first symbol inside a
+char class means negation, i.e. "[^N-P]" means "all characters except N, O or
+P". It can be used only once at the char class start.
+
+Pattern filters can not contain some special symbols like punctuation marks,
+quotes and brackets outside a char class. Lowercase latin letters are forbidden
+at the beginning of a pattern (they are reserved for project-specific filters)
+but they can be quoted using char classes.
+
+Pattern filters can also be used to filter by record names. In order to do
+it they must start with ':' (which means that the following pattern should be
+applied to a record name, not to a symbol name). The format of a pattern in this
+case is similar.
+
+Project-specific filters have a form of lowercase words. They can be provided
+by a class that implements SubscriptionFilterFactory service for specific project.
+Following project-specific filters are available in this project:
+@list-specific-filters
+
+Any simple filters can be composed by boolean operations '&' (and), ',' (or)
+and '!' (not). They can be grouped with '(' and ')'. For example, ".*&:Trade"
+filter will accept all "Trade" records with symbol names starting with '.', i. e.
+records about option trades. "(:Trade,:Quote,:Fundamental)&MSFT" filter will
+accept one of three types of records about MSFT symbol.
+
+Note, that all composite filter structures which consist only of simple record
+filters are preprocessed effectively and they can be applied quickly not depending
+on their complexity. Other simple filters (symbol or project-specific) can
+not be composed effectively, so long symbol lists processing for example can slow
+down performance.

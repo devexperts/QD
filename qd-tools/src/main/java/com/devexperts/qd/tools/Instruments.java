@@ -18,6 +18,7 @@ import com.devexperts.io.URLInputStream;
 import com.devexperts.mars.common.MARSEndpoint;
 import com.devexperts.qd.QDLog;
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.tools.*;
 import com.dxfeed.ipf.*;
 import com.dxfeed.ipf.live.InstrumentProfileCollector;
 import com.dxfeed.ipf.live.InstrumentProfileConnection;
@@ -35,7 +36,7 @@ import com.dxfeed.ipf.transform.*;
 	arguments = {}
 )
 @ServiceProvider
-public class Instruments extends AbstractTool {
+public class Instruments extends AbstractQDTool {
 	private final OptionString bizdate = new OptionString('b', "bizdate", "<date>",
 		"Business date for filtering of active options, format YYYY-MM-DD, applicable only to OCC.xml file.");
 	private final Option osi = new Option('o', "osi",

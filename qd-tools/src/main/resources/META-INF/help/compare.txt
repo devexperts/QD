@@ -1,0 +1,118 @@
+@article Compare
+@tool-summary
+
+This tool compares two data sources and provides comparison information (about
+data delays, dropped data percentage, etc.) to a screen and to MARS system.
+It's general usage format is quite similar to Connect tool format (see
+@link{Connect}).
+
+An alternative data source to compare with is specified using --other-address,
+--other-collector, and --other-record options which can be combined in arbitrary way.
+At least one of these options must always be set. --stat option must always
+be set as well.
+
+--other-address option is used to set alternative address for second connection.
+
+--other-collector option is used to set second connection collector type
+different from the first one i.e. data gathered with different collectors can be
+compared.
+
+--other-record option is used to compare two different records. When it is
+used the <records> parameter must consist only of one record. Both comparing
+records must have equal number of both int and obj fields. If one wish to compare
+two records with different fields but he is interested only in several specific
+fields, he can combine this option and --fields option to handle only required
+fields.
+
+--alias option can be used to give some aliases to comparing sources. These aliases
+are used to identify sources when logging a statistics to a screen or when passing
+it into MARS system. The value of this option consists of two names (one name for each
+data source) separated by slash ('/'). These names must not contain '=' and '.'
+symbols (due to MARS nodes naming restrictions). In case this option is omitted data
+sources are just called "1" and "2".
+
+Every n seconds (where n is the value of --stat option) the tool logs two separate
+statistics lines for each of two connections, starting with "(<alias1>)" and
+"(<alias2>)" (just the same as Connect tool does), and one additional statistics
+line of the following format:
+	"=== Matched: <m> / Compare: Dropped <d1>% vs <d2>%; Delay <t1> ms vs <t2> ms
+/ Unmatched buf: <u>"
+@br;<m> shows the number of records matched in two sources, <d1> and <d2> show
+percent of records that were received in one source and were dropped in the
+other one, <t1> and <t2> show average delay of records in one source relative to
+another, and <u> shows how much last records were received from one source
+and stored in buffer in order to be possibly matched later.
+
+Besides logging to a screen the Compare tool provides statistics into specified
+MARS node. To use this feature one should define two additional JVM parameters
+(using java -D option): "mars.node=<root-MARS-node>" and "mars.address=:<port>".
+In this case there will be MARS subtree with all comparison statistics (similar
+to one, that is logged to a screen) created inside the root node. Besides total
+average statistics this subtree will contain separate statistics nodes for each
+record and for each pair <record, symbol>. The whole subtree would have a
+following format:
+@br;
+@br;<1>/<2>
+@br;	|-<Record#1>
+@br;	|   |-<SYMBOL#1>
+@br;	|   |   |-delay_<1>     \
+@br;	|   |   |-delay_<2>      |
+@br;	|   |   |-dropped_<1>    |
+@br;	|   |   |-dropped_<2>     > Statistics for pair
+@br;	|   |   |-matched        | <Record#1, SYMBOL#1>
+@br;	|   |   |-unmatched_<1>  |
+@br;	|   |   |-unmatched_<2> /
+@br;	|   |-<SYMBOL#2>
+@br;	|   |   |- ...
+@br;	|   |-...
+@br;	|   |-<SYMBOL#M>
+@br;	|   |   |- ...
+@br;	|   |-delay_<1>      \
+@br;	|   |-delay_<2>       |
+@br;	|   |-dropped_<1>     |
+@br;	|   |-dropped_<2>      > Statistics for
+@br;	|   |-matched         | <Record#1>
+@br;	|   |-unmatched_<1>   |
+@br;	|   |-unmatched_<2>  /
+@br;	|-<Record#2>
+@br;	|   |- ...
+@br;	|- ...
+@br;	|-<Record#N>
+@br;	|   |- ...
+@br;	|-delay_<1>      \
+@br;	|-delay_<2>       |
+@br;	|-dropped_<1>     |
+@br;	|-dropped_<2>      > Overall statistics
+@br;	|-matched         |
+@br;	|-unmatched_<1>   |
+@br;	|-unmatched_<2>  /
+
+Here:
+@br;	- <1> and <2> are aliases for the first and the second data sources.
+@br;	- delay_<i> is average data delay (in milliseconds) of the corresponding
+data source.
+@br;	- dropped_<i> is average percentage of dropped data in the source.
+@br;	- matched is the number of matched records.
+@br;	- unmatched_<i> is the number of records in the source left unmatched yet.
+
+These statistics refers to last monitoring period only (as well the one that is
+logged to a console). If some node values are undefined (e.g. if no records was
+received during last monitoring period) they are presented as "N/A".
+
+If some symbol names contain '.' or '=' characters (which is allowed) they will be
+replaced by '_' and '-' characters correspondingly in the MARS tree.
+
+If aliases are not set for the data sources then the root of a subtree will have a
+name "compare" instead of "1/2" (or "compare1", "compare2", ... if several tools
+run inside one JVM (see @link{Batch})).
+
+Example:
+
+	Compare somehost:7777 Trade MSFT,IBM -s 10 -A anotherhost:1234 -C stream
+@br;This will compare Trade records about MSFT and IBM symbols received from
+somehost:7777 with ticker subscription with same records received from
+anotherhost:1234 with stream subscription, and generate statistics on these two
+connections and on correspondence between them every 10 seconds.
+
+Note, that the sample above supposes that the scheme is defined using JVM option
+-Dscheme=<...>.

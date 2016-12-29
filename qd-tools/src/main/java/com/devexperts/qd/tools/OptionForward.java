@@ -16,6 +16,8 @@ import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.RMIServer;
 import com.devexperts.rmi.impl.RMIConnectorInitializer;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
+import com.devexperts.tools.Option;
+import com.devexperts.tools.OptionParseException;
 
 public class OptionForward extends Option implements Closeable {
 

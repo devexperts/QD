@@ -17,6 +17,7 @@ import com.devexperts.qd.*;
 import com.devexperts.qd.qtp.*;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.tools.*;
 import com.devexperts.util.TimeFormat;
 
 /**
@@ -37,7 +38,7 @@ import com.devexperts.util.TimeFormat;
 	}
 )
 @ServiceProvider
-public class Connect extends AbstractTool {
+public class Connect extends AbstractQDTool {
 	private final OptionLog logfile = OptionLog.getInstance();
     private final OptionCollector collector = new OptionCollector("ticker");
 	private final OptionString tape = new OptionString('t', "tape", "<file>[<opts>]",
@@ -105,8 +106,8 @@ public class Connect extends AbstractTool {
 			if (args.length > 4)
 				date_time += "-" + args[4];
 
-			DataRecord[] records = Tools.parseRecords(record_list, scheme);
-			String[] symbols = Tools.parseSymbols(symbol_list, scheme);
+			DataRecord[] records = QDTools.parseRecords(record_list, scheme);
+			String[] symbols = QDTools.parseSymbols(symbol_list, scheme);
 			long millis = date_time == null ? 0 : TimeFormat.DEFAULT.parse(date_time).getTime();
 			ConnectorRecordsSymbols connector = new ConnectorRecordsSymbols(records, symbols, millis);
 			connector.subscribe(endpoint, processor);

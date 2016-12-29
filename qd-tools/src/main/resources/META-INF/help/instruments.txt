@@ -1,0 +1,48 @@
+@article Instruments
+@tool-summary
+
+The --read option can be either a network address or a file name. If it contains
+colon (':') character then it is treated as a network address in a form "host:port",
+otherwise it is treated as a file name. This option can be specified several times
+in order to read and concatenate several data sources. All sources are loaded in
+the order they are listed and concatenated into single data set.
+
+The tool can read several input formats and convert them into IPF format.
+The tool analyses file name to decide what input format is used.
+@br;If file name contains ".xml" then it is considered to be OCC FIXML file.
+@br;If file name contains "mo.dat" then it is considered to be CME MO.dat file.
+@br;Otherwise file is considered to be IPF format file.
+
+The tool supports file compression formats "zip" and "gzip" both for reading and writing.
+The tool analyses file name to decide what compression format is used.
+@br;If file name ends with ".zip" then "zip" format will be used.
+@br;If file name ends with ".gz" then "gzip" format will be used.
+@br;Otherwise no compression will be used.
+
+The --transform option can be either a direct transform program, an URL or a file name
+pointing to one. The tool treats option as direct one if it contains semicolon
+(';') character, otherwise option is treated as an URL or file name depending on format.
+This option can be specified several times in order to apply several separate transforms.
+All transforms are executed one after another in the order they are listed.
+
+Examples:
+
+	Instruments -r thinkorswimseries_2008-05-19.xml.zip -t occ.transform -c -w occ_2008-05-19.ipf.zip
+@br;This will read zipped OCC FIXML file "thinkorswimseries_2008-05-19.xml.zip",
+transform it according to "occ.transform" program, run data checks and
+write zipped instruments to "occ_2008-05-19.ipf.zip" file.
+
+	Instruments -r mo.dat.zip -t cme.transform -w cme_2008-05-19.ipf.zip
+@br;This will read zipped CME MO.dat file "mo.dat.zip", transform it according to
+"cme.transform" program and write zipped instruments to "cme_2008-05-19.ipf.zip" file.
+
+	Instruments -r data.ipf.zip -t 'if (UNDERLYING != "SPX") delete();' -w SPX.ipf
+@br;This will read zipped IPF file "data.ipf.zip", transform it according to
+specified program (deleting all instruments except "SPX" options) and write
+uncompressed instruments to "SPX.ipf" file.
+
+	Instruments -r main.ipf.zip -r missed.ipf -t cusip.transform -t sic.transform -m -w complete.ipf
+@br;This will read zipped IPF file "main.ipf.zip" and uncompressed IPF file "missed.ipf",
+concatenate them into single list, transform it according to both specified programs
+(first "cusip.transform" and then "sic.transform"), merge duplicate entries by symbol
+and finally write uncompressed instruments to IPF file "complete.ipf".

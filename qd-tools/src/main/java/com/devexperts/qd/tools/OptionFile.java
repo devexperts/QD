@@ -13,6 +13,9 @@ import java.io.IOException;
 import com.devexperts.qd.*;
 import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.qd.qtp.QDEndpoint;
+import com.devexperts.tools.BadToolParametersException;
+import com.devexperts.tools.OptionParseException;
+import com.devexperts.tools.OptionString;
 
 public class OptionFile extends OptionString {
 	private String spec = ""; // empty spec by default (CompositeFilters.valueOf throws NPE).

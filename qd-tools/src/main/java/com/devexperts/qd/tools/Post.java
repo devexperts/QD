@@ -12,6 +12,7 @@ import java.util.List;
 
 import com.devexperts.qd.qtp.*;
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.tools.*;
 
 @ToolSummary(
 	info = "Sends records to an agent.",
@@ -21,7 +22,7 @@ import com.devexperts.services.ServiceProvider;
 	}
 )
 @ServiceProvider
-public class Post extends AbstractTool {
+public class Post extends AbstractQDTool {
 	private final OptionLog logfile = OptionLog.getInstance();
 	private final OptionPostCollector collector = new OptionPostCollector(OptionPostCollector.RAW);
 	private final OptionName name = new OptionName("post");

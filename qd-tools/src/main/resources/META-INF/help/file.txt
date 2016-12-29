@@ -1,0 +1,17 @@
+@article File
+@messageconnector-summary
+
+File connector receives a URL of a file as an address and connects to it.
+It supports the same file formats as --tape option of Connect tool
+(see @link{tape}) and they are usually combined.
+
+It can read and give out all the data presented in a file at once, or it
+can also use ".time" files to reproduce original delays. By default it uses
+these files if they present, but this can be disabled by setting
+"ignoretime=true".
+
+File connector also supports reading multiple timestamped files. If
+filename contains special '~' marker, then it is replaced with a timestamp.
+For example, address "file:records~.dat" means that we want to seek for
+files like records20080320-154914+0030.dat and connect to them consecutively.
+Corresponding ".time" files are also used in that case (if they exist).

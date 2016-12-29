@@ -1,0 +1,49 @@
+@article Connect
+@tool-summary
+
+This tool is used to connect to some address with specified subscription, and
+log or tape received data. By default it just logs all received records to
+a screen in text format (see @link{text format}).
+
+There are two ways to define the subscription for this tool. One can either
+define comma separated lists of records and symbols to subscribe for (and
+date-time for history subscription also) or define an address to copy
+subscription from. For example in the second case it can be an uplink address
+of the server which we are connecting to. This way we can subscribe to all records
+and symbols which this server subscribes by itself.
+
+Note, that when defining <records> parameter one can use more complicated
+filters than just a list of record names (see @link{filters}), but each pattern
+filter (not depending on whether it starts with ':' or not) is considered to be
+a record filter.
+
+The main extra-functionality of the connect tool is taping data into file, which
+can be performed using --tape option. (see @link{tape} for its detailed description
+and samples).
+
+Examples:
+
+	Connect somehost:7777 Trade*,Quote MSFT,IBM
+@br;This will connect to somehost:7777, subscribe to all records which names
+starts with "Trade" and to record Quote about symbols MSFT and IBM using
+ticker collector (which is default) and log received records to a screen.
+
+	Connect somehost:7777 Trade*,Quote MSFT,IBM -q -tape quotes.log[time=text]
+@br;This will do the same as the previous one except that it won't log records
+to a screen but will tape them into file quotes.log (in binary format).
+
+	Connect file:quotes.log Quote IBM
+@br;This will connect to file quotes.log (created in previous example) and log
+only Quote records about IBM symbol.
+
+	Connect somehost:7777 somehost:7778
+@br;If 7778 port is an uplink port of server somehost (i.e. it tries to get
+record data from every connection and sends its subscription), then this command
+will subscribe for everything that this server receives.
+
+	Connect somehost:7777 Trade.Day GOOG 20080101 -c history
+@br;This is the example of using history subscription (all Trade.Day records
+about GOOG since the beginning of the year 2008).
+
+Note, that samples above suppose that the scheme is defined using JVM option
+-Dscheme=<...>.

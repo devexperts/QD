@@ -1,0 +1,89 @@
+@article Text format
+
+QDS tools that read or write data to/from console use uniform text format.
+This format can also be used when taping/reading data into/from file (see
+@link{Tape}, @link{FileConnector}).
+
+All data in text format is split into blocks depending on its type.
+Block type is described by a header. It can be one of:
+	==QD_TICKER_DATA
+	==QD_STREAM_DATA
+	==QD_HISTORY_DATA
+	==QD_RAW_DATA
+	==QD_TICKER_ADD_SUBSCRIPTION
+	==QD_TICKER_REMOVE_SUBSCRIPTION
+	==QD_STREAM_ADD_SUBSCRIPTION
+	==QD_STREAM_REMOVE_SUBSCRIPTION
+	==QD_HISTORY_ADD_SUBSCRIPTION
+	==QD_HISTORY_REMOVE_SUBSCRIPTION
+
+All records inside a data block format are represented in following form:
+	<record name> <symbol name> <field#1 value> ... <field#N value>
+@br;Each token is separated by one or more spaces and/or tabs. Each record occupies
+exactly one line. All field values are represented in text format. When reading
+a record from text format some last field values can be omitted. In this case
+they will automatically get values of 0 for int fields and null for obj fields.
+
+Subscriptions inside a subscription block are represented as:
+	<record name> <symbol name> [<subscription time>]
+	<subscription time> should be represented corresponding to a time format
+(see @link{Time format}).
+
+Each time some record is met for the first time (either in data or subscription block)
+it should be described. Record descriptions has following format:
+	=<record name> Symbol <field#1 name> ... <field#N name>
+@br;All field names are local (without "<record name>." prefix). Such descriptions are
+used to attempt to set some correspondence between slightly different data schemes (see
+@link{Scheme}).
+
+Lines that start with # are skipped as line comments. Empty lines are also
+allowed and skipped.
+
+Encoding
+
+In order to avoid problems with encoding and possibility of non-displayable
+symbols appearing at the console data is encoded in a special way. All symbols
+with ASCII codes out of range [32..126] are represented as \uXXXX, where XXXX
+is their unicode code. Besides this some special symbol back-slash escaping
+are used:
+ 	\t - tab character
+ 	\n - new line character
+ 	\r - carriage return character
+ 	\f - form-feed character
+ 	\\ - single back-slash '\'
+ 	\" - double quote '"'
+ 	\0 - symbol with 0 ASCII code
+ 	\NULL - null String
+@br;If some token (record, field or symbol name or field value) contains
+whitespaces or is an empty string then it is quoted with double quotes.
+
+Examples of text format:
+
+==QD_TICKER_DATA
+@br;# This is a comment
+@br;=Trade	Symbol	Last.Exchange	Last.Time	Last.Price	Last.Size	Last.Tick	Last.Change	Volume
+@br;Trade	GOOG	D	20080325-172918+0300	452.47	100	1	-8.09	2,063,718
+@br;Trade	IBM	N	20080325-172912+0300	117.60	100	2	-1.46	1,929,513
+@br;=Quote	Symbol	Bid.Exchange	Bid.Price	Bid.Size	Ask.Exchange	Ask.Price	Ask.Size
+@br;Quote	INTC	Q	22.09	777	Q	22.10	283
+@br;Quote	MSFT	Q	29.03	27	Q	29.04	134
+@br;Quote	/ES7ZG	\0	1476.75	0	\0	1477.50	0
+@br;...
+
+==QD_STREAM_ADD_SUBSCRIPTION
+@br;=Message	Symbol	Message
+@br;Message	categories.ALERT_MANAGEMENT
+@br;=Underlying	Symbol	PutCallRatio	CallVolumeIndex	PutVolumeIndex	OptionVolumeIndex	ImpVolatility
+@br;Underlying	/ER2
+@br;=TradeHistory	Symbol	Time	Sequence	Exchange	Price	Size	Bid	Ask
+@br;TradeHistory	$TIKI
+@br;TradeHistory	/NQM8
+@br;=Fundamental	Symbol	High.Price	Low.Price	Open.Price	Close.Price	OpenInterest
+@br;Fundamental	MTK
+@br;=Trade	Symbol	Last.Exchange	Last.Time	Last.Price	Last.Size	Last.Tick	Last.Change	Volume
+@br;Trade	IBB
+@br;TradeHistory	/YM
+@br;...
+
+NOTE: Lines in samples above are possibly separated to fit the screen. It is not
+allowed to separate lines in arbitrary way in real text format.

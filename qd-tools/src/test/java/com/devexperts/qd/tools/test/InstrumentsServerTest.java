@@ -13,7 +13,7 @@ import java.util.Random;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import com.devexperts.qd.tools.Tools;
+import com.devexperts.tools.Tools;
 import com.dxfeed.ipf.InstrumentProfile;
 import com.dxfeed.ipf.live.*;
 import com.dxfeed.ipf.services.InstrumentProfileServer;
