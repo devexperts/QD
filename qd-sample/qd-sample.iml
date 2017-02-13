@@ -14,7 +14,6 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" scope="TEST" name="Maven: com.devexperts.timetest:timetest:1.1.1" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.aspectj:aspectjrt:1.8.2" level="project" />
-    <orderEntry type="module" module-name="dxtools" />
     <orderEntry type="module" module-name="dxlib" />
     <orderEntry type="module" module-name="dxlib-qd-sandbox" />
     <orderEntry type="module" module-name="qd-core" />
@@ -22,6 +21,7 @@
     <orderEntry type="module" module-name="proto" />
     <orderEntry type="module" module-name="dxfeed-promise" />
     <orderEntry type="module" module-name="qd-tools" />
+    <orderEntry type="module" module-name="dxtools" />
     <orderEntry type="module" module-name="mars" />
     <orderEntry type="module" module-name="qd-rmi" />
     <orderEntry type="module" module-name="dxfeed-api" />
