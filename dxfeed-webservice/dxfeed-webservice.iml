@@ -31,9 +31,7 @@
     <orderEntry type="library" scope="TEST" name="Maven: com.devexperts.timetest:timetest:1.1.1" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.aspectj:aspectjrt:1.8.2" level="project" />
     <orderEntry type="module" module-name="qds" />
-    <orderEntry type="module" module-name="dxlib" />
     <orderEntry type="module" module-name="dxfeed-api" />
-    <orderEntry type="module" module-name="dxfeed-promise" />
     <orderEntry type="module" module-name="qd-core" />
     <orderEntry type="module" module-name="dxlib-qd-sandbox" />
     <orderEntry type="module" module-name="auth" />
@@ -46,7 +44,9 @@
     <orderEntry type="module" module-name="mars" />
     <orderEntry type="library" name="Maven: com.sun.jdmk:jmxtools:1.2.8" level="project" />
     <orderEntry type="module" module-name="dxfeed-ondemand" />
+    <orderEntry type="module" module-name="dxfeed-promise" />
     <orderEntry type="module" module-name="dxfeed-api" />
+    <orderEntry type="module" module-name="dxlib" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: javax.servlet:javax.servlet-api:3.1.0" level="project" />
     <orderEntry type="library" name="Maven: org.eclipse.jetty:jetty-servlets:9.2.9.v20150224" level="project" />
     <orderEntry type="library" name="Maven: org.eclipse.jetty:jetty-continuation:9.2.9.v20150224" level="project" />
@@ -60,8 +60,8 @@
     <orderEntry type="library" name="Maven: org.cometd.java:cometd-java-server:3.0.4" level="project" />
     <orderEntry type="library" name="Maven: org.cometd.java:cometd-java-common:3.0.4" level="project" />
     <orderEntry type="library" name="Maven: org.eclipse.jetty:jetty-util-ajax:9.2.9.v20150224" level="project" />
-    <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.10" level="project" />
     <orderEntry type="library" name="Maven: org.eclipse.jetty:jetty-jmx:9.2.9.v20150224" level="project" />
+    <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.10" level="project" />
     <orderEntry type="library" name="Maven: org.cometd.java:cometd-java-annotations:3.0.4" level="project" />
     <orderEntry type="library" name="Maven: javax.inject:javax.inject:1" level="project" />
     <orderEntry type="library" name="Maven: javax.annotation:jsr250-api:1.0" level="project" />
