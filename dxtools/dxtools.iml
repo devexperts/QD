@@ -12,7 +12,6 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="dxlib" />
     <orderEntry type="module" module-name="qd-tools" scope="RUNTIME" />
-    <orderEntry type="library" scope="TEST" name="Maven: junit:junit:4.8.1" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: com.devexperts.timetest:timetest:0.9" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.aspectj:aspectjrt:1.8.2" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.aspectj:aspectjweaver:1.8.2" level="project" />

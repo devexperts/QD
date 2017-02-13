@@ -11,7 +11,7 @@ package com.devexperts.rmi.test;
 import java.util.Random;
 
 import com.devexperts.logging.Logging;
-import com.devexperts.qd.tools.Tools;
+import com.devexperts.tools.Tools;
 import com.devexperts.rmi.RMIException;
 import com.devexperts.rmi.RMIRequest;
 import com.devexperts.test.TraceRunner;

@@ -17,7 +17,7 @@ import com.devexperts.services.ServiceProvider;
 import com.devexperts.services.Services;
 
 /**
- * com.devexperts.tools.Help tool.
+ * Help tool.
  */
 @ToolSummary(
 	info = "Main Help tool.",
@@ -65,9 +65,9 @@ public class Help extends AbstractTool {
 				throw new BadToolParametersException("Screen width must not be less, than " + MIN_WIDTH);
 		}
 
-		String caption = null;
+		String caption = "";
 		for (String word : args) {
-			caption = (caption == null) ? word : caption + " " + word;
+			caption = caption.isEmpty() ? word : caption + " " + word;
 		}
 		showArticle(caption.trim());
 	}
@@ -91,8 +91,8 @@ public class Help extends AbstractTool {
 					System.err.println("Couldn't print an article: " + caption1);
 				} else {
 					printArticle(article);
-					printArticleSeparator();
 				}
+				first = false;
 			}
 			return;
 		} else {
