@@ -3,7 +3,7 @@
 
 This tool is used to test network throughput. It is quite similar to
 TestThroughput tool from qd.sample, but it provides larger functionality
-in network testing and is integrated into com.devexperts.tools.Tools framework.
+in network testing and is integrated into Tools framework.
 
 The NetTest tool can be run in one of two modes: producer-side and
 consumer-side. In each mode it creates one or several collectors and
