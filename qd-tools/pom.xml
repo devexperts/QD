@@ -37,6 +37,11 @@
 		</dependency>
 		<dependency>
 			<groupId>com.devexperts.qd</groupId>
+			<artifactId>dxtools</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.devexperts.qd</groupId>
 			<artifactId>mars</artifactId>
 			<version>${project.version}</version>
 		</dependency>

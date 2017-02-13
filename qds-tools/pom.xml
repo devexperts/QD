@@ -50,6 +50,7 @@
 							</transformers>
 							<artifactSet>
 								<includes>
+									<include>com.devexperts.qd:dxtools</include>
 									<include>com.devexperts.qd:qd-logger</include>
 									<include>com.devexperts.qd:qd-nio</include>
 									<include>com.devexperts.qd:qd-servlet</include>

@@ -32,6 +32,7 @@
     <orderEntry type="library" name="Maven: javax.servlet:javax.servlet-api:3.1.0" level="project" />
     <orderEntry type="module" module-name="qd-stripe" />
     <orderEntry type="module" module-name="qd-tools" />
+    <orderEntry type="module" module-name="dxtools" />
     <orderEntry type="module" module-name="dxfeed-ondemand" />
     <orderEntry type="module" module-name="qd-samplecert" />
     <orderEntry type="module" module-name="dxfeed-tools" />

@@ -32,6 +32,7 @@
         <module name="dxfeed-webservice" />
         <module name="dxlib" />
         <module name="dxlib-qd-sandbox" />
+        <module name="dxtools" />
         <module name="jspc-maven-plugin" />
         <module name="license" />
         <module name="mars" />
@@ -76,6 +77,7 @@
       <module name="dxfeed-webservice" target="1.8" />
       <module name="dxlib" target="1.8" />
       <module name="dxlib-qd-sandbox" target="1.8" />
+      <module name="dxtools" target="1.8" />
       <module name="jspc-maven-plugin" target="1.8" />
       <module name="license" target="1.8" />
       <module name="mars" target="1.8" />

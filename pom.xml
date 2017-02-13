@@ -49,6 +49,7 @@
 		<module>dxfeed-ipf-filter</module>
 
 		<!-- modules shaded into qds-tools.jar -->
+		<module>dxtools</module>
 		<module>proto-ssl</module>
 		<module>qd-logger</module>
 		<module>qd-nio</module>
