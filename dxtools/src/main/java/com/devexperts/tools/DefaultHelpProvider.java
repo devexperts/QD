@@ -80,17 +80,19 @@ public abstract class DefaultHelpProvider implements HelpProvider {
 		Set<String> lowerCaptions = new HashSet<>();
 		File[] helpFiles = new File(helpPrefix).listFiles(new UnspecialHelpFileFilter());
 
-		for (File helpFile : helpFiles) {
-			try (BufferedReader reader = getHelpReader(helpFile.getName())) {
-				if (reader == null) {
-					continue;
-				}
+		if (helpFiles != null) {
+			for (File helpFile : helpFiles) {
+				try (BufferedReader reader = getHelpReader(helpFile.getName())) {
+					if (reader == null) {
+						continue;
+					}
 
-				String caption = reader.readLine().substring(ARTICLE_CAPTION_MARKER.length()).trim();
-				captions.add(caption);
-				lowerCaptions.add(caption.toLowerCase(Locale.US));
-			} catch (IOException e) {
-				return null;
+					String caption = reader.readLine().substring(ARTICLE_CAPTION_MARKER.length()).trim();
+					captions.add(caption);
+					lowerCaptions.add(caption.toLowerCase(Locale.US));
+				} catch (IOException e) {
+					return null;
+				}
 			}
 		}
 
