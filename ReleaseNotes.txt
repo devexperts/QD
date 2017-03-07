@@ -1,4 +1,12 @@
+QDS 3.251:
 
+* [QD-1011] History does not use subscription filter which is specified as service
+* [QD-1008] Schedule: Update Turkey holidays for 2017-2019 to schedule.properties
+* [QD-1007] Improve CPU usage of idle SocketReader
+
+QDS 3.250:
+
+* [QD-995] Prepare QD for delivering to GitHub
 * [QD-998] Add FreeFloat field to Profile record
 * [QD-999] dxlib: Add specific factory methods to IndexedSet
 * [QD-1001] QD unable to recover after I/O error

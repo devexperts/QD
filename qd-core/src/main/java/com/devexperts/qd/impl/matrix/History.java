@@ -145,7 +145,11 @@ public class History extends Collector implements QDHistory {
 
     protected History(Builder<?> builder) {
         super(builder, true, true);
-        this.historyFilter = builder.getHistoryFilter();
+        HistorySubscriptionFilter historyFilter = builder.getHistoryFilter();
+        // If history filter is not specified in builder get it as service.
+        if (historyFilter == null)
+            historyFilter = builder.getScheme().getService(HistorySubscriptionFilter.class);
+        this.historyFilter = historyFilter;
     }
 
     //======================================= methods =======================================
