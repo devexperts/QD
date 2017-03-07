@@ -20,4 +20,5 @@ import java.lang.annotation.*;
 @Target(ElementType.METHOD)
 public @interface MessageConnectorProperty {
     String value();
+    String deprecated() default "";
 }

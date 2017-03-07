@@ -198,7 +198,7 @@ public abstract class DXFeed {
      * {@link DXFeedSubscription#addEventListener} to get notified about data changes
      * and can change its data subscription via {@link DXFeedSubscription} methods.
      *
-     * <h5>Implementation notes</h5>
+     * <h3>Implementation notes</h3>
      *
      * This method adds a non-serializable {@link ObservableSubscriptionChangeListener} for the given subscription
      * via {@link DXFeedSubscription#addChangeListener} method.
@@ -215,7 +215,7 @@ public abstract class DXFeed {
      * Detaches the given subscription from this feed. This method does nothing if the
      * corresponding subscription is not attached to this feed.
      *
-     * <h5>Implementation notes</h5>
+     * <h3>Implementation notes</h3>
      *
      * This method removes {@link ObservableSubscriptionChangeListener} from the given subscription
      * via {@link DXFeedSubscription#removeChangeListener} method.

@@ -10,9 +10,9 @@ package com.devexperts.rmi.impl;
 
 import java.util.*;
 
+import com.devexperts.connector.codec.ssl.SSLConnectionFactory;
 import com.devexperts.connector.proto.*;
 import com.devexperts.qd.qtp.*;
-import com.devexperts.qd.qtp.socket.ClientSocketConnector;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.util.SystemProperties;
 
@@ -33,8 +33,9 @@ public class RMIConnectorInitializer implements QDEndpoint.ConnectorInitializer 
         if (rmiEndpoint.trustManager != null) {
             try {
                 for (MessageConnector connector : connectors) {
-                    if (connector instanceof ClientSocketConnector)
-                        ((ClientSocketConnector) connector).setTrustManager(rmiEndpoint.trustManager);
+                    SSLConnectionFactory factory = MessageConnectors.getCodecFactory(connector.getFactory(), SSLConnectionFactory.class);
+                    if (factory != null)
+                        factory.setTrustManager(rmiEndpoint.trustManager);
                 }
             } catch (ClassCastException e) {
                 throw new IllegalArgumentException("Trust store may be specified for client socket connector only", e);

@@ -12,6 +12,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
+import com.devexperts.connector.codec.CodecConnectionFactory;
 import com.devexperts.connector.codec.CodecFactory;
 import com.devexperts.connector.proto.*;
 import com.devexperts.qd.qtp.http.HttpConnector;
@@ -207,14 +208,12 @@ public class MessageConnectors {
         final List<List<String>> codecs; // one List<String> per codec of format: [<codec-name>, <codec-property-1>, ..., <codec-property-N>]
         final String address;
         final List<SharedProp> props;
-        final boolean isTls;
 
-        ParsedAddress(String spec, List<List<String>> codecs, String address, List<SharedProp> props, boolean isTls) {
+        ParsedAddress(String spec, List<List<String>> codecs, String address, List<SharedProp> props) {
             this.spec = spec;
             this.codecs = codecs;
             this.address = address;
             this.props = props;
-            this.isTls = isTls;
         }
     }
 
@@ -223,14 +222,6 @@ public class MessageConnectors {
         String[] specSplit = QDConfig.splitParenthesisedStringAt(address, '@');
         String spec = specSplit.length == 1 ? "" : specSplit[0];
         address = specSplit.length == 1 ? address : specSplit[1];
-
-        // dirty hack for 'tls' pseudo-codec over client/server socket connectors
-        boolean isTls = false;
-        String tlsCodecPrefix = "TLS+";
-        if (address.toUpperCase().startsWith(tlsCodecPrefix)) {
-            isTls = true;
-            address = address.substring(tlsCodecPrefix.length());
-        }
 
         // Parse additional properties at the end of address
         List<String> propStrings = new ArrayList<>();
@@ -259,7 +250,7 @@ public class MessageConnectors {
         List<SharedProp> props = new ArrayList<>();
         for (String s : propStrings)
             props.add(new SharedProp(s));
-        return new ParsedAddress(spec, codecs, address, props, isTls);
+        return new ParsedAddress(spec, codecs, address, props);
     }
 
     @SuppressWarnings({"unchecked"})
@@ -286,6 +277,14 @@ public class MessageConnectors {
             if (connector.getSimpleName().equalsIgnoreCase(name))
                 return connector;
         return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T extends CodecConnectionFactory> T getCodecFactory(ApplicationConnectionFactory factory, Class<T> codecFactoryClass) {
+        Objects.nonNull(factory);
+        while (factory instanceof CodecConnectionFactory && !codecFactoryClass.isInstance(factory))
+            factory = ((CodecConnectionFactory) factory).getDelegate();
+        return codecFactoryClass.isInstance(factory) ? (T) factory : null;
     }
 
     private static List<MessageConnector> createConfiguredConnector(String fullAddress,
@@ -386,7 +385,6 @@ public class MessageConnectors {
 
         if (address.startsWith(HTTP_PREFIX) || address.startsWith(HTTPS_PREFIX)) {
             // http address
-            ensureNoTls(pa);
             HttpConnector connector = new HttpConnector(acFactory, address);
             return Collections.singletonList(new ConnectorWithConfig(connector, pa.props, QDStats.SType.HTTP_CONNECTOR));
         }
@@ -394,7 +392,6 @@ public class MessageConnectors {
         for (MessageConnectorFactory mcf : Services.createServices(MessageConnectorFactory.class, null)) {
             MessageConnector connector = mcf.createMessageConnector(acFactory, address);
             if (connector != null) {
-                ensureNoTls(pa);
                 String name = connector.getClass().getName();
                 int idx = name.lastIndexOf('.');
                 if (idx >= 0)
@@ -429,22 +426,15 @@ public class MessageConnectors {
         // Create message connector
         if (address.isEmpty()) {
             ServerSocketConnector connector = new ServerSocketConnector(acFactory, port);
-            connector.setTls(pa.isTls);
             return Collections.singletonList(new ConnectorWithConfig(connector, pa.props, QDStats.SType.SERVER_SOCKET_CONNECTOR));
         } else {
             ClientSocketConnector connector = new ClientSocketConnector(acFactory, address, port);
-            connector.setTls(pa.isTls);
             return Collections.singletonList(new ConnectorWithConfig(connector, pa.props, QDStats.SType.CLIENT_SOCKET_CONNECTOR));
         }
     }
 
     private static void configureConnectorStats(MessageConnector connector, QDStats parentStats, QDStats.SType type) {
         connector.setStats(parentStats.create(type, "connector=" + JMXNameBuilder.quoteKeyPropertyValue(connector.getName())));
-    }
-
-    private static void ensureNoTls(ParsedAddress pa) {
-        if (pa.isTls)
-            throw new AddressSyntaxException("\"tls+\" codec may be used only for client or server socket connector");
     }
 
     private static ApplicationConnectionFactory configureConnectionFactory(ApplicationConnectionFactory originalFactory, ParsedAddress parsedAddress) {

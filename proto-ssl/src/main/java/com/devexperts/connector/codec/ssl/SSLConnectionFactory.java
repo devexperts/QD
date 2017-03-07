@@ -10,6 +10,7 @@ package com.devexperts.connector.codec.ssl;
 
 import java.io.IOException;
 import java.security.*;
+import java.util.Arrays;
 import java.util.concurrent.Executor;
 import javax.annotation.Nonnull;
 import javax.net.ssl.*;
@@ -24,7 +25,6 @@ import com.devexperts.util.SystemProperties;
 import static com.devexperts.util.SystemProperties.getIntProperty;
 
 public class SSLConnectionFactory extends CodecConnectionFactory {
-    private static Executor defaultExecutor;
 
     private static final ExecutorProvider DEFAULT_EXECUTOR_PROVIDER =
         createExecutorProvider(getIntProperty("com.devexperts.qd.qtp.ssl.executorThreadsNumber",
@@ -45,6 +45,11 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
     private String trustStorePassword = SystemProperties.getProperty("javax.net.ssl.trustStorePassword", null);
     private String trustStoreProvider = SystemProperties.getProperty("javax.net.ssl.trustStoreProvider", null);
     private String trustStoreType = SystemProperties.getProperty("javax.net.ssl.trustStoreType", KeyStore.getDefaultType());
+    private String protocols = SystemProperties.getProperty("com.devexperts.connector.codec.ssl.protocols", null);
+    private String cipherSuites = SystemProperties.getProperty("com.devexperts.connector.codec.ssl.cipherSuites", null);
+    private TrustManager trustManager;
+    private String[] protocolsArr;
+    private String[] cipherSuitesArr;
 
     private boolean isServer = false;
     private boolean needClientAuth;
@@ -71,6 +76,8 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
 
     @Configurable
     public void setKeyStore(String keyStore) {
+        if (isInitialized)
+            throw new IllegalStateException("Factory has already been initialized.");
         this.keyStore = keyStore;
     }
 
@@ -80,6 +87,8 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
 
     @Configurable
     public void setKeyStorePassword(String keyStorePassword) {
+        if (isInitialized)
+            throw new IllegalStateException("Factory has already been initialized.");
         this.keyStorePassword = keyStorePassword;
     }
 
@@ -89,6 +98,8 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
 
     @Configurable
     public void setKeyStoreProvider(String keyStoreProvider) {
+        if (isInitialized)
+            throw new IllegalStateException("Factory has already been initialized.");
         this.keyStoreProvider = keyStoreProvider;
     }
 
@@ -98,6 +109,8 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
 
     @Configurable
     public void setKeyStoreType(String keyStoreType) {
+        if (isInitialized)
+            throw new IllegalStateException("Factory has already been initialized.");
         this.keyStoreType = keyStoreType;
     }
 
@@ -107,6 +120,8 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
 
     @Configurable
     public void setTrustStore(String trustStore) {
+        if (isInitialized)
+            throw new IllegalStateException("Factory has already been initialized.");
         this.trustStore = trustStore;
     }
 
@@ -116,6 +131,8 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
 
     @Configurable
     public void setTrustStorePassword(String trustStorePassword) {
+        if (isInitialized)
+            throw new IllegalStateException("Factory has already been initialized.");
         this.trustStorePassword = trustStorePassword;
     }
 
@@ -125,6 +142,8 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
 
     @Configurable
     public void setTrustStoreProvider(String trustStoreProvider) {
+        if (isInitialized)
+            throw new IllegalStateException("Factory has already been initialized.");
         this.trustStoreProvider = trustStoreProvider;
     }
 
@@ -134,6 +153,8 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
 
     @Configurable
     public void setTrustStoreType(String trustStoreType) {
+        if (isInitialized)
+            throw new IllegalStateException("Factory has already been initialized.");
         this.trustStoreType = trustStoreType;
     }
 
@@ -143,6 +164,8 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
 
     @Configurable(name = "isServer")
     public void setServer(boolean server) {
+        if (isInitialized)
+            throw new IllegalStateException("Factory has already been initialized.");
         isServer = server;
     }
 
@@ -152,6 +175,8 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
 
     @Configurable
     public void setNeedClientAuth(boolean needClientAuth) {
+        if (isInitialized)
+            throw new IllegalStateException("Factory has already been initialized.");
         this.needClientAuth = needClientAuth;
     }
 
@@ -161,6 +186,8 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
 
     @Configurable
     public void setWantClientAuth(boolean wantClientAuth) {
+        if (isInitialized)
+            throw new IllegalStateException("Factory has already been initialized.");
         this.wantClientAuth = wantClientAuth;
     }
 
@@ -169,7 +196,9 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
     }
 
     @Configurable
-    public synchronized void setTaskThreads(int taskThreads) {
+    public void setTaskThreads(int taskThreads) {
+        if (isInitialized)
+            throw new IllegalStateException("Factory has already been initialized.");
         this.taskThreads = taskThreads;
     }
 
@@ -178,11 +207,44 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
     }
 
     @Configurable
-    public synchronized void setTaskExecutor(Executor taskExecutor) {
+    public void setTaskExecutor(Executor taskExecutor) {
+        if (isInitialized)
+            throw new IllegalStateException("Factory has already been initialized.");
         this.taskExecutor = taskExecutor;
     }
 
-    private synchronized ExecutorProvider getExecutorProvider() {
+    public String getProtocols() {
+        return protocols;
+    }
+
+    @Configurable
+    public void setProtocols(String protocols) {
+        if (isInitialized)
+            throw new IllegalStateException("Factory has already been initialized.");
+        this.protocols = protocols;
+        this.protocolsArr = protocols.trim().split(";");
+    }
+
+    public String getCipherSuites() {
+        return cipherSuites;
+    }
+
+    @Configurable
+    public void setCipherSuites(String cipherSuites) {
+        if (isInitialized)
+            throw new IllegalStateException("Factory has already been initialized.");
+        this.cipherSuites = cipherSuites;
+        this.cipherSuitesArr = cipherSuites.trim().split(";");
+    }
+
+    @Override
+    public void setTrustManager(TrustManager trustManager) {
+        if (isInitialized)
+            throw new IllegalStateException("Factory has already been initialized.");
+        this.trustManager = trustManager;
+    }
+
+    private ExecutorProvider getExecutorProvider() {
         if (taskExecutorProvider != null)
             return taskExecutorProvider;
         if (taskExecutor != null)
@@ -192,7 +254,7 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
         return DEFAULT_EXECUTOR_PROVIDER;
     }
 
-    private synchronized void init() throws GeneralSecurityException, IOException {
+    private void init() throws GeneralSecurityException, IOException {
         KeyManagerFactory keyManagerFactory = null;
         if (keyStore != null) {
             KeyStore keyStore = getKeyStore(keyStoreType, keyStoreProvider, this.keyStore, keyStorePassword);
@@ -200,16 +262,41 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
             keyManagerFactory.init(keyStore, keyStorePassword == null ? null : keyStorePassword.toCharArray());
         }
 
-        TrustManagerFactory trustManagerFactory = null;
-        if (trustStore != null) {
+        TrustManager[] trustManagers = null;
+        if (trustManager != null) {
+                trustManagers = new TrustManager[] {trustManager};
+        } else if (trustStore != null){
             KeyStore trustStore = getKeyStore(trustStoreType, trustStoreProvider, this.trustStore, trustStorePassword);
-            trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
             trustManagerFactory.init(trustStore);
+            trustManagers = trustManagerFactory.getTrustManagers();
         }
 
-        context.init(
-            keyManagerFactory != null ? keyManagerFactory.getKeyManagers() : null,
-            trustManagerFactory != null ? trustManagerFactory.getTrustManagers() : null, null);
+        context.init(keyManagerFactory != null ? keyManagerFactory.getKeyManagers() : null,
+            trustManagers, null);
+        SSLEngine engine = context.createSSLEngine();
+        if (protocolsArr != null) {
+            try {
+                engine.setEnabledProtocols(protocolsArr);
+            } catch (IllegalArgumentException e) {
+                log.error(e.getMessage() + " protocols are not supported. Available protocols: "
+                    + Arrays.toString(engine.getSupportedProtocols()));
+                throw new GeneralSecurityException(e);
+            }
+        } else {
+            protocolsArr = engine.getSupportedProtocols();
+        }
+        if (cipherSuitesArr != null) {
+            try {
+                engine.setEnabledCipherSuites(cipherSuitesArr);
+            } catch (IllegalArgumentException e) {
+                log.error(e.getMessage() + " cipher suites are not supported. Available cipher suites: "
+                    + Arrays.toString(engine.getSupportedCipherSuites()));
+                throw new GeneralSecurityException(e);
+            }
+        } else {
+            cipherSuitesArr = engine.getSupportedCipherSuites();
+        }
         isInitialized = true;
     }
 
@@ -233,6 +320,8 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
                 throw new IOException("Failed to initialize ssl engine: " +  e.getMessage());
             }
         SSLEngine engine = context.createSSLEngine();
+        engine.setEnabledProtocols(protocolsArr);
+        engine.setEnabledCipherSuites(cipherSuitesArr);
         if (isServer) {
             engine.setUseClientMode(false);
             engine.setWantClientAuth(needClientAuth);

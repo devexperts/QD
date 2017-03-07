@@ -10,7 +10,8 @@ package com.dxfeed.ipf;
 
 import java.text.*;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+
+import com.devexperts.util.*;
 
 /**
  * Defines standard fields of {@link InstrumentProfile} and provides data access methods.
@@ -61,7 +62,7 @@ public enum InstrumentProfileField {
         numericField = type != String.class;
     }
 
-    private static final HashMap<String, InstrumentProfileField> MAP = new HashMap<String, InstrumentProfileField>();
+    private static final HashMap<String, InstrumentProfileField> MAP = new HashMap<>();
     static {
         for (InstrumentProfileField ipf : values())
             MAP.put(ipf.name(), ipf);
@@ -210,27 +211,40 @@ public enum InstrumentProfileField {
 
     // ========== Internal Implementation ==========
 
-    private static final ThreadLocal<NumberFormat> NUMBER_FORMATTER = new ThreadLocal<NumberFormat>();
-    private static final ThreadLocal<DateFormat> DATE_FORMATTER = new ThreadLocal<DateFormat>();
+    private static final ThreadLocal<NumberFormat> NUMBER_FORMATTER = new ThreadLocal<>();
+    private static final ThreadLocal<DateFormat> DATE_FORMATTER = new ThreadLocal<>();
 
-    private static final String[] FORMATTED_NUMBERS = new String[20000]; // A "sparse" cache for small numbers
-    private static final String[] FORMATTED_DATES = new String[30000]; // A "sparse" cache for common dates (1970-2052)
-    private static final Map<String, Double> PARSED_NUMBERS = new ConcurrentHashMap<String, Double>();
-    private static final Map<String, Integer> PARSED_DATES = new ConcurrentHashMap<String, Integer>();
+    private static class Entry {
+        final long binary;
+        final String text;
 
-    private static final long DAY = 24 * 3600 * 1000;
+        Entry(long binary, String text) {
+            this.binary = binary;
+            this.text = text;
+        }
+    }
+
+    private static final SynchronizedIndexedSet<Long, Entry> FORMATTED_NUMBERS = SynchronizedIndexedSet.createLong(entry -> entry.binary);
+    private static final SynchronizedIndexedSet<Long, Entry> FORMATTED_DATES = SynchronizedIndexedSet.createLong(entry -> entry.binary);
+    private static final SynchronizedIndexedSet<String, Entry> PARSED_NUMBERS = SynchronizedIndexedSet.create((Entry entry) -> entry.text);
+    private static final SynchronizedIndexedSet<String, Entry> PARSED_DATES = SynchronizedIndexedSet.create((Entry entry) -> entry.text);
+
+    private static final int CACHE_SIZE = SystemProperties.getIntProperty(InstrumentProfileField.class, "cacheSize", 25000, 100, 100000);
+
+    private static <T> T doCache(SynchronizedIndexedSet<?, T> cache, T value) {
+        if (cache.size() > CACHE_SIZE)
+            cache.clear();
+        return cache.putIfAbsentAndGet(value);
+    }
 
     public static String formatNumber(double d) {
         if (d == 0)
             return "";
-        int n4 = (int) (d * 4) + 4000;
-        if (n4 == d * 4 + 4000 && n4 >= 0 && n4 < FORMATTED_NUMBERS.length) {
-            String cached = FORMATTED_NUMBERS[n4];
-            if (cached == null)
-                FORMATTED_NUMBERS[n4] = cached = formatNumberImpl(d);
-            return cached;
-        }
-        return formatNumberImpl(d);
+        long binary = Double.doubleToLongBits(d);
+        Entry cached = FORMATTED_NUMBERS.getByKey(binary);
+        if (cached == null)
+            cached = doCache(FORMATTED_NUMBERS, new Entry(binary, formatNumberImpl(d)));
+        return cached.text;
     }
 
     private static String formatNumberImpl(double d) {
@@ -255,40 +269,32 @@ public enum InstrumentProfileField {
     public static double parseNumber(String s) {
         if (s == null || s.isEmpty())
             return 0;
-        Double cached = PARSED_NUMBERS.get(s);
-        if (cached == null) {
-            if (PARSED_NUMBERS.size() > 10000)
-                PARSED_NUMBERS.clear();
-            PARSED_NUMBERS.put(s, cached = Double.parseDouble(s));
-        }
-        return cached;
+        Entry cached = PARSED_NUMBERS.getByKey(s);
+        if (cached == null)
+            cached = doCache(PARSED_NUMBERS, new Entry(Double.doubleToLongBits(Double.parseDouble(s)), s));
+        return Double.longBitsToDouble(cached.binary);
     }
 
     public static String formatDate(int d) {
         if (d == 0)
             return "";
-        if (d >= 0 && d < FORMATTED_DATES.length) {
-            String cached = FORMATTED_DATES[d];
-            if (cached == null)
-                FORMATTED_DATES[d] = cached = getDateFormat().format(new Date(d * DAY));
-            return cached;
-        }
-        return getDateFormat().format(new Date(d * DAY));
+        Entry cached = FORMATTED_DATES.getByKey(d);
+        if (cached == null)
+            cached = doCache(FORMATTED_DATES, new Entry(d, getDateFormat().format(new Date(d * TimeUtil.DAY))));
+        return cached.text;
     }
 
     public static int parseDate(String s) {
         if (s == null || s.isEmpty())
             return 0;
-        Integer cached = PARSED_DATES.get(s);
+        Entry cached = PARSED_DATES.getByKey(s);
         if (cached == null)
             try {
-                if (PARSED_DATES.size() > 10000)
-                    PARSED_DATES.clear();
-                PARSED_DATES.put(s, cached = (int) (getDateFormat().parse(s).getTime() / DAY));
+                cached = doCache(PARSED_DATES, new Entry(getDateFormat().parse(s).getTime() / TimeUtil.DAY, s));
             } catch (ParseException e) {
                 throw new IllegalArgumentException(e.getMessage());
             }
-        return cached;
+        return (int) cached.binary;
     }
 
     private static DateFormat getDateFormat() {

@@ -12,8 +12,9 @@ import com.devexperts.connector.codec.CodecFactory;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 
 public class SSLCodecFactory implements CodecFactory {
+    @Override
     public ApplicationConnectionFactory createCodec(String name, ApplicationConnectionFactory delegate) {
-        if (name.equalsIgnoreCase("ssl")) // todo: optionally in future: use this implementation for legacy 'tls' codec as well (but beware of the bug, described in SSLConnection class code).
+        if (name.equalsIgnoreCase("ssl") || name.equalsIgnoreCase("tls"))
             return new SSLConnectionFactory(delegate);
         return delegate;
     }

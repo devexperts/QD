@@ -11,7 +11,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.251</version>
+        <version>3.252</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -135,6 +135,7 @@
                     <links>
                         <link>http://docs.dxfeed.com/dxlib/api/</link>
                     </links>
+                    <additionalparam>--allow-script-in-comments</additionalparam>
                 </configuration>
                 <executions>
                     <execution>

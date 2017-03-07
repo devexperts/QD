@@ -11,6 +11,8 @@ package com.devexperts.connector.codec;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import javax.net.ssl.TrustManager;
+
 import com.devexperts.connector.proto.*;
 import com.devexperts.io.ChunkPool;
 
@@ -79,7 +81,15 @@ public abstract class CodecConnectionFactory extends ApplicationConnectionFactor
         delegate.setChunkPool(chunkPool);
     }
 
-    protected ApplicationConnectionFactory getDelegate() {
+    public ApplicationConnectionFactory getDelegate() {
         return delegate;
+    }
+
+    /**
+     * Using for SSLConnectionFactory
+     */
+    public void setTrustManager(TrustManager trustManager) {
+        if (delegate instanceof CodecConnectionFactory)
+            ((CodecConnectionFactory) delegate).setTrustManager(trustManager);
     }
 }

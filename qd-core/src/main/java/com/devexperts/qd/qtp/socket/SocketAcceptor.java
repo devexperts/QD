@@ -11,7 +11,6 @@ package com.devexperts.qd.qtp.socket;
 import java.io.IOException;
 import java.net.*;
 import javax.net.ServerSocketFactory;
-import javax.net.ssl.SSLServerSocketFactory;
 
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.qtp.QTPWorkerThread;
@@ -23,7 +22,6 @@ class SocketAcceptor extends QTPWorkerThread {
     private final ServerSocketConnector connector;
     private final int port;
     private final InetAddress bindAddress;
-    private final boolean isTls;
     private final String address;
 
     private final ReconnectHelper reconnectHelper;
@@ -37,7 +35,6 @@ class SocketAcceptor extends QTPWorkerThread {
             "-Acceptor");
         this.connector = connector;
         port = connector.getLocalPort();
-        isTls = connector.getTls();
         bindAddress = connector.bindAddr;
         address = connector.getAddress();
         reconnectHelper = new ReconnectHelper(connector.getReconnectDelay());
@@ -55,16 +52,14 @@ class SocketAcceptor extends QTPWorkerThread {
                 if (isClosed())
                     return; // ServerSocketConnector interrupts thread before closing socket. Socket is closed here...
                 reconnectHelper.sleepBeforeConnection();
-                log.info("Trying to listen at " + address + (isTls ? " (using TLS)" : ""));
+                log.info("Trying to listen at " + address);
                 try {
-                    serverSocket = this.serverSocket =
-                        (isTls ? SSLServerSocketFactory.getDefault() : ServerSocketFactory.getDefault())
-                            .createServerSocket(port, 0, bindAddress);
+                    serverSocket = this.serverSocket = ServerSocketFactory.getDefault().createServerSocket(port, 0, bindAddress);
                 } catch (Throwable t) {
                     log.error("Failed to listen at " + address, t);
                     continue; // retry listening again
                 }
-                log.info("Listening at " + address + (isTls ? " (using TLS)" : ""));
+                log.info("Listening at " + address);
                 connector.notifyMessageConnectorListeners();
                 // the following code handle concurrent close of the acceptor thread while socket was being created
                 // Note, that volatile this.serverSocket was assigned first,

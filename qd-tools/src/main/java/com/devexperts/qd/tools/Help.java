@@ -16,8 +16,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.devexperts.qd.QDFactory;
-import com.devexperts.qd.qtp.MessageConnector;
-import com.devexperts.qd.qtp.MessageConnectors;
+import com.devexperts.qd.qtp.*;
 import com.devexperts.qd.qtp.help.MessageConnectorProperty;
 import com.devexperts.qd.qtp.help.MessageConnectorSummary;
 import com.devexperts.qd.spi.QDFilterFactory;
@@ -128,7 +127,7 @@ public class Help extends AbstractTool {
                 }
             }
 
-            List<String> lines = new ArrayList<String>();
+            List<String> lines = new ArrayList<>();
             // Reading the article
             while (true) {
                 String line = reader.readLine();
@@ -150,7 +149,7 @@ public class Help extends AbstractTool {
             String articleSeparator = new String(sep);
 
             String caption = null;
-            List<String> lines = new ArrayList<String>();
+            List<String> lines = new ArrayList<>();
             do {
                 lines.clear();
                 String newCaption;
@@ -178,6 +177,16 @@ public class Help extends AbstractTool {
         }
     }
 
+    private static class PropDescContainer {
+        private final PropertyDescriptor propertyDescriptor;
+        private final String deprecated;
+
+        PropDescContainer(PropertyDescriptor propertyDescriptor, String deprecated) {
+            this.propertyDescriptor = propertyDescriptor;
+            this.deprecated = deprecated;
+        }
+    }
+
     private void printMessageConnectorHelpSummary(Class<? extends MessageConnector> connector) {
         MessageConnectorSummary annotation = connector.getAnnotation(MessageConnectorSummary.class);
         if (annotation == null) {
@@ -188,33 +197,46 @@ public class Help extends AbstractTool {
         System.out.println();
         printFormat("Address format: " + annotation.addressFormat());
         System.out.println();
-        Map<String, PropertyDescriptor> properties = getAnnotatedConnectorProperties(connector);
+        Map<String, PropDescContainer> properties = getAnnotatedConnectorProperties(connector);
         if (properties.isEmpty()) {
             printFormat("This connector has no special properties.");
         } else try {
             printFormat("Properties:");
-            ArrayList<String[]> table = new ArrayList<String[]>();
+            ArrayList<String[]> table = new ArrayList<>();
             table.add(new String[]{"  ", "[type]", "[name]", "[description]"});
-            for (PropertyDescriptor pd : properties.values()) {
-                String name = pd.getName();
-                String desc = pd.getWriteMethod().getAnnotation(MessageConnectorProperty.class).value();
-                String type = pd.getPropertyType().getSimpleName();
-                table.add(new String[]{"", type, name, desc});
+            List<String[]> deprecatedProperties = new ArrayList<>();
+            deprecatedProperties.add(new String[]{"  ", "[type]", "[name]", "[description]"});
+            for (PropDescContainer prop : properties.values()) {
+                String name = prop.propertyDescriptor.getName();
+                String desc = prop.propertyDescriptor.getWriteMethod().getAnnotation(MessageConnectorProperty.class).value();
+                String type = prop.propertyDescriptor.getPropertyType().getSimpleName();
+                String deprecated = prop.deprecated;
+                if (deprecated.isEmpty())
+                    table.add(new String[]{"", type, name, desc});
+                else
+                    deprecatedProperties.add(new String[]{"", type, name, desc + "\n" + deprecated});
             }
             System.out.println(formatTable(table, width, "  "));
+            if (deprecatedProperties.size() > 1) {
+                System.out.println("\nDeprecated properties:");
+                System.out.println(formatTable(deprecatedProperties, width, "  "));
+            }
         } catch (IllegalArgumentException e) {
             printFormat("\t--- Error occurred while generating properties information ---");
         }
     }
 
-    private Map<String, PropertyDescriptor> getAnnotatedConnectorProperties(Class<? extends MessageConnector> connector) {
-        Map<String, PropertyDescriptor> result = new TreeMap<String, PropertyDescriptor>();
+    private Map<String, PropDescContainer> getAnnotatedConnectorProperties(Class<? extends MessageConnector> connector) {
+        Map<String, PropDescContainer> result = new TreeMap<>();
         try {
             BeanInfo bi = Introspector.getBeanInfo(connector);
             for (PropertyDescriptor pd : bi.getPropertyDescriptors()) {
                 Method wm = pd.getWriteMethod();
-                if (wm != null && wm.getAnnotation(MessageConnectorProperty.class) != null)
-                    result.put(pd.getName(), pd);
+                if (wm != null) {
+                    MessageConnectorProperty annotation = wm.getAnnotation(MessageConnectorProperty.class);
+                    if (annotation != null)
+                        result.put(pd.getName(), new PropDescContainer(pd, annotation.deprecated()));
+                }
             }
         } catch (IntrospectionException e) {
             // just ignore a return empty result
@@ -224,8 +246,8 @@ public class Help extends AbstractTool {
 
     private void printHelpContents(BufferedReader reader) {
         // List all help article names
-        ArrayList<String> captions = new ArrayList<String>();
-        Set<String> lowerCaptions = new HashSet<String>();
+        ArrayList<String> captions = new ArrayList<>();
+        Set<String> lowerCaptions = new HashSet<>();
         try {
             while (true) {
                 String line = reader.readLine();
@@ -292,7 +314,7 @@ public class Help extends AbstractTool {
             }
             if (line.trim().equalsIgnoreCase(LIST_CONNECTORS)) {
                 flush(sb);
-                ArrayList<String[]> table = new ArrayList<String[]>();
+                ArrayList<String[]> table = new ArrayList<>();
                 table.add(new String[]{"  ", "[name]", "[address format]", "[description]"});
                 for (Class<? extends MessageConnector> connector : MessageConnectors.listMessageConnectors(getHelpClassLoader())) {
                     MessageConnectorSummary annotation = connector.getAnnotation(MessageConnectorSummary.class);
@@ -325,7 +347,7 @@ public class Help extends AbstractTool {
     }
 
     static void listAllTools(PrintStream out, int width) {
-        ArrayList<String[]> table = new ArrayList<String[]>();
+        ArrayList<String[]> table = new ArrayList<>();
         for (String toolName : Tools.getToolNames()) {
             Class<? extends AbstractTool> toolClass = Tools.getTool(toolName).getClass();
             ToolSummary annotation = toolClass.getAnnotation(ToolSummary.class);
@@ -350,7 +372,7 @@ public class Help extends AbstractTool {
     }
 
     private void printSubscriptionFilters(QDFilterFactory filterFactory) {
-        ArrayList<String[]> table = new ArrayList<String[]>();
+        ArrayList<String[]> table = new ArrayList<>();
         table.add(new String[]{"[name]", "[description]"});
         if (filterFactory != null)
             for (Map.Entry<String, String> entry : filterFactory.describeFilters().entrySet())

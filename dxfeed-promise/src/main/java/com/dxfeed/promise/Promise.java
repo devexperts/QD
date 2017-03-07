@@ -39,7 +39,7 @@ import java.util.concurrent.*;
  * <pre>
  *     public Promise&lt;T&gt; findSomethingPromise(Args args) {
  *         Promise&lt;T&gt; promise = new {@link #Promise() Promise}&lt;T&gt;();
- *         executor.{@link Executor#execute(Runnable) execute}(() -> {
+ *         executor.{@link Executor#execute(Runnable) execute}(() -&gt; {
  *             try {
  *                 T result = findSomething(args);
  *                 promise.{@link #complete(Object) complete}(result);
@@ -57,7 +57,7 @@ import java.util.concurrent.*;
  * <pre>
  *     public Promise&lt;T&gt; findSomethingPromise(Args args) {
  *         Promise&lt;T&gt; promise = new {@link #Promise() Promise}&lt;T&gt;();
- *         Future&lt;?&gt; future = executor.{@link ExecutorService#submit(Runnable) submit}(() -> {
+ *         Future&lt;?&gt; future = executor.{@link ExecutorService#submit(Runnable) submit}(() -&gt; {
  *             try {
  *                 T result = findSomething(args);
  *                 promise.{@link #complete(Object) complete}(result);
@@ -65,7 +65,7 @@ import java.util.concurrent.*;
  *                 promise.{@link #completeExceptionally(Throwable) completeExceptionally}(t);
  *             }
  *         });
- *         promise.whenDone(p -> future.{@link Future#cancel(boolean) cancel}(true)); // true to interrupt running task
+ *         promise.whenDone(p -&gt; future.{@link Future#cancel(boolean) cancel}(true)); // true to interrupt running task
  *         return promise;
  *     }</pre>
  *
@@ -85,7 +85,7 @@ import java.util.concurrent.*;
  * The same handling can be performed in the service provider thread like this:
  *
  * <pre>
- *     findSomething(args).whenDone(promise -> {
+ *     findSomething(args).whenDone(promise -&gt; {
  *         if (promise.hasResult())
  *            handleResult(promise.getResult());
  *         else

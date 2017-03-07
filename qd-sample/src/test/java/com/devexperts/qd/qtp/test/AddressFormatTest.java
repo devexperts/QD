@@ -8,7 +8,6 @@
  */
 package com.devexperts.qd.qtp.test;
 
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.*;
 
@@ -24,7 +23,7 @@ public class AddressFormatTest extends TestCase {
 
     private final ApplicationConnectionFactory ACF = new ApplicationConnectionFactory() {
         @Override
-        public ApplicationConnection<?> createConnection(TransportConnection transportConnection) throws IOException {
+        public ApplicationConnection<?> createConnection(TransportConnection transportConnection) {
             return null;
         }
         @Override
@@ -45,16 +44,12 @@ public class AddressFormatTest extends TestCase {
 
     public void testAddressFormats() throws Exception {
         filters.clear();
-        validate1(MessageConnectors.createMessageConnectors(ACF, "(haba@tls+xor(secret=secret)+1.2.3.4:5678)(ssl[isServer]+:1111(bindAddr=7.7.7.7))"));
+        validate1(MessageConnectors.createMessageConnectors(ACF, "(haba@xor(secret=secret)+tls[isServer=true]+1.2.3.4:5678)(ssl[isServer]+:1111(bindAddr=7.7.7.7))"));
         filters.clear();
-        validate1(MessageConnectors.createMessageConnectors(ACF, "(haba@tls+xor+1.2.3.4:5678)(ssl(isServer)+:1111[bindAddr=7.7.7.7])"));
+        validate1(MessageConnectors.createMessageConnectors(ACF, "(haba@xor+tls[isServer=true]+1.2.3.4:5678)(ssl(isServer)+:1111[bindAddr=7.7.7.7])"));
         filters.clear();
-        validate1(MessageConnectors.createMessageConnectors(ACF, "haba@tls+xor[secret=secret]+1.2.3.4:5678/ssl[isServer]+:1111(bindAddr=7.7.7.7)"));
+        validate1(MessageConnectors.createMessageConnectors(ACF, "haba@xor[secret=secret]+tls[isServer=true]+1.2.3.4:5678/ssl[isServer]+:1111(bindAddr=7.7.7.7)"));
 
-        try {
-            MessageConnectors.createMessageConnectors(ACF, "xor+tls+:1234");
-            fail();
-        } catch (AddressSyntaxException ignored) {}
         try {
             MessageConnectors.createMessageConnectors(ACF, "xor+[secret=12345]http://foo.com:1234");
             fail();
@@ -100,20 +95,23 @@ public class AddressFormatTest extends TestCase {
         ClientSocketConnector clientSocketConnector = (ClientSocketConnector) connectors.get(0);
         assertEquals("1.2.3.4:5678", clientSocketConnector.getAddress());
         assertEquals(5678, clientSocketConnector.getPort());
-        assertTrue(clientSocketConnector.getTls());
+        assertFalse(clientSocketConnector.getTls());
         ApplicationConnectionFactory xorFactory = clientSocketConnector.getFactory();
         assertEquals("secret", xorFactory.getConfiguration(ConfigurationKey.create("secret", String.class)));
         assertEquals(xorFactory.getClass().getSimpleName(), "XorConnectionFactory");
+        ApplicationConnectionFactory sslFactory = ((CodecConnectionFactory) xorFactory).getDelegate();
+        assertEquals(sslFactory.getClass().getSimpleName(), "SSLConnectionFactory");
+
 
         delegateField.setAccessible(true);
-        assertEquals(ACF.getClass(), delegateField.get(xorFactory).getClass());
+        assertEquals(ACF.getClass(), delegateField.get(sslFactory).getClass());
 
         ServerSocketConnector serverSocketConnector = (ServerSocketConnector) connectors.get(1);
         assertEquals("7.7.7.7:1111", serverSocketConnector.getAddress());
         assertEquals(1111, serverSocketConnector.getLocalPort());
         assertEquals("7.7.7.7", serverSocketConnector.getBindAddr());
         assertFalse(serverSocketConnector.getTls());
-        ApplicationConnectionFactory sslFactory = serverSocketConnector.getFactory();
+        sslFactory = serverSocketConnector.getFactory();
         assertEquals(sslFactory.getClass().getSimpleName(), "SSLConnectionFactory");
         delegateField.setAccessible(true);
         assertEquals(ACF.getClass(), delegateField.get(sslFactory).getClass());

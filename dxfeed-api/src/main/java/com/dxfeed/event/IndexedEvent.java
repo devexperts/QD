@@ -58,7 +58,7 @@ import com.dxfeed.event.option.Series;
  * <p> {@code TX} (bit 0) &mdash; {@link #TX_PENDING} is an indicator of pending transactional update.
  * It can be retrieved from {@code eventFlags} with the following piece of code:
  *
- * <p><code>boolean txPending = (event.{@link #getEventFlags() getEventFlags}() & IndexedEvent.{@link #TX_PENDING TX_PENDING}) != 0;</code>
+ * <p><code> boolean txPending = (event.{@link #getEventFlags() getEventFlags}() &amp; IndexedEvent.{@link #TX_PENDING TX_PENDING}) != 0;</code>
  *
  * <p>When {@code txPending} is {@code true} it means, that an ongoing transaction update that spans multiple events is
  * in process. All events with {@code txPending} {@code true} shall be put into a separate <em>pending list</em>
@@ -68,11 +68,11 @@ import com.dxfeed.event.option.Series;
  * <p> {@code RE} (bit 1) &mdash; {@link #REMOVE_EVENT} is used to indicate that that the event with the
  * corresponding index has to be removed.
  *
- * <p><code>boolean removeEvent = (event.{@link #getEventFlags() getEventFlags}() & IndexedEvent.{@link #REMOVE_EVENT REMOVE_EVENT}) != 0;</code>
+ * <p><code> boolean removeEvent = (event.{@link #getEventFlags() getEventFlags}() &amp; IndexedEvent.{@link #REMOVE_EVENT REMOVE_EVENT}) != 0; </code>
  *
  * <p> {@code SB} (bit 2) &mdash; {@link #SNAPSHOT_BEGIN} is used to indicate when the loading of a snapshot starts.
  *
- * <p><code>boolean snapshotBegin = (event.{@link #getEventFlags() getEventFlags}() & IndexedEvent.{@link #SNAPSHOT_BEGIN SNAPSHOT_BEGIN}) != 0;</code>
+ * <p><code> boolean snapshotBegin = (event.{@link #getEventFlags() getEventFlags}() &amp; IndexedEvent.{@link #SNAPSHOT_BEGIN SNAPSHOT_BEGIN}) != 0; </code>
  *
  * <p> Snapshot load starts on new subscription and the first indexed event that arrives for each non-zero source id
  * on new subscription may have {@code snapshotBegin} set to {@code true}. It means, that an ongoing snapshot
@@ -82,8 +82,8 @@ import com.dxfeed.event.option.Series;
  * <p> {@code SE} (bit 3) &mdash; {@link #SNAPSHOT_END} or {@code SS} (bit 4) &mdash; {@link #SNAPSHOT_SNIP}
  * are used to indicate the end of a snapshot.
  *
- * <p> <code>boolean snapshotEnd = (event.{@link #getEventFlags() getEventFlags}() & IndexedEvent.{@link #SNAPSHOT_END SNAPSHOT_END}) != 0;</code>
- * <br><code>boolean snapshotSnip = (event.{@link #getEventFlags() getEventFlags}() & IndexedEvent.{@link #SNAPSHOT_SNIP SNAPSHOT_SNIP}) != 0;</code>
+ * <p> <code> boolean snapshotEnd = (event.{@link #getEventFlags() getEventFlags}() &amp; IndexedEvent.{@link #SNAPSHOT_END SNAPSHOT_END}) != 0; </code>
+ * <br><code> boolean snapshotSnip = (event.{@link #getEventFlags() getEventFlags}() &amp; IndexedEvent.{@link #SNAPSHOT_SNIP SNAPSHOT_SNIP}) != 0; </code>
  *
  * <p>The last event of a snapshot is marked with either {@code snapshotEnd} or {@code snapshotSnip}. At this time, all events
  * from a <em>pending list</em> for the corresponding source can be processed, unless {@code txPending} is also
@@ -113,7 +113,7 @@ public interface IndexedEvent<T> extends EventType<T> {
     /**
      * Bit mask to get transaction pending indicator from the value of {@link #getEventFlags() eventFlags} property.
      *
-     * <p><code>boolean txPending = (event.{@link #getEventFlags() getEventFlags}() & IndexedEvent.TX_PENDING) != 0;</code>
+     * <p><code> boolean txPending = (event.{@link #getEventFlags() getEventFlags}() &amp; IndexedEvent.TX_PENDING) != 0; </code>
      *
      * <p>See "Event Flags" section.
      */
@@ -122,7 +122,7 @@ public interface IndexedEvent<T> extends EventType<T> {
     /**
      * Bit mask to get removal indicator from the value of {@link #getEventFlags() eventFlags} property.
      *
-     * <p><code>boolean removeEvent = (event.{@link #getEventFlags() getEventFlags}() & IndexedEvent.REMOVE_EVENT) != 0;</code>
+     * <p><code> boolean removeEvent = (event.{@link #getEventFlags() getEventFlags}() &amp; IndexedEvent.REMOVE_EVENT) != 0; </code>
      *
      * <p>See "Event Flags" section.
      */
@@ -131,7 +131,7 @@ public interface IndexedEvent<T> extends EventType<T> {
     /**
      * Bit mask to get snapshot begin indicator from the value of {@link #getEventFlags() eventFlags} property.
      *
-     * <p><code>boolean snapshotBegin = (event.{@link #getEventFlags() getEventFlags}() & IndexedEvent.SNAPSHOT_BEGIN) != 0;</code>
+     * <p><code> boolean snapshotBegin = (event.{@link #getEventFlags() getEventFlags}() &amp; IndexedEvent.SNAPSHOT_BEGIN) != 0; </code>
      *
      * <p>See "Event Flags" section.
      */
@@ -140,7 +140,7 @@ public interface IndexedEvent<T> extends EventType<T> {
     /**
      * Bit mask to get snapshot end indicator from the value of {@link #getEventFlags() eventFlags} property.
      *
-     * <p><code>boolean snapshotEnd = (event.{@link #getEventFlags() getEventFlags}() & IndexedEvent.SNAPSHOT_END) != 0;</code>
+     * <p><code> boolean snapshotEnd = (event.{@link #getEventFlags() getEventFlags}() &amp; IndexedEvent.SNAPSHOT_END) != 0; </code>
      *
      * <p>See "Event Flags" section.
      */
@@ -149,7 +149,7 @@ public interface IndexedEvent<T> extends EventType<T> {
     /**
      * Bit mask to get snapshot snip indicator from the value of {@link #getEventFlags() eventFlags} property.
      *
-     * <p><code>boolean snapshotSnip = (event.{@link #getEventFlags() getEventFlags}() & IndexedEvent.SNAPSHOT_SNIP) != 0;</code>
+     * <p><code> boolean snapshotSnip = (event.{@link #getEventFlags() getEventFlags}() &amp; IndexedEvent.SNAPSHOT_SNIP) != 0; </code>
      *
      * <p>See "Event Flags" section.
      */

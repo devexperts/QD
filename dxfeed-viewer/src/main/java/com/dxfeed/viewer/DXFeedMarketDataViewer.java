@@ -282,7 +282,7 @@ public class DXFeedMarketDataViewer implements Runnable {
                             ipfWebServiceCredentials.getUsername(), ipfWebServiceCredentials.getPassword());
                     URLInputStream.checkConnectionResponseCode(connection);
                 } catch (IOException e) {
-                    System.out.println("Cannot connect to " + ipfAddress + " (is username/password correct?)");
+                    log.debug("Cannot connect to " + ipfAddress + " (are username/password correct?)", e);
                     continue;
                 }
                 ipfWebUsernameLabel.setText("ipf: " + ipfWebServiceCredentials.getUsername().toLowerCase());

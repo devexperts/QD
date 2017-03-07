@@ -22,20 +22,6 @@ import com.devexperts.util.ExecutorProvider;
 
 class SSLConnection extends CodecConnection<SSLConnectionFactory> {
 
-    /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
-    *                                                                         *
-    *    _                         W A R N I N G                              *
-    *   | |                                                                   *
-    *   | |   This implementation of SSL codec uses javax.net.ssl.SSLEngine,  *
-    *   | |   which is known to have a concurrency bug in Java 5 and elder:   *
-    *   | |   http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6492872      *
-    *   |_|                                                                   *
-    *    _    The bug was fixed only in JDK 1.6.0_02 and therefore, using     *
-    *   (_)   this SSL codec may cause a dead-lock while performing           *
-    *         handshake in any former versions of JRE.                        *
-    *                                                                         *
-    \* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
     private static final ThreadLocal<ByteBuffer> inAppBuffer = new ThreadLocal<>(); // todo: optionally: this may be replaced by buffer pooling
     private static final ThreadLocal<ByteBuffer> inNetBuffer = new ThreadLocal<>();
     private static final ThreadLocal<ByteBuffer> outAppBuffer = new ThreadLocal<>();

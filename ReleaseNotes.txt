@@ -1,3 +1,17 @@
+QDS 3.252:
+
+* [QD-1005] Investigate enforcing specific version of TLS (TLS 2.1) programmatically in QD RMI
+  - tls, ssl codecs and option "isTls' are always working through SSLConnectionFactory
+  - New property "protocols" for tls codec is introduce in address string.
+  - New property "cipherSuites" for tls codec is introduce in address string.
+  - Now address line may look like:
+    tls[protocols=TLSv1.2,cipher=SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA;TLS_EMPTY_RENEGOTIATION_INFO_SCSV]+:7777
+* [QD-1015] [dxFeedViewer] Change default ipf-address protocol from http to https
+* [QD-1013] dxlib: Add toString() to TypedMap and TypedKey
+* [QD-1014] BUG FIX: JDK1.8.0_121 does't support script javascript in documentation comment
+* [QD-1016] BUG FIX: Incorrect translation of close price from OnDemand to Summary record
+* [QD-1017] BUG FIX: Spurious ULP formatting in IPF
+
 QDS 3.251:
 
 * [QD-1011] History does not use subscription filter which is specified as service

@@ -105,7 +105,7 @@ public interface TimeSeriesEvent<T> extends IndexedEvent<T> {
      * Typically event index for a time series event includes
      * {@link #getTime() time} inside.
      *
-     * <h5>Implementation notes</h5>
+     * <h3>Implementation notes</h3>
      *
      * The most common scheme for event indices is to set highest 32 bits of event index
      * to event timestamp in seconds. The lowest 32 bits are then split as follows.

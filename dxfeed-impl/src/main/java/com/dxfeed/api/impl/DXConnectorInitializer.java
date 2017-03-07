@@ -8,7 +8,6 @@
  */
 package com.dxfeed.api.impl;
 
-import java.util.Iterator;
 import java.util.List;
 
 import com.devexperts.qd.qtp.*;
@@ -28,11 +27,7 @@ class DXConnectorInitializer implements QDEndpoint.ConnectorInitializer {
         List<MessageConnector> connectors = MessageConnectors.createMessageConnectors(factory, address, qdEndpoint.getRootStats());
             // remove non-demand connectors in ON_DEMAND_FEED role
         if (dxEndpoint.getRole() == DXEndpoint.Role.ON_DEMAND_FEED) {
-            for (Iterator<MessageConnector> it = qdEndpoint.getConnectors().iterator(); it.hasNext(); ) {
-                MessageConnector connector = it.next();
-                if (!(connector instanceof OnDemandConnectorMarker))
-                    it.remove();
-            }
+            qdEndpoint.getConnectors().removeIf(connector -> !(connector instanceof OnDemandConnectorMarker));
         }
         // add connectors
         qdEndpoint.addConnectors(connectors);

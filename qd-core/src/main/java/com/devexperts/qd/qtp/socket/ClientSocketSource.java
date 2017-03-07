@@ -11,15 +11,10 @@ package com.devexperts.qd.qtp.socket;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.*;
-import java.security.GeneralSecurityException;
-import java.security.KeyStore;
 import java.util.*;
-import javax.net.ssl.*;
 
-import com.devexperts.io.URLInputStream;
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.qtp.ReconnectHelper;
-import com.devexperts.util.SystemProperties;
 
 /**
  * Implements load-balancing algorithm for {@link ClientSocketConnector} by resolving host
@@ -54,8 +49,6 @@ class ClientSocketSource extends SocketSource {
     private final ReconnectHelper resolveHelper;
     private final String hostNames;
     private final int port;
-    private final boolean isTls;
-    private final SSLSocketFactory sslSocketFactory;
 
     private final List<SocketAddress> parsedAddresses;
 
@@ -68,34 +61,7 @@ class ClientSocketSource extends SocketSource {
         this.resolveHelper = new ReconnectHelper(connector.getReconnectDelay());
         this.hostNames = connector.getHost();
         this.port = connector.getPort();
-        this.isTls = connector.getTls();
-        this.sslSocketFactory = isTls ? initSslSocketFactory() : null;
         this.parsedAddresses = SocketUtil.parseAddressList(hostNames, port);
-    }
-
-    private SSLSocketFactory initSslSocketFactory() {
-        try {
-            TrustManager trustManager = connector.getTrustManager();
-            if (trustManager == null)
-                return (SSLSocketFactory) SSLSocketFactory.getDefault();
-
-            SSLContext context = SSLContext.getInstance("TLS");
-
-            String keyStoreUrl = SystemProperties.getProperty("javax.net.ssl.keyStore", null);
-            String keyStorePassword = SystemProperties.getProperty("javax.net.ssl.keyStorePassword", null);
-            String keyStoreProvider = SystemProperties.getProperty("javax.net.ssl.keyStoreProvider", null);
-            String keyStoreType = SystemProperties.getProperty("javax.net.ssl.keyStoreType", KeyStore.getDefaultType());
-
-            KeyStore keyStore = getKeyStore(keyStoreType, keyStoreProvider, keyStoreUrl, keyStorePassword);
-            KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-            keyManagerFactory.init(keyStore, keyStorePassword == null ? null : keyStorePassword.toCharArray());
-
-            context.init(keyManagerFactory.getKeyManagers(), new TrustManager[]{trustManager}, null);
-            return context.getSocketFactory();
-        } catch (Throwable t) {
-            log.error("Failed to configure SSL socket factory; connector will not start!");
-            throw new IllegalArgumentException(t);
-        }
     }
 
     @Override
@@ -109,13 +75,12 @@ class ClientSocketSource extends SocketSource {
         SocketAddress address = nextAddress();
         if (address == null)
             return null;
-        String addressStr = address + (isTls ? " (using TLS)" : "");
         ReconnectHelper reconnectHelper = reconnectHelpers.get(address);
         if (reconnectHelper == null)
             reconnectHelpers.put(address, reconnectHelper = new ReconnectHelper(connector.getReconnectDelay()));
 
         reconnectHelper.sleepBeforeConnection();
-        log.info("Connecting to " + addressStr);
+        log.info("Connecting to " + address);
 
         Socket socket = null;
         try {
@@ -141,19 +106,17 @@ class ClientSocketSource extends SocketSource {
                     throw new IOException("Unexpected response from HTTPS proxy: '" + response + "'");
                 for (String line; (line = readLine(input)) != null && line.length() > 0;) {} // skip HTTP header
             }
-            if (isTls)
-                socket = sslSocketFactory.createSocket(socket, address.host, address.port, true);
         } catch (Throwable t) {
-            log.error("Failed to connect to " + addressStr, t);
+            log.error("Failed to connect to " + address, t);
             if (socket != null)
                 try {
                     socket.close();
                 } catch (Throwable tt) {
-                    log.error("Failed to close socket " + addressStr, tt);
+                    log.error("Failed to close socket " + address, tt);
                 }
             return null;
         }
-        log.info("Connected to " + addressStr);
+        log.info("Connected to " + address);
         return new SocketInfo(socket, address);
     }
 
@@ -166,14 +129,6 @@ class ClientSocketSource extends SocketSource {
             if (c != '\r')
                 sb.append((char) c);
         return sb.toString();
-    }
-
-    private static KeyStore getKeyStore(String type, String provider, String url, String password) throws GeneralSecurityException, IOException {
-        KeyStore result = provider == null ?
-            KeyStore.getInstance(type) :
-            KeyStore.getInstance(type, provider);
-        result.load(url == null ? null : new URLInputStream(url), password == null ? null : password.toCharArray());
-        return result;
     }
 
     private SocketAddress nextAddress() throws InterruptedException {

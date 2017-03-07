@@ -35,4 +35,9 @@ public class TypedMap {
     public synchronized <T> void set(TypedKey<T> key, T value) {
         values.put(key, value);
     }
+
+    @Override
+    public String toString() {
+        return values.toString();
+    }
 }
