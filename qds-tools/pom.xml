@@ -87,6 +87,11 @@
 		<!-- shaded dependencies -->
 		<dependency>
 			<groupId>com.devexperts.qd</groupId>
+			<artifactId>dxtools</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.devexperts.qd</groupId>
 			<artifactId>qd-logger</artifactId>
 			<version>${project.version}</version>
 		</dependency>

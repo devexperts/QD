@@ -27,7 +27,6 @@ import com.devexperts.tools.*;
 public class QDHelpProvider extends DefaultHelpProvider {
 	private static final String CONNECTOR_SUFFIX = "Connector";
 
-
 	@Override
 	public String getMetaTag(String name, String caption, int width) {
 		switch (name) {

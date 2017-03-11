@@ -30,12 +30,6 @@
 			<artifactId>dxlib</artifactId>
 			<version>${project.version}</version>
 		</dependency>
-		<dependency>
-			<groupId>com.devexperts.qd</groupId>
-			<artifactId>qd-tools</artifactId>
-			<version>${project.version}</version>
-			<scope>runtime</scope>
-		</dependency>
 	</dependencies>
 
 </project>

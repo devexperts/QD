@@ -47,8 +47,6 @@ public class Help extends AbstractTool {
 
 	private static final List<Class<? extends HelpProvider>> PROVIDERS = Services.loadServiceClasses(HelpProvider.class, null);
 
-	private HelpProvider finder;
-
 	@Override
 	protected Option[] getOptions() {
 		return new Option[] { widthOpt };
@@ -121,7 +119,7 @@ public class Help extends AbstractTool {
 				System.out.println();
 			} else if (!line.startsWith(COMMENT_MARKER) && !line.startsWith(TODO_MARKER)) {
 				if (line.startsWith("" + SPECIAL_SYMBOL)) {
-					String specialLine = finder.getMetaTag(line.substring(1), caption, width);
+					String specialLine = getMetaTag(line.substring(1), caption);
 					if (specialLine != null) {
 						flush(small);
 						System.out.print(specialLine);
@@ -188,12 +186,24 @@ public class Help extends AbstractTool {
 				HelpProvider provider = providerClass.newInstance();
 				String article = provider.getArticle(caption);
 				if (article != null) {
-					this.finder = provider;
 					return article;
 				}
-			} catch (InstantiationException e) {
+			} catch (InstantiationException | IllegalAccessException e) {
 				continue;
-			} catch (IllegalAccessException e) {
+			}
+		}
+		return null;
+	}
+
+	private String getMetaTag(String name, String caption) {
+		for (Class<? extends HelpProvider> providerClass : PROVIDERS) {
+			try {
+				HelpProvider provider = providerClass.newInstance();
+				String metaTag = provider.getMetaTag(name, caption, width);
+				if (metaTag != null) {
+					return metaTag;
+				}
+			} catch (InstantiationException | IllegalAccessException ignored) {
 				continue;
 			}
 		}

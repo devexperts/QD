@@ -9,11 +9,13 @@
 package com.devexperts.tools;
 
 import java.io.*;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.*;
 
 import com.devexperts.services.Services;
 
-public abstract class DefaultHelpProvider implements HelpProvider {
+public class DefaultHelpProvider implements HelpProvider {
 	private static final String HELP_LOCAL_PREFIX = "META-INF/help";
 	private static final String HELP_FILE_SUFFIX = ".txt";
 	private static final char SPECIAL_SYMBOL = '@';
@@ -21,16 +23,20 @@ public abstract class DefaultHelpProvider implements HelpProvider {
 	private static final String ARTICLE_CAPTION_MARKER = SPECIAL_SYMBOL + "article";
 	private static final String TOOL_SUMMARY_MARKER = SPECIAL_SYMBOL + "tool-summary";
 
-	protected final String helpPrefix;
+	protected final List<URL> helpFolders;
 	protected final List<Class<? extends AbstractTool>> tools;
 
-	protected DefaultHelpProvider() {
-		helpPrefix = getClass().getProtectionDomain().getCodeSource().getLocation().getPath() + HELP_LOCAL_PREFIX;
-		tools = Services.loadLocalServiceClasses(AbstractTool.class, getClass(), null);
+	public DefaultHelpProvider() {
+		helpFolders = new LinkedList<>();
+		try {
+			helpFolders.addAll(Collections.list(getClass().getClassLoader().getResources(HELP_LOCAL_PREFIX)));
+		} catch (IOException ignored) {
+		}
+		tools = Services.loadServiceClasses(AbstractTool.class, null);
 	}
 
 	@Override
-	public String getArticle(String name) {
+	public final String getArticle(String name) {
 		BufferedReader reader = getHelpReader(name);
 		if (reader == null) {
 			AbstractTool tool = getTool(name);
@@ -70,7 +76,8 @@ public abstract class DefaultHelpProvider implements HelpProvider {
 		} finally {
 			try {
 				reader.close();
-			} catch (IOException ignored) {}
+			} catch (IOException ignored) {
+			}
 		}
 	}
 
@@ -78,21 +85,29 @@ public abstract class DefaultHelpProvider implements HelpProvider {
 	public List<String> getArticles() {
 		ArrayList<String> captions = new ArrayList<>();
 		Set<String> lowerCaptions = new HashSet<>();
-		File[] helpFiles = new File(helpPrefix).listFiles(new UnspecialHelpFileFilter());
-
-		if (helpFiles != null) {
-			for (File helpFile : helpFiles) {
-				try (BufferedReader reader = getHelpReader(helpFile.getName())) {
-					if (reader == null) {
-						continue;
-					}
-
-					String caption = reader.readLine().substring(ARTICLE_CAPTION_MARKER.length()).trim();
-					captions.add(caption);
-					lowerCaptions.add(caption.toLowerCase(Locale.US));
-				} catch (IOException e) {
-					return null;
+		List<File> helpFiles = new LinkedList<>();
+		for (URL helpFolder : helpFolders) {
+			try {
+				File[] filesInTheFolder = new File(helpFolder.toURI()).listFiles(new UnspecialHelpFileFilter());
+				if (filesInTheFolder != null) {
+					helpFiles.addAll(Arrays.asList(filesInTheFolder));
 				}
+			} catch (URISyntaxException e) {
+				System.out.println(e.getMessage());
+			}
+		}
+
+		for (File helpFile : helpFiles) {
+			try (BufferedReader reader = getHelpReader(helpFile.getName())) {
+				if (reader == null) {
+					continue;
+				}
+
+				String caption = reader.readLine().substring(ARTICLE_CAPTION_MARKER.length()).trim();
+				captions.add(caption);
+				lowerCaptions.add(caption.toLowerCase(Locale.US));
+			} catch (IOException e) {
+				return null;
 			}
 		}
 
@@ -130,12 +145,15 @@ public abstract class DefaultHelpProvider implements HelpProvider {
 		if (!caption.endsWith(HELP_FILE_SUFFIX)) {
 			caption += HELP_FILE_SUFFIX;
 		}
-		String contentFilePath = helpPrefix + "/" + caption.replaceAll(" ", "_");
-		try {
-			return new BufferedReader(new FileReader(contentFilePath));
-		} catch (FileNotFoundException e) {
-			return null;
+		for (URL helpFolder : helpFolders) {
+			try {
+				String contentFilePath = helpFolder.getPath() + "/" + caption.replaceAll(" ", "_");
+				return new BufferedReader(new FileReader(contentFilePath));
+			} catch (FileNotFoundException ignored) {
+				continue;
+			}
 		}
+		return null;
 	}
 
 	protected AbstractTool getTool(String name) {

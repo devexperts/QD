@@ -13,24 +13,6 @@
     <orderEntry type="library" scope="TEST" name="Maven: com.devexperts.timetest:timetest:0.9" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.aspectj:aspectjrt:1.8.2" level="project" />
     <orderEntry type="module" module-name="dxlib" />
-    <orderEntry type="module" module-name="qd-tools" scope="RUNTIME" />
-    <orderEntry type="module" module-name="dxlib-qd-sandbox" scope="RUNTIME" />
-    <orderEntry type="module" module-name="mars" scope="RUNTIME" />
-    <orderEntry type="module" module-name="qds-monitoring" scope="RUNTIME" />
-    <orderEntry type="module" module-name="qds" scope="RUNTIME" />
-    <orderEntry type="module" module-name="proto-ssl" scope="RUNTIME" />
-    <orderEntry type="module" module-name="dxfeed-ipf-filter" scope="RUNTIME" />
-    <orderEntry type="library" scope="RUNTIME" name="Maven: com.sun.jdmk:jmxtools:1.2.8" level="project" />
-    <orderEntry type="module" module-name="qd-core" scope="RUNTIME" />
-    <orderEntry type="module" module-name="auth" scope="RUNTIME" />
-    <orderEntry type="module" module-name="proto" scope="RUNTIME" />
-    <orderEntry type="module" module-name="dxfeed-promise" scope="RUNTIME" />
-    <orderEntry type="module" module-name="qd-rmi" scope="RUNTIME" />
-    <orderEntry type="module" module-name="dxfeed-api" scope="RUNTIME" />
-    <orderEntry type="module" module-name="qds-file" scope="RUNTIME" />
-    <orderEntry type="module" module-name="dxfeed-ondemand" scope="RUNTIME" />
-    <orderEntry type="module" module-name="dxfeed-tools" scope="RUNTIME" />
-    <orderEntry type="module" module-name="dxfeed-impl" scope="RUNTIME" />
     <orderEntry type="library" scope="TEST" name="Maven: junit:junit:4.12" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.hamcrest:hamcrest-core:1.3" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.aspectj:aspectjweaver:1.8.2" level="project" />

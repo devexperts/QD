@@ -265,27 +265,6 @@ public class Services {
 		return classes;
 	}
 
-	public static <T> List<Class<? extends T>> loadLocalServiceClasses(Class<T> serviceClass, Class<?> sourceClass, ClassLoader loader) {
-		SortedMap<Integer, List<Class<? extends T>>> ordered = new TreeMap<>();
-		for (String className : getLocalServiceClassNames(serviceClass, sourceClass, loader)) {
-			Class<? extends T> clazz = loadServiceClass(serviceClass, loader, className);
-			if (clazz == null)
-				continue;
-			int order = 0;
-			ServiceProvider providerAnnotation = clazz.getAnnotation(ServiceProvider.class);
-			if (providerAnnotation != null)
-				order = providerAnnotation.order();
-			List<Class<? extends T>> list = ordered.get(order);
-			if (list == null)
-				ordered.put(order, list = new ArrayList<>());
-			list.add(clazz);
-		}
-		List<Class<? extends T>> classes = new ArrayList<>();
-		for (List<Class<? extends T>> list : ordered.values())
-			classes.addAll(list);
-		return classes;
-	}
-
 	private static List<String> getServiceClassNames(Class<?> serviceClass, ClassLoader loader) {
 		Set<String> names = new LinkedHashSet<>();
 		for (URL url : getServiceConfigURLs(serviceClass, loader)) {
@@ -297,28 +276,6 @@ public class Services {
 					int ci = name.indexOf('#');
 					if (ci >= 0)
 						name = name.substring(0, ci);
-					name = name.trim();
-					if (name.isEmpty())
-						continue;
-					if (SystemProperties.getProperty(name + DISABLE_SUFFIX, null) != null)
-						continue; // this service was disabled
-					names.add(name);
-				}
-			} catch (IOException e) {
-				log().error("Cannot read " + url, e);
-			}
-		}
-		return new ArrayList<>(names);
-	}
-
-	private static List<String> getLocalServiceClassNames(Class<?> serviceClass, Class<?> sourceClass, ClassLoader loader) {
-		Set<String> names = new LinkedHashSet<>();
-		for (URL url : getLocalServiceConfigURLs(serviceClass, sourceClass, loader)) {
-			try (BufferedReader r =
-					new BufferedReader(new InputStreamReader(url.openStream(), StandardCharsets.UTF_8)))
-			{
-				String name;
-				while ((name = r.readLine()) != null) {
 					name = name.trim();
 					if (name.isEmpty())
 						continue;
@@ -353,24 +310,6 @@ public class Services {
 		SupersedesService supersedes = serviceClass.getAnnotation(SupersedesService.class);
 		if (supersedes != null && supersedes.value() != null)
 			urls.addAll(getServiceConfigURLs(supersedes.value(), loader));
-		return urls;
-	}
-
-	private static List<URL> getLocalServiceConfigURLs(Class<?> serviceClass, Class<?> sourceClass, ClassLoader loader) {
-		String serviceConfig = META_INF_SERVICES + serviceClass.getName();
-		List<URL> urls = new ArrayList<>();
-		URL root = sourceClass.getProtectionDomain().getCodeSource().getLocation();
-		URL serviceConfigURL;
-		try {
-			serviceConfigURL = root.toURI().resolve(serviceConfig).toURL();
-			urls.add(serviceConfigURL);
-		} catch (URISyntaxException | MalformedURLException e) {
-			log().error("Cannot read local " + serviceConfig);
-			urls = Collections.emptyList();
-		}
-		SupersedesService supersedes = serviceClass.getAnnotation(SupersedesService.class);
-		if (supersedes != null && supersedes.value() != null)
-			urls.addAll(getLocalServiceConfigURLs(supersedes.value(), sourceClass, loader));
 		return urls;
 	}
 }
