@@ -56,3 +56,4 @@ qds/dependency-reduced-pom.xml
 qds/target
 rt-api-builder/target
 teamcity-version/target
+tdp/target

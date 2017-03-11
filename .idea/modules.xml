@@ -44,6 +44,7 @@
       <module fileurl="file://$PROJECT_DIR$/qds-monitoring/qds-monitoring.iml" filepath="$PROJECT_DIR$/qds-monitoring/qds-monitoring.iml" />
       <module fileurl="file://$PROJECT_DIR$/qds-tools/qds-tools.iml" filepath="$PROJECT_DIR$/qds-tools/qds-tools.iml" />
       <module fileurl="file://$PROJECT_DIR$/rt-api-builder/rt-api-builder.iml" filepath="$PROJECT_DIR$/rt-api-builder/rt-api-builder.iml" />
+      <module fileurl="file://$PROJECT_DIR$/tdp/tdp.iml" filepath="$PROJECT_DIR$/tdp/tdp.iml" />
       <module fileurl="file://$PROJECT_DIR$/teamcity-version/teamcity-version.iml" filepath="$PROJECT_DIR$/teamcity-version/teamcity-version.iml" />
     </modules>
   </component>

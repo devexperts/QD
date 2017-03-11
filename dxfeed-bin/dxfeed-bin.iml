@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <module org.jetbrains.idea.maven.project.MavenProjectsManager.isMavenModule="true" type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_8" inherit-compiler-output="false">
     <output url="file://$MODULE_DIR$/target/classes" />
@@ -27,15 +28,16 @@
     <orderEntry type="module" module-name="qds-monitoring" />
     <orderEntry type="module" module-name="qds-tools" />
     <orderEntry type="module" module-name="qds-file" />
+    <orderEntry type="module" module-name="dxtools" />
     <orderEntry type="module" module-name="qd-logger" />
     <orderEntry type="module" module-name="qd-nio" />
     <orderEntry type="module" module-name="qd-servlet" />
     <orderEntry type="library" name="Maven: javax.servlet:javax.servlet-api:3.1.0" level="project" />
     <orderEntry type="module" module-name="qd-stripe" />
     <orderEntry type="module" module-name="qd-tools" />
-    <orderEntry type="module" module-name="dxtools" />
     <orderEntry type="module" module-name="qd-samplecert" />
     <orderEntry type="module" module-name="dxfeed-tools" />
+    <orderEntry type="module" module-name="tdp" />
     <orderEntry type="module" module-name="dxfeed-ondemand" />
     <orderEntry type="module" module-name="dxfeed-news" />
     <orderEntry type="library" name="Maven: com.sun.jdmk:jmxtools:1.2.8" level="project" />

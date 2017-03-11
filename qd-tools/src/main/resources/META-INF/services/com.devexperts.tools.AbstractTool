@@ -13,5 +13,4 @@ com.devexperts.qd.tools.Post
 com.devexperts.qd.tools.SchemeDump
 com.devexperts.qd.tools.Services
 com.devexperts.qd.tools.SubscriptionDumpParser
-com.devexperts.qd.tools.TDP
 com.devexperts.qd.tools.Time

@@ -58,6 +58,7 @@
 									<include>com.devexperts.qd:qd-tools</include>
 									<include>com.devexperts.qd:qd-samplecert</include>
 									<include>com.devexperts.qd:dxfeed-tools</include>
+									<include>com.devexperts.qd:tdp</include>
 								</includes>
 							</artifactSet>
 						</configuration>
@@ -123,6 +124,11 @@
 		<dependency>
 			<groupId>com.devexperts.qd</groupId>
 			<artifactId>dxfeed-tools</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.devexperts.qd</groupId>
+			<artifactId>tdp</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 	</dependencies>

@@ -59,6 +59,9 @@
 		<module>qd-samplecert</module>
 		<module>dxfeed-tools</module>
 
+		<!-- module shaded into tdp.jar -->
+		<module>tdp</module>
+
 		<!-- other (internal) modules -->
 		<module>mars-sample</module>
 		<module>proto-sample</module>
