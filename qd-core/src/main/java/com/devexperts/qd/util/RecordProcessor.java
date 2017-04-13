@@ -116,11 +116,14 @@ public abstract class RecordProcessor {
             if (rescheduleTask)
                 rescheduleTask();
             else {
-                signalNoMoreToProcess();
-                taskScheduled.set(false);
-                // Concurrent dataAvailable notification might have happened - recheck flag
-                if (handler.available)
-                    scheduleTaskIfNeeded();
+                try {
+                    signalNoMoreToProcess();
+                } finally {
+                    taskScheduled.set(false);
+                    // Concurrent recordsAvailable notification might have happened - recheck flag
+                    if (handler.available)
+                        scheduleTaskIfNeeded();
+                }
             }
         }
     }

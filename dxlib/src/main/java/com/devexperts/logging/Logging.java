@@ -176,18 +176,35 @@ public class Logging {
      */
     private static DefaultLogging configure() {
         DefaultLogging impl;
-        Map<String, Exception> errors = new LinkedHashMap<String, Exception>();
+        Map<String, Exception> errors = new LinkedHashMap<>();
         try {
             impl = (DefaultLogging) Class.forName("com.devexperts.logging.Log4jLogging").newInstance();
             errors.putAll(impl.configure());
         } catch (Throwable t) {
-            // failed to configure log4j -- use default logging
+            // failed to configure log4j
+            impl = null;
+            // LinkageError means that log4j is not found at all, otherwise it was found but our config is wrong
+            if (!(t instanceof LinkageError) && !(t.getCause() instanceof LinkageError)) {
+                errors.put("log4j link", new IllegalStateException(t));
+            }
+        }
+        if (impl == null) {
+            try {
+                impl = (DefaultLogging) Class.forName("com.devexperts.logging.Log4j2Logging").newInstance();
+                errors.putAll(impl.configure());
+            } catch (Throwable t) {
+                // failed to configure log4j2
+                impl = null;
+                if (!(t instanceof LinkageError) && !(t.getCause() instanceof LinkageError)) {
+                    errors.put("log4j2 link", new IllegalStateException(t));
+                }
+            }
+        }
+        if (impl == null) {
             impl = new DefaultLogging();
             errors.putAll(impl.configure());
-            // LinkageError means that log4j is not found at all, otherwise it was found but our config is wrong
-            if (!(t instanceof LinkageError) && !(t.getCause() instanceof LinkageError))
-                impl.log(impl.getPeer("config"), Level.SEVERE, "Failed to configure log4j", t);
         }
+
         reportErrors(impl, errors);
         return impl;
     }

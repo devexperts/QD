@@ -11,15 +11,16 @@ package com.dxfeed.api.test;
 import java.util.*;
 
 import com.dxfeed.api.DXEndpoint;
-import com.dxfeed.api.osub.IndexedEventSubscriptionSymbol;
-import com.dxfeed.api.osub.WildcardSymbol;
+import com.dxfeed.api.DXFeedSubscription;
+import com.dxfeed.api.osub.*;
 import com.dxfeed.event.candle.*;
 import com.dxfeed.event.market.*;
 import com.dxfeed.event.option.Series;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class DXPublisherTest extends AbstractDXPublisherTest {
     // Note that '9' and '~' are not a supported "exchange codes" and subscription to
@@ -34,6 +35,54 @@ public class DXPublisherTest extends AbstractDXPublisherTest {
     protected DXEndpoint.Builder endpointBuilder() {
         return super.endpointBuilder()
             .withProperty(DXEndpoint.DXSCHEME_NANO_TIME_PROPERTY, "true");
+    }
+
+    @Test
+    public void testSubscriptionNotificationLoss() throws InterruptedException {
+        setUp("testSubscriptionNotificationLoss");
+        Set<Object> symbols = new HashSet<>(Arrays.asList("AAPL,GOOG,IBM,GE".split(",")));
+        Object firstSymbol = symbols.iterator().next();
+        Set<Object> added = new HashSet<>();
+        Set<Object> removed = new HashSet<>();
+        ObservableSubscriptionChangeListener observableSubChangeListener = new ObservableSubscriptionChangeListener() {
+            @Override
+            public void symbolsAdded(Set<?> symbols) {
+                log.info("symbolsAdded " + symbols);
+                added.addAll(symbols);
+                assertTrue(!symbols.isEmpty());
+                throw new RuntimeException();
+            }
+
+            @Override
+            public void symbolsRemoved(Set<?> symbols) {
+                log.info("symbolsRemoved " + symbols);
+                removed.addAll(symbols);
+                assertTrue(!symbols.isEmpty());
+                throw new RuntimeException();
+            }
+        };
+        Class<Quote> eventType = Quote.class;
+        publisher.getSubscription(eventType).addChangeListener(observableSubChangeListener);
+        DXFeedSubscription sub = feed.createSubscription(eventType);
+        log.info("Adding symbol " + firstSymbol);
+        sub.addSymbols(firstSymbol);
+        checkpoint();
+        log.info("Adding rest of symbols " + symbols);
+        sub.addSymbols(symbols.toArray());
+        checkpoint();
+        assertEquals(symbols, added);
+
+        log.info("Removing symbol " + firstSymbol);
+        sub.removeSymbols(firstSymbol);
+        checkpoint();
+        log.info("Closing subscription with rest of symbols " + symbols);
+        sub.close();
+        checkpoint();
+        assertEquals(symbols, added);
+        assertEquals(symbols, removed);
+
+        publisher.getSubscription(eventType).removeChangeListener(observableSubChangeListener);
+        tearDown();
     }
 
     @Test
@@ -264,19 +313,19 @@ public class DXPublisherTest extends AbstractDXPublisherTest {
                 assertEquals(publishedEvent.getEventTime(), receivedEvent.getEventTime());
                 assertEquals(publishedEvent.getIndex(), receivedEvent.getIndex());
                 assertEquals(publishedEvent.getTime(), receivedEvent.getTime());
-                assertEquals(publishedEvent.getClose(), receivedEvent.getClose());
+                assertEquals(publishedEvent.getClose(), receivedEvent.getClose(), 0);
                 assertEquals(publishedEvent.getVolume(), receivedEvent.getVolume());
                 if (symbol.getPeriod() != CandlePeriod.TICK) {
                     assertEquals(publishedEvent.getCount(), receivedEvent.getCount());
-                    assertEquals(publishedEvent.getOpen(), receivedEvent.getOpen());
-                    assertEquals(publishedEvent.getHigh(), receivedEvent.getHigh());
-                    assertEquals(publishedEvent.getLow(), receivedEvent.getLow());
-                    assertEquals(publishedEvent.getVWAP(), receivedEvent.getVWAP());
+                    assertEquals(publishedEvent.getOpen(), receivedEvent.getOpen(), 0);
+                    assertEquals(publishedEvent.getHigh(), receivedEvent.getHigh(), 0);
+                    assertEquals(publishedEvent.getLow(), receivedEvent.getLow(), 0);
+                    assertEquals(publishedEvent.getVWAP(), receivedEvent.getVWAP(), 0);
                 } else {
                     assertEquals(1, receivedEvent.getCount());
-                    assertEquals(publishedEvent.getClose(), receivedEvent.getOpen());
-                    assertEquals(publishedEvent.getClose(), receivedEvent.getHigh());
-                    assertEquals(publishedEvent.getClose(), receivedEvent.getLow());
+                    assertEquals(publishedEvent.getClose(), receivedEvent.getOpen(), 0);
+                    assertEquals(publishedEvent.getClose(), receivedEvent.getHigh(), 0);
+                    assertEquals(publishedEvent.getClose(), receivedEvent.getLow(), 0);
                 }
             };
             testEventPublishing(Candle.class, symbol, eventCreator, eventChecker);

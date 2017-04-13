@@ -113,27 +113,37 @@ public abstract class SubscriptionProcessor {
         removedHandler.setListener(null);
     }
 
+    /**
+     * Returns true when this SubscriptionProcessor has more subscription available to process or its
+     * task is scheduled for processing.
+     */
+    public boolean hasMoreToProcess() {
+        return taskScheduled.get();
+    }
+
+    /**
+     * This method is called immediately before {@link #hasMoreToProcess()} becomes false.
+     */
+    protected void signalNoMoreToProcess() {}
+
     // ========== Implementation ==========
 
-    private void scheduleTask() {
+    private void rescheduleTask() {
+        executor.execute(addedHandler);
+    }
+
+    private void scheduleTaskIfNeeded() {
         if (taskScheduled.compareAndSet(false, true))
-            executor.execute(addedHandler);
+            rescheduleTask();
     }
 
     private void executeTask() {
-        boolean moreAvailable; // Repeat while more sub available to process
-        do {
-            moreAvailable = executeTaskOnce();
-        } while (moreAvailable);
-    }
-
-    // returns true when there is more sub available to process
-    private boolean executeTaskOnce() {
+        boolean rescheduleTask = true; // Reschedule task if an exception was thrown.
         try {
             // INVARIANT: taskScheduled == true here
             // added subscription is contract-specific
             RecordBuffer buf = RecordBuffer.getInstance(RecordMode.addedSubscriptionFor(contract));
-            buf.setCapacityLimited(true);
+            buf.setCapacityLimited(true); // retrieve up to buffer capacity only
             addedHandler.retrieve(buf);
             if (TRACE_LOG)
                 log.trace("executeTask added size=" + buf.size());
@@ -148,14 +158,20 @@ public abstract class SubscriptionProcessor {
             if (!buf.isEmpty())
                 processRemovedSubscription(buf);
             buf.release();
-
-            // Concurrent subscriptionAvailable notification might have happened - recheck all flags.
-            taskScheduled.set(false);
-            return addedHandler.available || removedHandler.available;
-        } catch (Throwable t) {
-            log.error("Subscription processor has failed", t);
-            scheduleTask(); // reschedule task if exception was thrown
-            throw t;
+            rescheduleTask = addedHandler.available || removedHandler.available;
+        } finally {
+            if (rescheduleTask)
+                rescheduleTask();
+            else {
+                try {
+                    signalNoMoreToProcess();
+                } finally {
+                    taskScheduled.set(false);
+                    // Concurrent recordsAvailable notification might have happened - recheck flag
+                    if (addedHandler.available || removedHandler.available)
+                        scheduleTaskIfNeeded();
+                }
+            }
         }
     }
 
@@ -176,7 +192,7 @@ public abstract class SubscriptionProcessor {
             boolean more = true; // Consider subscription is still available if an exception was thrown.
             try {
                 available = false;
-                more = provider.retrieveSubscription(buf);
+                more = provider.retrieve(buf);
             } finally {
                 if (more)
                     available = true;
@@ -188,7 +204,7 @@ public abstract class SubscriptionProcessor {
             if (TRACE_LOG)
                 log.trace("recordsAvailable from " + provider);
             available = true;
-            scheduleTask();
+            scheduleTaskIfNeeded();
         }
 
         @Override

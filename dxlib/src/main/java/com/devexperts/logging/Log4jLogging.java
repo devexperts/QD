@@ -29,41 +29,46 @@ class Log4jLogging extends DefaultLogging {
     }
 
     @Override
-    Map<String, Exception> configureLogFile(String log_file) {
+    Map<String, Exception> configureLogFile(String logFile) {
         Category.getRoot().removeAllAppenders();
-        return reconfigure(log_file);
+        return reconfigure(logFile);
     }
 
-    private static Map<String, Exception> reconfigure(String log_file) {
+    private static Map<String, Exception> reconfigure(String logFile) {
         Map<String, Exception> errors = new LinkedHashMap<String, Exception>();
         Appender appender = null;
-        if (log_file != null)
+        if (logFile != null) {
             try {
-                appender = createFileAppender(log_file, Logging.LOG_MAX_FILE_SIZE_PROPERTY, errors);
+                appender = createFileAppender(logFile, Logging.LOG_MAX_FILE_SIZE_PROPERTY, errors);
             } catch (Exception e) {
-                errors.put(log_file, e);
+                errors.put(logFile, e);
             }
+        }
         if (appender == null)
             appender = new ConsoleAppender(new DetailedLogLayout());
         Category.getRoot().addAppender(appender);
-        String err_file = getProperty(Logging.ERR_FILE_PROPERTY, null);
-        if (err_file != null)
+
+        String errFile = getProperty(Logging.ERR_FILE_PROPERTY, null);
+        if (errFile != null) {
             try {
-                RollingFileAppender rf_appender = createFileAppender(err_file, Logging.ERR_MAX_FILE_SIZE_PROPERTY, errors);
-                rf_appender.setThreshold(Priority.WARN);
-                Category.getRoot().addAppender(rf_appender);
+                RollingFileAppender errAppender = createFileAppender(errFile, Logging.ERR_MAX_FILE_SIZE_PROPERTY, errors);
+                errAppender.setThreshold(Priority.WARN);
+                Category.getRoot().addAppender(errAppender);
             } catch (Exception e) {
-                errors.put(err_file, e);
+                errors.put(errFile, e);
             }
+        }
         return errors;
     }
 
-    private static RollingFileAppender createFileAppender(String log_file, String max_size_key, Map<String, Exception> errors) throws IOException {
-        RollingFileAppender rf_appender = new RollingFileAppender(new DetailedLogLayout(), log_file, true);
-        int limit = getLimit(max_size_key, errors);
+    private static RollingFileAppender createFileAppender(String logFile, String maxSizeKey,
+        Map<String, Exception> errors) throws IOException
+    {
+        RollingFileAppender appender = new RollingFileAppender(new DetailedLogLayout(), logFile, true);
+        int limit = getLimit(maxSizeKey, errors);
         if (limit != 0)
-            rf_appender.setMaxFileSize(Integer.toString(limit));
-        return rf_appender;
+            appender.setMaxFileSize(Integer.toString(limit));
+        return appender;
     }
 
     @Override
@@ -82,8 +87,8 @@ class Log4jLogging extends DefaultLogging {
     }
 
     @Override
-    void setDebugEnabled(Object peer, boolean debug_enabled) {
-        ((Category) peer).setPriority(debug_enabled ? Priority.DEBUG : Priority.INFO);
+    void setDebugEnabled(Object peer, boolean debugEnabled) {
+        ((Category) peer).setPriority(debugEnabled ? Priority.DEBUG : Priority.INFO);
     }
 
     @Override
@@ -97,8 +102,10 @@ class Log4jLogging extends DefaultLogging {
             priority = Priority.WARN;
         else
             priority = Priority.ERROR;
+
         if (!((Category) peer).isEnabledFor(priority))
             return;
+
         // Before calling log4j logger we must clear "interrupted" flag from current thread.
         // If this flag is "true", log4j will log error in 1 appender only (and probably clear the flag).
         // We will re-establish "interrupted" flag later.

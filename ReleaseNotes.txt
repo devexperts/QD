@@ -1,3 +1,9 @@
+
+QDS 3.253:
+
+* [QD-1021] dxlib: Allow Log4j2 as logging implementation
+* [QD-1018] BUGFIX: SubscriptionProcessor stops working after exception
+
 QDS 3.252:
 
 * [QD-1005] Investigate enforcing specific version of TLS (TLS 2.1) programmatically in QD RMI

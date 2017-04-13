@@ -12,6 +12,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.devexperts.logging.Logging;
 import com.devexperts.test.ThreadCleanCheck;
@@ -23,15 +24,17 @@ import com.dxfeed.event.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import static junit.framework.Assert.*;
+import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
 @Parameterized.UseParametersRunnerFactory(TraceRunnerWithParametersFactory.class)
 public abstract class AbstractDXPublisherTest {
-    private final Logging log = Logging.getLogging(getClass());
+    protected final Logging log = Logging.getLogging(getClass());
 
     protected final DXEndpoint.Role role;
     protected ExecutorService executorService;
+    protected Executor executor;
+    protected AtomicInteger executionCount;
     protected DXEndpoint endpoint;
     protected DXFeed feed;
     protected DXPublisher publisher;
@@ -51,7 +54,9 @@ public abstract class AbstractDXPublisherTest {
     public void setUp(String description) {
         ThreadCleanCheck.before(description);
         executorService = Executors.newSingleThreadExecutor();
-        endpoint = endpointBuilder().build().executor(executorService);
+        executor = command -> { executionCount.incrementAndGet(); executorService.execute(command); };
+        executionCount = new AtomicInteger();
+        endpoint = endpointBuilder().build().executor(executor);
         feed = endpoint.getFeed();
         publisher = endpoint.getPublisher();
     }
@@ -189,9 +194,13 @@ public abstract class AbstractDXPublisherTest {
 
     protected void checkpoint() {
         try {
-            executorService.submit(() -> {
-                log.trace("Executing checkpoint");
-            }).get();
+            for (int i = 1;; i++) {
+                int loop = i;
+                int count = executionCount.get();
+                executorService.submit(() -> log.trace("Executing checkpoint #" + loop + " for " + count)).get();
+                if (executionCount.get() == count)
+                    break;
+            }
             log.trace("Checkpoint done");
         } catch (Exception e) {
             e.printStackTrace();
