@@ -128,31 +128,7 @@ public final class Schedule {
             downloadPeriod = config.length >= 2 ? Math.max(TimePeriod.valueOf(config[1]).getTime(), 0) : 0;
             LockSupport.unpark(downloadThread);
             if (downloadPeriod > 0) {
-                downloadThread = new Thread(new Runnable() {
-                    public void run() {
-                        long next = 0;
-                        while (true)
-                            try {
-                                long time = System.currentTimeMillis();
-                                long newNext;
-                                synchronized (Schedule.class) {
-                                    if (downloadURL == null || downloadPeriod == 0 || downloadThread != Thread.currentThread())
-                                        return;
-                                    newNext = time + (long) (downloadPeriod * (0.95 + Math.random() / 10));
-                                }
-                                if (next == 0)
-                                    next = newNext;
-                                if (time < next) {
-                                    LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(next - time));
-                                    continue;
-                                }
-                                next = newNext;
-                                doDownload();
-                            } catch (Throwable t) {
-                                Logging.getLogging(Schedule.class).error("Unexpected error", t);
-                            }
-                    }
-                }, "ScheduleDownloader");
+                downloadThread = new Thread(Schedule::runDownload, "ScheduleDownloader");
                 downloadThread.setDaemon(true);
                 downloadThread.start();
             } else
@@ -161,16 +137,48 @@ public final class Schedule {
         doDownload();
     }
 
+    private static void runDownload() {
+        long next = 0;
+        while (true) {
+            try {
+                long time = System.currentTimeMillis();
+                long newNext;
+                synchronized (Schedule.class) {
+                    if (downloadURL == null || downloadPeriod == 0 || downloadThread != Thread.currentThread())
+                        return;
+                    newNext = time + (long) (downloadPeriod * (0.95 + 0.1 * Math.random()));
+                }
+                if (next == 0)
+                    next = newNext;
+                if (time < next) {
+                    LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(next - time));
+                    continue;
+                }
+                next = newNext;
+                doDownload();
+            } catch (Throwable t) {
+                Logging.getLogging(Schedule.class).error("Unexpected error", t);
+            }
+        }
+    }
+
     private static void doDownload() {
         String url = downloadURL; // Atomic read.
         if (url == null)
             return;
         Logging log = Logging.getLogging(Schedule.class);
+        byte[] data;
         try {
-            setDefaults(URLInputStream.readURL(url));
-            log.info("Downloaded schedule defaults successfully from " + url);
-        } catch (IOException e) {
-            log.error("Failed to download schedule defaults from " + url, e);
+            data = URLInputStream.readURL(url);
+        } catch (Throwable t) {
+            log.error("Failed to download schedule defaults from " + url, t);
+            return;
+        }
+        try (InputStream in = StreamCompression.detectCompressionByHeaderAndDecompress(new ByteArrayInput(data))) {
+            String result = setDefaults(in);
+            log.info("Downloaded schedule defaults from " + url + " - they are " + result);
+        } catch (Throwable t) {
+            log.error("Unexpected error", t);
         }
     }
 
@@ -400,15 +408,9 @@ public final class Schedule {
         return (dayId % 7 + 10) % 7 + 1; // 1=Monday, 7=Sunday, protected from overflows and negative numbers
     }
 
-    private static final Comparator<Day> USAGE_COMPARATOR = new Comparator<Day>() {
-        public int compare(Day d1, Day d2) {
-            long uc1 = d1.usageCounter;
-            long uc2 = d2.usageCounter;
-            return uc1 < uc2 ? -1 : uc1 > uc2 ? 1 : 0;
-        }
-    };
+    private static final Comparator<Day> USAGE_COMPARATOR = (d1, d2) -> Long.compare(d1.usageCounter, d2.usageCounter);
 
-    private static final class TimeDef implements Comparable<TimeDef> {
+    private static final class TimeDef {
         final int day;
         final int hour;
         final int minute;
@@ -600,7 +602,7 @@ public final class Schedule {
         Defaults defaults = DEFAULTS; // Atomic volatile read.
         String venue = def.substring(0, def.indexOf('('));
         Map<String, String> props = defaults.venues.get(venue);
-        props = props == null ? new HashMap<String, String>() : new HashMap<>(props);
+        props = props == null ? new HashMap<>() : new HashMap<>(props);
         props = readProps(props, def.substring(def.indexOf('(') + 1, def.length() - 1));
         String name = props.get("name");
         if (name == null)
@@ -740,19 +742,24 @@ public final class Schedule {
         try (InputStream in = Schedule.class.getResourceAsStream("schedule.properties")) {
             if (in != null)
                 setDefaults(in);
-        } catch (IOException e) {
-            Logging.getLogging(Schedule.class).error("Unexpected error", e);
+        } catch (Throwable t) {
+            Logging.getLogging(Schedule.class).error("Unexpected error", t);
         }
         downloadDefaults(SystemProperties.getProperty(DOWNLOAD_PROPERTY, null));
     }
 
-    private static void setDefaults(InputStream in) throws IOException {
+    private static String setDefaults(InputStream in) throws IOException {
         Defaults newDef = new Defaults();
         //noinspection IOResourceOpenedButNotSafelyClosed
         BufferedReader br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
         for (String line; (line = br.readLine()) != null;) {
-            for (String nextLine = line; nextLine.endsWith("\\") && (nextLine = br.readLine()) != null;)
-                line = line.substring(0, line.length() - 1) + nextLine;
+            while (line.endsWith("\\")) {
+                line = line.substring(0, line.length() - 1);
+                String nextLine = br.readLine();
+                if (nextLine == null)
+                    break;
+                line = line + nextLine;
+            }
             if (line.startsWith("date=")) {
                 newDef.date = TimeFormat.GMT.parse(line.substring("date=".length())).getTime();
                 continue;
@@ -771,16 +778,23 @@ public final class Schedule {
                 if (newDef.shortdays.put(subkey, readDays(newDef.shortdays, value)) != null)
                     throw new IllegalArgumentException("duplicate short day list " + line);
             } else if (key.startsWith("tv.")) {
-                if (newDef.venues.put(subkey, readProps(new HashMap<String, String>(), value)) != null)
+                if (newDef.venues.put(subkey, readProps(new HashMap<>(), value)) != null)
                     throw new IllegalArgumentException("duplicate venue " + line);
             }
         }
         Defaults oldDef = DEFAULTS; // Atomic volatile read.
-        if (newDef.date < oldDef.date || newDef.holidays.equals(oldDef.holidays) && newDef.shortdays.equals(oldDef.shortdays) && newDef.venues.equals(oldDef.venues))
-            return;
+        if (newDef.date < oldDef.date)
+            return "older than current - ignored";
         DEFAULTS = newDef; // Atomic volatile write.
+        if (newDef.holidays.equals(oldDef.holidays) && newDef.shortdays.equals(oldDef.shortdays) && newDef.venues.equals(oldDef.venues))
+            return "identical to current";
         for (Schedule schedule : SCHEDULES)
-            schedule.init();
+            try {
+                schedule.init();
+            } catch (Throwable t) {
+                Logging.getLogging(Schedule.class).error("Unexpected error", t);
+            }
+        return "newer than current - applied";
     }
 
     private static LongHashSet readDays(Map<String, LongHashSet> refs, String list) {

@@ -230,6 +230,7 @@ public class CompositeFiltersTest extends TestCase {
         assertTrue(parse("!A") instanceof SymbolSetFilter);
         assertTrue(parse("A,B,C") instanceof SymbolSetFilter);
         assertTrue(parse("!(A,B,C)") instanceof SymbolSetFilter);
+        assertTrue(CompositeFilters.makeAnd(parse("A,B"), new NotFilter(parse("A*"))) instanceof SymbolSetFilter);
         // efficient not-pattern implementation
         assertTrue(parse("A*") instanceof PatternFilter);
         assertTrue(parse("!A*") instanceof PatternFilter);
@@ -284,7 +285,7 @@ public class CompositeFiltersTest extends TestCase {
 
     private QDFilter parse(String s) {
         QDFilter result = CompositeFilters.valueOf(s, SCHEME);
-        assertTrue(result == null || result.isStable()); // and must be stable
+        assertTrue(result.isStable()); // and must be stable
         return result;
     }
 }

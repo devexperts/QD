@@ -11,7 +11,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.253</version>
+        <version>3.254</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -57,26 +57,27 @@
             <version>${jetty.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.eclipse.jetty.orbit</groupId>
-            <artifactId>org.apache.jasper.glassfish</artifactId>
-            <version>${jasper-glassfish.version}</version>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>apache-jsp</artifactId>
+            <version>${jetty.version}</version>
         </dependency>
     </dependencies>
 
     <build>
         <plugins>
             <plugin>
-                <groupId>com.devexperts.qd</groupId>
-                <artifactId>jspc-maven-plugin</artifactId>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-jspc-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>precompile-jsps</id>
+                        <id>precompile-jsp</id>
                         <goals>
                             <goal>jspc</goal>
                         </goals>
                     </execution>
                 </executions>
             </plugin>
+
             <plugin>
                 <artifactId>maven-war-plugin</artifactId>
                 <configuration>

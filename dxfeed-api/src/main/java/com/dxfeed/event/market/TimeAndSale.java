@@ -138,6 +138,8 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
     private double askPrice = Double.NaN;
     private String exchangeSaleConditions;
     private int flags;
+    private String buyer;
+    private String seller;
 
     /**
      * Creates new time and sale event with default values.
@@ -548,6 +550,38 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
     }
 
     /**
+     * Returns buyer of this time and sale event.
+     * @return buyer of this time and sale event.
+     */
+    public String getBuyer() {
+        return buyer;
+    }
+
+    /**
+     * Changes buyer of this time and sale event.
+     * @param buyer buyer of this time and sale event.
+     */
+    public void setBuyer(String buyer) {
+        this.buyer = buyer;
+    }
+
+    /**
+     * Returns seller of this time and sale event.
+     * @return seller of this time and sale event.
+     */
+    public String getSeller() {
+        return seller;
+    }
+
+    /**
+     * Changes seller of this time and sale event.
+     * @param seller seller of this time and sale event.
+     */
+    public void setSeller(String seller) {
+        this.seller = seller;
+    }
+
+    /**
      * Returns string representation of this time and sale event.
      * @return string representation of this time and sale event.
      */
@@ -571,6 +605,8 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
             ", ETH=" + isExtendedTradingHours() +
             ", validTick=" + isValidTick() +
             ", type=" + getType() +
+            (buyer == null ? "" : ", buyer='" + buyer + "'") +
+            (seller == null ? "" : ", seller='" + seller + "'") +
             "}";
     }
 

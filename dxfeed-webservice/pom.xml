@@ -11,7 +11,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.253</version>
+        <version>3.254</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -30,17 +30,7 @@
         <!-- dependencies on other modules -->
         <dependency>
             <groupId>com.devexperts.qd</groupId>
-            <artifactId>qds</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.devexperts.qd</groupId>
-            <artifactId>qds-monitoring</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.devexperts.qd</groupId>
-            <artifactId>dxfeed-ondemand</artifactId>
+            <artifactId>dxfeed-webservice-impl</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -57,11 +47,7 @@
             <classifier>javadoc</classifier>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.devexperts.qd</groupId>
-            <artifactId>dxlib</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         <!-- external dependencies -->
         <dependency>
             <groupId>javax.servlet</groupId>
@@ -69,24 +55,27 @@
             <version>${servlet-api.version}</version>
             <scope>provided</scope>
         </dependency>
+
         <!-- external dependencies - cross-origins filter -->
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlets</artifactId>
             <version>${jetty.version}</version>
         </dependency>
+        <!-- external dependencies - JMX support -->
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-jmx</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+
         <!-- external dependencies - JSP stuff -->
         <dependency>
-            <groupId>org.eclipse.jetty.orbit</groupId>
-            <artifactId>org.apache.jasper.glassfish</artifactId>
-            <version>${jasper-glassfish.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.eclipse.jetty.orbit</groupId>
-                    <artifactId>javax.servlet</artifactId>
-                </exclusion>
-            </exclusions>
+            <groupId>org.mortbay.jasper</groupId>
+            <artifactId>apache-jsp</artifactId>
+            <version>${jasper.version}</version>
         </dependency>
+
         <!-- external dependencies (included anyway) -->
         <dependency>
             <groupId>org.cometd.java</groupId>
@@ -119,18 +108,6 @@
             <artifactId>slf4j-jdk14</artifactId>
             <version>${slf4j.version}</version>
         </dependency>
-        <!-- Jackson JSON -->
-        <dependency>
-          <groupId>com.fasterxml.jackson.core</groupId>
-          <artifactId>jackson-databind</artifactId>
-          <version>${jackson.version}</version>
-        </dependency>
-        <!-- JAXB Reference Implementation (will use its features) -->
-        <dependency>
-            <groupId>com.sun.xml.bind</groupId>
-            <artifactId>jaxb-impl</artifactId>
-            <version>${jaxb.version}</version>
-        </dependency>
     </dependencies>
 
     <build>
@@ -155,7 +132,7 @@
                                 </artifactItem>
                             </artifactItems>
                             <includes>**/*.js</includes>
-                            <outputDirectory>${project.build.directory}/cometd-js</outputDirectory>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
                         </configuration>
                     </execution>
                 </executions>
@@ -177,12 +154,12 @@
                             <webappSourceDir>${project.basedir}</webappSourceDir>
                             <jsSourceDir>/</jsSourceDir>
                             <jsSourceFiles>
-                                <jsSourceFile>target/cometd-js/org/cometd.js</jsSourceFile>
-                                <jsSourceFile>target/cometd-js/jquery/jquery.cometd.js</jsSourceFile>
+                                <jsSourceFile>target/js/cometd/cometd.js</jsSourceFile>
+                                <jsSourceFile>target/js/jquery/jquery.cometd.js</jsSourceFile>
                                 <jsSourceFile>src/main/webapp/js/dxfeed/dxfeed.cometd.js</jsSourceFile>
                             </jsSourceFiles>
                             <jsTargetDir>js/min</jsTargetDir>
-                            <jsFinalFile>dxfeed.cometd.all.inc.js</jsFinalFile>
+                            <jsFinalFile>dxfeed.cometd.all.js</jsFinalFile>
                         </configuration>
                     </execution>
                     <execution>
@@ -197,27 +174,30 @@
                             <webappSourceDir>${project.basedir}</webappSourceDir>
                             <jsSourceDir>/</jsSourceDir>
                             <jsSourceFiles>
-                                <jsSourceFile>target/cometd-js/org/cometd.js</jsSourceFile>
-                                <jsSourceFile>target/cometd-js/jquery/jquery.cometd.js</jsSourceFile>
+                                <jsSourceFile>target/js/cometd/cometd.js</jsSourceFile>
+                                <jsSourceFile>target/js/jquery/jquery.cometd.js</jsSourceFile>
                                 <jsSourceFile>src/main/webapp/js/dxfeed/dxfeed.cometd.js</jsSourceFile>
                                 <jsSourceFile>src/main/webapp/js/dxfeed/dxfeed-ui.qtable.js</jsSourceFile>
                             </jsSourceFiles>
                             <jsTargetDir>js/min</jsTargetDir>
-                            <jsFinalFile>dxfeed-ui.cometd.all.inc.js</jsFinalFile>
+                            <jsFinalFile>dxfeed-ui.cometd.all.js</jsFinalFile>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
             <!-- Precompile JSP files -->
             <plugin>
-                <groupId>com.devexperts.qd</groupId>
-                <artifactId>jspc-maven-plugin</artifactId>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-jspc-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>precompile-jsps</id>
+                        <id>precompile-jsp</id>
                         <goals>
                             <goal>jspc</goal>
                         </goals>
+                        <configuration>
+                            <includes>**/*.jsp,js/dxfeed/dxfeed.context.js</includes>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -228,21 +208,11 @@
                     <archive>
                         <addMavenDescriptor>false</addMavenDescriptor>
                     </archive>
+                    <attachClasses>true</attachClasses>
                     <outputFileNameMapping>@{artifactId}@@{dashClassifier?}@.@{extension}@</outputFileNameMapping>
                     <!-- take web.xml from jspc output -->
                     <webXml>${project.build.directory}/web.xml</webXml>
                     <overlays>
-                        <overlay>
-                            <groupId>org.cometd.javascript</groupId>
-                            <artifactId>cometd-javascript-jquery</artifactId>
-                            <includes>
-                                <include>**/*.js</include>
-                            </includes>
-                            <excludes>
-                                <exclude>jquery/jquery-2.1.3.js</exclude>
-                            </excludes>
-                            <targetPath>/js/cometd</targetPath>
-                        </overlay>
                         <!-- overlay XSDs -->
                         <overlay>
                             <groupId>com.devexperts.qd</groupId>
@@ -263,6 +233,21 @@
                             <targetPath>/javadoc</targetPath>
                         </overlay>
                     </overlays>
+                </configuration>
+            </plugin>
+
+            <!-- Run WAR from command line in maven -->
+            <plugin>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-maven-plugin</artifactId>
+                <version>${jetty.version}</version>
+                <configuration>
+                    <stopPort>8989</stopPort>
+                    <stopKey>QUIT</stopKey>
+                    <scanIntervalSeconds>1</scanIntervalSeconds>
+                    <webApp>
+                        <contextPath>/</contextPath>
+                    </webApp>
                 </configuration>
             </plugin>
         </plugins>

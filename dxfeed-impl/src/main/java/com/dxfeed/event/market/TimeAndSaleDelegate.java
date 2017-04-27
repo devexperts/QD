@@ -49,6 +49,8 @@ public final class TimeAndSaleDelegate extends MarketEventDelegateImpl<TimeAndSa
         event.setAskPrice(m.getAskPrice(cursor));
         event.setExchangeSaleConditions(m.getSaleConditionsString(cursor));
         event.setFlags(m.getFlags(cursor));
+        event.setBuyer(m.getBuyer(cursor));
+        event.setSeller(m.getSeller(cursor));
         return event;
     }
 
@@ -66,6 +68,8 @@ public final class TimeAndSaleDelegate extends MarketEventDelegateImpl<TimeAndSa
         m.setAskPrice(cursor, event.getAskPrice());
         m.setSaleConditionsString(cursor, event.getExchangeSaleConditions());
         m.setFlags(cursor, event.getFlags());
+        m.setBuyer(cursor, event.getBuyer());
+        m.setSeller(cursor, event.getSeller());
         return cursor;
     }
 // END: CODE AUTOMATICALLY GENERATED

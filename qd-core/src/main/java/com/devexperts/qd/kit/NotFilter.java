@@ -38,7 +38,10 @@ public class NotFilter extends QDFilter implements QDFilter.UpdateListener {
 
     @Override
     public boolean accept(QDContract contract, DataRecord record, int cipher, String symbol) {
-        if (cipher == record.getScheme().getCodec().getWildcardCipher())
+        DataScheme scheme = getScheme();
+        if (scheme == null)
+            scheme = record.getScheme(); // for backwards compatibility
+        if (cipher == scheme.getCodec().getWildcardCipher())
             return true;
         return !delegate.accept(contract, record, cipher, symbol);
     }

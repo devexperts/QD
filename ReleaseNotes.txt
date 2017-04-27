@@ -1,4 +1,20 @@
 
+
+QDS 3.254:
+
+* [QD-1020] dxFeed webservice: Migrate to cometd 3.1.1
+  - Breaking changes: changed location of JavaScript files:
+    + "\js\cometd\org\cometd.js" is moved to "\js\cometd\cometd.js"
+    + "\js\cometd\jquery\jquery.cometd.js" is moved to "\js\jquery\jquery.cometd.js" (same with other cometd extensions)
+    + "\js\dxfeed\dxfeed.context.js" is deprecated - use it only if you have problems with locating service URL
+  - dxFeed JavaSciprt API: added ability to set authToken
+  - Additional migration notes from CometD: https://docs.cometd.org/current/reference/#_migration_30_to_31
+* [QD-1023] BUG FIX: Schedule: Bad schedule.properties format leads to unrecoverable errors
+* [QD-1019] BUGFIX: NullPointerException in NotIPF filter
+* [QD-1024] Tools do not accept several ipfs as source of symbols
+* [QD-1025] dxFeed API: Add Buyer and Seller optional fields to TimeAndSale events
+* [QD-1026] dxFeedAPI: Add regional TimeAndSale events
+
 QDS 3.253:
 
 * [QD-1021] dxlib: Allow Log4j2 as logging implementation

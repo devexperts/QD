@@ -11,13 +11,13 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.253</version>
+        <version>3.254</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>dxfeed-samples</artifactId>
-  <version>3.253</version>
+  <version>3.254</version>
     <packaging>jar</packaging>
 
     <properties>

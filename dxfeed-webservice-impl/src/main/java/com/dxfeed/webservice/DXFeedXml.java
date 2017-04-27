@@ -45,7 +45,7 @@ public class DXFeedXml {
 
     private static Marshaller marshaller(String indent) throws JAXBException {
         Marshaller marshaller = CONTEXT.createMarshaller();
-        marshaller.setProperty("com.sun.xml.bind.namespacePrefixMapper", new NSMapper());
+//      marshaller.setProperty("com.sun.xml.bind.namespacePrefixMapper", new NSMapper());
         if (indent != null)
             marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
         return marshaller;

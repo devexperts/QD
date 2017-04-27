@@ -16,18 +16,14 @@
         <welcome-file>index.jsp</welcome-file>
     </welcome-file-list>
 
-    <!-- The following JS files are mapped to JSP servlet, because they are using JSP to embed context path into them.
-	     They are precompiled by jspc-maven-plugin during build and the corresponding servlet-mapping
-	     is replaced by mapping of those precompiled servlets. -->
-
+    <!-- Context JS file is mapped to servlet to embed context path.
+         Uncomment the mapping below if no precompilation of JSPs is used. -->
+    <!--
     <servlet-mapping>
         <servlet-name>jsp</servlet-name>
         <url-pattern>/js/dxfeed/dxfeed.context.js</url-pattern>
-        <url-pattern>/js/min/dxfeed.cometd.all.min.js</url-pattern>
-        <url-pattern>/js/min/dxfeed-ui.cometd.all.min.js</url-pattern>
     </servlet-mapping>
-
-    <!-- end of jps -->
+    -->
 
     <!-- rest servlet -->
     <servlet>
@@ -43,7 +39,11 @@
     <!-- cometd servlet -->
     <servlet>
         <servlet-name>cometd</servlet-name>
-        <servlet-class>org.cometd.annotation.AnnotationCometDServlet</servlet-class>
+        <servlet-class>com.dxfeed.webservice.comet.DXFeedCometDServlet</servlet-class>
+        <init-param>
+            <param-name>debugSessions</param-name>
+            <param-value>false</param-value>
+        </init-param>
         <init-param>
             <param-name>transports</param-name>
             <param-value>org.cometd.websocket.server.WebSocketTransport</param-value>

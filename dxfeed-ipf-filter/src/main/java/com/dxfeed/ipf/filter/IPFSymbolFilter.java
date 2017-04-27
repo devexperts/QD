@@ -71,6 +71,7 @@ public class IPFSymbolFilter extends QDFilter {
 
     // --- instance variables ---
 
+    private final int wildcard;
     private final String address;
     private final Config config;
 
@@ -91,6 +92,7 @@ public class IPFSymbolFilter extends QDFilter {
 
     IPFSymbolFilter(DataScheme scheme, String address, Config config, QDFilter source) {
         super(scheme, source);
+        this.wildcard = scheme.getCodec().getWildcardCipher();
         this.address = address;
         this.config = config;
     }
@@ -302,7 +304,7 @@ public class IPFSymbolFilter extends QDFilter {
     public final boolean accept(QDContract contract, DataRecord record, int cipher, String symbol) {
         // NOte: IPFSymbolFilter is "symbol-only filter" (see QDFilter.Kind.isSymbolOnly), so
         // it must work even when contract and record are null (it cannot be used here)
-        if (cipher == getScheme().getCodec().getWildcardCipher())
+        if (cipher == wildcard)
             return true;
         if (set.contains(cipher, symbol))
             return true;

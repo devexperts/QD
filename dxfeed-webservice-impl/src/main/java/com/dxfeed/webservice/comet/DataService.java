@@ -28,6 +28,7 @@ import com.dxfeed.webservice.EventSymbolMap;
 import org.cometd.annotation.*;
 import org.cometd.bayeux.server.ServerMessage;
 import org.cometd.bayeux.server.ServerSession;
+import org.cometd.server.ServerSessionImpl;
 
 @Service
 public class DataService {
@@ -140,18 +141,35 @@ public class DataService {
         return session;
     }
 
-    private class SessionState implements ServerSession.RemoveListener, PropertyChangeListener {
+    private class SessionState
+        implements ServerSession.RemoveListener, ServerSession.Extension, PropertyChangeListener
+    {
         private final ServerSession remote;
+        private final ServerSessionImpl sessionImpl;
+
         private final Map<Class<?>, DXFeedSubscription<Object>> regularSubscriptionsMap = new HashMap<>();
         private final Map<Class<?>, DXFeedSubscription<Object>> timeSeriesSubscriptionsMap = new HashMap<>();
         private final EventSymbolMap symbolMap = new EventSymbolMap();
+
         private DXFeed feed = sharedFeed;
         private OnDemandService onDemand;
         private volatile boolean closed;
+        private SessionStats stats = new SessionStats();
+        private SessionStats tmpStats = new SessionStats();
 
         SessionState(ServerSession remote) {
             log.info("Create session=" + remote.getId());
             this.remote = remote;
+            this.sessionImpl = (remote instanceof ServerSessionImpl) ? (ServerSessionImpl) remote : null;
+
+            stats.sessionId = remote.getId();
+            stats.numSessions = 1;
+            stats.createTime = stats.lastActiveTime = System.currentTimeMillis();
+
+            remote.setAttribute(CometDMonitoring.STATS_ATTR, stats);
+            remote.setAttribute(CometDMonitoring.TMP_STATS_ATTR, tmpStats);
+            remote.addExtension(this);
+
             deliverStateChange("replaySupported", sharedOnDemand.isReplaySupported());
         }
 
@@ -162,6 +180,7 @@ public class DataService {
             return true;
         }
 
+        // ServerSession.RemoveListener Interface Implementation
         @Override
         public void removed(ServerSession remote, boolean timeout) {
             if (!makeClosedSync())
@@ -218,6 +237,11 @@ public class DataService {
             processSub(true, false, (Map<String, List<?>>) map.get("add"));
             processSub(false, true, (Map<String, List<?>>) map.get("removeTimeSeries"));
             processSub(true, true, (Map<String, List<?>>) map.get("addTimeSeries"));
+
+            stats.regSubscription(
+                regularSubscriptionsMap.values().stream().mapToInt(sub -> sub.getSymbols().size()).sum(), false);
+            stats.regSubscription(
+                timeSeriesSubscriptionsMap.values().stream().mapToInt(sub -> sub.getSymbols().size()).sum(), true);
         }
 
         private void resetSub() {
@@ -269,6 +293,7 @@ public class DataService {
             return timeSeries ? timeSeriesSubscriptionsMap : regularSubscriptionsMap;
         }
 
+        // PropertyChangeListener Interface Implementation
         @Override
         public void propertyChange(PropertyChangeEvent evt) {
             String propertyName = evt.getPropertyName();
@@ -357,6 +382,43 @@ public class DataService {
                 subscriptions.put(eventType, sub);
             }
             return sub;
+        }
+
+        // ServerSession.Extension Interface Implementation
+
+        @Override
+        public boolean rcv(ServerSession session, ServerMessage.Mutable message) {
+            if (message instanceof DataMessage) {
+                stats.readEvents += ((DataMessage) message).getEvents().size();
+            }
+            stats.lastActiveTime = System.currentTimeMillis();
+            stats.read++;
+            return true;
+        }
+
+        @Override
+        public boolean rcvMeta(ServerSession session, ServerMessage.Mutable message) {
+            stats.readMeta++;
+            return true;
+        }
+
+        @Override
+        public ServerMessage send(ServerSession session, ServerMessage message) {
+            if (message.getData() instanceof DataMessage) {
+                stats.writeEvents += ((DataMessage) message.getData()).getEvents().size();
+            }
+            if (sessionImpl != null) {
+                stats.regQueueSize(((ServerSessionImpl) remote).getQueue().size());
+            }
+            stats.lastActiveTime = System.currentTimeMillis();
+            stats.write++;
+            return message;
+        }
+
+        @Override
+        public boolean sendMeta(ServerSession session, ServerMessage.Mutable message) {
+            stats.writeMeta++;
+            return true;
         }
     }
 }

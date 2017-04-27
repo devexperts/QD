@@ -334,7 +334,7 @@ public class ImplCodeGen {
             assign("OrderSide", "Side.SELL").
             assign("Scope", "Scope.AGGREGATE");
 
-        ctx.delegate("TimeAndSale", TimeAndSale.class, "TimeAndSale").
+        ctx.delegate("TimeAndSale", TimeAndSale.class, "TimeAndSale&").
             inheritDelegateFrom(MARKET_EVENT_DELEGATE).
             inheritMappingFrom(MARKET_EVENT_MAPPING).
             subContract(QDContract.STREAM).
@@ -348,6 +348,8 @@ public class ImplCodeGen {
             map("AskPrice", "Ask.Price", FieldType.DECIMAL_AS_DOUBLE).
             map("ExchangeSaleConditions", "SaleConditions", "ExchangeSaleConditions", FieldType.SHORT_STRING).
             map("Flags", "Flags", FieldType.INT).
+            map("Buyer", "Buyer", FieldType.STRING).optional().disabledByDefault().
+            map("Seller", "Seller", FieldType.STRING).optional().disabledByDefault().
             publishable();
 
         // This is just a temporary implementation over legacy TradeHistory record. Separate new TimeAndSale record will be used later.

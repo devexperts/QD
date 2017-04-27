@@ -25,6 +25,8 @@ public class TimeAndSaleMapping extends MarketEventMapping {
     private final int iAskPrice;
     private final int iSaleConditions;
     private final int iFlags;
+    private final int oBuyer;
+    private final int oSeller;
 
     public TimeAndSaleMapping(DataRecord record) {
         super(record);
@@ -38,6 +40,8 @@ public class TimeAndSaleMapping extends MarketEventMapping {
         iAskPrice = MappingUtil.findIntField(record, "Ask.Price", true);
         iSaleConditions = MappingUtil.findIntField(record, "ExchangeSaleConditions", true);
         iFlags = MappingUtil.findIntField(record, "Flags", true);
+        oBuyer = MappingUtil.findObjField(record, "Buyer", false);
+        oSeller = MappingUtil.findObjField(record, "Seller", false);
         putNonDefaultPropertyName("Exchange", "ExchangeCode");
         putNonDefaultPropertyName("ExchangeSaleConditions", "SaleConditions");
     }
@@ -194,6 +198,30 @@ public class TimeAndSaleMapping extends MarketEventMapping {
 
     public void setFlags(RecordCursor cursor, int flags) {
         setInt(cursor, iFlags, flags);
+    }
+
+    public String getBuyer(RecordCursor cursor) {
+        if (oBuyer < 0)
+            return null;
+        return (String) getObj(cursor, oBuyer);
+    }
+
+    public void setBuyer(RecordCursor cursor, String buyer) {
+        if (oBuyer < 0)
+            return;
+        setObj(cursor, oBuyer, buyer);
+    }
+
+    public String getSeller(RecordCursor cursor) {
+        if (oSeller < 0)
+            return null;
+        return (String) getObj(cursor, oSeller);
+    }
+
+    public void setSeller(RecordCursor cursor, String seller) {
+        if (oSeller < 0)
+            return;
+        setObj(cursor, oSeller, seller);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }

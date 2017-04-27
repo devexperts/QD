@@ -222,6 +222,23 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         builder.addRequiredField("TimeAndSale", "Ask.Price", SerialFieldType.DECIMAL);
         builder.addRequiredField("TimeAndSale", "ExchangeSaleConditions", SerialFieldType.SHORT_STRING);
         builder.addRequiredField("TimeAndSale", "Flags", SerialFieldType.COMPACT_INT);
+        builder.addOptionalField("TimeAndSale", "Buyer", SerialFieldType.UTF_CHAR_ARRAY, "TimeAndSale", "Buyer", false);
+        builder.addOptionalField("TimeAndSale", "Seller", SerialFieldType.UTF_CHAR_ARRAY, "TimeAndSale", "Seller", false);
+        for (char exchange : SystemProperties.getProperty("com.dxfeed.event.market.impl.TimeAndSale.exchanges", "ABCDEFGHIJKLMNOPQRSTUVWXYZ").toCharArray()) {
+            String recordName = "TimeAndSale&" + exchange;
+            builder.addRequiredField(recordName, "Time", SerialFieldType.TIME, SchemeFieldTime.FIRST_TIME_INT_FIELD);
+            builder.addRequiredField(recordName, "Sequence", SerialFieldType.SEQUENCE, SchemeFieldTime.SECOND_TIME_INT_FIELD);
+            builder.addOptionalField(recordName, "TimeNanoPart", SerialFieldType.COMPACT_INT, "TimeAndSale", "TimeNanoPart", false);
+            builder.addRequiredField(recordName, "Exchange", SerialFieldType.UTF_CHAR);
+            builder.addRequiredField(recordName, "Price", SerialFieldType.DECIMAL);
+            builder.addRequiredField(recordName, "Size", SerialFieldType.COMPACT_INT);
+            builder.addRequiredField(recordName, "Bid.Price", SerialFieldType.DECIMAL);
+            builder.addRequiredField(recordName, "Ask.Price", SerialFieldType.DECIMAL);
+            builder.addRequiredField(recordName, "ExchangeSaleConditions", SerialFieldType.SHORT_STRING);
+            builder.addRequiredField(recordName, "Flags", SerialFieldType.COMPACT_INT);
+            builder.addOptionalField(recordName, "Buyer", SerialFieldType.UTF_CHAR_ARRAY, "TimeAndSale", "Buyer", false);
+            builder.addOptionalField(recordName, "Seller", SerialFieldType.UTF_CHAR_ARRAY, "TimeAndSale", "Seller", false);
+        }
     }
 
     @Override
