@@ -1,10 +1,13 @@
 /*
+ * !++
  * QDS - Quick Data Signalling Library
- * Copyright (C) 2002-2016 Devexperts LLC
- *
+ * !-
+ * Copyright (C) 2002 - 2017 Devexperts LLC
+ * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
  * http://mozilla.org/MPL/2.0/.
+ * !__
  */
 package com.devexperts.qd.kit;
 
@@ -12,6 +15,8 @@ import com.devexperts.qd.DataIntField;
 import com.devexperts.qd.SerialFieldType;
 
 public abstract class AbstractDataIntField extends AbstractDataField implements DataIntField {
+    private static final String[] INT_STRING_CACHE = new String[1001];
+
     AbstractDataIntField(int index, String name, SerialFieldType serialType) {
         super(index, name, serialType);
     }
@@ -22,6 +27,10 @@ public abstract class AbstractDataIntField extends AbstractDataField implements 
      * This implementation returns <code>Integer.toString(value)</code>.
      */
     public String toString(int value) {
+        if (value >= 0 && value < INT_STRING_CACHE.length) {
+            String s = INT_STRING_CACHE[value]; // Atomic read
+            return s != null ? s : (INT_STRING_CACHE[value] = Integer.toString(value));
+        }
         return Integer.toString(value);
     }
 

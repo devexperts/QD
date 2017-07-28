@@ -15,10 +15,10 @@
     <file url="file://$PROJECT_DIR$/dxfeed-promise" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/dxfeed-samples" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/dxfeed-tools" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/dxfeed-tos" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/dxfeed-viewer" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/dxfeed-viewer-installer" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/dxfeed-webservice" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/dxfeed-webservice-impl" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/dxlib" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/dxlib-qd-sandbox" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/jspc-maven-plugin" charset="UTF-8" />

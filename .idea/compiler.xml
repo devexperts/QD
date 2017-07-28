@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="CompilerConfiguration">
-    <option name="DEFAULT_COMPILER" value="Javac" />
     <resourceExtensions>
       <entry name=".+\.(properties|xml|html|dtd|tld)" />
       <entry name=".+\.(gif|png|jpeg|jpg)" />
@@ -10,14 +9,10 @@
       <entry name="!*.java" />
     </wildcardResourcePatterns>
     <annotationProcessing>
-      <profile default="true" name="Default" enabled="false">
-        <processorPath useClasspath="true" />
-      </profile>
-      <profile default="false" name="Maven default annotation processors profile" enabled="true">
+      <profile name="Maven default annotation processors profile" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="true" />
         <module name="auth" />
         <module name="dxfeed-api" />
         <module name="dxfeed-impl" />
@@ -30,9 +25,9 @@
         <module name="dxfeed-tools" />
         <module name="dxfeed-viewer" />
         <module name="dxfeed-webservice" />
+        <module name="dxfeed-webservice-impl" />
         <module name="dxlib" />
         <module name="dxlib-qd-sandbox" />
-        <module name="jspc-maven-plugin" />
         <module name="license" />
         <module name="mars" />
         <module name="mars-sample" />
@@ -74,6 +69,7 @@
       <module name="dxfeed-viewer" target="1.8" />
       <module name="dxfeed-viewer-installer" target="1.8" />
       <module name="dxfeed-webservice" target="1.8" />
+      <module name="dxfeed-webservice-impl" target="1.8" />
       <module name="dxlib" target="1.8" />
       <module name="dxlib-qd-sandbox" target="1.8" />
       <module name="jspc-maven-plugin" target="1.8" />

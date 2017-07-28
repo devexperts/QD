@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module org.jetbrains.idea.maven.project.MavenProjectsManager.isMavenModule="true" type="JAVA_MODULE" version="4">
-  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_8" inherit-compiler-output="false">
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_8">
     <output url="file://$MODULE_DIR$/target/classes" />
     <output-test url="file://$MODULE_DIR$/target/test-classes" />
     <content url="file://$MODULE_DIR$">
@@ -20,7 +20,7 @@
     <orderEntry type="module" module-name="proto" />
     <orderEntry type="module" module-name="dxfeed-promise" />
     <orderEntry type="module" module-name="dxfeed-api" />
-    <orderEntry type="module" module-name="proto-ssl" scope="TEST" />
+    <orderEntry type="module" module-name="proto-ssl" />
     <orderEntry type="module" module-name="proto-sample" scope="TEST" />
     <orderEntry type="library" scope="TEST" name="Maven: com.jcraft:jzlib:1.1.1" level="project" />
     <orderEntry type="module" module-name="qd-samplecert" scope="TEST" />

@@ -1,10 +1,13 @@
 /*
+ * !++
  * QDS - Quick Data Signalling Library
- * Copyright (C) 2002-2016 Devexperts LLC
- *
+ * !-
+ * Copyright (C) 2002 - 2017 Devexperts LLC
+ * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
  * http://mozilla.org/MPL/2.0/.
+ * !__
  */
 package com.devexperts.rmi.test;
 
@@ -17,6 +20,7 @@ import javax.management.ObjectName;
 
 import com.devexperts.logging.Logging;
 import com.devexperts.mars.common.MARSNode;
+import com.devexperts.qd.monitoring.JMXEndpoint;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.test.ThreadCleanCheck;
 import com.devexperts.util.SynchronizedIndexedSet;
@@ -129,10 +133,21 @@ public class RMIMonitoringTest extends TestCase {
         Set<String> initialBeans = getBeans();
         Set<String> initialThreads = getThreadNames();
 
-        server = RMIEndpoint.newBuilder().withName("server").build();
+        server = RMIEndpoint.newBuilder()
+            .withName("server")
+            .withProperty(JMXEndpoint.JMX_HTML_PORT_PROPERTY, "11192")
+            .withProperty(JMXEndpoint.JMX_RMI_PORT_PROPERTY, "11193")
+            .withProperty(MARSNode.MARS_ROOT_PROPERTY, "testClientRoot")
+            .withProperty(MARSNode.MARS_ADDRESS_PROPERTY, ":11194")
+            .build();
 
         // we just need a connector to test
-        client = RMIEndpoint.newBuilder().withName("client").build();
+        client = RMIEndpoint.newBuilder()
+            .withName("client")
+            .withProperty(JMXEndpoint.JMX_HTML_PORT_PROPERTY, "11195")
+            .withProperty(JMXEndpoint.JMX_RMI_PORT_PROPERTY, "11196")
+            .withProperty(MARSNode.MARS_ROOT_PROPERTY, "testServerRoot")
+            .build();
         client.getClient().setRequestSendingTimeout(3000L);
 
         for (int attempt = 1; attempt <= 2; attempt++) {
@@ -144,6 +159,11 @@ public class RMIMonitoringTest extends TestCase {
             Set<String> createdBeans = getCreatedBeans(initialBeans);
             Set<String> createdThreads = getCreatedThreads(initialThreads);
 
+            // adaptors
+            assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=11192"));
+            assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=RmiServer,port=11193"));
+            assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=11195"));
+            assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=RmiServer,port=11196"));
             // root stats
             assertTrue(createdBeans.contains("com.devexperts.qd.stats:name=server,c=Any,id=!AnyStats"));
             assertTrue(createdBeans.contains("com.devexperts.qd.stats:name=client,c=Any,id=!AnyStats"));
@@ -158,7 +178,8 @@ public class RMIMonitoringTest extends TestCase {
             assertTrue(createdThreads.contains("ServerSocket-RMI-:1212-Acceptor"));
             assertTrue(createdThreads.contains("localhost:1212-Reader"));
             assertTrue(createdThreads.contains("localhost:1212-Writer"));
-
+            assertTrue(createdThreads.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=11192"));
+            assertTrue(createdThreads.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=11195"));
             server.getServer().export(new SimpleStartService(), StartService.class);
             server.getServer().export(new SimpleUpdateService(), UpdateService.class);
             server.getServer().export(new SimpleCloseService(), CloseService.class);

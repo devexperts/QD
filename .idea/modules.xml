@@ -19,9 +19,9 @@
       <module fileurl="file://$PROJECT_DIR$/dxfeed-viewer/dxfeed-viewer.iml" filepath="$PROJECT_DIR$/dxfeed-viewer/dxfeed-viewer.iml" />
       <module fileurl="file://$PROJECT_DIR$/dxfeed-viewer-installer/dxfeed-viewer-installer.iml" filepath="$PROJECT_DIR$/dxfeed-viewer-installer/dxfeed-viewer-installer.iml" />
       <module fileurl="file://$PROJECT_DIR$/dxfeed-webservice/dxfeed-webservice.iml" filepath="$PROJECT_DIR$/dxfeed-webservice/dxfeed-webservice.iml" />
+      <module fileurl="file://$PROJECT_DIR$/dxfeed-webservice-impl/dxfeed-webservice-impl.iml" filepath="$PROJECT_DIR$/dxfeed-webservice-impl/dxfeed-webservice-impl.iml" />
       <module fileurl="file://$PROJECT_DIR$/dxlib/dxlib.iml" filepath="$PROJECT_DIR$/dxlib/dxlib.iml" />
       <module fileurl="file://$PROJECT_DIR$/dxlib-qd-sandbox/dxlib-qd-sandbox.iml" filepath="$PROJECT_DIR$/dxlib-qd-sandbox/dxlib-qd-sandbox.iml" />
-      <module fileurl="file://$PROJECT_DIR$/jspc-maven-plugin/jspc-maven-plugin.iml" filepath="$PROJECT_DIR$/jspc-maven-plugin/jspc-maven-plugin.iml" />
       <module fileurl="file://$PROJECT_DIR$/license/license.iml" filepath="$PROJECT_DIR$/license/license.iml" />
       <module fileurl="file://$PROJECT_DIR$/mars/mars.iml" filepath="$PROJECT_DIR$/mars/mars.iml" />
       <module fileurl="file://$PROJECT_DIR$/mars-sample/mars-sample.iml" filepath="$PROJECT_DIR$/mars-sample/mars-sample.iml" />

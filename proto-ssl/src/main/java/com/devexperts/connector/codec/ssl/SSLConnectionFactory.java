@@ -1,10 +1,13 @@
 /*
+ * !++
  * QDS - Quick Data Signalling Library
- * Copyright (C) 2002-2016 Devexperts LLC
- *
+ * !-
+ * Copyright (C) 2002 - 2017 Devexperts LLC
+ * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
  * http://mozilla.org/MPL/2.0/.
+ * !__
  */
 package com.devexperts.connector.codec.ssl;
 
@@ -222,7 +225,6 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
         if (isInitialized)
             throw new IllegalStateException("Factory has already been initialized.");
         this.protocols = protocols;
-        this.protocolsArr = protocols.trim().split(";");
     }
 
     public String getCipherSuites() {
@@ -234,7 +236,6 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
         if (isInitialized)
             throw new IllegalStateException("Factory has already been initialized.");
         this.cipherSuites = cipherSuites;
-        this.cipherSuitesArr = cipherSuites.trim().split(";");
     }
 
     @Override
@@ -275,7 +276,9 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
         context.init(keyManagerFactory != null ? keyManagerFactory.getKeyManagers() : null,
             trustManagers, null);
         SSLEngine engine = context.createSSLEngine();
-        if (protocolsArr != null) {
+
+        if (protocols != null) {
+            protocolsArr = protocols.trim().split(";");
             try {
                 engine.setEnabledProtocols(protocolsArr);
             } catch (IllegalArgumentException e) {
@@ -283,10 +286,10 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
                     + Arrays.toString(engine.getSupportedProtocols()));
                 throw new GeneralSecurityException(e);
             }
-        } else {
-            protocolsArr = engine.getSupportedProtocols();
         }
-        if (cipherSuitesArr != null) {
+        if (cipherSuites != null) {
+            cipherSuitesArr = cipherSuites.trim().split(";");
+
             try {
                 engine.setEnabledCipherSuites(cipherSuitesArr);
             } catch (IllegalArgumentException e) {
@@ -294,8 +297,6 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
                     + Arrays.toString(engine.getSupportedCipherSuites()));
                 throw new GeneralSecurityException(e);
             }
-        } else {
-            cipherSuitesArr = engine.getSupportedCipherSuites();
         }
         isInitialized = true;
     }
@@ -320,8 +321,10 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
                 throw new IOException("Failed to initialize ssl engine: " +  e.getMessage());
             }
         SSLEngine engine = context.createSSLEngine();
-        engine.setEnabledProtocols(protocolsArr);
-        engine.setEnabledCipherSuites(cipherSuitesArr);
+        if (protocolsArr != null)
+            engine.setEnabledProtocols(protocolsArr);
+        if (cipherSuitesArr != null)
+            engine.setEnabledCipherSuites(cipherSuitesArr);
         if (isServer) {
             engine.setUseClientMode(false);
             engine.setWantClientAuth(needClientAuth);

@@ -1,10 +1,13 @@
 /*
+ * !++
  * QDS - Quick Data Signalling Library
- * Copyright (C) 2002-2016 Devexperts LLC
- *
+ * !-
+ * Copyright (C) 2002 - 2017 Devexperts LLC
+ * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
  * http://mozilla.org/MPL/2.0/.
+ * !__
  */
 package com.devexperts.util;
 
@@ -30,7 +33,6 @@ public class TypedMap {
     /**
      * Changes the specified value with the specified key in this map.
      * If the map previously contained a mapping for the key, the old value is replaced by the specified value.
-     *
      */
     public synchronized <T> void set(TypedKey<T> key, T value) {
         values.put(key, value);

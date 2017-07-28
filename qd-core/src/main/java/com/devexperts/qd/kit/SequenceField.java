@@ -1,10 +1,13 @@
 /*
+ * !++
  * QDS - Quick Data Signalling Library
- * Copyright (C) 2002-2016 Devexperts LLC
- *
+ * !-
+ * Copyright (C) 2002 - 2017 Devexperts LLC
+ * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
  * http://mozilla.org/MPL/2.0/.
+ * !__
  */
 package com.devexperts.qd.kit;
 
@@ -26,6 +29,8 @@ public class SequenceField extends CompactIntField {
 
     @Override
     public String toString(int value) {
+        if (value == 0)
+            return "0";
         int millis = value >>> MILLIS_SHIFT;
         return millis != 0 ? millis + ":" + (value & SEQUENCE_MASK) : Integer.toString(value);
     }

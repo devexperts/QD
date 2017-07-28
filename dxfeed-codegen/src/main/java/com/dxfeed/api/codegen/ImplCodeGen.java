@@ -1,10 +1,13 @@
 /*
+ * !++
  * QDS - Quick Data Signalling Library
- * Copyright (C) 2002-2016 Devexperts LLC
- *
+ * !-
+ * Copyright (C) 2002 - 2017 Devexperts LLC
+ * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
  * http://mozilla.org/MPL/2.0/.
+ * !__
  */
 package com.dxfeed.api.codegen;
 
@@ -206,7 +209,7 @@ public class ImplCodeGen {
             publishable();
 
         ctx.delegate("Order", Order.class, "Order").
-            suffixes("|#NTV|#DEA|#DEX|#BYX|#BZX|#IST|#ISE").
+            suffixes("|#NTV|#NFX|#ESPD|#DEA|#DEX|#BYX|#BZX|#IST|#ISE|#BATE|#CHIX|#BXTR|#GLBX|#XEUR").
             inheritDelegateFrom(ORDER_BASE_DELEGATE).
             inheritMappingFrom(ORDER_BASE_MAPPING).
             source("m.getRecordSource()").
@@ -228,7 +231,8 @@ public class ImplCodeGen {
             map("Size", "Size", FieldType.INT).
             map("Count", "Count", FieldType.INT).onlySuffixes("com.dxfeed.event.order.impl.Order.suffixes.count", "").
             map("Flags", "Flags", FieldType.INT).
-            map("MarketMaker", "MMID", FieldType.SHORT_STRING).onlySuffixes("com.dxfeed.event.order.impl.Order.suffixes.mmid", "|#NTV").
+            map("MarketMaker", "MMID", FieldType.SHORT_STRING).onlySuffixes(
+                "com.dxfeed.event.order.impl.Order.suffixes.mmid", "|#NTV|#BATE|#CHIX|#BXTR").
             injectPutEventCode(
                 "if (index < 0)",
                 "\tthrow new IllegalArgumentException(\"Invalid index to publish\");",

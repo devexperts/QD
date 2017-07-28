@@ -1,6 +1,6 @@
 DXFEED/QDS API BINARIES AND SOURCES
 ===================================
-Copyright (C) 2002-2015 Devexperts LLC
+Copyright (C) 2002-2017 Devexperts LLC
 
 This package contains binaries and sources for dxFeed/QDS API.
 Binaries are in "lib" directory, the corresponding sources in "src" directory.

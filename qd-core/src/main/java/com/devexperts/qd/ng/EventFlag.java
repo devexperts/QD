@@ -1,10 +1,13 @@
 /*
+ * !++
  * QDS - Quick Data Signalling Library
- * Copyright (C) 2002-2016 Devexperts LLC
- *
+ * !-
+ * Copyright (C) 2002 - 2017 Devexperts LLC
+ * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
  * http://mozilla.org/MPL/2.0/.
+ * !__
  */
 package com.devexperts.qd.ng;
 
@@ -72,6 +75,10 @@ public enum EventFlag {
     // ======================= static =======================
 
     private static final EventFlag[][] VALUES_BY_MESSAGE_TYPE;
+    private static final int[] MASKS_BY_MESSAGE_TYPE;
+    private static final EventFlag[] ALL_FLAGS = values();
+    private static final int ALL_FLAGS_MASK;
+    private static final String[] FLAGS_STRING_CACHE;
 
     static {
         MessageType[] messageTypes = MessageType.values();
@@ -82,6 +89,21 @@ public enum EventFlag {
                     VALUES_BY_MESSAGE_TYPE[messageType.ordinal()] = collectValuesByMessageType(messageType);
             }
         }
+        MASKS_BY_MESSAGE_TYPE = new int[VALUES_BY_MESSAGE_TYPE.length];
+        for (int i = 0; i < MASKS_BY_MESSAGE_TYPE.length; i++) {
+            if (VALUES_BY_MESSAGE_TYPE[i] != null) {
+                for (EventFlag flag : VALUES_BY_MESSAGE_TYPE[i])
+                    MASKS_BY_MESSAGE_TYPE[i] |= flag.flag;
+            }
+        }
+        int allFlags = 0;
+        for (EventFlag flag : values())
+            allFlags |= flag.flag;
+        ALL_FLAGS_MASK = allFlags;
+        FLAGS_STRING_CACHE = new String[allFlags + 1];
+        FLAGS_STRING_CACHE[0] = "";
+        for (EventFlag flag : values())
+            FLAGS_STRING_CACHE[flag.flag] = flag.name();
     }
 
     private static EventFlag[] collectValuesByMessageType(MessageType messageType) {
@@ -122,18 +144,7 @@ public enum EventFlag {
     public static String formatEventFlags(int eventFlags, MessageType messageType) {
         if (eventFlags == 0)
             return "";
-        EventFlag[] flags = VALUES_BY_MESSAGE_TYPE[messageType.ordinal()];
-        if (flags == null)
-            return "";
-        StringBuilder sb = new StringBuilder();
-        for (EventFlag flag : flags) {
-            if ((eventFlags & flag.flag) != 0) {
-                if (sb.length() > 0)
-                    sb.append(",");
-                sb.append(flag);
-            }
-        }
-        return sb.toString();
+        return formatEventFlags(eventFlags & MASKS_BY_MESSAGE_TYPE[messageType.ordinal()]);
     }
 
     /**
@@ -146,20 +157,30 @@ public enum EventFlag {
     public static String formatEventFlags(int eventFlags) {
         if (eventFlags == 0)
             return "";
+        int knownFlags = eventFlags & ALL_FLAGS_MASK;
+        String s = FLAGS_STRING_CACHE[knownFlags];
+        if (s != null && eventFlags == knownFlags)
+            return s;
+        return formatEventFlagsImpl(eventFlags);
+    }
+
+    private static String formatEventFlagsImpl(int eventFlags) {
         StringBuilder sb = new StringBuilder();
-        for (EventFlag flag : values()) {
+        for (EventFlag flag : ALL_FLAGS) {
             if ((eventFlags & flag.flag) != 0) {
                 if (sb.length() > 0)
                     sb.append(",");
                 sb.append(flag);
-                eventFlags &= ~flag.flag;
             }
         }
-        if (eventFlags != 0) {
+        int knownFlags = eventFlags & ALL_FLAGS_MASK;
+        if (FLAGS_STRING_CACHE[knownFlags] == null)
+            FLAGS_STRING_CACHE[knownFlags] = sb.toString();
+        if (eventFlags != knownFlags) {
             // output unsupported flags
             if (sb.length() > 0)
                 sb.append(",");
-            sb.append("0x").append(Integer.toHexString(eventFlags));
+            sb.append("0x").append(Integer.toHexString(eventFlags ^ knownFlags));
         }
         return sb.toString();
     }

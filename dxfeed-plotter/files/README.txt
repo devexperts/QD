@@ -1,7 +1,7 @@
 dxFeed Plotter
 =============
 
-Copyright (C) 2002-2016 Devexperts LLC
+Copyright (C) 2002-2017 Devexperts LLC
 
 dxPlotter is an advanced Swing UI application that shows quote charts for
 selected symbols from different feeds, supports editing of the symbol list.

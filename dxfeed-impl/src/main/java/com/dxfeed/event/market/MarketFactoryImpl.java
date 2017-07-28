@@ -1,10 +1,13 @@
 /*
+ * !++
  * QDS - Quick Data Signalling Library
- * Copyright (C) 2002-2016 Devexperts LLC
- *
+ * !-
+ * Copyright (C) 2002 - 2017 Devexperts LLC
+ * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
  * http://mozilla.org/MPL/2.0/.
+ * !__
  */
 package com.dxfeed.event.market;
 
@@ -170,7 +173,7 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         builder.addRequiredField("Profile", "Description", SerialFieldType.UTF_CHAR_ARRAY);
         builder.addOptionalField("Profile", "StatusReason", SerialFieldType.UTF_CHAR_ARRAY, "Profile", "StatusReason", true);
 
-        for (String suffix : SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.suffixes", "|#NTV|#DEA|#DEX|#BYX|#BZX|#IST|#ISE").split("\\|")) {
+        for (String suffix : SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.suffixes", "|#NTV|#NFX|#ESPD|#DEA|#DEX|#BYX|#BZX|#IST|#ISE|#BATE|#CHIX|#BXTR|#GLBX|#XEUR").split("\\|")) {
             String recordName = "Order" + suffix;
             builder.addRequiredField(recordName, "Void", SerialFieldType.VOID, SchemeFieldTime.FIRST_TIME_INT_FIELD);
             builder.addRequiredField(recordName, "Index", SerialFieldType.COMPACT_INT, SchemeFieldTime.SECOND_TIME_INT_FIELD);
@@ -182,7 +185,7 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             if (suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.Order.suffixes.count", "")))
                 builder.addOptionalField(recordName, "Count", SerialFieldType.COMPACT_INT, "Order", "Count", true);
             builder.addRequiredField(recordName, "Flags", SerialFieldType.COMPACT_INT);
-            if (suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.Order.suffixes.mmid", "|#NTV")))
+            if (suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.Order.suffixes.mmid", "|#NTV|#BATE|#CHIX|#BXTR")))
                 builder.addOptionalField(recordName, "MMID", SerialFieldType.SHORT_STRING, "Order", "MarketMaker", true);
         }
 

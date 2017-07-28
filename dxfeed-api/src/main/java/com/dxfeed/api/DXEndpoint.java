@@ -1,10 +1,13 @@
 /*
+ * !++
  * QDS - Quick Data Signalling Library
- * Copyright (C) 2002-2016 Devexperts LLC
- *
+ * !-
+ * Copyright (C) 2002 - 2017 Devexperts LLC
+ * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
  * http://mozilla.org/MPL/2.0/.
+ * !__
  */
 package com.dxfeed.api;
 
@@ -310,7 +313,6 @@ public abstract class DXEndpoint {
      * <p>Use this property if you need to work with historical data coming from files
      * or from {@link OnDemandService OnDemandService} or writing data with times to file via
      * {@link DXPublisher} using "tape:..." address.
-     *
      */
     public static final String DXENDPOINT_EVENT_TIME_PROPERTY = "dxendpoint.eventTime";
 

@@ -1,4 +1,14 @@
+QDS 3.255:
 
+* [QD-1032] Add Order records for new sources
+* [QD-931] RMIEndpoint shall support monitoring properties
+* [QD-1027] BUGFIX: TLS protocols and cipher suites system property are not used in the SSLConnectionFactory
+* [QD-1029] Improve performance of data formatting
+* [QD-1030] Improve performance of instruments tool exclude operation
+* [QD-1022] IPF: Authorisation issue in in and notin expressions
+* [QD-1031] Migrate from manual license upgrade to maven license plugin
+  - To add or update a copyright, use the command: mvn license:update-file-header
+* Files are updated for new template in copyright
 
 QDS 3.254:
 

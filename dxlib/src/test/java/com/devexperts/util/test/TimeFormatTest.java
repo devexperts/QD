@@ -1,15 +1,17 @@
 /*
+ * !++
  * QDS - Quick Data Signalling Library
- * Copyright (C) 2002-2016 Devexperts LLC
- *
+ * !-
+ * Copyright (C) 2002 - 2017 Devexperts LLC
+ * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
  * http://mozilla.org/MPL/2.0/.
+ * !__
  */
 package com.devexperts.util.test;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.text.*;
 import java.util.*;
 
 import com.devexperts.util.*;
@@ -272,9 +274,9 @@ public class TimeFormatTest extends TestCase {
         assertEqual(TimeFormat.GMT.parse("2002-05-30T09:30:10+06:00"), "20020530-033010+0000", TimeFormat.GMT);
         assertEqual(TimeFormat.GMT.parse("2002-05-30T09:30:10Z"), "20020530-093010+0000", TimeFormat.GMT);
         // test format
-        assertEquals("2002-05-30T09:30:10.000-06", TimeFormat.getInstance(TimeZone.getTimeZone("GMT-06:00")).asFullIso().format(
+        assertEquals("2002-05-30T09:30:10.000-06:00", TimeFormat.getInstance(TimeZone.getTimeZone("GMT-06:00")).asFullIso().format(
             TimeFormat.GMT.parse("20020530-153010")));
-        assertEquals("2002-05-30T09:30:10.000+06", TimeFormat.getInstance(TimeZone.getTimeZone("GMT+06:00")).asFullIso().format(
+        assertEquals("2002-05-30T09:30:10.000+06:00", TimeFormat.getInstance(TimeZone.getTimeZone("GMT+06:00")).asFullIso().format(
             TimeFormat.GMT.parse("20020530-033010")));
         assertEquals("2002-05-30T09:30:10.000Z", TimeFormat.GMT.asFullIso().format(
             TimeFormat.GMT.parse("20020530-093010")));
@@ -308,5 +310,45 @@ public class TimeFormatTest extends TestCase {
         assertEquals("0", GMT.withMillis().format(new Date(0)));
         assertEquals("0", GMT.withTimeZone().withMillis().format(new Date(0)));
         assertEquals("0", GMT.format(new Date(0)));
+    }
+
+    public void testEquivalence() throws ParseException {
+        for (String tzName : "GMT,GMT+01:30,GMT-01:30,Europe/Moscow,America/Chicago".split(",")) {
+            TimeZone tz = TimeZone.getTimeZone(tzName);
+            TimeFormat format = TimeFormat.getInstance(tz);
+
+            assertTrue(format.withMillis().withTimeZone() == format.withTimeZone().withMillis());
+            assertTrue(format.asFullIso() == format.withMillis().asFullIso());
+            assertTrue(format.asFullIso() == format.withTimeZone().asFullIso());
+            assertTrue(format.asFullIso() == format.withMillis().withTimeZone().asFullIso());
+
+            doTestEquivalence(format, "yyyyMMdd-HHmmss", false, false);
+            doTestEquivalence(format.withMillis(), "yyyyMMdd-HHmmss.SSS", true, false);
+            doTestEquivalence(format.withTimeZone(), "yyyyMMdd-HHmmssZ", false, true);
+            doTestEquivalence(format.withMillis().withTimeZone(), "yyyyMMdd-HHmmss.SSSZ", true, true);
+            doTestEquivalence(format.asFullIso(), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX", true, true);
+        }
+    }
+
+    private void doTestEquivalence(TimeFormat format, String pattern, boolean withMillis, boolean withZone) throws ParseException {
+        SimpleDateFormat sdf = new SimpleDateFormat(pattern);
+        sdf.setTimeZone(format.getTimeZone());
+        Random random = new Random(20170608);
+        for (int i = 0; i < 1000; i++) {
+            long expected = random.nextLong() >> 20; // 1970 +/- 278 years
+            if (!withMillis)
+                expected = (expected >> 10) * 1000;
+            String canonical = sdf.format(expected);
+            long reversed = sdf.parse(canonical).getTime();
+            assertEquals(canonical, format.format(expected));
+            assertEquals(canonical, format.format(new Date(expected)));
+            assertEquals(reversed, format.parse(canonical).getTime());
+            if (expected != reversed && format.getTimeZone().getOffset(expected) % 60000 == 0) {
+                fail("Reversed time differ from original time - " +
+                    "\nExpected " + expected + " = " + sdf.format(expected) + " = " + format.format(expected) + ", offset " + format.getTimeZone().getOffset(expected) +
+                    "\nReversed " + reversed + " = " + sdf.format(reversed) + " = " + format.format(reversed) + ", offset " + format.getTimeZone().getOffset(reversed) +
+                    "\nPattern " + pattern + ", time zone " + format.getTimeZone());
+            }
+        }
     }
 }

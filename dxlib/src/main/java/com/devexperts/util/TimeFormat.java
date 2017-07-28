@@ -1,10 +1,13 @@
 /*
+ * !++
  * QDS - Quick Data Signalling Library
- * Copyright (C) 2002-2016 Devexperts LLC
- *
+ * !-
+ * Copyright (C) 2002 - 2017 Devexperts LLC
+ * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
  * http://mozilla.org/MPL/2.0/.
+ * !__
  */
 package com.devexperts.util;
 
@@ -473,9 +476,7 @@ public class TimeFormat {
      * @throws NullPointerException if time is null.
      */
     public String format(Date time) throws NullPointerException {
-        if (time.getTime() == 0)
-            return "0";
-        return format.get().format(time);
+        return format(time.getTime());
     }
 
     /**
@@ -484,7 +485,63 @@ public class TimeFormat {
     public String format(long time) {
         if (time == 0)
             return "0";
-        return format.get().format(new Date(time));
+        return formatFast(time);
+    }
+
+    private String formatFast(long time) {
+        int timeOffset = format.getTimeZone().getOffset(time);
+        int ymd = DayUtil.getYearMonthDayByDayId((int) MathUtil.div(time + timeOffset, TimeUtil.DAY));
+        int dayTime = (int) MathUtil.rem(time + timeOffset, TimeUtil.DAY);
+        if (ymd < 10101 || ymd > 99991231)
+            throw new IllegalArgumentException("time cannot be formatted " + time);
+
+        char[] chars = new char[format.standardLength];
+        int offset = 0;
+
+        offset = putNum2(chars, offset, (ymd / 1000000) % 100);
+        offset = putNum2(chars, offset, (ymd / 10000) % 100);
+        if (format.withIso)
+            chars[offset++] = '-';
+        offset = putNum2(chars, offset, (ymd / 100) % 100);
+        if (format.withIso)
+            chars[offset++] = '-';
+        offset = putNum2(chars, offset, ymd % 100);
+        chars[offset++] = format.withIso ? 'T' : '-';
+        offset = putNum2(chars, offset, (dayTime / (int)TimeUtil.HOUR) % 24);
+        if (format.withIso)
+            chars[offset++] = ':';
+        offset = putNum2(chars, offset, (dayTime / (int)TimeUtil.MINUTE) % 60);
+        if (format.withIso)
+            chars[offset++] = ':';
+        offset = putNum2(chars, offset, (dayTime / (int)TimeUtil.SECOND) % 60);
+        if (format.withMillis) {
+            chars[offset++] = '.';
+            offset = putNum3(chars, offset, dayTime % 1000);
+        }
+        if (format.withZone) {
+            if (format.withIso && timeOffset == 0) {
+                chars[offset++] = 'Z';
+            } else {
+                chars[offset++] = timeOffset >= 0 ? '+' : '-';
+                offset = putNum2(chars, offset, (Math.abs(timeOffset) / (int)TimeUtil.HOUR) % 24);
+                if (format.withIso)
+                    chars[offset++] = ':';
+                offset = putNum2(chars, offset, (Math.abs(timeOffset) / (int)TimeUtil.MINUTE) % 60);
+            }
+        }
+
+        return new String(chars, 0, offset);
+    }
+
+    private static int putNum2(char[] chars, int offset, int v) {
+        chars[offset] = (char) ('0' + (v / 10));
+        chars[offset + 1] = (char) ('0' + (v % 10));
+        return offset + 2;
+    }
+
+    private static int putNum3(char[] chars, int offset, int v) {
+        chars[offset] = (char) ('0' + (v / 100));
+        return putNum2(chars, offset + 1, v % 100);
     }
 
     /**
@@ -499,11 +556,17 @@ public class TimeFormat {
         final int standardLength;
         final ThreadLocal<DateFormat> threadLocal = new ThreadLocal<>();
         final DateFormat masterFormat;
+        final boolean withMillis;
+        final boolean withZone;
+        final boolean withIso;
 
-        Format(String format, TimeZone timezone) {
-            standardLength = format.endsWith("Z") ? (format.length() + 4) : format.length();
+        Format(String format, int extraLength, TimeZone timezone, boolean withMillis, boolean withZone, boolean withIso) {
+            standardLength = format.length() + extraLength;
             masterFormat = new SimpleDateFormat(format);
             masterFormat.setTimeZone(timezone);
+            this.withMillis = withMillis;
+            this.withZone = withZone;
+            this.withIso = withIso;
         }
 
         DateFormat get() {
@@ -534,12 +597,12 @@ public class TimeFormat {
         final Format fullIsoFmt;
 
         Formats(TimeZone timezone) {
-            dateFmt = new Format("yyyyMMdd", timezone);
-            defaultFmt = new Format("yyyyMMdd-HHmmss", timezone);
-            timezoneFmt = new Format("yyyyMMdd-HHmmssZ", timezone);
-            millisFmt = new Format("yyyyMMdd-HHmmss.SSS", timezone);
-            millisTimezoneFmt = new Format("yyyyMMdd-HHmmss.SSSZ", timezone);
-            fullIsoFmt = new Format("yyyy-MM-dd'T'HH:mm:ss.SSSX", timezone);
+            dateFmt = new Format("yyyyMMdd", 0, timezone, false, false, false);
+            defaultFmt = new Format("yyyyMMdd-HHmmss", 0, timezone, false, false, false);
+            timezoneFmt = new Format("yyyyMMdd-HHmmssZ", 4, timezone, false, true, false);
+            millisFmt = new Format("yyyyMMdd-HHmmss.SSS", 0, timezone, true, false, false);
+            millisTimezoneFmt = new Format("yyyyMMdd-HHmmss.SSSZ", 4, timezone, true, true, false);
+            fullIsoFmt = new Format("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", 3 - 2, timezone, true, true, true);
         }
 
         void setTimeZone(TimeZone timezone) {

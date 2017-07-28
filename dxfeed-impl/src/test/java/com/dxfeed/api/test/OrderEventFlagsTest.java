@@ -1,10 +1,13 @@
 /*
+ * !++
  * QDS - Quick Data Signalling Library
- * Copyright (C) 2002-2016 Devexperts LLC
- *
+ * !-
+ * Copyright (C) 2002 - 2017 Devexperts LLC
+ * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
  * http://mozilla.org/MPL/2.0/.
+ * !__
  */
 package com.dxfeed.api.test;
 
@@ -49,15 +52,16 @@ public class OrderEventFlagsTest extends TestCase {
         publisherEndpoint.connect(":" + PORT);
         feedEndpoint.connect("localhost:" + PORT);
 
+        IndexedEventSubscriptionSymbol<String> expectedSubSymbol = new IndexedEventSubscriptionSymbol<>(SYMBOL, OrderSource.DEFAULT);
+
         DXFeedSubscription<Order> sub = feedEndpoint.getFeed().createSubscription(Order.class);
         sub.addEventListener(orderQeuue::addAll);
-        sub.addSymbols(SYMBOL);
+        sub.addSymbols(expectedSubSymbol);
 
         // Wait until subscription arrives to publisher
         publisherEndpoint.getPublisher().getSubscription(Order.class).addChangeListener(subQueue::addAll);
 
         // wait until expected symbol sub is received
-        IndexedEventSubscriptionSymbol<String> expectedSubSymbol = new IndexedEventSubscriptionSymbol<>(SYMBOL, OrderSource.DEFAULT);
         while (true) {
             IndexedEventSubscriptionSymbol<String> subSymbol = (IndexedEventSubscriptionSymbol<String>) subQueue.poll(10, TimeUnit.SECONDS);
             if (expectedSubSymbol.equals(subSymbol))

@@ -1,10 +1,13 @@
 /*
+ * !++
  * QDS - Quick Data Signalling Library
- * Copyright (C) 2002-2016 Devexperts LLC
- *
+ * !-
+ * Copyright (C) 2002 - 2017 Devexperts LLC
+ * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
  * http://mozilla.org/MPL/2.0/.
+ * !__
  */
 package com.devexperts.rmi.test;
 
@@ -131,7 +134,7 @@ public class RMIFunctionalityTest {
 
         // --------------------------------------------------
 
-    private void implTestSummator() {
+    private void implTestSummator(int scale) {
         RMICommonTest.Summator summator = channelLogic.clientPort.getProxy(RMICommonTest.Summator.class, "summator");
         Random rnd = new Random(123514623655723586L);
         final int n = 100;
@@ -147,7 +150,7 @@ public class RMIFunctionalityTest {
                     log.info("i = " + i + "; very loooooong");
                 assertEquals(c, summatorSum);
             }
-            assertEquals(summator.getOperationsCount(), n);
+            assertEquals(summator.getOperationsCount(), n * scale);
         } catch (RMIException e) {
             fail(e.getMessage());
         } catch (Exception e) {
@@ -159,7 +162,7 @@ public class RMIFunctionalityTest {
     public void testSummator() {
         NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class, "summator"), channelLogic);
         connectDefault(1);
-        implTestSummator();
+        implTestSummator(1);
     }
 
     @Test
@@ -186,7 +189,7 @@ public class RMIFunctionalityTest {
 
         connectWith("tls", 5);
 
-        implTestSummator();
+        implTestSummator(1);
         client.disconnect();
         client.setTrustManager(null);
         assertTrue(checked[0]);
@@ -207,10 +210,27 @@ public class RMIFunctionalityTest {
         } catch (InterruptedException e) {
             fail(e.getMessage());
         }
-        implTestSummator();
+        implTestSummator(1);
         server.disconnect();
         client.disconnect();
-        Thread.sleep(1000);
+        Thread.sleep(500);
+
+        System.out.println("-----------------------");
+
+        System.getProperties().setProperty("com.devexperts.connector.codec.ssl.protocols", "TLSv1.1");
+        NTU.connect(server, "tls[isServer,protocols=TLSv1.1;TLSv1.2]+:" + NTU.port(7));
+        NTU.connect(client, "tls+" + NTU.LOCAL_HOST + ":" + NTU.port(7));
+        try {
+            channelLogic.initPorts();
+        } catch (InterruptedException e) {
+            fail(e.getMessage());
+        }
+        implTestSummator(2);
+        server.disconnect();
+        client.disconnect();
+        Thread.sleep(500);
+
+        System.out.println("-----------------------");
 
         //test tls versions
         System.out.println("test tls versions");
@@ -237,7 +257,7 @@ public class RMIFunctionalityTest {
         NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class, "summator"), channelLogic);
         client.getClient().setRequestSendingTimeout(1000);
         NTU.connect(server, "tls[isServer,protocols=TLSv1.2]+:" + NTU.port(7));
-        NTU.connect(client, "tls[protocols=TLSv1.1]+" + NTU.LOCAL_HOST + ":" + NTU.port(7));
+        NTU.connect(client, "tls+" + NTU.LOCAL_HOST + ":" + NTU.port(7));
         try {
             channelLogic.initPorts();
         } catch (InterruptedException e) {
@@ -259,7 +279,6 @@ public class RMIFunctionalityTest {
         assertTrue(notConnectedVersion.await(10, TimeUnit.SECONDS));
         server.disconnect();
         client.disconnect();
-        System.setProperties(props);
     }
 
     @Test
@@ -272,21 +291,21 @@ public class RMIFunctionalityTest {
         } catch (InterruptedException e) {
             fail(e.getMessage());
         }
-        implTestSummator();
+        implTestSummator(1);
     }
 
     @Test
     public void testWithZLIB() {
         NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class, "summator"), channelLogic);
         connectWith("zlib", 11);
-        implTestSummator();
+        implTestSummator(1);
     }
 
     @Test
     public void testWithXOR() {
         NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class, "summator"), channelLogic);
         connectWith("xor", 13);
-        implTestSummator();
+        implTestSummator(1);
     }
 
 // --------------------------------------------------

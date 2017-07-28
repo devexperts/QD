@@ -1,10 +1,13 @@
 /*
+ * !++
  * QDS - Quick Data Signalling Library
- * Copyright (C) 2002-2016 Devexperts LLC
- *
+ * !-
+ * Copyright (C) 2002 - 2017 Devexperts LLC
+ * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
  * http://mozilla.org/MPL/2.0/.
+ * !__
  */
 package com.devexperts.qd.tools;
 
@@ -399,12 +402,12 @@ public class Instruments extends AbstractTool {
         for (InstrumentProfile ip : read(new ArrayList<>(), source))
             symbols.add(ip.getSymbol());
         long time = System.currentTimeMillis();
-        int size = profiles.size();
-        for (Iterator<InstrumentProfile> it = profiles.iterator(); it.hasNext();)
-            if (symbols.contains(it.next().getSymbol()))
-                it.remove();
-        QDLog.log.info("Excluded " + (size - profiles.size()) + " profiles in " + (System.currentTimeMillis() - time) / 100 / 10.0 + "s");
-        return profiles;
+        List<InstrumentProfile> filtered = new ArrayList<>();
+        for (InstrumentProfile ip : profiles)
+            if (!symbols.contains(ip.getSymbol()))
+                filtered.add(ip);
+        QDLog.log.info("Excluded " + (profiles.size() - filtered.size()) + " profiles in " + (System.currentTimeMillis() - time) / 100 / 10.0 + "s");
+        return filtered;
     }
 
     private List<InstrumentProfile> check(List<InstrumentProfile> profiles) {
