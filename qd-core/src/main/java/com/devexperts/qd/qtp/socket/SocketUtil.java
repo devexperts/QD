@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.devexperts.qd.qtp.AddressSyntaxException;
+import com.devexperts.util.LogUtil;
 
 public class SocketUtil {
     public static String getAcceptedSocketAddress(Socket socket) {
@@ -40,15 +41,15 @@ public class SocketUtil {
                     port = Integer.parseInt(addressString.substring(colonPos + 1));
                     host = addressString.substring(0, colonPos);
                 } catch (NumberFormatException e) {
-                    throw new AddressSyntaxException("Failed to parse port from address \"" + addressString + "\"", e);
+                    throw new AddressSyntaxException("Failed to parse port from address \"" + LogUtil.hideCredentials(addressString) + "\"", e);
                 }
             }
             if (host.startsWith("[")) {
                 if (!host.endsWith("]"))
-                    throw new AddressSyntaxException("An expected closing square bracket is not found in address \"" + addressString + "\"");
+                    throw new AddressSyntaxException("An expected closing square bracket is not found in address \"" + LogUtil.hideCredentials(addressString) + "\"");
                 host = host.substring(1, host.length() - 1);
             } else if (host.contains(":"))
-                throw new AddressSyntaxException("IPv6 numeric address must be enclosed in square brackets in address \"" + addressString + "\"");
+                throw new AddressSyntaxException("IPv6 numeric address must be enclosed in square brackets in address \"" + LogUtil.hideCredentials(addressString) + "\"");
             result.add(new SocketAddress(host, port));
         }
         return result;

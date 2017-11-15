@@ -15,10 +15,12 @@ import java.util.List;
 
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.QDLog;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.MessageConnector;
+import com.devexperts.qd.qtp.QDEndpoint;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.util.LogUtil;
 
 
 /**
@@ -62,7 +64,7 @@ public class Forward extends AbstractTool {
         RMIEndpoint forwardServerEndpoint = new RMIEndpointImpl(RMIEndpoint.Side.SERVER, qdEndpoint, null, null);
 
         Logging log = QDLog.log;
-        log.info("Using address " + MessageConnectors.maskAuthorizationData(address));
+        log.info("Using address " + LogUtil.hideCredentials(address));
 
         forward.applyForwards(forwardServerEndpoint.getServer(), qdEndpoint);
         log.info("Configured requests forwarding for the following services: " + forward.getServices());

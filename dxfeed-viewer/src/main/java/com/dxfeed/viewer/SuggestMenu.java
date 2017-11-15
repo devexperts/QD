@@ -40,7 +40,7 @@ public class SuggestMenu extends JPopupMenu implements ActionListener {
 
     private final Action symbolSelected;
     private final Component invoker;
-    private final String login;
+    private final String user;
     private final String password;
 
     private SwingWorker<List<InstrumentProfile>, Void> downloadTask;
@@ -51,11 +51,11 @@ public class SuggestMenu extends JPopupMenu implements ActionListener {
     }
 
 
-    public SuggestMenu(String prefix, Action symbolSelected, Component invoker, JTextField textField, String ipfAddress, List<InstrumentProfile> ipfList, String login, String password) {
-        this(prefix, DEFAULT_SUGGEST_LIMIT, symbolSelected, ipfAddress, null, ipfList, invoker, textField, login, password);
+    public SuggestMenu(String prefix, Action symbolSelected, Component invoker, JTextField textField, String ipfAddress, List<InstrumentProfile> ipfList, String user, String password) {
+        this(prefix, DEFAULT_SUGGEST_LIMIT, symbolSelected, ipfAddress, null, ipfList, invoker, textField, user, password);
     }
 
-    public SuggestMenu(String prefix, int limit, Action symbolSelected, String ipfAddress, Date date, List<InstrumentProfile> ipfList, Component invoker, JTextField textField, String login, String password) {
+    public SuggestMenu(String prefix, int limit, Action symbolSelected, String ipfAddress, Date date, List<InstrumentProfile> ipfList, Component invoker, JTextField textField, String user, String password) {
         this.prefix = prefix;
         this.limit = limit;
         this.ipfAddress = ipfAddress;
@@ -64,7 +64,7 @@ public class SuggestMenu extends JPopupMenu implements ActionListener {
         this.symbolSelected = symbolSelected;
         this.invoker = invoker;
         this.textField = textField;
-        this.login = login;
+        this.user = user;
         this.password = password;
         if (!prefix.isEmpty()) {
             startDownload();
@@ -148,7 +148,7 @@ public class SuggestMenu extends JPopupMenu implements ActionListener {
             if (date != null) {
 //                url += "&" + "date=" + DATE_FORMATTER.format(date);
             }
-            List<InstrumentProfile> list = reader.readFromFile(url, login, password);
+            List<InstrumentProfile> list = reader.readFromFile(url, user, password);
             return list;
         }
     }

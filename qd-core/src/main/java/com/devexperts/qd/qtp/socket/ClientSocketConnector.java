@@ -27,6 +27,7 @@ import com.devexperts.qd.util.QDConfig;
 import com.devexperts.services.Services;
 import com.devexperts.transport.stats.ConnectionStats;
 import com.devexperts.transport.stats.EndpointStats;
+import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
 
 /**
@@ -100,7 +101,7 @@ public class ClientSocketConnector extends AbstractMessageConnector
     @Override
     public synchronized void setHost(String host) {
         if (!host.equals(this.host)) { // also checks for null
-            log.info("Setting host=" + host);
+            log.info("Setting host=" + LogUtil.hideCredentials(host));
             this.host = host;
             reconfigure();
         }
@@ -133,7 +134,7 @@ public class ClientSocketConnector extends AbstractMessageConnector
     @MessageConnectorProperty("HTTP proxy host name")
     public synchronized void setProxyHost(String proxyHost) {
         if (!proxyHost.equals(this.proxyHost)) { // also checks for null
-            log.info("Setting proxyHost=" + proxyHost);
+            log.info("Setting proxyHost=" + LogUtil.hideCredentials(proxyHost));
             this.proxyHost = proxyHost;
             reconfigure();
         }
@@ -259,7 +260,7 @@ public class ClientSocketConnector extends AbstractMessageConnector
     public synchronized void start() {
         if (handler != null)
             return;
-        log.info("Starting ClientSocketConnector to " + getAddress());
+        log.info("Starting ClientSocketConnector to " + LogUtil.hideCredentials(getAddress()));
         // create default stats instance if specific one was not provided.
         if (getStats() == null)
             setStats(QDFactory.getDefaultFactory().createStats(QDStats.SType.CLIENT_SOCKET_CONNECTOR, null));

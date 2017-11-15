@@ -1,3 +1,15 @@
+QDS 3.256:
+
+* [QD-1049] Fix RMIChannelTest.cancelChannelTasks
+* [QD-1048] QD Core: improve performance of record buffer copying
+* [QD-1047] dxlib: Add more convenient methods to URLInputStream
+* [QD-1046] Hide credentials in logs, management, monitoring, and display
+* [QD-1045] Add Order source for ICE (Order#ICE)
+* [QD-1042] dxlib: Default console logging with Log4j2 doesn't work
+* [QD-1041] BUG FIX: Closure of channel's client-side(due to some reasons) doesn't lead to closure of inner-tasks
+* [QD-1040] BUG FIX: Request closure inside of the channel leads to closure of this channel
+* [QD-1034] [dxFeedViewer] Should work correctly with JRE8
+
 QDS 3.255:
 
 * [QD-1032] Add Order records for new sources

@@ -50,7 +50,9 @@ class TasksManager {
         return completedTasks.size();
     }
 
+    // for inner tasks
     void notifyTaskCompleted(RMITaskImpl<?> taskImpl) {
+        assert taskImpl.isNestedTask();
         runningTasks.remove(taskImpl);
         if (taskImpl.getRequestMessage().getRequestType() == RMIRequestType.DEFAULT) {
             completedTasks.add(new RMITaskResponse(taskImpl));
@@ -58,6 +60,17 @@ class TasksManager {
         }
     }
 
+    // for top-level tasks
+    void notifyTaskCompleted(RMIChannelOwner owner, long channelId) {
+        runningTasks.remove(owner, channelId);
+        if (owner.getChannelType() == RMIChannelType.SERVER_CHANNEL && owner.getRequestMessage().getRequestType() == RMIRequestType.DEFAULT) {
+            completedTasks.add(new RMITaskResponse((RMITaskImpl<?>) owner));
+            connection.messageAdapter.rmiMessageAvailable(RMIQueueType.RESPONSE);
+        }
+    }
+
+
+    //for fast-failed in server
     void notifyTaskCompleted(RMIRequestType type, RMITaskResponse taskImpl) {
         if (type == RMIRequestType.DEFAULT) {
             completedTasks.add(taskImpl);

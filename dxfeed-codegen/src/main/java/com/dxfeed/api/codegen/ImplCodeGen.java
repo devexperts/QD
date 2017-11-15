@@ -11,19 +11,39 @@
  */
 package com.dxfeed.api.codegen;
 
-import java.io.IOException;
-
 import com.devexperts.qd.QDContract;
-import com.dxfeed.event.candle.*;
+import com.dxfeed.event.candle.Candle;
+import com.dxfeed.event.candle.CandleEventDelegateImpl;
+import com.dxfeed.event.candle.DailyCandle;
 import com.dxfeed.event.candle.impl.CandleEventMapping;
-import com.dxfeed.event.market.*;
-import com.dxfeed.event.market.impl.*;
+import com.dxfeed.event.market.MarketEventDelegateImpl;
+import com.dxfeed.event.market.Order;
+import com.dxfeed.event.market.OrderBaseDelegateImpl;
+import com.dxfeed.event.market.Profile;
+import com.dxfeed.event.market.Quote;
+import com.dxfeed.event.market.SpreadOrder;
+import com.dxfeed.event.market.Summary;
+import com.dxfeed.event.market.TimeAndSale;
+import com.dxfeed.event.market.Trade;
+import com.dxfeed.event.market.TradeETH;
+import com.dxfeed.event.market.impl.MarketEventMapping;
+import com.dxfeed.event.market.impl.OrderBaseMapping;
 import com.dxfeed.event.misc.Configuration;
 import com.dxfeed.event.misc.Message;
-import com.dxfeed.event.option.*;
+import com.dxfeed.event.option.Greeks;
+import com.dxfeed.event.option.Series;
+import com.dxfeed.event.option.TheoPrice;
+import com.dxfeed.event.option.Underlying;
+
+import java.io.IOException;
 
 /**
  * Main class to generate all implementation-related code for dxFeed.
+ *
+ * <p>You can run this with this maven command from the root of the project:
+ * <pre>
+ *   mvn exec:java -Dexec.mainClass="com.dxfeed.api.codegen.ImplCodeGen" -pl :dxfeed-codegen
+ * </pre>
  */
 public class ImplCodeGen {
 
@@ -209,7 +229,7 @@ public class ImplCodeGen {
             publishable();
 
         ctx.delegate("Order", Order.class, "Order").
-            suffixes("|#NTV|#NFX|#ESPD|#DEA|#DEX|#BYX|#BZX|#IST|#ISE|#BATE|#CHIX|#BXTR|#GLBX|#XEUR").
+            suffixes("|#NTV|#NFX|#ESPD|#DEA|#DEX|#BYX|#BZX|#IST|#ISE|#BATE|#CHIX|#BXTR|#GLBX|#XEUR|#ICE").
             inheritDelegateFrom(ORDER_BASE_DELEGATE).
             inheritMappingFrom(ORDER_BASE_MAPPING).
             source("m.getRecordSource()").

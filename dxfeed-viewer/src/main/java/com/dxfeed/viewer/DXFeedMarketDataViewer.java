@@ -26,6 +26,7 @@ import javax.swing.table.TableColumnModel;
 
 import com.devexperts.io.URLInputStream;
 import com.devexperts.logging.Logging;
+import com.devexperts.util.LogUtil;
 import com.dxfeed.api.*;
 import com.dxfeed.event.market.*;
 import com.dxfeed.ipf.InstrumentProfile;
@@ -193,17 +194,16 @@ public class DXFeedMarketDataViewer implements Runnable {
         Properties properties = new Properties();
         File file = new File(configFile);
         if (!file.exists()) {
-            log.info(file.getAbsoluteFile() + " file not found; will use default configuration");
+            log.info(LogUtil.hideCredentials(file.getAbsoluteFile()) + " file not found; will use default configuration");
             file = new File(PROPERTIES_FILE);
         }
 
         if (file.exists()) {
-            log.info("Loading configuration from " + file.getAbsoluteFile());
+            log.info("Loading configuration from " + LogUtil.hideCredentials(file.getAbsoluteFile()));
             try (FileInputStream in = new FileInputStream(file)) {
                 properties.load(in);
             } catch (IOException e) {
-                log.error(
-                    "Failed to load configuration from " + file.getAbsoluteFile() + "; will use default configuration");
+                log.error("Failed to load configuration from " + LogUtil.hideCredentials(file.getAbsoluteFile()) + "; will use default configuration");
             }
         }
         return properties;
@@ -211,7 +211,7 @@ public class DXFeedMarketDataViewer implements Runnable {
 
     private void saveConfiguration(String configFile) {
         File file = new File(configFile);
-        log.info("Saving configuration into " + file.getAbsoluteFile());
+        log.info("Saving configuration into " + LogUtil.hideCredentials(file.getAbsoluteFile()));
         try {
             Properties properties = new Properties();
             properties.setProperty(NAME_PROPERTY, name);
@@ -226,7 +226,7 @@ public class DXFeedMarketDataViewer implements Runnable {
             }
             properties.store(new FileOutputStream(file), "dxFeed Market Data Viewer Configuration");
         } catch (IOException e) {
-            log.error("Failed to save configuration into " + file.getAbsoluteFile(), e);
+            log.error("Failed to save configuration into " + LogUtil.hideCredentials(file.getAbsoluteFile()), e);
         }
     }
 
@@ -238,25 +238,25 @@ public class DXFeedMarketDataViewer implements Runnable {
             chains = null;
             if (!showIpfWebServicePasswordDialog()) {
                 ipfMode = IpfMode.NO_IPF;
-                log.info("No credentials for " + ipfAddress + ", work without instrument profiles");
+                log.info("No credentials for " + LogUtil.hideCredentials(ipfAddress) + ", work without instrument profiles");
             } else {
                 ipfMode = IpfMode.WEB_SERVICE;
-                log.info("Will load instrument profiles from " + ipfAddress + " on demand.");
+                log.info("Will load instrument profiles from " + LogUtil.hideCredentials(ipfAddress) + " on demand.");
                 ipfWebConnectionStatusLabel.setText("CONNECTED");
                 ipfWebConnectionStatusLabel.setForeground(Color.GREEN.darker());
             }
         } else {
             try {
-                log.debug("Reading instrument profiles from " + ipfAddress + "...");
+                log.debug("Reading instrument profiles from " + LogUtil.hideCredentials(ipfAddress) + "...");
                 instruments = ipfReader.readFromFile(ipfAddress);
                 log.debug("done");
-                log.debug("Building option chains from " + ipfAddress + "...");
+                log.debug("Building option chains from " + LogUtil.hideCredentials(ipfAddress) + "...");
                 chains = OptionChainsBuilder.build(instruments).getChains();
                 log.debug("done");
                 ipfMode = IpfMode.LOCAL_FILE;
             } catch (IOException e) {
                 ipfMode = IpfMode.NO_IPF;
-                log.debug("fail to load ipf from " + ipfAddress);
+                log.debug("fail to load ipf from " + LogUtil.hideCredentials(ipfAddress));
                 log.info("Work without instrument profiles");
             }
         }
@@ -271,7 +271,7 @@ public class DXFeedMarketDataViewer implements Runnable {
             c = new Credentials("demo", "demo");
         }
 
-        final String title = "Accessing IPF service [" + ipfAddress + "]";
+        final String title = "Accessing IPF service [" + LogUtil.hideCredentials(ipfAddress) + "]";
         boolean firstIteration = true;
         while (true) {
             c = PasswordDialog
@@ -285,7 +285,7 @@ public class DXFeedMarketDataViewer implements Runnable {
                             ipfWebServiceCredentials.getUsername(), ipfWebServiceCredentials.getPassword());
                     URLInputStream.checkConnectionResponseCode(connection);
                 } catch (IOException e) {
-                    log.debug("Cannot connect to " + ipfAddress + " (are username/password correct?)", e);
+                    log.debug("Cannot connect to " + LogUtil.hideCredentials(ipfAddress) + " (are username/password correct?)", e);
                     continue;
                 }
                 ipfWebUsernameLabel.setText("ipf: " + ipfWebServiceCredentials.getUsername().toLowerCase());

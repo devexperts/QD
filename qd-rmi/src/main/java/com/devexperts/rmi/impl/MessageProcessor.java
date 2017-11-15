@@ -343,9 +343,9 @@ class MessageProcessor {
             RMIChannelImpl channel = connection.channelsManager.getChannel(channelId, channelType);
             if (channel != null)
                 channel.cancel(RMICancelType.valueOf(operation.getMethodName()));
-        }
-        else
+        } else {
             connection.tasksManager.cancelTask((long) params[0], channelId, RMICancelType.valueOf(operation.getMethodName()).getId(), channelType);
+        }
         return true;
     }
 

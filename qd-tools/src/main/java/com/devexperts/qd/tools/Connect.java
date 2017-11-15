@@ -20,6 +20,7 @@ import com.devexperts.qd.*;
 import com.devexperts.qd.qtp.*;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.util.LogUtil;
 import com.devexperts.util.TimeFormat;
 
 /**
@@ -77,7 +78,7 @@ public class Connect extends AbstractTool {
 
         String address = args[0];
         Logging log = QDLog.log;
-        log.info("Using address " + MessageConnectors.maskAuthorizationData(address));
+        log.info("Using address " + LogUtil.hideCredentials(address));
 
         DataScheme scheme = QDFactory.getDefaultScheme();
         endpoint = collector.createEndpoint(name.getName());
@@ -95,7 +96,7 @@ public class Connect extends AbstractTool {
 
         if (clone_subscription) {
             String subscription_address = args[1];
-            log.info("Using subscription address " + MessageConnectors.maskAuthorizationData(subscription_address));
+            log.info("Using subscription address " + LogUtil.hideCredentials(subscription_address));
             subscriptionConnectors = MessageConnectors.createMessageConnectors(
                 new SubscriptionAdapter.Factory(endpoint, null, processor, processor.dataVisitor), subscription_address, QDStats.VOID);
             MessageConnectors.startMessageConnectors(subscriptionConnectors);

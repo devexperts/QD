@@ -15,6 +15,8 @@ import java.net.*;
 import java.text.ParseException;
 import java.util.*;
 
+import com.devexperts.util.LogUtil;
+
 /**
  * SocketAcceptor provides {@link Socket} instances for {@link SocketHandler} by listening for incoming
  * connections on specified server port number. Accepts any number of incoming connections.
@@ -23,7 +25,7 @@ class SocketAcceptor extends SocketController {
 
     private final SocketAddress address;
 
-    private final Set<SocketHandler> handlers = new HashSet<SocketHandler>();
+    private final Set<SocketHandler> handlers = new HashSet<>();
 
     private ServerSocket server_socket;
 
@@ -40,7 +42,7 @@ class SocketAcceptor extends SocketController {
     }
 
     public String toString() {
-        return "SocketAcceptor-" + address + ": " + STATE_NAMES[state];
+        return "SocketAcceptor-" + LogUtil.hideCredentials(address) + ": " + STATE_NAMES[state];
     }
 
     synchronized void start() {
@@ -94,18 +96,18 @@ class SocketAcceptor extends SocketController {
                     // Create new SocketHandler to accept next socket.
                     createNewSocket();
                 }
-                connector.log("Connection accepted " + connector.getSocketAddress(socket), null, null);
+                connector.log("Connection accepted " + LogUtil.hideCredentials(connector.getSocketAddress(socket)), null, null);
                 return socket;
             } catch (SocketException e) {
                 if (!isClosed()) {
                     if ("socket closed".equalsIgnoreCase(e.getMessage())) {
-                        connector.log("Accepting failed " + address, e, false, null);
+                        connector.log("Accepting failed " + LogUtil.hideCredentials(address), e, false, null);
                     } else {
-                        connector.log("Accepting failed " + address, e, null);
+                        connector.log("Accepting failed " + LogUtil.hideCredentials(address), e, null);
                     }
                 }
             } catch (Throwable t) {
-                connector.log("Accepting failed " + address, t, null);
+                connector.log("Accepting failed " + LogUtil.hideCredentials(address), t, null);
             }
         }
         return null;
@@ -134,7 +136,7 @@ class SocketAcceptor extends SocketController {
                 if (is_reconnection)
                     Thread.sleep(connector.getSkewedPeriod(connector.getReconnectionPeriod()));
                 is_reconnection = true;
-                connector.log("Listening " + address, null, null);
+                connector.log("Listening " + LogUtil.hideCredentials(address), null, null);
                 InetAddress bindAddress = address.getBind() == null || address.getBind().isEmpty() ? null : InetAddress.getByName(address.getBind());
                 server_socket = new ServerSocket(address.getPort(), 50, bindAddress);
                 synchronized (this) {
@@ -150,7 +152,7 @@ class SocketAcceptor extends SocketController {
             } finally {
                 if (!connected) {
                     cleanup(server_socket);
-                    connector.log("Listening failed " + address, error, null);
+                    connector.log("Listening failed " + LogUtil.hideCredentials(address), error, null);
                 }
             }
         }
@@ -162,7 +164,7 @@ class SocketAcceptor extends SocketController {
             try {
                 server_socket.close();
             } catch (Throwable t) {
-                connector.log("Cleanup failed " + address, t, null);
+                connector.log("Cleanup failed " + LogUtil.hideCredentials(address), t, null);
             }
     }
 }

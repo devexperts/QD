@@ -11,15 +11,34 @@
  */
 package com.dxfeed.event.market;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.EnumSet;
 
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.QDContract;
+import com.devexperts.qd.SerialFieldType;
 import com.devexperts.qd.ng.RecordMapping;
 import com.devexperts.qd.ng.RecordMappingFactory;
 import com.devexperts.services.ServiceProvider;
 import com.devexperts.util.SystemProperties;
-import com.dxfeed.api.impl.*;
-import com.dxfeed.event.market.impl.*;
+import com.dxfeed.api.impl.EventDelegate;
+import com.dxfeed.api.impl.EventDelegateFactory;
+import com.dxfeed.api.impl.EventDelegateFlags;
+import com.dxfeed.api.impl.SchemeBuilder;
+import com.dxfeed.api.impl.SchemeFieldTime;
+import com.dxfeed.event.market.impl.BookMapping;
+import com.dxfeed.event.market.impl.FundamentalMapping;
+import com.dxfeed.event.market.impl.MarketMakerMapping;
+import com.dxfeed.event.market.impl.OrderBaseMapping;
+import com.dxfeed.event.market.impl.OrderMapping;
+import com.dxfeed.event.market.impl.ProfileMapping;
+import com.dxfeed.event.market.impl.QuoteMapping;
+import com.dxfeed.event.market.impl.SpreadOrderMapping;
+import com.dxfeed.event.market.impl.SummaryMapping;
+import com.dxfeed.event.market.impl.TimeAndSaleMapping;
+import com.dxfeed.event.market.impl.TradeETHMapping;
+import com.dxfeed.event.market.impl.TradeMapping;
 
 @ServiceProvider(order = -50)
 public final class MarketFactoryImpl extends EventDelegateFactory implements RecordMappingFactory {
@@ -173,7 +192,7 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         builder.addRequiredField("Profile", "Description", SerialFieldType.UTF_CHAR_ARRAY);
         builder.addOptionalField("Profile", "StatusReason", SerialFieldType.UTF_CHAR_ARRAY, "Profile", "StatusReason", true);
 
-        for (String suffix : SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.suffixes", "|#NTV|#NFX|#ESPD|#DEA|#DEX|#BYX|#BZX|#IST|#ISE|#BATE|#CHIX|#BXTR|#GLBX|#XEUR").split("\\|")) {
+        for (String suffix : SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.suffixes", "|#NTV|#NFX|#ESPD|#DEA|#DEX|#BYX|#BZX|#IST|#ISE|#BATE|#CHIX|#BXTR|#GLBX|#XEUR|#ICE").split("\\|")) {
             String recordName = "Order" + suffix;
             builder.addRequiredField(recordName, "Void", SerialFieldType.VOID, SchemeFieldTime.FIRST_TIME_INT_FIELD);
             builder.addRequiredField(recordName, "Index", SerialFieldType.COMPACT_INT, SchemeFieldTime.SECOND_TIME_INT_FIELD);

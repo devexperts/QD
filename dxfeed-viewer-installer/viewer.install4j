@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<install4j version="5.1.5" transformSequenceNumber="4">
+<install4j version="6.0.3" transformSequenceNumber="5">
   <directoryPresets config="./target/dependency/lib/qds.jar" />
-  <application name="dxFeed Market Data Viewer" distributionSourceDir="" applicationId="4685-5019-1821-0488" mediaDir="target" mediaFilePattern="${compiler:sys.shortName}_${compiler:sys.platform}_${compiler:sys.version}" compression="6" lzmaCompression="false" pack200Compression="false" excludeSignedFromPacking="true" commonExternalFiles="false" createMd5Sums="true" shrinkRuntime="true" shortName="dxFeedViewer" publisher="dxFeed" publisherWeb="http://www.dxfeed.com/" version="${compiler:version}" allPathsRelative="true" backupOnSave="false" autoSave="false" convertDotsToUnderscores="true" macSignature="????" installerName="" javaMinVersion="1.6" javaMaxVersion="" allowBetaVM="false" jdkMode="runtimeJre" jdkName="">
+  <application name="dxFeed Market Data Viewer" distributionSourceDir="" applicationId="4685-5019-1821-0488" mediaDir="target" mediaFilePattern="${compiler:sys.shortName}_${compiler:sys.platform}_${compiler:sys.version}" compression="6" lzmaCompression="false" pack200Compression="false" excludeSignedFromPacking="true" commonExternalFiles="false" createMd5Sums="true" shrinkRuntime="true" shortName="dxFeedViewer" publisher="dxFeed" publisherWeb="http://www.dxfeed.com/" version="${compiler:version}" allPathsRelative="true" backupOnSave="false" autoSave="false" convertDotsToUnderscores="true" macSignature="????" macVolumeId="8def8ac1a5b8262f" javaMinVersion="1.8" javaMaxVersion="" allowBetaVM="false" jdkMode="runtimeJre" jdkName="">
     <languages skipLanguageSelection="false" languageSelectionInPrincipalLanguage="false">
       <principalLanguage id="en" customLocalizationFile="" />
       <additionalLanguages />
@@ -25,11 +25,9 @@
       <mountPoint id="55" root="" location="" mode="755" />
     </mountPoints>
     <entries>
-      <fileEntry mountPoint="109" file="./target/dependency/lib/antlr4-runtime.jar" overwriteMode="4" shared="false" fileMode="644" uninstallMode="0" overrideFileMode="false" overrideOverwriteMode="false" overrideUninstallMode="false" />
       <fileEntry mountPoint="109" file="./target/dependency/lib/asm.jar" overwriteMode="4" shared="false" fileMode="644" uninstallMode="0" overrideFileMode="false" overrideOverwriteMode="false" overrideUninstallMode="false" />
       <fileEntry mountPoint="109" file="./target/dependency/lib/asm-commons.jar" overwriteMode="4" shared="false" fileMode="644" uninstallMode="0" overrideFileMode="false" overrideOverwriteMode="false" overrideUninstallMode="false" />
       <fileEntry mountPoint="109" file="./target/dependency/lib/asm-tree.jar" overwriteMode="4" shared="false" fileMode="644" uninstallMode="0" overrideFileMode="false" overrideOverwriteMode="false" overrideUninstallMode="false" />
-      <fileEntry mountPoint="109" file="./target/dependency/lib/dgen.jar" overwriteMode="4" shared="false" fileMode="644" uninstallMode="0" overrideFileMode="false" overrideOverwriteMode="false" overrideUninstallMode="false" />
       <fileEntry mountPoint="109" file="./target/dependency/lib/dxfeed-api.jar" overwriteMode="4" shared="false" fileMode="644" uninstallMode="0" overrideFileMode="false" overrideOverwriteMode="false" overrideUninstallMode="false" />
       <fileEntry mountPoint="109" file="./target/dependency/lib/dxfeed-ondemand.jar" overwriteMode="4" shared="false" fileMode="644" uninstallMode="0" overrideFileMode="false" overrideOverwriteMode="false" overrideUninstallMode="false" />
       <fileEntry mountPoint="109" file="./target/dependency/lib/dxfeed-viewer.jar" overwriteMode="4" shared="false" fileMode="644" uninstallMode="0" overrideFileMode="false" overrideOverwriteMode="false" overrideUninstallMode="false" />
@@ -38,10 +36,8 @@
       <fileEntry mountPoint="109" file="./target/dependency/lib/forms_rt.jar" overwriteMode="4" shared="false" fileMode="644" uninstallMode="0" overrideFileMode="false" overrideOverwriteMode="false" overrideUninstallMode="false" />
       <fileEntry mountPoint="109" file="./target/dependency/lib/jdom.jar" overwriteMode="4" shared="false" fileMode="644" uninstallMode="0" overrideFileMode="false" overrideOverwriteMode="false" overrideUninstallMode="false" />
       <fileEntry mountPoint="109" file="./target/dependency/lib/JTattoo.jar" overwriteMode="4" shared="false" fileMode="644" uninstallMode="0" overrideFileMode="false" overrideOverwriteMode="false" overrideUninstallMode="false" />
-      <fileEntry mountPoint="109" file="./target/dependency/lib/org.abego.treelayout.core.jar" overwriteMode="4" shared="false" fileMode="644" uninstallMode="0" overrideFileMode="false" overrideOverwriteMode="false" overrideUninstallMode="false" />
       <fileEntry mountPoint="109" file="./target/dependency/lib/qds.jar" overwriteMode="4" shared="false" fileMode="644" uninstallMode="0" overrideFileMode="false" overrideOverwriteMode="false" overrideUninstallMode="false" />
       <fileEntry mountPoint="109" file="./target/dependency/lib/qds-file.jar" overwriteMode="4" shared="false" fileMode="644" uninstallMode="0" overrideFileMode="false" overrideOverwriteMode="false" overrideUninstallMode="false" />
-      <fileEntry mountPoint="109" file="./target/dependency/lib/tools.jar" overwriteMode="4" shared="false" fileMode="644" uninstallMode="0" overrideFileMode="false" overrideOverwriteMode="false" overrideUninstallMode="false" />
       <fileEntry mountPoint="55" file="./target/dependency/README.txt" overwriteMode="4" shared="false" fileMode="644" uninstallMode="0" overrideFileMode="false" overrideOverwriteMode="false" overrideUninstallMode="false" />
       <fileEntry mountPoint="55" file="./target/dependency/dxviewer.bat" overwriteMode="4" shared="false" fileMode="644" uninstallMode="0" overrideFileMode="false" overrideOverwriteMode="false" overrideUninstallMode="false" />
       <fileEntry mountPoint="55" file="./target/dependency/dxviewer.cfg" overwriteMode="4" shared="false" fileMode="644" uninstallMode="0" overrideFileMode="false" overrideOverwriteMode="false" overrideUninstallMode="false" />
@@ -50,14 +46,14 @@
     <components />
   </files>
   <launchers>
-    <launcher name="dxFeedViewer" id="61" customizedId="" external="false" excludeFromMenu="false" unixMode="755" menuName="" icnsFile="" customMacBundleIdentifier="false" macBundleIdentifier="" swtApp="false" fileset="" macBundleBinary="JavaApplicationStub" addMacEntitlements="false" macEntitlementsFile="">
-      <executable name="dxFeedViewer" type="1" iconSet="false" iconFile="" executableDir="." redirectStderr="true" stderrFile="error.log" stderrMode="overwrite" redirectStdout="false" stdoutFile="output.log" stdoutMode="overwrite" failOnStderrOutput="true" executableMode="1" changeWorkingDirectory="true" workingDirectory="." singleInstance="false" serviceStartType="2" serviceDependencies="" serviceDescription="" jreLocation="" executionLevel="asInvoker" checkConsoleParameter="false" globalSingleInstance="false">
+    <launcher name="dxFeedViewer" id="61" customizedId="" external="false" excludeFromMenu="false" unixMode="755" menuName="" icnsFile="" customMacBundleIdentifier="false" macBundleIdentifier="" swtApp="false" fileset="" macBundleBinary="JavaApplicationStub" addMacEntitlements="false" macEntitlementsFile="" useCustomMacosExecutableName="false" customMacosExecutableName="">
+      <executable name="dxFeedViewer" type="1" iconSet="false" iconFile="" executableDir="." redirectStderr="true" stderrFile="error.log" stderrMode="overwrite" redirectStdout="false" stdoutFile="output.log" stdoutMode="overwrite" failOnStderrOutput="true" executableMode="1" changeWorkingDirectory="true" workingDirectory="." singleInstance="false" serviceStartType="2" serviceDependencies="" serviceDescription="" jreLocation="" executionLevel="asInvoker" checkConsoleParameter="false" globalSingleInstance="false" singleInstanceActivate="true" dpiAware="false">
         <versionInfo include="true" fileVersion="" fileDescription="${compiler:sys.fullName}" legalCopyright="${compiler:sys.publisher}" internalName="${compiler:sys.shortName}" productName="${compiler:sys.shortName}" />
       </executable>
-      <splashScreen show="false" autoOff="true" alwaysOnTop="true" width="0" height="0" bitmapFile="" java6SplashScreen="false">
+      <splashScreen show="false" width="0" height="0" bitmapFile="" windowsNative="false" textOverlay="false">
         <text>
-          <statusLine x="20" y="20" text="" font="Arial" fontSize="8" fontColor="0,0,0" fontWeight="500" />
-          <versionLine x="20" y="40" text="version ${compiler:sys.version}" font="Arial" fontSize="8" fontColor="0,0,0" fontWeight="500" />
+          <statusLine x="20" y="20" text="" fontSize="8" fontColor="0,0,0" bold="false" />
+          <versionLine x="20" y="40" text="version ${compiler:sys.version}" fontSize="8" fontColor="0,0,0" bold="false" />
         </text>
       </splashScreen>
       <java mainClass="com.dxfeed.viewer.DXFeedMarketDataViewer" vmParameters="" arguments="" allowVMPassthroughParameters="true" preferredVM="" bundleRuntime="true">
@@ -81,6 +77,7 @@
     </launcher>
   </launchers>
   <installerGui installerType="1" addOnAppId="" suggestPreviousLocations="true" autoUpdateDescriptorUrl="" useAutoUpdateBaseUrl="false" autoUpdateBaseUrl="">
+    <staticMembers script="" />
     <customCode />
     <autoUpdate useMinUpdatableVersion="false" minUpdatableVersion="" useMaxUpdatableVersion="false" maxUpdatableVersion="">
       <commentFiles />
@@ -278,7 +275,14 @@
       <application name="" id="uninstaller" customizedId="" beanClass="com.install4j.runtime.beans.applications.UninstallerApplication" enabled="true" commentSet="false" comment="" actionElevationType="none" fileset="" customIcnsFile="" customIcoFile="" macEntitlementsFile="" automaticLauncherIntegration="false" launchMode="startupFirstWindow" launchInNewProcess="false" launchSchedule="updateSchedule" allLaunchers="true">
         <serializedBean>
           <java class="java.beans.XMLDecoder">
-            <object class="com.install4j.runtime.beans.applications.UninstallerApplication" />
+            <object class="com.install4j.runtime.beans.applications.UninstallerApplication">
+              <void property="customMacosExecutableName">
+                <string>${i18n:UninstallerMenuEntry(${compiler:sys.fullName})}</string>
+              </void>
+              <void property="useCustomMacosExecutableName">
+                <boolean>true</boolean>
+              </void>
+            </object>
           </java>
         </serializedBean>
         <launcherIds />
@@ -382,7 +386,9 @@
     </applications>
   </installerGui>
   <mediaSets>
-    <macosFolder name="Mac OS X Folder" id="59" customizedId="" mediaFileName="" installDir="dxFeedViewer" overridePrincipalLanguage="false" jreBitType="all" runPostProcessor="false" postProcessor="" failOnPostProcessorError="false" useLegacyMediaFileIds="false" legacyMediaFileIds="" includedJRE="macosx-amd64-1.7.0_25" manualJREEntry="false" bundleType="2" jreURL="http://devexperts.s3.amazonaws.com/JRE/macosx-amd64-1.7.0_25.tar.gz" jreShared="false" directDownload="false" installOnlyIfNecessary="false" appleJre="false" customInstallBaseDir="" contentFilesType="1" downloadURL="" signLaunchers="false">
+    <macosFolder name="Mac OS X Folder" id="59" customizedId="" mediaFileName="" installDir="dxFeedViewer" overridePrincipalLanguage="false" jreBitType="all" runPostProcessor="false" postProcessor="" failOnPostProcessorError="false" useLegacyMediaFileIds="false" legacyMediaFileIds="" downloadURL="" includeAllDownloadableComponents="false" includedJRE="" manualJREEntry="false" bundleType="2" jreURL="http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jre-8u131-macosx-x64.tar.gz" jreShared="false" directDownload="false" installOnlyIfNecessary="false" appleJre="false" requiredVmIdPrefix="" customInstallBaseDir="" contentFilesType="1" installerName="${i18n:InstallerName(${compiler:sys.fullName})}" volumeName="${compiler:sys.shortName}" compressDmg="false" signLaunchers="false">
+      <excludedComponents />
+      <includedDownloadableComponents />
       <excludedLaunchers />
       <excludedBeans />
       <overriddenPrincipalLanguage id="en" customLocalizationFile="" />
@@ -394,10 +400,11 @@
         <commentFiles />
         <customAttributes />
       </autoUpdate>
-      <excludedComponents />
-      <includedDownloadableComponents />
+      <topLevelFiles />
     </macosFolder>
-    <windows name="Windows" id="60" customizedId="" mediaFileName="" installDir="dxFeedViewer" overridePrincipalLanguage="false" jreBitType="32" runPostProcessor="false" postProcessor="" failOnPostProcessorError="false" useLegacyMediaFileIds="false" legacyMediaFileIds="" includedJRE="windows-x86-1.7.0_25" manualJREEntry="false" bundleType="2" jreURL="http://devexperts.s3.amazonaws.com/JRE/windows-x86-1.7.0_25.tar.gz" jreShared="false" directDownload="false" installOnlyIfNecessary="false" customInstallBaseDir="" contentFilesType="1" downloadURL="" verifyIntegrity="true">
+    <windows name="Windows" id="60" customizedId="" mediaFileName="" installDir="dxFeedViewer" overridePrincipalLanguage="false" jreBitType="64" runPostProcessor="false" postProcessor="" failOnPostProcessorError="false" useLegacyMediaFileIds="false" legacyMediaFileIds="" downloadURL="" includeAllDownloadableComponents="false" includedJRE="" manualJREEntry="false" bundleType="2" jreURL="http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jre-8u131-windows-x64.tar.gz" jreShared="false" directDownload="false" installOnlyIfNecessary="true" customInstallBaseDir="" contentFilesType="1" verifyIntegrity="true">
+      <excludedComponents />
+      <includedDownloadableComponents />
       <excludedLaunchers />
       <excludedBeans />
       <overriddenPrincipalLanguage id="en" customLocalizationFile="" />
@@ -409,10 +416,10 @@
         <commentFiles />
         <customAttributes />
       </autoUpdate>
+    </windows>
+    <unixInstaller name="Unix Installer" id="158" customizedId="" mediaFileName="" installDir="dxFeedViewer" overridePrincipalLanguage="false" jreBitType="all" runPostProcessor="false" postProcessor="" failOnPostProcessorError="false" useLegacyMediaFileIds="false" legacyMediaFileIds="" downloadURL="" includeAllDownloadableComponents="false" includedJRE="" manualJREEntry="false" bundleType="1" jreURL="" jreShared="false" directDownload="false" installOnlyIfNecessary="false" customInstallBaseDir="" contentFilesType="1">
       <excludedComponents />
       <includedDownloadableComponents />
-    </windows>
-    <unixInstaller name="Unix Installer" id="158" customizedId="" mediaFileName="" installDir="dxFeedViewer" overridePrincipalLanguage="false" jreBitType="all" runPostProcessor="false" postProcessor="" failOnPostProcessorError="false" useLegacyMediaFileIds="false" legacyMediaFileIds="" includedJRE="" manualJREEntry="false" bundleType="1" jreURL="" jreShared="false" directDownload="false" installOnlyIfNecessary="false" customInstallBaseDir="" contentFilesType="1" downloadURL="">
       <excludedLaunchers />
       <excludedBeans />
       <overriddenPrincipalLanguage id="en" customLocalizationFile="" />
@@ -425,14 +432,11 @@
         <commentFiles />
         <customAttributes />
       </autoUpdate>
-      <excludedComponents />
-      <includedDownloadableComponents />
       <installerScript mode="1" file="">
         <content />
       </installerScript>
     </unixInstaller>
   </mediaSets>
   <buildIds buildAll="true" />
-  <buildOptions verbose="false" faster="false" disableSigning="false" debug="false" />
+  <buildOptions verbose="false" faster="false" disableSigning="false" disableJreBundling="false" debug="false" />
 </install4j>
-

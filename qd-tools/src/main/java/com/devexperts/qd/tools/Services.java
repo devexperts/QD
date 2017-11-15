@@ -15,11 +15,13 @@ import java.util.List;
 
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.QDLog;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.MessageConnector;
+import com.devexperts.qd.qtp.QDEndpoint;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
 import com.devexperts.rmi.task.RMIServiceDescriptor;
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.util.LogUtil;
 
 /**
  * Forward tool.
@@ -60,7 +62,7 @@ public class Services extends AbstractTool {
         qdEndpoint = QDEndpoint.newBuilder().withName(name.getName()).build();
         RMIEndpointImpl endpoint = new RMIEndpointImpl(RMIEndpoint.Side.CLIENT, qdEndpoint, null, null);
 
-        log.info("Using address " + MessageConnectors.maskAuthorizationData(address));
+        log.info("Using address " + LogUtil.hideCredentials(address));
 
         endpoint.getClient().getService("*").addServiceDescriptorsListener(descriptors -> {
             for (RMIServiceDescriptor descriptor : descriptors)

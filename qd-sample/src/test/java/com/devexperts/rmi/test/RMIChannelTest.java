@@ -14,6 +14,8 @@ package com.devexperts.rmi.test;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
@@ -205,6 +207,320 @@ public class RMIChannelTest {
         log.info("processResultLatch = " + processResultLatch);
         log.info("processChannelLatch = " + processChannelLatch);
     }
+
+    // --------------------------------------------------
+
+    @Test
+    public void testCancelChannelTask() throws InterruptedException {
+        ChannelHandler.update();
+        connectDefault(2);
+        ChannelTaskCancelCheckerImpl channelCancelChecker = new ChannelTaskCancelCheckerImpl();
+        server.getServer().export(channelCancelChecker, ChannelTaskCancelChecker.class);
+        CountDownLatch[] requestCancelListenerLatch = {new CountDownLatch(1)};
+
+        log.info("Client channel task and result");
+        RMIRequest<String> request = client.getClient().createRequest(null,
+            RMIOperation.valueOf(ChannelTaskCancelChecker.class, String.class, "resultResponseClientCheck"));
+        client.getClient().setRequestRunningTimeout(100_000);
+        request.getChannel().addChannelHandler(ChannelHandler.resultResponseClientHandler);
+        request.setListener(req -> {
+            log.info("client request listener");
+            requestCancelListenerLatch[0].countDown();
+        });
+        request.send();
+        try {
+            assertTrue(requestCancelListenerLatch[0].await(10, TimeUnit.SECONDS));
+            assertEquals("OK", request.getBlocking());
+        } catch (RMIException e) {
+            fail(e.getType().toString());
+        }
+        assertTrue(ChannelHandler.resultResponseClientHandler.cancelTaskLatch.await(10, TimeUnit.SECONDS));
+
+        log.info("Client channel task and fail");
+        requestCancelListenerLatch[0] = new CountDownLatch(1);
+        request = client.getClient().createRequest(null,
+            RMIOperation.valueOf(ChannelTaskCancelChecker.class, String.class, "failedResponseClientCheck"));
+        request.getChannel().addChannelHandler(ChannelHandler.failedResponseClientHandler);
+        request.setListener(req -> {
+            log.info("client request listener");
+            requestCancelListenerLatch[0].countDown();
+        });
+        request.send();
+        try {
+            assertTrue(requestCancelListenerLatch[0].await(10, TimeUnit.SECONDS));
+            assertEquals("FAILED", request.getBlocking());
+            fail();
+        } catch (RMIException e) {
+            assertEquals(RMIExceptionType.APPLICATION_ERROR, e.getType());
+            assertEquals(RuntimeException.class, e.getCause().getClass());
+            assertEquals(e.getMessage(), "OK", e.getCause().getMessage());
+        }
+        assertTrue(ChannelHandler.failedResponseClientHandler.cancelTaskLatch.await(10, TimeUnit.SECONDS));
+
+        log.info("Client channel task and cancelClientCheck (cancelOrAbort)");
+        requestCancelListenerLatch[0] = new CountDownLatch(1);
+        request = client.getClient().createRequest(null,
+            RMIOperation.valueOf(ChannelTaskCancelChecker.class, String.class, "cancelClientCheck"));
+        request.getChannel().addChannelHandler(ChannelHandler.cancelClientHandler);
+        request.setListener(req -> {
+            log.info("client request listener");
+            requestCancelListenerLatch[0].countDown();
+        });
+        request.send();
+        assertTrue(ChannelHandler.cancelClientHandler.channelTaskLatch.await(10, TimeUnit.SECONDS));
+        request.cancelOrAbort();
+        try {
+            assertTrue(requestCancelListenerLatch[0].await(10, TimeUnit.SECONDS));
+            request.getBlocking();
+            fail();
+        } catch (RMIException e) {
+            assertEquals(RMIExceptionType.CANCELLED_DURING_EXECUTION, e.getType());
+        }
+        assertTrue(ChannelHandler.cancelClientHandler.cancelTaskLatch.await(10, TimeUnit.SECONDS));
+
+        log.info("Client channel task and cancelClientCheck (cancelWithConfirmation)");
+        requestCancelListenerLatch[0] = new CountDownLatch(1);
+        ChannelHandler.cancelClientHandler = new ChannelHandler();
+        request = client.getClient().createRequest(null,
+            RMIOperation.valueOf(ChannelTaskCancelChecker.class, String.class, "cancelClientCheck"));
+        request.getChannel().addChannelHandler(ChannelHandler.cancelClientHandler);
+        request.setListener(req -> {
+            log.info("client request listener");
+            requestCancelListenerLatch[0].countDown();
+        });
+        request.send();
+        assertTrue(ChannelHandler.cancelClientHandler.channelTaskLatch.await(10, TimeUnit.SECONDS));
+        request.cancelWithConfirmation();
+        try {
+            assertTrue(requestCancelListenerLatch[0].await(10, TimeUnit.SECONDS));
+            assertTrue(ChannelHandler.cancelClientHandler.cancelTaskLatch.await(10, TimeUnit.SECONDS));
+            assertEquals("OK", request.getBlocking());
+        } catch (RMIException e) {
+            assertEquals(RMIExceptionType.CANCELLED_AFTER_EXECUTION, e.getType());
+        }
+
+        log.info("Server channel task and result");
+        request = client.getClient().createRequest(null,
+            RMIOperation.valueOf(ChannelTaskCancelChecker.class, String.class, "resultResponseServerCheck"));
+        RMIRequest<String> channelRequest = request.getChannel().createRequest(
+            RMIOperation.valueOf(ChannelHandler.NAME, String.class, "method"));
+        channelRequest.setListener(req -> log.info("client channel request listener"));
+        channelRequest.send();
+        request.send();
+        try {
+            assertEquals("OK", request.getBlocking());
+        } catch (RMIException e) {
+            fail(e.getType().toString());
+        }
+        assertTrue(ChannelHandler.resultResponseServerHandler.cancelTaskLatch.await(10, TimeUnit.SECONDS));
+
+        log.info("Server channel task and fail");
+        requestCancelListenerLatch[0] = new CountDownLatch(1);
+        request = client.getClient().createRequest(null,
+            RMIOperation.valueOf(ChannelTaskCancelChecker.class, String.class, "failResponseServerCheck"));
+        channelRequest = request.getChannel().createRequest(
+            RMIOperation.valueOf(ChannelHandler.NAME, String.class, "method"));
+        channelRequest.setListener(req -> {
+            log.info("client channel request listener");
+            requestCancelListenerLatch[0].countDown();
+        });
+        channelRequest.send();
+        request.send();
+        try {
+            request.getBlocking();
+            fail();
+        } catch (RMIException e) {
+            assertEquals(RMIExceptionType.APPLICATION_ERROR, e.getType());
+            assertEquals(RuntimeException.class, e.getCause().getClass());
+            assertEquals(e.getMessage(), "OK", e.getCause().getMessage());
+        }
+        assertTrue(ChannelHandler.failedResponseServerHandler.cancelTaskLatch.await(10, TimeUnit.SECONDS));
+        assertTrue(requestCancelListenerLatch[0].await(10, TimeUnit.SECONDS));
+
+        log.info("Server channel task and cancelClientCheck (cancelOrAbort)");
+        requestCancelListenerLatch[0] = new CountDownLatch(1);
+        request = client.getClient().createRequest(null,
+            RMIOperation.valueOf(ChannelTaskCancelChecker.class, String.class, "cancelServerCheck"));
+        request.setListener(req -> {
+            log.info("client request listener");
+            requestCancelListenerLatch[0].countDown();
+        });
+        channelRequest = request.getChannel().createRequest(
+            RMIOperation.valueOf(ChannelHandler.NAME, String.class, "method"));
+        channelRequest.setListener(req -> log.info("client channel request listener"));
+        channelRequest.send();
+        request.send();
+        assertTrue(ChannelHandler.cancelServerHandler.channelTaskLatch.await(10, TimeUnit.SECONDS));
+        request.cancelOrAbort();
+        try {
+            assertTrue(requestCancelListenerLatch[0].await(10, TimeUnit.SECONDS));
+            request.getBlocking();
+            fail();
+        } catch (RMIException e) {
+            assertEquals(RMIExceptionType.CANCELLED_DURING_EXECUTION, e.getType());
+        }
+        assertTrue(ChannelHandler.cancelServerHandler.cancelTaskLatch.await(10, TimeUnit.SECONDS));
+
+        log.info("Server channel task and cancelClientCheck (cancelWithConfirmation)");
+        requestCancelListenerLatch[0] = new CountDownLatch(1);
+        ChannelTaskCancelCheckerImpl.latch = new CountDownLatch(1);
+        ChannelHandler.cancelServerHandler = new ChannelHandler();
+        request = client.getClient().createRequest(null,
+            RMIOperation.valueOf(ChannelTaskCancelChecker.class, String.class, "cancelServerCheck"));
+        request.getChannel().addChannelHandler(ChannelHandler.cancelClientHandler);
+        request.setListener(req -> {
+            log.info("client request listener");
+            requestCancelListenerLatch[0].countDown();
+        });
+        channelRequest = request.getChannel().createRequest(
+            RMIOperation.valueOf(ChannelHandler.NAME, String.class, "method"));
+        channelRequest.setListener(req -> log.info("client channel request listener :: " + req));
+        channelRequest.send();
+        request.send();
+        assertTrue(ChannelHandler.cancelServerHandler.channelTaskLatch.await(10, TimeUnit.SECONDS));
+        request.cancelWithConfirmation();
+        try {
+            request.getBlocking();
+            fail();
+        } catch (RMIException e) {
+            assertEquals(RMIExceptionType.CANCELLED_AFTER_EXECUTION, e.getType());
+        }
+        assertTrue(ChannelHandler.cancelServerHandler.cancelTaskLatch.await(10, TimeUnit.SECONDS));
+    }
+
+    private static class ChannelHandler extends RMIService<String> {
+
+        private static final String NAME = "ChannelHandler";
+        private static void update() {
+            resultResponseClientHandler = new ChannelHandler();
+            failedResponseClientHandler = new ChannelHandler();
+            cancelClientHandler = new ChannelHandler();
+            resultResponseServerHandler = new ChannelHandler();
+            failedResponseServerHandler = new ChannelHandler();
+            cancelServerHandler = new ChannelHandler();
+            ChannelTaskCancelCheckerImpl.latch = new CountDownLatch(1);
+        }
+        static ChannelHandler resultResponseClientHandler;
+        static ChannelHandler failedResponseClientHandler;
+        static ChannelHandler cancelClientHandler;
+        static ChannelHandler resultResponseServerHandler;
+        static ChannelHandler failedResponseServerHandler;
+        static ChannelHandler cancelServerHandler;
+
+        CountDownLatch cancelTaskLatch = new CountDownLatch(1);
+        CountDownLatch channelTaskLatch = new CountDownLatch(1);
+
+        ChannelHandler() {
+            super(NAME);
+        }
+
+        @Override
+        public void processTask(RMITask<String> task) {
+            log.info("ChannelHandler processTask");
+            AtomicBoolean flag = new AtomicBoolean(false);
+            task.setCancelListener(t -> {
+                log.info("ChannelHandler task listener");
+                cancelTaskLatch.countDown();
+                flag.set(true);
+            });
+            channelTaskLatch.countDown();
+            while (!flag.get() && ChannelTaskCancelCheckerImpl.latch.getCount() != 0){
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    task.completeExceptionally(e);
+                    break;
+                }
+            }
+
+            task.complete("Task completed or cancelling");
+            log.info("ChannelHandler processTask END");
+        }
+    }
+
+    private static interface ChannelTaskCancelChecker extends RMIChannelSupport<String> {
+        String resultResponseClientCheck() throws InterruptedException;
+        String failedResponseClientCheck() throws InterruptedException;
+        String cancelClientCheck() throws InterruptedException;
+        String resultResponseServerCheck() throws InterruptedException;
+        String failResponseServerCheck() throws InterruptedException;
+        String cancelServerCheck() throws InterruptedException;
+    }
+
+    private static class ChannelTaskCancelCheckerImpl implements ChannelTaskCancelChecker {
+        static volatile Thread thread;
+        static CountDownLatch latch = new CountDownLatch(1);
+
+        @Override
+        public void openChannel(RMITask<String> task) {
+            if (task.getOperation().getMethodName().contains("Client")) {
+                RMIRequest<String> request = task.getChannel().createRequest(RMIOperation.valueOf(ChannelHandler.NAME, String.class, "method"));
+                request.setListener(req -> log.info("server channel request listener"));
+                request.send();
+            } else if (task.getOperation().getMethodName().equals("resultResponseServerCheck")) {
+                task.getChannel().addChannelHandler(ChannelHandler.resultResponseServerHandler);
+            } else if (task.getOperation().getMethodName().contains("failResponseServerCheck")) {
+                task.getChannel().addChannelHandler(ChannelHandler.failedResponseServerHandler);
+            } else if (task.getOperation().getMethodName().contains("cancelServerCheck")) {
+                task.getChannel().addChannelHandler(ChannelHandler.cancelServerHandler);
+                task.setCancelListener(t -> {
+                    latch.countDown();
+                    log.info("server task listener");
+                });
+                return;
+            }
+            task.setCancelListener(t -> log.info("server task listener"));
+        }
+
+        @Override
+        public String resultResponseClientCheck() throws InterruptedException {
+            log.info("resultResponseClientCheck");
+            if (ChannelHandler.resultResponseClientHandler.channelTaskLatch.await(10, TimeUnit.SECONDS))
+                return "OK";
+            return "FAILED";
+        }
+
+        @Override
+        public String failedResponseClientCheck() throws InterruptedException {
+            log.info("failedResponseClientCheck");
+            if (ChannelHandler.failedResponseClientHandler.channelTaskLatch.await(10, TimeUnit.SECONDS))
+                throw new RuntimeException("OK");
+            throw new RuntimeException("FAILED");
+        }
+
+        @Override
+        public String cancelClientCheck() throws InterruptedException {
+            log.info("cancelClientCheck");
+            if (ChannelHandler.cancelClientHandler.cancelTaskLatch.await(10, TimeUnit.SECONDS))
+                return "OK";
+            return "FAILED";
+        }
+
+        @Override
+        public String resultResponseServerCheck() throws InterruptedException {
+            log.info("resultResponseServerCheck");
+            if (ChannelHandler.resultResponseServerHandler.channelTaskLatch.await(10, TimeUnit.SECONDS))
+                return "OK";
+            return "FAILED";
+        }
+
+        @Override
+        public String failResponseServerCheck() throws InterruptedException {
+            log.info("failResponseServerCheck");
+            if (ChannelHandler.failedResponseServerHandler.channelTaskLatch.await(10, TimeUnit.SECONDS))
+                throw new RuntimeException("OK");
+            throw new RuntimeException("FAILED");
+        }
+
+        @Override
+        public String cancelServerCheck() throws InterruptedException {
+            log.info("cancelServerCheck");
+            if (ChannelHandler.cancelServerHandler.cancelTaskLatch.await(10, TimeUnit.SECONDS))
+                return "OK";
+            return "FAILED";
+        }
+    }
+
 
     // --------------------------------------------------
 
@@ -651,4 +967,174 @@ public class RMIChannelTest {
         assertTrue(isStart);
         assertFalse(isOpen);
     }
+
+    // ---------------------------------------------------------
+
+    @Test
+    public void testChannelRequestCancel() throws InterruptedException {
+        connectDefault(22);
+        server.getServer().export(new ChannelRequestCancelCheckerImpl(), ChannelRequestCancelChecker.class);
+        RMIOperation<Void> requestOperation = RMIOperation.valueOf(
+            ChannelRequestCancelChecker.class, void.class, "process", boolean.class, boolean.class);
+        RMIOperation<Void> channelRequestOperation = RMIOperation.valueOf(
+            ChannelRequestCancelCheckerImpl.ChannelHandler.class.getName(), void.class, "method");
+
+        log.info("Server channel request, cancel before send");
+        RMIRequest<Void> request = client.getClient().getPort(null).createRequest(requestOperation, true, true);
+        RMIRequest<Void> channelRequest = request.getChannel().createRequest(channelRequestOperation);
+        request.setListener(req -> {
+            ChannelRequestCancelCheckerImpl.waitFlag = false;
+            LockSupport.unpark(ChannelRequestCancelCheckerImpl.currentThread);
+        });
+        CountDownLatch[] channelRequestCancel = {new CountDownLatch(1)};
+        channelRequest.setListener(req -> {
+            ChannelRequestCancelCheckerImpl.ChannelHandler.waitFlag = false;
+            LockSupport.unpark(ChannelRequestCancelCheckerImpl.ChannelHandler.currentThread);
+            channelRequestCancel[0].countDown();
+        });
+        request.send();
+        assertTrue(ChannelRequestCancelCheckerImpl.startLatch.await(10, TimeUnit.SECONDS));
+        channelRequest.cancelOrAbort();
+        assertTrue(channelRequestCancel[0].await(10, TimeUnit.SECONDS));
+        assertTrue(request.getChannel().isOpen());
+        assertEquals(RMIRequestState.SENT, request.getState());
+
+        log.info("Server channel request, cancel after send");
+        channelRequestCancel[0] = new CountDownLatch(1);
+        channelRequest = request.getChannel().createRequest(channelRequestOperation);
+        channelRequest.setListener(req -> {
+            ChannelRequestCancelCheckerImpl.ChannelHandler.waitFlag = false;
+            LockSupport.unpark(ChannelRequestCancelCheckerImpl.ChannelHandler.currentThread);
+            channelRequestCancel[0].countDown();
+        });
+        channelRequest.send();
+        assertTrue(ChannelRequestCancelCheckerImpl.ChannelHandler.startLatch.await(10, TimeUnit.SECONDS));
+        channelRequest.cancelOrAbort();
+        assertTrue(channelRequestCancel[0].await(10, TimeUnit.SECONDS));
+        assertTrue(request.getChannel().isOpen());
+        assertEquals(RMIRequestState.SENT, request.getState());
+        request.cancelOrAbort();
+        assertFalse(request.getChannel().isOpen());
+        assertEquals(RMIRequestState.FAILED, request.getState());
+
+        log.info("Client channel request, cancel before send");
+        ChannelRequestCancelCheckerImpl.ChannelHandler.handler = new ChannelRequestCancelCheckerImpl.ChannelHandler();
+        ChannelRequestCancelCheckerImpl.startLatch = new CountDownLatch(1);
+        request = client.getClient().getPort(null).createRequest(requestOperation, false, true);
+        request.setListener(req -> {
+            ChannelRequestCancelCheckerImpl.waitFlag = false;
+            LockSupport.unpark(ChannelRequestCancelCheckerImpl.currentThread);
+        });
+        request.getChannel().addChannelHandler(ChannelRequestCancelCheckerImpl.ChannelHandler.handler);
+        request.send();
+        assertTrue(ChannelRequestCancelCheckerImpl.startLatch.await(10, TimeUnit.SECONDS));
+        assertTrue(ChannelRequestCancelCheckerImpl.requestCancelLatch.await(10, TimeUnit.SECONDS));
+        assertTrue(request.getChannel().isOpen());
+        assertEquals(RMIRequestState.SENT, request.getState());
+        assertTrue(ChannelRequestCancelCheckerImpl.currentTask.getChannel().isOpen());
+        assertEquals(RMITaskState.ACTIVE, ChannelRequestCancelCheckerImpl.currentTask.getState());
+        request.cancelOrAbort();
+        assertFalse(request.getChannel().isOpen());
+        assertEquals(RMIRequestState.FAILED, request.getState());
+
+        log.info("Client channel request, cancel after send");
+        ChannelRequestCancelCheckerImpl.ChannelHandler.handler = new ChannelRequestCancelCheckerImpl.ChannelHandler();
+        ChannelRequestCancelCheckerImpl.startLatch = new CountDownLatch(1);
+        ChannelRequestCancelCheckerImpl.ChannelHandler.startLatch = new CountDownLatch(1);
+        ChannelRequestCancelCheckerImpl.requestCancelLatch = new CountDownLatch(1);
+        request = client.getClient().getPort(null).createRequest(requestOperation, false, false);
+        request.setListener(req -> {
+            ChannelRequestCancelCheckerImpl.waitFlag = false;
+            LockSupport.unpark(ChannelRequestCancelCheckerImpl.currentThread);
+        });
+        request.getChannel().addChannelHandler(ChannelRequestCancelCheckerImpl.ChannelHandler.handler);
+        request.send();
+        assertTrue(ChannelRequestCancelCheckerImpl.startLatch.await(10, TimeUnit.SECONDS));
+        assertTrue(ChannelRequestCancelCheckerImpl.ChannelHandler.startLatch.await(10, TimeUnit.SECONDS));
+        assertTrue(ChannelRequestCancelCheckerImpl.requestCancelLatch.await(10, TimeUnit.SECONDS));
+        assertTrue(request.getChannel().isOpen());
+        assertEquals(RMIRequestState.SENT, request.getState());
+        assertTrue(ChannelRequestCancelCheckerImpl.currentTask.getChannel().isOpen());
+        assertEquals(RMITaskState.ACTIVE, ChannelRequestCancelCheckerImpl.currentTask.getState());
+        request.cancelOrAbort();
+        assertFalse(request.getChannel().isOpen());
+        assertEquals(RMIRequestState.FAILED, request.getState());
+    }
+
+    private static interface ChannelRequestCancelChecker {
+        void process(boolean forServerChannelRequest, boolean cancelBeforeSend);
+    }
+
+    private static class ChannelRequestCancelCheckerImpl implements ChannelRequestCancelChecker, RMIChannelSupport<Void> {
+
+        @SuppressWarnings("InnerClassFieldHidesOuterClassField")
+        private static class ChannelHandler extends RMIService<Void> {
+            static ChannelHandler handler = new ChannelHandler();
+            static volatile Thread currentThread;
+            static volatile boolean waitFlag;
+            static CountDownLatch startLatch = new CountDownLatch(1);
+            protected ChannelHandler() {
+                super(ChannelHandler.class.getName());
+            }
+
+            @Override
+            public void processTask(RMITask<Void> task) {
+                currentThread = Thread.currentThread();
+                waitFlag = true;
+                startLatch.countDown();
+                while (waitFlag)
+                    LockSupport.park();
+            }
+        }
+
+        static volatile Thread currentThread;
+        static volatile boolean waitFlag;
+        static CountDownLatch startLatch = new CountDownLatch(1);
+        static CountDownLatch requestCancelLatch = new CountDownLatch(1);
+        static volatile RMITask<Void> currentTask;
+
+
+        @Override
+        public void openChannel(RMITask<Void> task) {
+            Object[] params = task.getRequestMessage().getParameters().getObject();
+            if ((boolean) params[0]) {
+                task.getChannel().addChannelHandler(ChannelHandler.handler);
+                return;
+            }
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+            task.setCancelListener(t -> executor.shutdown());
+            executor.execute(() -> {
+                RMIRequest<Void> request = task.getChannel().createRequest(
+                    RMIOperation.valueOf(ChannelHandler.class.getName(), void.class, "method"));
+                if ((boolean) params[1]) {
+                    request.setListener(req -> requestCancelLatch.countDown());
+                    request.cancelOrAbort();
+                    return;
+                }
+                request.setListener(req -> {
+                    ChannelHandler.waitFlag = false;
+                    LockSupport.unpark(ChannelHandler.currentThread);
+                    requestCancelLatch.countDown();
+                });
+                request.send();
+                try {
+                    if (ChannelHandler.startLatch.await(10, TimeUnit.SECONDS))
+                        request.cancelOrAbort();
+                } catch (InterruptedException e) {
+                    task.completeExceptionally(e);
+                }
+            });
+        }
+
+        @Override
+        public void process(boolean forServerChannelRequest, boolean cancelBeforeSend) {
+            currentThread = Thread.currentThread();
+            waitFlag = true;
+            currentTask = RMITask.current(void.class);
+            startLatch.countDown();
+            while (waitFlag)
+                LockSupport.park();
+        }
+    }
+
 }

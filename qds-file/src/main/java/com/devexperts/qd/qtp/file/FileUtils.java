@@ -18,6 +18,7 @@ import java.net.URL;
 
 import com.devexperts.io.URLInputStream;
 import com.devexperts.qd.QDLog;
+import com.devexperts.util.LogUtil;
 
 class FileUtils {
 
@@ -47,7 +48,7 @@ class FileUtils {
     public static String getTimeFilePath(String dataFilePath, String dataFileExtension, String containerExtension) {
         String fullExtension = dataFileExtension + containerExtension;
         if (!dataFilePath.endsWith(fullExtension))
-            throw new IllegalArgumentException("File path '" + dataFilePath + "' is expected to end with extension '" + fullExtension + "'");
+            throw new IllegalArgumentException("File path '" + LogUtil.hideCredentials(dataFilePath) + "' is expected to end with extension '" + fullExtension + "'");
         return dataFilePath.substring(0, dataFilePath.length() - fullExtension.length()) + TIME_FILE_EXTENSION + containerExtension;
     }
 
@@ -55,7 +56,7 @@ class FileUtils {
         try {
             return URLInputStream.resolveURL(address);
         } catch (MalformedURLException e) {
-            throw new IllegalArgumentException("Invalid address url: " + address, e);
+            throw new IllegalArgumentException("Invalid address URL: " + LogUtil.hideCredentials(address), e);
         }
     }
 
@@ -70,7 +71,7 @@ class FileUtils {
             try {
                 closeable.close();
             } catch (Throwable t) {
-                QDLog.log.error("Failed to close " + address, t);
+                QDLog.log.error("Failed to close " + LogUtil.hideCredentials(address), t);
             }
     }
 }

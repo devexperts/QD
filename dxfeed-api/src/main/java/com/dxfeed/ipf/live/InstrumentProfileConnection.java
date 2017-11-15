@@ -307,7 +307,7 @@ public class InstrumentProfileConnection {
     @Override
     public String toString() {
         // Note: it is also used as a thread name.
-        return "IPC:" + address;
+        return "IPC:" + LogUtil.hideCredentials(address);
     }
 
     // =====================  private instance methods =====================

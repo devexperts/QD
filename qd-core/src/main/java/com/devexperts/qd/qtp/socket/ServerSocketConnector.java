@@ -30,6 +30,7 @@ import com.devexperts.qd.util.QDConfig;
 import com.devexperts.services.Services;
 import com.devexperts.transport.stats.ConnectionStats;
 import com.devexperts.transport.stats.EndpointStats;
+import com.devexperts.util.LogUtil;
 
 /**
  * The <code>ServerSocketConnector</code> handles standard server socket using blocking API.
@@ -202,7 +203,7 @@ public class ServerSocketConnector extends AbstractMessageConnector implements S
     public synchronized void start() {
         if (acceptor != null)
             return;
-        log.info("Starting ServerSocketConnector to " + getAddress());
+        log.info("Starting ServerSocketConnector to " + LogUtil.hideCredentials(getAddress()));
         // create default stats instance if specific one was not provided.
         if (getStats() == null)
             setStats(QDFactory.getDefaultFactory().createStats(QDStats.SType.SERVER_SOCKET_CONNECTOR, null));

@@ -66,10 +66,11 @@ public class URLInputStream extends FilterInputStream {
     // =====================  public static methods =====================
 
     /**
-     * Resolves a given URL in the context of the current file.
-     * @param url url, relative, or absolute file name.
-     * @return Resolved url.
-     * @throws MalformedURLException if url cannot be parsed.
+     * Resolves specified URL in the context of the current user directory.
+     *
+     * @param url the URL
+     * @return resolved URL
+     * @throws MalformedURLException if URL cannot be parsed
      */
     public static URL resolveURL(String url) throws MalformedURLException {
         if (url.length() > 2 && url.charAt(1) == ':' && File.separatorChar == '\\')
@@ -78,34 +79,38 @@ public class URLInputStream extends FilterInputStream {
     }
 
     /**
-     * Opens {@link URLConnection} for a specified URL. This method {@link #resolveURL(String) resolves}
-     * specified URL first, for a proper support of file name.
+     * Opens {@link URLConnection} for specified URL.
+     * This method {@link #resolveURL(String) resolves} specified URL first, for a proper support of file name.
+     * <p>
      * Use {@link #checkConnectionResponseCode(URLConnection) checkConnectionResponseCode} after establishing
      * connection to ensure that it was Ok.
+     * <p>
      * This is a shortcut for
-     * <code>{@link #openConnection(URL, String, String) openConnection}({@link #resolveURL(String) resolveURL}(url), <b>null</b>, <b>null</b>)</code>.
+     * <code>{@link #openConnection(URL, String, String) openConnection}({@link #resolveURL(String) resolveURL}(url),
+     * <b>null</b>, <b>null</b>)</code>.
      *
-     * @param url the URL.
-     * @return URLConnection
-     * @throws IOException if an I/O error occurs.
+     * @param url the URL
+     * @return opened URLConnection
+     * @throws IOException if an I/O error occurs
      */
     public static URLConnection openConnection(String url) throws IOException {
         return openConnection(resolveURL(url), null, null);
     }
 
     /**
-     * Opens {@link URLConnection} for a specified URL with a specified basic user and password credentials.
-     * Use {@link #checkConnectionResponseCode(URLConnection) checkConnectionResponseCode} after establishing
-     * connection to ensure that it was Ok.
+     * Opens {@link URLConnection} for specified URL with specified credentials.
      * Credentials are used only when both user and password are non-null and non-empty.
      * Specified credentials take precedence over authentication information that is supplied to this method
      * as part of URL user info like {@code "http://user:password@host:port/path/file"}.
+     * <p>
+     * Use {@link #checkConnectionResponseCode(URLConnection) checkConnectionResponseCode} after establishing
+     * connection to ensure that it was Ok.
      *
-     * @param url the URL.
-     * @param user the user name (may be null).
-     * @param password the password (may be null).
-     * @return URLConnection
-     * @throws IOException if an I/O error occurs.
+     * @param url the URL
+     * @param user the user name (may be null)
+     * @param password the password (may be null)
+     * @return opened URLConnection
+     * @throws IOException if an I/O error occurs
      */
     public static URLConnection openConnection(URL url, String user, String password) throws IOException {
         URLConnection connection = url.openConnection();
@@ -117,16 +122,18 @@ public class URLInputStream extends FilterInputStream {
             auth = user + ":" + password;
         else
             auth = url.getUserInfo();
-        if (auth != null && !auth.isEmpty())
-            connection.setRequestProperty("Authorization", "Basic " +
-                Base64.DEFAULT.encode(auth.getBytes(StandardCharsets.UTF_8)));
+        if (auth != null && !auth.isEmpty()) {
+            connection.setRequestProperty("Authorization",
+                "Basic " + Base64.DEFAULT.encode(auth.getBytes(StandardCharsets.UTF_8)));
+        }
         return connection;
     }
 
     /**
      * Checks connection response code and throws {@link IOException} if it is not Ok.
+     *
      * @param connection URLConnection
-     * @throws IOException if an I/O error occurs
+     * @throws IOException if an I/O error occurs or if connection response code is not Ok
      */
     public static void checkConnectionResponseCode(URLConnection connection) throws IOException {
         if (connection instanceof HttpURLConnection && ((HttpURLConnection) connection).getResponseCode() != HttpURLConnection.HTTP_OK)
@@ -135,52 +142,95 @@ public class URLInputStream extends FilterInputStream {
 
     /**
      * Reads content for specified URL and returns it as a byte array.
+     * This method {@link #resolveURL(String) resolves} specified URL first, for a proper support of file name.
+     * <p>
+     * This is a shortcut for
+     * <code>{@link #readBytes(URL, String, String) readBytes}({@link #resolveURL(String) resolveURL}(url),
+     * <b>null</b>, <b>null</b>)</code>.
      *
-     * @param url the URL to read
+     * @param url the URL
+     * @return the byte array with read content
+     * @throws IOException if an I/O error occurs
+     * @deprecated use {@link #readBytes(String) readBytes} instead
+     */
+    @Deprecated
+    public static byte[] readURL(String url) throws IOException {
+        return readBytes(resolveURL(url), null, null);
+    }
+
+    /**
+     * Reads content for specified URL and returns it as a byte array.
+     * This method {@link #resolveURL(String) resolves} specified URL first, for a proper support of file name.
+     * <p>
+     * This is a shortcut for
+     * <code>{@link #readBytes(URL, String, String) readBytes}({@link #resolveURL(String) resolveURL}(url),
+     * <b>null</b>, <b>null</b>)</code>.
+     *
+     * @param url the URL
+     * @return the byte array with read content
      * @throws IOException if an I/O error occurs
      */
-    public static byte[] readURL(String url) throws IOException {
-        try (URLInputStream in = new URLInputStream(url)) {
-            ByteArrayOutput out = new ByteArrayOutput(Math.max(in.connection.getContentLength(), 10000));
-            for (int n; (n = in.read(out.getBuffer(), out.getPosition(), out.getLimit() - out.getPosition())) >= 0; ) {
-                out.setPosition(out.getPosition() + n);
-                out.ensureCapacity(out.getPosition() + 10000);
-            }
-            return out.toByteArray();
+    public static byte[] readBytes(String url) throws IOException {
+        return readBytes(resolveURL(url), null, null);
+    }
+
+    /**
+     * Reads content for specified URL with specified credentials and returns it as a byte array.
+     * Credentials are used only when both user and password are non-null and non-empty.
+     * Specified credentials take precedence over authentication information that is supplied to this method
+     * as part of URL user info like {@code "http://user:password@host:port/path/file"}.
+     *
+     * @param url the URL
+     * @param user the user name (may be null)
+     * @param password the password (may be null)
+     * @return the byte array with read content
+     * @throws IOException if an I/O error occurs
+     */
+    public static byte[] readBytes(URL url, String user, String password) throws IOException {
+        try (URLInputStream in = new URLInputStream(url, user, password)) {
+            return in.readAllBytes();
         }
     }
 
     /**
-     * Returns last modification time for a specified URL. This method never returns 0.
+     * Returns last modification time for specified URL. This method never returns 0.
+     * <p>
      * This is a shortcut for
      * <code>{@link #getLastModified(URL, String, String) getLastModified}({@link #resolveURL(String) resolveURL}(url),
-     *          <b>null</b>, <b>null</b>)</code>.
-     * @param url the URL.
-     * @throws IOException if there is some problem retrieving last modification time or it is not known.
+     * <b>null</b>, <b>null</b>)</code>.
+     *
+     * @param url the URL
+     * @return last modification time
+     * @throws IOException if an I/O error occurs or if last modification time is not known
      */
     public static long getLastModified(String url) throws IOException {
         return getLastModified(resolveURL(url), null, null);
     }
 
     /**
-     * Returns last modification time for a specified URL. This method never returns 0.
-     * @param url the URL.
-     * @param user the user name (may be null).
-     * @param password the password (may be null).
-     * @throws IOException if there is some problem retrieving last modification time or it is not known.
+     * Returns last modification time for specified URL with specified credentials. This method never returns 0.
+     * Credentials are used only when both user and password are non-null and non-empty.
+     * Specified credentials take precedence over authentication information that is supplied to this method
+     * as part of URL user info like {@code "http://user:password@host:port/path/file"}.
+     *
+     * @param url the URL
+     * @param user the user name (may be null)
+     * @param password the password (may be null)
+     * @return last modification time
+     * @throws IOException if an I/O error occurs or if last modification time is not known
      */
     public static long getLastModified(URL url, String user, String password) throws IOException {
         URLConnection connection = openConnection(url, user, password);
-        if (connection instanceof HttpURLConnection)
-            ((HttpURLConnection) connection).setRequestMethod("HEAD");
         try {
+            if (connection instanceof HttpURLConnection)
+                ((HttpURLConnection) connection).setRequestMethod("HEAD");
             long lastModified = connection.getLastModified();
             checkConnectionResponseCode(connection);
             if (lastModified == 0)
                 throw new IOException("Last modified time is not known");
             return lastModified;
         } finally {
-            // NOTE: "getLastModified" implicitly performs "connect" and we must close input stream that we don't need
+            // NOTE: "getLastModified" and "getResponseCode" implicitly perform "connect", need to close input stream
             connection.getInputStream().close();
         }
     }
@@ -192,35 +242,115 @@ public class URLInputStream extends FilterInputStream {
     // =====================  constructor and instance methods =====================
 
     /**
-     * Creates a <tt>URLInputStream</tt> for specified URL.
+     * Creates a new {@code URLInputStream} instance for specified URL.
+     * <p>
+     * This is a shortcut for
+     * <code>{@link #URLInputStream(URL, String, String) URLInputStream}({@link #resolveURL(String) resolveURL}(url),
+     * <b>null</b>, <b>null</b>)</code>.
      *
-     * @param url the URL to open
+     * @param url the URL
      * @throws IOException if an I/O error occurs
      */
     public URLInputStream(String url) throws IOException {
+        this(resolveURL(url), null, null, 0);
+    }
+
+    /**
+     * Creates a new {@code URLInputStream} instance for specified URL with specified credentials.
+     * Credentials are used only when both user and password are non-null and non-empty.
+     * Specified credentials take precedence over authentication information that is supplied to this method
+     * as part of URL user info like {@code "http://user:password@host:port/path/file"}.
+     *
+     * @param url the URL
+     * @param user the user name (may be null)
+     * @param password the password (may be null)
+     * @throws IOException if an I/O error occurs
+     */
+    public URLInputStream(URL url, String user, String password) throws IOException {
+        this(url, user, password, 0);
+    }
+
+    /**
+     * Creates a new {@code URLInputStream} instance for specified URL with specified credentials
+     * and specified {@code If-Modified-Since} request parameter.
+     * Credentials are used only when both user and password are non-null and non-empty.
+     * Specified credentials take precedence over authentication information that is supplied to this method
+     * as part of URL user info like {@code "http://user:password@host:port/path/file"}.
+     * The {@code If-Modified-Since} time is used only when it is not 0.
+     *
+     * @param url the URL
+     * @param user the user name (may be null)
+     * @param password the password (may be null)
+     * @param ifModifiedSince the If-Modified-Since time (may be 0)
+     * @throws IOException if an I/O error occurs
+     */
+    public URLInputStream(URL url, String user, String password, long ifModifiedSince) throws IOException {
         super(null);
-        connection = openConnection(url);
+        connection = openConnection(url, user, password);
+        connection.setIfModifiedSince(ifModifiedSince);
         in = connection.getInputStream();
-        boolean ok = false;
-        try {
-            checkConnectionResponseCode(connection);
-            ok = true;
-        } finally {
-            if (!ok)
-                try {
-                    close();
-                } catch (Exception ignored) {
-                    // Stream is closed because of connecting error - throw original exception, not closing one.
-                }
+        if (connection instanceof HttpURLConnection) {
+            int response = ((HttpURLConnection) connection).getResponseCode();
+            boolean skipped = ifModifiedSince != 0 && response == HttpURLConnection.HTTP_NOT_MODIFIED;
+            // Close on any error response except NOT_MODIFIED
+            if (response != HttpURLConnection.HTTP_OK && !skipped) {
+                close();
+                throw new IOException("Unexpected response: " + connection.getHeaderField(0));
+            }
         }
     }
 
     /**
-     * This method returns last modification time from this {@code URLInputStream}.
+     * Returns {@link URLConnection} for this {@code URLInputStream}.
+     *
+     * @return URLConnection for this URLInputStream
+     */
+    public URLConnection getConnection() {
+        return connection;
+    }
+
+    /**
+     * Returns last modification time from this {@code URLInputStream}.
      * Returns 0 when last modification time is not known.
+     *
+     * @return last modification time from this URLInputStream or 0 if unknown
      */
     public long getLastModified() {
         return connection.getLastModified();
+    }
+
+    /**
+     * Determines whether content of this {@code URLInputStream} was modified according to {@code If-Modified-Since}
+     * request parameter specified at creation.
+     *
+     * @return {@code true} if content was modified according to {@code If-Modified-Since} parameter,
+     * 		or parameter was not specified or was 0
+     * @throws IOException if an I/O error occurs
+     */
+    public boolean isModifiedSince() throws IOException {
+        if (connection instanceof HttpURLConnection &&
+            ((HttpURLConnection) connection).getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED)
+        {
+            return false;
+        }
+        if (connection.getIfModifiedSince() != 0 && connection.getLastModified() == connection.getIfModifiedSince())
+            return false;
+        return true;
+    }
+
+    /**
+     * Reads remaining content from this {@code URLInputStream} and returns it as a byte array.
+     *
+     * @return the byte array with read content
+     * @throws IOException if an I/O error occurs
+     */
+    public byte[] readAllBytes() throws IOException {
+        ByteArrayOutput out = new ByteArrayOutput(connection.getContentLength() + 1000);
+        for (int n; (n = in.read(out.getBuffer(), out.getPosition(), out.getLimit() - out.getPosition())) >= 0; ) {
+            out.setPosition(out.getPosition() + n);
+            out.ensureCapacity(out.getPosition() + 1000);
+        }
+        return out.toByteArray();
     }
 
     @Override
@@ -230,7 +360,8 @@ public class URLInputStream extends FilterInputStream {
     }
 
     @Override
-    protected void finalize() throws IOException {
+    protected void finalize() throws Throwable {
+        super.finalize();
         close();
     }
 }

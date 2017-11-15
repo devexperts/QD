@@ -25,6 +25,7 @@ import com.devexperts.qd.tools.*;
 import com.devexperts.services.ServiceProvider;
 import com.devexperts.transport.stats.ConnectionStats;
 import com.devexperts.util.GlobListUtil;
+import com.devexperts.util.LogUtil;
 
 @ToolSummary(
     info = "Analyses binary file and distribution of various structures in it.",
@@ -62,7 +63,7 @@ public class FileAnalysis extends AbstractTool {
 
         // analyze url
         String url = args[0];
-        QDLog.log.info("Analyzing " + url);
+        QDLog.log.info("Analyzing " + LogUtil.hideCredentials(url));
 
         FileReaderParams.Default params = new FileReaderParams.Default();
         String dataFilePath = FileReader.parseParameters(url, params);

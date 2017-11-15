@@ -11,13 +11,16 @@
  */
 package com.dxfeed.event.market;
 
-import java.util.*;
-
 import com.devexperts.util.SynchronizedIndexedSet;
 import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.DXPublisher;
 import com.dxfeed.api.osub.IndexedEventSubscriptionSymbol;
 import com.dxfeed.event.IndexedEventSource;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * Identifies source of {@link Order} and {@link SpreadOrder} events.
@@ -136,6 +139,13 @@ public final class OrderSource extends IndexedEventSource {
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
      */
     public static final OrderSource ESPD = new OrderSource("ESPD", PUB_ORDER);
+
+    /**
+     * Intercontinental Exchange.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource ICE = new OrderSource("ICE", PUB_ORDER);
 
     /**
      * International Securities Exchange.

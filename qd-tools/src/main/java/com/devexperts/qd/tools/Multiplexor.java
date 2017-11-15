@@ -21,6 +21,7 @@ import com.devexperts.qd.qtp.*;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.util.LogUtil;
 
 /**
  * Multiplexor tool.
@@ -83,7 +84,7 @@ public class Multiplexor extends AbstractTool {
         if (drop.isSet())
             log.info("Configured to drop " + drop.getValue() + "% of data");
 
-        log.info("Using agent address " + MessageConnectors.maskAuthorizationData(agentAddress));
+        log.info("Using agent address " + LogUtil.hideCredentials(agentAddress));
         AgentAdapter.Factory factory = new AgentAdapter.Factory(endpoint, null);
         RMIEndpoint forwardServerEndpoint = null;
         if (forward.isSet() || route.isSet()) {
@@ -103,7 +104,7 @@ public class Multiplexor extends AbstractTool {
             closeOnExit.add(route);
 
 
-        log.info("Using distributor address " + MessageConnectors.maskAuthorizationData(distributorAddress));
+        log.info("Using distributor address " + LogUtil.hideCredentials(distributorAddress));
 
         MessageAdapter.AbstractFactory distributorFactory = delay.isSet() || drop.isSet() ?
             new DelayDropAdapter.Factory(endpoint, null, delay.getValue().getTime(), drop.getValue() / 100.0) :

@@ -28,8 +28,7 @@ import com.devexperts.qd.spi.QDFilterFactory;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.LegacyAdapter;
 import com.devexperts.services.Services;
-import com.devexperts.util.LoggedThreadPoolExecutor;
-import com.devexperts.util.TimePeriod;
+import com.devexperts.util.*;
 
 /**
  * The <code>AgentAdapter</code> adapts agent side of QD to message API.
@@ -461,7 +460,8 @@ public class AgentAdapter extends MessageAdapter {
                 try {
                     filters.put(filter, filterFactory.createFilter(filter, QDFilterContext.REMOTE_FILTER));
                 } catch (IllegalArgumentException e) {
-                    QDLog.log.warn("Cannot parse filter '" + filter + "' from " + getRemoteHostAddress(), e);
+                    QDLog.log.warn("Cannot parse filter '" + LogUtil.hideCredentials(filter) + "'" +
+                        " from " + LogUtil.hideCredentials(getRemoteHostAddress()), e);
                     filters.put(filter, QDFilter.ANYTHING);
                 }
             peerFilter[contract.ordinal()] = filters.get(filter);

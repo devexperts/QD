@@ -299,7 +299,7 @@ public class MarketDataReplay implements Runnable {
                 return readResponse(input);
             } catch (IOException e) {
                 if (e instanceof NoRouteToHostException || e instanceof ConnectException || e instanceof SocketTimeoutException) {
-                    Log.log.error("Unable to connect to " + address + ": " + e);
+                    Log.log.error("Unable to connect to " + LogUtil.hideCredentials(address) + ": " + e);
                     badAddresses.put(address, System.currentTimeMillis());
                     continue;
                 }

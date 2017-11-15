@@ -176,8 +176,10 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
             preOpenIncomingRequests = null;
         }
         state = RMIChannelState.CLOSED;
-        if (connection != null)
+        if (connection != null) {
             connection.channelsManager.removeChannel(channelId, type);
+            connection.tasksManager.notifyTaskCompleted(owner, channelId);
+        }
     }
 
     synchronized RMIService<?> getHandler(String handlerName) {
@@ -197,13 +199,14 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
     }
 
     synchronized void cancel(RMICancelType cancel) {
-        if (type != RMIChannelType.CLIENT_CHANNEL) {
+        if (type == RMIChannelType.SERVER_CHANNEL) {
             if (cancel == RMICancelType.ABORT_RUNNING)
                 ((RMITaskImpl<?>) owner).cancel();
             else
                 ((RMITaskImpl<?>) owner).cancelWithConfirmation();
             return;
         }
+        //for top-level request
         RMIRequest<Void> cancelChannel = createRequest(new RMIRequestMessage<>(RMIRequestType.ONE_WAY,
             cancel == RMICancelType.ABORT_RUNNING ? RMIRequestImpl.ABORT_CANCEL : RMIRequestImpl.CANCEL_WITH_CONFIRMATION, 0L));
         cancelChannel.setListener(request -> this.close());

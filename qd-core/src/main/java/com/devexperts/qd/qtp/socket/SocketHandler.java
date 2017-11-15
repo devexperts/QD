@@ -20,8 +20,7 @@ import com.devexperts.logging.Logging;
 import com.devexperts.qd.qtp.*;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.transport.stats.ConnectionStats;
-import com.devexperts.util.JMXNameBuilder;
-import com.devexperts.util.SystemProperties;
+import com.devexperts.util.*;
 
 /**
  * The <code>SocketHandler</code> handles standard socket using blocking API.
@@ -185,13 +184,13 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
         try {
             socket.close();
             if (reason == null || reason instanceof IOException && socketSource instanceof ServerSocketSource)
-                log.info("Disconnected from " + address +
+                log.info("Disconnected from " + LogUtil.hideCredentials(address) +
                     (reason == null ? "" :
                         " because of " + (reason.getMessage() == null ? reason.toString() : reason.getMessage())));
             else
-                log.error("Disconnected from " + address, reason);
+                log.error("Disconnected from " + LogUtil.hideCredentials(address), reason);
         } catch (Throwable t) {
-            log.error("Error occurred while disconnecting from " + address, t);
+            log.error("Error occurred while disconnecting from " + LogUtil.hideCredentials(address), t);
         }
     }
 
@@ -221,7 +220,7 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
             if (stats == null)
                 throw new NullPointerException("Stats were not created");
         } catch (Throwable t) {
-            log.error("Failed to configure socket " + socketInfo.socketAddress, t);
+            log.error("Failed to configure socket " + LogUtil.hideCredentials(socketInfo.socketAddress), t);
             connector.addClosedConnectionStats(connectionStats);
             cleanupSocket(socket, socketInfo.socketAddress, null);
             return null;
@@ -238,7 +237,7 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
             failureReason = t;
         }
         if (connection == null) {
-            log.error("Failed to create connection on socket " + socketInfo.socketAddress, failureReason);
+            log.error("Failed to create connection on socket " + LogUtil.hideCredentials(socketInfo.socketAddress), failureReason);
             cleanupStats(stats);
             connector.addClosedConnectionStats(connectionStats);
             cleanupSocket(socket, socketInfo.socketAddress, null);

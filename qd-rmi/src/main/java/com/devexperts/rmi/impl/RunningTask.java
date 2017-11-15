@@ -38,21 +38,24 @@ class RunningTask {
         set.add(task);
     }
 
+    //for inner task
     synchronized void remove(RMITaskImpl<?> task) {
+        assert task.isNestedTask();
         IndexedSet<Long, RMITaskImpl<?>> set = getMap(task.getChannel().getType()).get(task.getChannelId());
-        if (task.isNestedTask()) {
-            if (set == null)
-                return;
-            set.remove(task);
-            if (set.isEmpty())
-                getMap(task.getChannel().getType()).remove(task.getChannelId());
+        if (set == null)
             return;
-        }
-        if (set != null) {
+        set.remove(task);
+        if (set.isEmpty())
+            getMap(task.getChannel().getType()).remove(task.getChannelId());
+    }
+
+    // for top-level tasks
+    synchronized void remove(RMIChannelOwner owner, long channelId) {
+        IndexedSet<Long, RMITaskImpl<?>> set = getMap(owner.getChannelType()).get(channelId);
+        if (set != null && !set.isEmpty()) {
             for (RMITaskImpl<?> runTask : set)
                 runTask.completeExceptionally(RMIExceptionType.CHANNEL_CLOSED, null);
         }
-        serverChannelTasks.remove(task);
     }
 
     synchronized RMITaskImpl<?> removeById(long requestId, long channelId, RMIChannelType type) {
@@ -92,11 +95,6 @@ class RunningTask {
     }
 
     private  Map<Long, IndexedSet<Long, RMITaskImpl<?>>> getMap(RMIChannelType type) {
-        Map<Long, IndexedSet<Long, RMITaskImpl<?>>> result = mapNestedTask.get(type);
-        if (result == null) {
-            result = new HashMap<>();
-            mapNestedTask.put(type, result);
-        }
-        return result;
+        return mapNestedTask.computeIfAbsent(type, k -> new HashMap<>());
     }
 }

@@ -18,13 +18,13 @@ import com.devexperts.io.ClassUtil;
 import com.devexperts.io.Marshalled;
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.QDLog;
-import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.rmi.*;
 import com.devexperts.rmi.message.*;
 import com.devexperts.rmi.task.RMIServiceDescriptor;
 import com.devexperts.rmi.task.RMIServiceId;
 import com.devexperts.services.ServiceProvider;
 import com.devexperts.util.ConfigUtil;
+import com.devexperts.util.LogUtil;
 import com.dxfeed.promise.Promise;
 
 /**
@@ -80,7 +80,7 @@ public class Invoke extends AbstractTool {
 
         RMIOperation<?> operation = RMIOperation.valueOf(serviceName, returnType, method,
             types.toArray(new Class<?>[types.size()]));
-        log.info("Using address " + MessageConnectors.maskAuthorizationData(address));
+        log.info("Using address " + LogUtil.hideCredentials(address));
         log.info("Invoking " + operation + " with " + parameters);
 
         RMIEndpoint endpoint = RMIEndpoint.createEndpoint(RMIEndpoint.Side.CLIENT);

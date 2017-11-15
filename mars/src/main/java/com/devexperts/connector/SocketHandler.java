@@ -13,6 +13,7 @@ package com.devexperts.connector;
 
 import java.net.Socket;
 
+import com.devexperts.util.LogUtil;
 import com.devexperts.util.TimeUtil;
 
 /**
@@ -61,7 +62,7 @@ class SocketHandler implements ConnectionAdapterListener, Runnable {
     }
 
     public String toString() {
-        return "SocketHandler-" + address + ": " + STATE_NAMES[state];
+        return "SocketHandler-" + LogUtil.hideCredentials(address) + ": " + STATE_NAMES[state];
     }
 
     /**
@@ -90,7 +91,7 @@ class SocketHandler implements ConnectionAdapterListener, Runnable {
         if (state != NEW) {
             throw new IllegalStateException("Handler may be started only once.");
         }
-        reader = new Thread(this, "SocketHandler-" + address);
+        reader = new Thread(this, "SocketHandler-" + LogUtil.hideCredentials(address));
         reader.setDaemon(true);
         reader.start();
         state = CONNECTING;
@@ -105,8 +106,8 @@ class SocketHandler implements ConnectionAdapterListener, Runnable {
             return false;
         if (state != CONNECTING)
             throw new IllegalStateException("Handler may be connected only once.");
-        reader.setName("SocketReader-" + address);
-        writer = new Thread(this, "SocketWriter-" + address);
+        reader.setName("SocketReader-" + LogUtil.hideCredentials(address));
+        writer = new Thread(this, "SocketWriter-" + LogUtil.hideCredentials(address));
         writer.setDaemon(true);
         writer.start();
         this.socket = socket;
@@ -187,13 +188,13 @@ class SocketHandler implements ConnectionAdapterListener, Runnable {
             try {
                 socket.close();
             } catch (Throwable t) {
-                connector.log("Cleanup failed " + connector.getSocketAddress(socket), t, null);
+                connector.log("Cleanup failed " + LogUtil.hideCredentials(connector.getSocketAddress(socket)), t, null);
             }
         if (adapter != null)
             try {
                 adapter.close();
             } catch (Throwable t) {
-                connector.log("Cleanup failed " + adapter, t, null);
+                connector.log("Cleanup failed " + LogUtil.hideCredentials(adapter), t, null);
             }
     }
 
@@ -248,14 +249,13 @@ class SocketHandler implements ConnectionAdapterListener, Runnable {
                             controlPack.prevConnectStatusNumber++;
                         } else {
                             controlPack.prevConnectStatusTime = curTime;
-                            StringBuffer buf = new StringBuffer(64);
+                            StringBuilder sb = new StringBuilder(error.getMessage());
                             if (controlPack.prevConnectStatusNumber != 0) {
-                                buf.append('[').append(controlPack.prevConnectStatusNumber + 1)
-                                    .append(" msg, address=").append(address).append(']');
+                                sb.append('[').append(controlPack.prevConnectStatusNumber + 1);
+                                sb.append(" msg, address=").append(LogUtil.hideCredentials(address)).append(']');
                                 controlPack.prevConnectStatusNumber = 0;
                             }
-
-                            connector.log(error.getMessage(), error, null);
+                            connector.log(sb.toString(), error, null);
                         }
                     }
                 }
@@ -273,7 +273,7 @@ class SocketHandler implements ConnectionAdapterListener, Runnable {
         controller.handlerClosed(this);
         cleanup(socket, adapter);
 
-        connector.log("Disconnect for " + address, error, ConnectorStates.DISCONNECTED_STATE);
+        connector.log("Disconnect for " + LogUtil.hideCredentials(address), error, ConnectorStates.DISCONNECTED_STATE);
     }
 
     /**

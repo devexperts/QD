@@ -164,7 +164,8 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
                 throw new InvalidFormatException("\"storagetime\" and \"storagesize\" parameters can be used only with \"split\"");
         }
         if (split != null) {
-            log.info("Create FileWriter which writes tape to " + this.dataFilePath + (time.isUsingTimeFile() ? "/" + FileUtils.TIME_FILE_EXTENSION : "") +
+            log.info("Create FileWriter which writes tape to " + LogUtil.hideCredentials(this.dataFilePath) +
+                (time.isUsingTimeFile() ? "/" + FileUtils.TIME_FILE_EXTENSION : "") +
                 ", where \"" + FileUtils.TIMESTAMP_MARKER + "\" is replaced by current date and time. " +
                 "Splitting files with interval " + split);
         }
@@ -205,13 +206,13 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
         composer.setWriteHeartbeat(time == TimestampsType.MESSAGE);
         composer.setOptSet(optSet);
         // Create and start periodic flushing thread
-        flushThread = new FlushThread(dataFilePath);
+        flushThread = new FlushThread(LogUtil.hideCredentials(dataFilePath));
         flushThread.start();
         // user composer's buffer size
-        dataWriter = new ParallelWriter("Write-Data-" + dataFilePath, TASK_QUEUE_SIZE);
+        dataWriter = new ParallelWriter("Write-Data-" + LogUtil.hideCredentials(dataFilePath), TASK_QUEUE_SIZE);
         dataWriter.start();
         if (time.isUsingTimeFile()) {
-            timeWriter = new ParallelWriter("Write-Time-" + dataFilePath, TASK_QUEUE_SIZE);
+            timeWriter = new ParallelWriter("Write-Time-" + LogUtil.hideCredentials(dataFilePath), TASK_QUEUE_SIZE);
             timeWriter.start();
         }
         return this;
@@ -252,12 +253,12 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
         position = 0;
         lastTime = 0; // have not written timestamp to the new file yet
         this.dataFilePath = dataFilePath;
-        log.info("Writing tape data to " + dataFilePath +
+        log.info("Writing tape data to " + LogUtil.hideCredentials(dataFilePath) +
             (compression == StreamCompression.NONE ? "" : " with " + compression));
         dataOut = reuseOutputStream(dataFilePath, dataWriter);
         if (time.isUsingTimeFile()) {
             timeFilePath = getTimeFilePath(dataFilePath);
-            log.info("Writing tape time to " + timeFilePath +
+            log.info("Writing tape time to " + LogUtil.hideCredentials(timeFilePath) +
                 (compression == StreamCompression.NONE ? "" : " with " + compression));
             timeOut = new PrintWriter(reuseOutputStream(timeFilePath, timeWriter));
         } else
@@ -304,9 +305,9 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
     private void tryDelete(File file) {
         if (!file.exists())
             return;
-        log.info("Deleting file " + file);
+        log.info("Deleting file " + LogUtil.hideCredentials(file));
         if (!file.delete())
-            log.warn("Failed to delete " + file);
+            log.warn("Failed to delete " + LogUtil.hideCredentials(file));
     }
 
     @Override
@@ -490,7 +491,7 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
 
     @Override
     public synchronized String toString() {
-        return "tape data file " + dataFilePath;
+        return "tape data file " + LogUtil.hideCredentials(dataFilePath);
     }
 
     // it is used from visitTimestampedData

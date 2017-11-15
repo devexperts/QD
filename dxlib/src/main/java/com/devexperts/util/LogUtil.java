@@ -13,6 +13,7 @@ package com.devexperts.util;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class LogUtil {
 
@@ -21,6 +22,29 @@ public class LogUtil {
     private static final int MIN_ARRAY_LENGTH = SystemProperties.getIntProperty(
         LogUtil.class, "minArrayLength", 10);
     private static final String NULL = "null";
+
+    private static final Pattern CREDENTIALS_PROPERTIES = Pattern.compile("([\\[\\(\\?,;&](user|password)=)([^\\]\\),;&]+)");
+    private static final Pattern CREDENTIALS_USER_INFO = Pattern.compile("(://)([^/\\?\\[\\]\\(\\),;&]+)(@)");
+
+    /**
+     * Hides credentials by replacing them with asterisks. Hides both <b>user</b> and <b>password</b> credentials.
+     * Hides credentials specified as properties, as URL query parameters, or as URL user info.
+     *
+     * @param o the object with credentials in string representation
+     * @return the string representation with hidden credentials
+     */
+    public static String hideCredentials(Object o) {
+        if (o == null)
+            return null;
+        String s = o.toString();
+        if (s == null)
+            return null;
+        if (s.contains("user=") || s.contains("password="))
+            s = CREDENTIALS_PROPERTIES.matcher(s).replaceAll("$1****");
+        if (s.contains("://") && s.lastIndexOf('@') > s.indexOf("://"))
+            s = CREDENTIALS_USER_INFO.matcher(s).replaceAll("$1****$3");
+        return s;
+    }
 
     /**
      * Returns a compact string representation of the "deep contents" of the specified

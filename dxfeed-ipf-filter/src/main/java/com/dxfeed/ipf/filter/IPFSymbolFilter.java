@@ -21,8 +21,7 @@ import com.devexperts.qd.*;
 import com.devexperts.qd.kit.FilterSyntaxException;
 import com.devexperts.qd.util.QDConfig;
 import com.devexperts.qd.util.SymbolSet;
-import com.devexperts.util.TimeFormat;
-import com.devexperts.util.TimePeriod;
+import com.devexperts.util.*;
 import com.dxfeed.ipf.InstrumentProfile;
 import com.dxfeed.ipf.InstrumentProfileReader;
 import com.dxfeed.schedule.Schedule;
@@ -38,7 +37,7 @@ public class IPFSymbolFilter extends QDFilter {
     private final Logging log = new Logging(IPFSymbolFilter.class.getName()) {
         @Override
         protected String decorateLogMessage(String msg) {
-            return "[" + address + "] " + super.decorateLogMessage(msg);
+            return "[" + LogUtil.hideCredentials(address) + "] " + super.decorateLogMessage(msg);
         }
     };
 

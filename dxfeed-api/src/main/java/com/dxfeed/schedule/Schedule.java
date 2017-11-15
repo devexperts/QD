@@ -174,12 +174,12 @@ public final class Schedule {
         try {
             data = URLInputStream.readURL(url);
         } catch (Throwable t) {
-            log.error("Failed to download schedule defaults from " + url, t);
+            log.error("Failed to download schedule defaults from " + LogUtil.hideCredentials(url), t);
             return;
         }
         try (InputStream in = StreamCompression.detectCompressionByHeaderAndDecompress(new ByteArrayInput(data))) {
             String result = setDefaults(in);
-            log.info("Downloaded schedule defaults from " + url + " - they are " + result);
+            log.info("Downloaded schedule defaults from " + LogUtil.hideCredentials(url) + " - they are " + result);
         } catch (Throwable t) {
             log.error("Unexpected error", t);
         }

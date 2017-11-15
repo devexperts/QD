@@ -14,6 +14,7 @@ package com.devexperts.qd.qtp.socket;
 import java.net.Socket;
 
 import com.devexperts.logging.Logging;
+import com.devexperts.util.LogUtil;
 
 class ServerSocketSource extends SocketSource {
     private static final Logging log = Logging.getLogging(ServerSocketConnector.class);
@@ -30,10 +31,10 @@ class ServerSocketSource extends SocketSource {
             return new SocketInfo(socket, new SocketAddress(socket.getInetAddress().getHostAddress(), socket.getPort()));
         } catch (Throwable t) {
             try {
-                log.error("Failed to configure socket " + SocketUtil.getAcceptedSocketAddress(socket), t);
+                log.error("Failed to configure socket " + LogUtil.hideCredentials(SocketUtil.getAcceptedSocketAddress(socket)), t);
                 socket.close();
             } catch (Throwable tt) {
-                log.error("Failed to close socket " + SocketUtil.getAcceptedSocketAddress(socket), t);
+                log.error("Failed to close socket " + LogUtil.hideCredentials(SocketUtil.getAcceptedSocketAddress(socket)), t);
             }
             return null;
         }

@@ -20,6 +20,7 @@ import javax.naming.NamingException;
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.util.InvalidFormatException;
+import com.devexperts.util.LogUtil;
 
 public class DataExtractorConfig {
     private static final Logging log = Logging.getLogging(DataExtractorConfig.class);
@@ -54,7 +55,7 @@ public class DataExtractorConfig {
             if (configFilePath == null)
                 configFilePath = System.getProperty(DATA_PROPERTIES);
             if (configFilePath != null) {
-                log.info("Loading config file from " + configFilePath);
+                log.info("Loading config file from " + LogUtil.hideCredentials(configFilePath));
                 InputStream in = new FileInputStream(configFilePath);
                 try {
                     props.load(in);

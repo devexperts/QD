@@ -459,7 +459,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
         return "DXEndpoint{" +
             "role=" + role +
             ", scheme=" + scheme.getClass().getSimpleName() +
-            ", address=" + address +
+            ", address=" + LogUtil.hideCredentials(address) +
             (isClosed() ? ", closed" : "") +
             '}';
     }
@@ -603,7 +603,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
         }
 
         private void failedToLoadFrom(String name, String propFileKey, IOException e) {
-            QDLog.log.error("Failed to load " + propFileKey + " from " + name, e);
+            QDLog.log.error("Failed to load " + propFileKey + " from " + LogUtil.hideCredentials(name), e);
         }
 
         @Override

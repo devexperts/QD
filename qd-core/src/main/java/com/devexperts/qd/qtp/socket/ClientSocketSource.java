@@ -18,6 +18,7 @@ import java.util.*;
 
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.qtp.ReconnectHelper;
+import com.devexperts.util.LogUtil;
 
 /**
  * Implements load-balancing algorithm for {@link ClientSocketConnector} by resolving host
@@ -83,7 +84,7 @@ class ClientSocketSource extends SocketSource {
             reconnectHelpers.put(address, reconnectHelper = new ReconnectHelper(connector.getReconnectDelay()));
 
         reconnectHelper.sleepBeforeConnection();
-        log.info("Connecting to " + address);
+        log.info("Connecting to " + LogUtil.hideCredentials(address));
 
         Socket socket = null;
         try {
@@ -95,7 +96,7 @@ class ClientSocketSource extends SocketSource {
             } else {
                 // connect via HTTPS proxy
                 int proxyPort = connector.getProxyPort();
-                log.info("Using HTTPS proxy: " + proxyHost + ":" + proxyPort);
+                log.info("Using HTTPS proxy: " + LogUtil.hideCredentials(proxyHost) + ":" + proxyPort);
                 socket = new Socket(proxyHost, proxyPort);
                 configureSocket(socket);
                 String connectRequest = "CONNECT " + address.host + ":" + address.port + " HTTP/1.0\r\n\r\n";
@@ -110,16 +111,16 @@ class ClientSocketSource extends SocketSource {
                 for (String line; (line = readLine(input)) != null && line.length() > 0;) {} // skip HTTP header
             }
         } catch (Throwable t) {
-            log.error("Failed to connect to " + address, t);
+            log.error("Failed to connect to " + LogUtil.hideCredentials(address), t);
             if (socket != null)
                 try {
                     socket.close();
                 } catch (Throwable tt) {
-                    log.error("Failed to close socket " + address, tt);
+                    log.error("Failed to close socket " + LogUtil.hideCredentials(address), tt);
                 }
             return null;
         }
-        log.info("Connected to " + address);
+        log.info("Connected to " + LogUtil.hideCredentials(address));
         return new SocketInfo(socket, address);
     }
 
@@ -147,7 +148,7 @@ class ClientSocketSource extends SocketSource {
     }
 
     public String toString() {
-        return hostNames + (port == 0 ? "" : ":" + port);
+        return LogUtil.hideCredentials(hostNames) + (port == 0 ? "" : ":" + port);
     }
 
     private void resolveAddresses() {
@@ -155,8 +156,7 @@ class ClientSocketSource extends SocketSource {
         Set<SocketAddress> addresses = new HashSet<>();
         for (SocketAddress parsedAddress : parsedAddresses) {
             // Resolve all host addresses
-            if (log != null)
-                log.info("Resolving IPs for " + parsedAddress.host);
+            log.info("Resolving IPs for " + LogUtil.hideCredentials(parsedAddress.host));
             try {
                 InetAddress[] temp = InetAddress.getAllByName(parsedAddress.host);
                 for (InetAddress inetAddress : temp)
@@ -165,8 +165,7 @@ class ClientSocketSource extends SocketSource {
                 // We may reside under HTTPS proxy without having access to DNS server.
                 // In this case let the proxy try to resolve the required address later.
                 // Otherwise we will just get another UnknownHostException later anyway.
-                if (log != null)
-                    log.warn("Failed to resolve IPs for " + parsedAddress.host);
+                log.warn("Failed to resolve IPs for " + LogUtil.hideCredentials(parsedAddress.host));
                 addresses.add(new SocketAddress(parsedAddress.host, parsedAddress.port));
             }
         }

@@ -22,6 +22,7 @@ import javax.swing.*;
 import javax.swing.Timer;
 
 import com.devexperts.logging.Logging;
+import com.devexperts.util.LogUtil;
 import com.dxfeed.api.*;
 import com.dxfeed.event.market.*;
 import com.jtattoo.plaf.acryl.AcrylLookAndFeel;
@@ -135,16 +136,16 @@ public class DXFeedMarketDataPlotter implements Runnable {
         Properties properties = new Properties();
         File file = new File(configFile);
         if (!file.exists()) {
-            log.info(file.getAbsoluteFile() + " file not found; will use default configuration");
+            log.info(LogUtil.hideCredentials(file.getAbsoluteFile()) + " file not found; will use default configuration");
             file = new File(PROPERTIES_FILE);
         }
 
         if (file.exists()) {
-            log.info("Loading configuration from " + file.getAbsoluteFile());
+            log.info("Loading configuration from " + LogUtil.hideCredentials(file.getAbsoluteFile()));
             try (FileInputStream in = new FileInputStream(file)) {
                 properties.load(in);
             } catch (IOException e) {
-                log.error("Failed to load configuration from " + file.getAbsoluteFile() + "; will use default configuration");
+                log.error("Failed to load configuration from " + LogUtil.hideCredentials(file.getAbsoluteFile()) + "; will use default configuration");
             }
         }
         return properties;
@@ -152,7 +153,7 @@ public class DXFeedMarketDataPlotter implements Runnable {
 
     private void saveConfiguration(String configFile) {
         File file = new File(configFile);
-        log.info("Saving configuration into " + file.getAbsoluteFile());
+        log.info("Saving configuration into " + LogUtil.hideCredentials(file.getAbsoluteFile()));
         try {
             Properties properties = new Properties();
             properties.setProperty(NAME_PROPERTY, name);
@@ -165,7 +166,7 @@ public class DXFeedMarketDataPlotter implements Runnable {
             }
             properties.store(new FileOutputStream(file), "dxFeed Market Data Plotter Configuration");
         } catch (IOException e) {
-            log.error("Failed to save configuration into " + file.getAbsoluteFile(), e);
+            log.error("Failed to save configuration into " + LogUtil.hideCredentials(file.getAbsoluteFile()), e);
         }
     }
 
@@ -251,7 +252,8 @@ public class DXFeedMarketDataPlotter implements Runnable {
             final String name;
             String address;
             if (spaceIdx == -1) {
-                name = address = nameAddress;
+                name = LogUtil.hideCredentials(nameAddress);
+                address = nameAddress;
             } else {
                 name = nameAddress.substring(0, spaceIdx);
                 address = nameAddress.substring(spaceIdx + 1);
@@ -289,7 +291,7 @@ public class DXFeedMarketDataPlotter implements Runnable {
             feed.addSymbols(Arrays.asList(symbols));
             feed.connect(address);
             feeds.add(feed);
-            log.info("Connected to '" + name + "' (" + address + ")");
+            log.info("Connected to '" + name + "' (" + LogUtil.hideCredentials(address) + ")");
         }
     }
 

@@ -21,6 +21,7 @@ import com.devexperts.io.URLInputStream;
 import com.devexperts.mars.common.MARSEndpoint;
 import com.devexperts.qd.QDLog;
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.util.LogUtil;
 import com.dxfeed.ipf.*;
 import com.dxfeed.ipf.live.InstrumentProfileCollector;
 import com.dxfeed.ipf.live.InstrumentProfileConnection;
@@ -232,10 +233,10 @@ public class Instruments extends AbstractTool {
             long time = System.currentTimeMillis();
             List<InstrumentProfile> readProfiles = reader.readFromFile(source);
             profiles.addAll(readProfiles);
-            QDLog.log.info("Read " + readProfiles.size() + " profiles from " + source + " in " + (System.currentTimeMillis() - time) / 100 / 10.0 + "s");
+            QDLog.log.info("Read " + readProfiles.size() + " profiles from " + LogUtil.hideCredentials(source) + " in " + (System.currentTimeMillis() - time) / 100 / 10.0 + "s");
             return profiles;
         } catch (IOException e) {
-            QDLog.log.error("Error reading source " + source, e);
+            QDLog.log.error("Error reading source " + LogUtil.hideCredentials(source), e);
             throw new IllegalArgumentException(e);
         }
     }
@@ -452,10 +453,11 @@ public class Instruments extends AbstractTool {
             long time = System.currentTimeMillis();
             if (!profiles.isEmpty())
                 new InstrumentProfileWriter().writeToFile(file, profiles);
-            QDLog.log.info("Wrote " + profiles.size() + " profiles to " + file + " in " + (System.currentTimeMillis() - time) / 100 / 10.0 + "s");
+            QDLog.log.info("Wrote " + profiles.size() + " profiles to " + LogUtil.hideCredentials(file) +
+                " in " + (System.currentTimeMillis() - time) / 100 / 10.0 + "s");
             return profiles;
         } catch (IOException e) {
-            QDLog.log.error("Error writing file " + file, e);
+            QDLog.log.error("Error writing file " + LogUtil.hideCredentials(file), e);
             throw new IllegalArgumentException(e);
         }
     }

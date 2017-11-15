@@ -12,6 +12,7 @@
 /launch
 /target
 auth/target
+dxfeed-api/dependency-reduced-pom.xml
 dxfeed-api/target
 dxfeed-bin/target
 dxfeed-codegen-verify/target
@@ -26,6 +27,7 @@ dxfeed-samples/target
 dxfeed-tools/target
 dxfeed-viewer-installer/target
 dxfeed-viewer/target
+dxfeed-webservice-impl/target/
 dxfeed-webservice/overlays
 dxfeed-webservice/target
 dxlib-qd-sandbox/target

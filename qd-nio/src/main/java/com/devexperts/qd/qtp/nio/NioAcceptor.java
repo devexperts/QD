@@ -17,6 +17,7 @@ import java.nio.channels.*;
 
 import com.devexperts.qd.qtp.ReconnectHelper;
 import com.devexperts.qd.qtp.socket.SocketUtil;
+import com.devexperts.util.LogUtil;
 
 /**
  * Accepting connections thread.
@@ -41,21 +42,21 @@ class NioAcceptor extends NioWorkerThread {
         if (!serverChannel.socket().isBound())
             try {
                 reconnectHelper.sleepBeforeConnection();
-                log.info("Trying to listen at " + core.address);
+                log.info("Trying to listen at " + LogUtil.hideCredentials(core.address));
                 serverChannel.socket().bind(core.bindSocketAddress);
-                log.info("Listening at " + core.address);
+                log.info("Listening at " + LogUtil.hideCredentials(core.address));
             } catch (InterruptedException e) {
                 return;
             } catch (IOException e) {
                 if (!core.isClosed())
-                    log.error("Failed to listen at " + core.address, e);
+                    log.error("Failed to listen at " + LogUtil.hideCredentials(core.address), e);
                 return;
             }
 
         SocketChannel channel;
         try {
             channel = serverChannel.accept();
-            log.info("Accepted client socket " + SocketUtil.getAcceptedSocketAddress(channel.socket()));
+            log.info("Accepted client socket " + LogUtil.hideCredentials(SocketUtil.getAcceptedSocketAddress(channel.socket())));
         } catch (ClosedChannelException e) {
             core.close();
             return;
@@ -85,9 +86,9 @@ class NioAcceptor extends NioWorkerThread {
     void close() {
         try {
             serverChannel.close();
-            log.info("Stopped listening at " + core.address);
+            log.info("Stopped listening at " + LogUtil.hideCredentials(core.address));
         } catch (Throwable t) {
-            log.error("Failed to close server socket at " + core.address, t);
+            log.error("Failed to close server socket at " + LogUtil.hideCredentials(core.address), t);
         }
         interrupt();
     }

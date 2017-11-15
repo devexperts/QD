@@ -237,7 +237,7 @@ public class FileReader implements MessageReader {
         this.dataFileExtension = dataFileExtension;
         this.doNotTryToReadTimeFile = doNotTryToReadTimeFile;
         this.stats = params.getStats().getOrCreate(QDStats.SType.CONNECTIONS).create(QDStats.SType.CONNECTION,
-            "file=" + dataFilePath);
+            "file=" + LogUtil.hideCredentials(dataFilePath));
     }
 
     /** Utility method to parse additional parameters after
@@ -794,13 +794,13 @@ public class FileReader implements MessageReader {
                 compression = StreamCompression.detectCompressionByHeader(in);
             }
             in = compression.decompress(in);
-            log.info("Reading " + (openTimeFile ? "time" : "data") + " from " + url +
+            log.info("Reading " + (openTimeFile ? "time" : "data") + " from " + LogUtil.hideCredentials(address) +
                 (compression == StreamCompression.NONE ? "" : " with " + compression));
             return in;
         } catch (IOException e) {
             if (ignoreFileNotFound && e instanceof FileNotFoundException)
                 return null;
-            log.error("Failed to open " + address, e);
+            log.error("Failed to open " + LogUtil.hideCredentials(address), e);
             return null;
         }
     }

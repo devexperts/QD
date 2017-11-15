@@ -20,8 +20,7 @@ import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.qd.qtp.*;
 import com.devexperts.qd.qtp.help.MessageConnectorProperty;
 import com.devexperts.qd.qtp.help.MessageConnectorSummary;
-import com.devexperts.util.TimeFormat;
-import com.devexperts.util.TimePeriod;
+import com.devexperts.util.*;
 import com.dxfeed.api.impl.OnDemandConnectorMarker;
 import com.dxfeed.ondemand.impl.MarketDataReplay;
 import com.dxfeed.ondemand.impl.MarketDataToken;
@@ -59,7 +58,7 @@ public class OnDemandConnector extends AbstractMessageConnector
             return; // already active
         if (time == null)
             return; // will not start until time is set
-        log.info("Starting OnDemandConnector to " + getAddress() + " at " + TimeFormat.DEFAULT.format(time));
+        log.info("Starting OnDemandConnector to " + LogUtil.hideCredentials(getAddress()) + " at " + TimeFormat.DEFAULT.format(time));
         reconnectHelper.setReconnectDelay(getReconnectDelay()); // update reconnect delay
         handler = new ReplayConnectionHandler(this);
         handler.start();

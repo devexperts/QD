@@ -17,12 +17,13 @@ import java.util.logging.Level;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.*;
+import org.apache.logging.log4j.core.appender.ConsoleAppender;
 import org.apache.logging.log4j.core.appender.RollingFileAppender;
 import org.apache.logging.log4j.core.appender.rolling.SizeBasedTriggeringPolicy;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.NullConfiguration;
 import org.apache.logging.log4j.core.filter.ThresholdFilter;
-import org.apache.logging.log4j.core.layout.PatternLayout;
+import org.apache.logging.log4j.core.layout.AbstractStringLayout;
 import org.apache.logging.log4j.message.SimpleMessage;
 import org.apache.logging.log4j.status.StatusLogger;
 
@@ -32,7 +33,7 @@ import static org.apache.logging.log4j.core.Filter.Result.DENY;
 import static org.apache.logging.log4j.core.config.ConfigurationSource.NULL_SOURCE;
 
 /**
- * Logging implementation that uses log4j logging facilities.
+ * Logging implementation that uses log4j2 logging facilities.
  */
 class Log4j2Logging extends DefaultLogging {
     private static final String FQCN = Logging.class.getName() + ".";
@@ -61,22 +62,30 @@ class Log4j2Logging extends DefaultLogging {
             // Safe to delete here since config.getRootLogger().getAppenders() returns new map
             config.getRootLogger().removeAppender(entry.getKey());
         }
+
+        Appender appender = null;
         if (logFile != null) {
             try {
-                Appender appender = createFileAppender("common", logFile, Logging.LOG_MAX_FILE_SIZE_PROPERTY, errors);
-                if (appender != null) {
-                    config.getRootLogger().addAppender(appender, INFO,
-                        errFile == null ? null : ThresholdFilter.createFilter(WARN, DENY, ACCEPT));
-                }
+                appender = createFileAppender("common", logFile, Logging.LOG_MAX_FILE_SIZE_PROPERTY, errors);
             } catch (Exception e) {
                 errors.put(logFile, e);
             }
         }
 
+        if (appender == null)
+            appender = ConsoleAppender.newBuilder()
+                .withName("common")
+                .withLayout(getDetailedLayout())
+                .setTarget(ConsoleAppender.Target.SYSTEM_OUT)
+                .build();
+
+        config.getRootLogger().addAppender(appender, INFO,
+            errFile == null ? null : ThresholdFilter.createFilter(WARN, DENY, ACCEPT));
+
         if (errFile != null) {
             try {
-                Appender appender = createFileAppender("error", errFile, Logging.ERR_MAX_FILE_SIZE_PROPERTY, errors);
-                config.getRootLogger().addAppender(appender, WARN, ThresholdFilter.createFilter(WARN, ACCEPT, DENY));
+                Appender errAppender = createFileAppender("error", errFile, Logging.ERR_MAX_FILE_SIZE_PROPERTY, errors);
+                config.getRootLogger().addAppender(errAppender, WARN, ThresholdFilter.createFilter(WARN, ACCEPT, DENY));
             } catch (Exception e) {
                 errors.put(errFile, e);
             }
@@ -85,10 +94,8 @@ class Log4j2Logging extends DefaultLogging {
         return errors;
     }
 
-    private static PatternLayout getDetailedLayout() {
-        // Outputs the first 1M lines of the stack trace as a workaround to make Log4j2 stacktrace format as Log4j
-        return PatternLayout.newBuilder().withPattern(
-            "%p{length=1} %d{yyMMdd HHmmss.SSS} [%t] %c{1} - %m%n%ex{1000000}%n").build();
+    private static AbstractStringLayout getDetailedLayout() {
+        return DxFeedPatternLayout.createDefaultLayout(null);
     }
 
     private static RollingFileAppender createFileAppender(String name, String logFile, String maxSizeKey,

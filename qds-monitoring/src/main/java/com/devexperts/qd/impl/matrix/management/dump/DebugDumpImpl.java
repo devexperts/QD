@@ -26,6 +26,7 @@ import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDLog;
 import com.devexperts.qd.impl.matrix.management.DebugDump;
 import com.devexperts.qd.impl.matrix.management.impl.Exec;
+import com.devexperts.util.LogUtil;
 
 import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.*;
 
@@ -73,14 +74,14 @@ public class DebugDumpImpl implements DebugDump {
                 try {
                     new DebugDumpImpl().makeDump(file, owner, null);
                 } catch (Throwable t) {
-                    QDLog.log.error("Failed to dump to " + file, t);
+                    QDLog.log.error("Failed to dump to " + LogUtil.hideCredentials(file), t);
                 }
             }
         });
     }
 
     public void makeDump(String file, Object owner, Throwable t) throws IOException {
-        log.info("Dumping objects in internal format to '" + file + "' file...");
+        log.info("Dumping objects in internal format to '" + LogUtil.hideCredentials(file));
         putObject(owner, OWNER);
         putObject(QDFactory.getVersion(), VERSION);
         try {

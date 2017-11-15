@@ -18,6 +18,7 @@ import com.devexperts.qd.qtp.help.MessageConnectorProperty;
 import com.devexperts.qd.qtp.help.MessageConnectorSummary;
 import com.devexperts.qd.util.QDConfig;
 import com.devexperts.transport.stats.EndpointStats;
+import com.devexperts.util.LogUtil;
 import com.devexperts.util.TimePeriod;
 
 @MessageConnectorSummary(
@@ -56,7 +57,7 @@ public class TapeConnector extends AbstractMessageConnector implements TapeConne
     public synchronized void start() {
         if (isActive())
             return;
-        log.info("Starting TapeConnector to " + getAddress());
+        log.info("Starting TapeConnector to " + LogUtil.hideCredentials(getAddress()));
         handler = new FileWriterHandler(this);
         handler.init();
         handler.start();

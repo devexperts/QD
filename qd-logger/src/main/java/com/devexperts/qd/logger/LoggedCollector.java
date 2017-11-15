@@ -18,6 +18,7 @@ import com.devexperts.qd.impl.AbstractCollector;
 import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.stats.QDStats;
+import com.devexperts.util.LogUtil;
 
 public class LoggedCollector extends AbstractCollector {
     protected Logger log;
@@ -50,7 +51,7 @@ public class LoggedCollector extends AbstractCollector {
 
     @Override
     public void setStoreEverythingFilter(SubscriptionFilter filter) {
-        log.debug("setStoreEverythingFilter(" + filter + ")");
+        log.debug("setStoreEverythingFilter(" + LogUtil.hideCredentials(filter) + ")");
         delegate.setStoreEverythingFilter(filter);
     }
 

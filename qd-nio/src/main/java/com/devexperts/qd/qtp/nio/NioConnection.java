@@ -28,6 +28,7 @@ import com.devexperts.qd.qtp.socket.SocketUtil;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.transport.stats.ConnectionStats;
 import com.devexperts.util.JMXNameBuilder;
+import com.devexperts.util.LogUtil;
 
 import static com.devexperts.qd.qtp.nio.NioFlags.*;
 
@@ -108,10 +109,10 @@ class NioConnection extends AbstractTransportConnection {
         String address = SocketUtil.getAcceptedSocketAddress(channel.socket());
         try {
             channel.close();
-            log.info("Disconnected from " + address +
+            log.info("Disconnected from " + LogUtil.hideCredentials(address) +
                 (reason == null ? "" : reason.getMessage() == null ? "" : " because of " + reason.getMessage()));
         } catch (Throwable t) {
-            log.error("Error occurred while disconnecting from " + address, t);
+            log.error("Error occurred while disconnecting from " + LogUtil.hideCredentials(address), t);
         }
     }
 

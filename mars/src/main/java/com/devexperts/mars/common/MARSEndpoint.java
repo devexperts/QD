@@ -16,6 +16,7 @@ import java.util.*;
 import com.devexperts.logging.Logging;
 import com.devexperts.mars.common.net.MARSConnector;
 import com.devexperts.services.Services;
+import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
 
 /**
@@ -107,7 +108,7 @@ public class MARSEndpoint {
             connector.setAddress(address);
             connector.start();
             connectors.add(connector);
-            log.info("MARS root is " + root + ", address is " + address);
+            log.info("MARS root is " + root + ", address is " + LogUtil.hideCredentials(address));
         }
         // create all plugins
         for (MARSPlugin.Factory pluginFactory : Services.createServices(MARSPlugin.Factory.class, null)) {

@@ -119,7 +119,8 @@ public class RMITaskImpl<T> extends RMITask<T> implements RMIChannelOwner {
         response.getMarshalledResult().getBytes();
         if (!isNestedTask())
             channel.close();
-        tasksManager.notifyTaskCompleted(this);
+        else
+            tasksManager.notifyTaskCompleted(this);
         if (executionTask != null)
             executionTask.updateState(submitNextInQueue); // force sync of execution task's state
     }

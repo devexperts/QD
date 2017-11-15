@@ -516,9 +516,9 @@ public final class RMIRequestImpl<T> extends RMIRequest<T> implements RMIChannel
         }
     }
 
-    // GuardedBy(this)
     // This method may update state to FAILED on first attempt to get result
     @SuppressWarnings("unchecked")
+    @GuardedBy("requestLock")
     private T getResultImpl() {
         if (requestMessage.getRequestType() == RMIRequestType.ONE_WAY || state != RMIRequestState.SUCCEEDED)
             return null;
@@ -537,6 +537,7 @@ public final class RMIRequestImpl<T> extends RMIRequest<T> implements RMIChannel
     }
 
     // Note: the caller must ensure this request is not in any map/set
+    @GuardedBy("requestLock")
     private void setSucceededStateInternal(Marshalled<T> result, RMIRoute route) {
         if (!nestedRequest)
             channel.close();
@@ -556,6 +557,7 @@ public final class RMIRequestImpl<T> extends RMIRequest<T> implements RMIChannel
     }
 
     // Note: the caller must ensure this request is not in any map/set
+    @GuardedBy("requestLock")
     private void setFailedStateInternal(RMIExceptionType type, Throwable cause, RMIRoute route) {
         setFailedStateInternal(new RMIErrorMessage(type, cause, route));
     }
@@ -576,35 +578,35 @@ public final class RMIRequestImpl<T> extends RMIRequest<T> implements RMIChannel
         synchronized (requestLock) {
             switch (state) {
             case NEW:
+                if (!isNestedRequest())
+                    channel.close();
                 setFailedStateInternal(RMIExceptionType.CANCELLED_BEFORE_EXECUTION, null, null);
-                channel.close();
                 break;
             case WAITING_TO_SEND:
+                if (!isNestedRequest())
+                    channel.close();
                 needToRemoveFromSendingQueue = true;
-                channel.close();
                 setFailedStateInternal(RMIExceptionType.CANCELLED_BEFORE_EXECUTION, null, null);
                 break;
             case SENDING:
             case SENT:
+                sendCancellationMessageInternal(type);
                 if (type == RMICancelType.ABORT_RUNNING) {
                     // Note: In SENDING state we are already sending request to the other side and
                     // might have actually finished doing sending (but have not updated the state yet),
                     // so there is a chance the were are cancelling request during execution
-                    sendCancellationMessageInternal(type);
                     setFailedStateInternal(RMIExceptionType.CANCELLED_DURING_EXECUTION, null, null);
                 } else {
                     state = RMIRequestState.CANCELLING;
-                    sendCancellationMessageInternal(type);
                     return; // not complete yet
                 }
                 break;
             case CANCELLING:
-                if (type == RMICancelType.ABORT_RUNNING) {
-                    setFailedStateInternal(RMIExceptionType.CANCELLED_DURING_EXECUTION, null, null);
-                    if (assignedConnection != null)
-                        sendCancellationMessageInternal(RMICancelType.ABORT_RUNNING);
-                } else
+                if (type == RMICancelType.DEFAULT)
                     return; // not complete yet
+                if (assignedConnection != null)
+                    sendCancellationMessageInternal(RMICancelType.ABORT_RUNNING);
+                setFailedStateInternal(RMIExceptionType.CANCELLED_DURING_EXECUTION, null, null);
                 break;
             case FAILED:
             case SUCCEEDED:
@@ -623,6 +625,7 @@ public final class RMIRequestImpl<T> extends RMIRequest<T> implements RMIChannel
         if (!isNestedRequest()) {
             channel.cancel(type);
         } else {
+            //for inner request
             channel.createRequest(new RMIRequestMessage<>(RMIRequestType.ONE_WAY,
                 type == RMICancelType.ABORT_RUNNING ? ABORT_CANCEL : CANCEL_WITH_CONFIRMATION, id)).send();
         }

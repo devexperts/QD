@@ -23,6 +23,7 @@ import com.devexperts.qd.qtp.help.MessageConnectorSummary;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.QDConfig;
 import com.devexperts.transport.stats.EndpointStats;
+import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
 
 /**
@@ -80,7 +81,7 @@ public class NioServerConnector extends AbstractMessageConnector implements NioS
             return;
         }
         if (core.compareAndSet(null, newCore)) {
-            log.info("Starting NioServerConnector to " + getAddress());
+            log.info("Starting NioServerConnector to " + LogUtil.hideCredentials(getAddress()));
             newCore.start();
         } else
             newCore.close();
@@ -157,7 +158,7 @@ public class NioServerConnector extends AbstractMessageConnector implements NioS
         if (newBindAddress == null || newBindAddress.isEmpty())
             newBindAddress = ANY_BIND_ADDRESS;
         if (!newBindAddress.equals(this.bindAddressString)) {
-            log.info("Setting bindAddr=" + newBindAddress);
+            log.info("Setting bindAddr=" + LogUtil.hideCredentials(newBindAddress));
             this.bindAddress = newBindAddress.equals(ANY_BIND_ADDRESS) ? null : InetAddress.getByName(newBindAddress);
             this.bindAddressString = newBindAddress;
             reconfigure();

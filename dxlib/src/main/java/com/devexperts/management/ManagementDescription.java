@@ -16,7 +16,7 @@ import javax.management.MBeanOperationInfo;
 
 import com.devexperts.annotation.Description;
 
-/***
+/**
  * Description for managed type, operation, or attribute.
  * Attribute descriptions shall be attached to the corresponding getter method.
  *

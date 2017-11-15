@@ -21,8 +21,7 @@ import com.devexperts.qd.qtp.help.MessageConnectorProperty;
 import com.devexperts.qd.qtp.help.MessageConnectorSummary;
 import com.devexperts.qd.util.QDConfig;
 import com.devexperts.transport.stats.EndpointStats;
-import com.devexperts.util.TimeFormat;
-import com.devexperts.util.TimePeriod;
+import com.devexperts.util.*;
 
 /**
  * Reads messages from a specified URL or file. By default when reading
@@ -77,7 +76,7 @@ public class FileConnector extends AbstractMessageConnector implements FileConne
     public synchronized void start() {
         if (isActive())
             return;
-        log.info("Starting FileConnector to " + getAddress());
+        log.info("Starting FileConnector to " + LogUtil.hideCredentials(getAddress()));
         handler = new FileReaderHandler(this);
         handler.start();
         notifyMessageConnectorListeners();
@@ -104,7 +103,7 @@ public class FileConnector extends AbstractMessageConnector implements FileConne
     @Override
     public synchronized void setAddress(String address) {
         if (!address.equals(this.address)) {  // also checks for null
-            log.info("Setting address=" + address);
+            log.info("Setting address=" + LogUtil.hideCredentials(address));
             this.address = address;
             reconfigure();
         }

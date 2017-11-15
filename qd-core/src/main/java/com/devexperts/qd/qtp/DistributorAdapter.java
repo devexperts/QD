@@ -22,6 +22,7 @@ import com.devexperts.qd.ng.RecordProvider;
 import com.devexperts.qd.spi.QDFilterContext;
 import com.devexperts.qd.spi.QDFilterFactory;
 import com.devexperts.qd.stats.QDStats;
+import com.devexperts.util.LogUtil;
 
 /**
  * The <code>DistributorAdapter</code> adapts distributor side of QD to message API.
@@ -186,8 +187,8 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
     @Override
     protected void startImpl(MasterMessageAdapter master) {
         if (filter.isDynamic())
-            QDLog.log.warn("Using dynamic filter '" + filter + "' in distributor address " +
-                "will cause connection reset when filter changes");
+            QDLog.log.warn("Using dynamic filter '" + LogUtil.hideCredentials(filter) + "'" +
+                " in distributor address will cause connection reset when filter changes");
         filter.addUpdateListener(this); // listen for filter updates
         // Legacy behavior: immediately send subscription if we are not using DESCRIBE_PROTOCOL messages,
         // which is when useDescribeProtocol() was not called before start.
@@ -273,7 +274,8 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
                     try {
                         filters.put(filter, filterFactory.createFilter(filter, QDFilterContext.REMOTE_FILTER));
                     } catch (IllegalArgumentException e) {
-                        QDLog.log.warn("Cannot parse filter '" + filter + "' from " + getRemoteHostAddress() + ": " + e);
+                        QDLog.log.warn("Cannot parse filter '" + LogUtil.hideCredentials(filter) + "'" +
+                            " from " + LogUtil.hideCredentials(getRemoteHostAddress()) + ": " + e);
                         filters.put(filter, QDFilter.ANYTHING);
                     }
                 peerFilter[contract.ordinal()] = filters.get(filter);

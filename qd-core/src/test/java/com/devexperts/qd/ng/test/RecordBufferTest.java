@@ -253,6 +253,49 @@ public class RecordBufferTest extends TestCase {
         assertEquals("no next", null, buf2.next());
     }
 
+    public void testFastCopy() {
+        long baseEts = 0x123456789abcdefL;
+        RecordCursor cur;
+        RecordBuffer buf1 = RecordBuffer.getInstance(RecordMode.DATA.withEventTimeSequence());
+
+        cur = buf1.add(RECORD, 0, "TEST-SYM1");
+        cur.setEventTimeSequence(baseEts);
+        cur = buf1.add(RECORD, 0, "TEST-SYM2");
+        cur.setEventTimeSequence(baseEts << 1);
+        cur = buf1.add(RECORD, 0, "TEST-SYM3");
+        cur.setEventTimeSequence(baseEts << 2);
+        assertEquals("buf1.size", 3, buf1.size());
+
+        RecordBuffer buf2 = RecordBuffer.getInstance(buf1.getMode());
+        buf2.process(buf1);
+        assertEquals("buf2.size", 3, buf2.size());
+
+        cur = buf2.next();
+        assertEquals("symbol1", "TEST-SYM1", cur.getSymbol());
+        assertEquals("ets1", baseEts, cur.getEventTimeSequence());
+        cur = buf2.next();
+        assertEquals("symbol2", "TEST-SYM2", cur.getSymbol());
+        assertEquals("ets2", baseEts << 1, cur.getEventTimeSequence());
+        cur = buf2.next();
+        assertEquals("symbol3", "TEST-SYM3", cur.getSymbol());
+        assertEquals("ets3", baseEts << 2, cur.getEventTimeSequence());
+        assertEquals("no next", null, buf2.next());
+
+        buf1.rewind();
+        buf1.next();
+        RecordBuffer buf3 = RecordBuffer.getInstance(buf1.getMode());
+        buf3.process(buf1);
+        assertEquals("buf3.size", 2, buf3.size());
+
+        cur = buf3.next();
+        assertEquals("symbol2", "TEST-SYM2", cur.getSymbol());
+        assertEquals("ets2", baseEts << 1, cur.getEventTimeSequence());
+        cur = buf3.next();
+        assertEquals("symbol3", "TEST-SYM3", cur.getSymbol());
+        assertEquals("ets3", baseEts << 2, cur.getEventTimeSequence());
+        assertEquals("no next", null, buf3.next());
+    }
+
     public void testVoid() {
         assertEquals(null, RecordSource.VOID.current());
         assertEquals(null, RecordSource.VOID.next());

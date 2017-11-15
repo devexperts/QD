@@ -15,18 +15,16 @@ import java.lang.management.ManagementFactory;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
-import com.devexperts.logging.Logging;
 import com.devexperts.qd.QDLog;
 import com.devexperts.qd.impl.matrix.management.DebugDump;
 import com.devexperts.services.Services;
+import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
 
 /**
  * This class represents a fatal and unrecoverable error in the QDS core implementation.
  */
 public class FatalError extends Error {
-    private static final Logging log = Logging.getLogging(FatalError.class);
-
     private static final String SURVIVE_PROPERTY = FatalError.class.getName() + ".survive";
     private static final String DUMP_PROPERTY = FatalError.class.getName() + ".dump";
     private static final String HPROF_PROPERTY = FatalError.class.getName() + ".hprof";
@@ -40,7 +38,7 @@ public class FatalError extends Error {
     /**
      * This method returns new {@code FatalError} with the corresponding message when
      * {@link #SURVIVE_PROPERTY} system property is set; by default, this method
-     * terminlates JVM with {@link System#exit} method.
+     * terminates JVM with {@link System#exit} method.
      */
     static FatalError fatal(Object owner, String message) {
         FatalError fatal = new FatalError(message);
@@ -67,19 +65,19 @@ public class FatalError extends Error {
             try {
                 dump.makeDump(file, owner, fatal);
             } catch (Throwable t) {
-                QDLog.log.error("Failed to dump to " + file, t);
+                QDLog.log.error("Failed to dump to " + LogUtil.hideCredentials(file), t);
             }
     }
 
     private static void makeHProf(String file) {
-        QDLog.log.info("Dumping all heap memory in HPROF format to " + file + " file...");
+        QDLog.log.info("Dumping all heap memory in HPROF format to " + LogUtil.hideCredentials(file));
         try {
             MBeanServer server = ManagementFactory.getPlatformMBeanServer();
             server.invoke(new ObjectName(HOTSPOT_DIAGNOSTIC), "dumpHeap",
                 new Object[] { file, true },
                 new String[] { "java.lang.String", "boolean" });
         } catch (Throwable t) {
-            QDLog.log.error("Failed to dump to " + file, t);
+            QDLog.log.error("Failed to dump to " + LogUtil.hideCredentials(file), t);
         }
     }
 

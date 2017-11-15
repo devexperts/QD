@@ -20,6 +20,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.devexperts.logging.Logging;
+import com.devexperts.util.LogUtil;
 
 /**
  * Defines context of deserialization operation. Class contains whitelist, blacklist and classLoader.
@@ -112,7 +113,7 @@ public class SerialClassContext {
                         set = set.add(StringPrefixSet.valueOf(name));
                 }
             } catch (IOException e) {
-                log.error("Cannot read " + url, e);
+                log.error("Cannot read " + LogUtil.hideCredentials(url), e);
             }
         }
         return set;

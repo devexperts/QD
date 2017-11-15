@@ -21,6 +21,7 @@ import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.util.JMXNameBuilder;
+import com.devexperts.util.LogUtil;
 
 import static com.devexperts.qd.monitoring.IOCounter.*;
 
@@ -149,7 +150,7 @@ class IOCounters {
         for (IOCounter io : counters.values()){
             MessageConnector connector = io.getConnector();
             // update addr
-            String addr = connector.getAddress();
+            String addr = LogUtil.hideCredentials(connector.getAddress());
             if (displayAddr.isEmpty()) {
                 displayAddr = addr;
                 sameAddrCount = 1;

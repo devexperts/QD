@@ -192,8 +192,12 @@ public class MessageConnectors {
         return true;
     }
 
+    /**
+     * @deprecated use {@link LogUtil#hideCredentials} instead
+     */
+    @Deprecated
     public static String maskAuthorizationData(String address) {
-        return address.replaceAll("([\\[,](" + USER_CONFIGURATION_KEY.getName() + "|" + PASSWORD_CONFIGURATION_KEY.getName() + "))=([^,\\]]*)", "$1=****");
+        return LogUtil.hideCredentials(address);
     }
 
     // Property key-value whose namespace is shared between Connector and ApplicationConnectionFactory
