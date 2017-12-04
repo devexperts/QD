@@ -38,14 +38,15 @@ public class Logging {
     private static final int FINEST_INT = Level.FINEST.intValue();
     private static final int FINE_INT = Level.FINE.intValue();
 
+    public static final String LOG_CLASS_NAME = "log.className";
     public static final String LOG_FILE_PROPERTY = "log.file";
     public static final String ERR_FILE_PROPERTY = "err.file";
     public static final String LOG_MAX_FILE_SIZE_PROPERTY = "log.maxFileSize";
     public static final String ERR_MAX_FILE_SIZE_PROPERTY = "err.maxFileSize";
     public static final String DEFAULT_MAX_FILE_SIZE = "900M";
 
-    private static final ConcurrentMap<String, Logging> INSTANCES = new ConcurrentHashMap<String, Logging>();
-    private static final DefaultLogging IMPL = configure();
+    private static final ConcurrentMap<String, Logging> INSTANCES = new ConcurrentHashMap<>();
+    private static final DefaultLogging IMPL = configure(DefaultLogging.getProperty(LOG_CLASS_NAME, ""));
 
     public static Logging getLogging(Class<?> clazz) {
         return getLogging(clazz.getName());
@@ -173,22 +174,37 @@ public class Logging {
     }
 
     /**
-     * First tries to use log4j logging. If this attempt fails, it uses {@link java.util.logging} logging.
+     * At first tries to use logging from passed class name. If this attempt fails, tries to use log4j logging.
+     * If this attempt fails, it uses log4j2 logging. If this attempt fails, it uses {@link java.util.logging} logging.
      *
      * @return Logging implementation
      */
-    private static DefaultLogging configure() {
-        DefaultLogging impl;
+    private static DefaultLogging configure(String className) {
+        DefaultLogging impl = null;
         Map<String, Exception> errors = new LinkedHashMap<>();
-        try {
-            impl = (DefaultLogging) Class.forName("com.devexperts.logging.Log4jLogging").newInstance();
-            errors.putAll(impl.configure());
-        } catch (Throwable t) {
-            // failed to configure log4j
-            impl = null;
-            // LinkageError means that log4j is not found at all, otherwise it was found but our config is wrong
-            if (!(t instanceof LinkageError) && !(t.getCause() instanceof LinkageError)) {
-                errors.put("log4j link", new IllegalStateException(t));
+        if (!className.isEmpty()) {
+            try {
+                impl = (DefaultLogging) Class.forName(className).newInstance();
+                errors.putAll(impl.configure());
+            } catch (Throwable t) {
+                // failed to configure with passed class name
+                impl = null;
+                if (!(t instanceof LinkageError) && !(t.getCause() instanceof LinkageError)) {
+                    errors.put(className + " link", new IllegalStateException(t));
+                }
+            }
+        }
+        if (impl == null) {
+            try {
+                impl = (DefaultLogging) Class.forName("com.devexperts.logging.Log4jLogging").newInstance();
+                errors.putAll(impl.configure());
+            } catch (Throwable t) {
+                // failed to configure log4j
+                impl = null;
+                // LinkageError means that log4j is not found at all, otherwise it was found but our config is wrong
+                if (!(t instanceof LinkageError) && !(t.getCause() instanceof LinkageError)) {
+                    errors.put("log4j link", new IllegalStateException(t));
+                }
             }
         }
         if (impl == null) {

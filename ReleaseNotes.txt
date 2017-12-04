@@ -1,3 +1,9 @@
+QDS 3.257:
+
+* [QD-1051] dxlib: NPE on log event formatting
+* [QD-1052] Add Order source for CFE (Order#CFE)
+* [QD-1050] BUG FIX: only 2 levels of SSL-level authentication are supported
+
 QDS 3.256:
 
 * [QD-1049] Fix RMIChannelTest.cancelChannelTasks

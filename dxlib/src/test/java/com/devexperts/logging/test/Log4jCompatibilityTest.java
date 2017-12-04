@@ -21,37 +21,18 @@ import org.apache.log4j.PropertyConfigurator;
 
 /**
  * Tests that {@link com.devexperts.logging.DetailedLogLayout} works as layout with either Log4j version
- * using both Log4J logging facilities and {@link com.devexperts.logging.Logging}.
+ * using both Log4J logging facilities and {@link Logging}.
  */
 public class Log4jCompatibilityTest extends LogFormatterTestBase {
     private static final Category log = Category.getInstance(Log4jCompatibilityTest.class);
     private static File logFile;
     public static final File BUILD_TEST_DIR = new File("build/test/");
 
-    protected static String loadFile(final File file) throws IOException {
-        InputStream is = null;
-        try {
-            is = new BufferedInputStream(new FileInputStream(file), 1024);
-
-            final Reader reader = new InputStreamReader(is);
-            final StringBuilder result = new StringBuilder();
-            char[] buf = new char[1024];
-            int count;
-            while ((count = reader.read(buf)) != -1) {
-                result.append(buf, 0, count);
-            }
-
-            return result.toString();
-        } finally {
-            if (is != null) {
-                is.close();
-            }
-        }
-    }
-
+    @Override
     protected void setUp() throws Exception {
         super.setUp();
 
+        System.getProperties().setProperty(Logging.LOG_CLASS_NAME, "com.devexperts.logging.Log4jLogging");
         initLogFormatter();
 
         final Properties props = new Properties();
@@ -69,8 +50,6 @@ public class Log4jCompatibilityTest extends LogFormatterTestBase {
     }
 
     public void testLog4JLogging() throws IOException {
-//		Logging log = Logging.getLogging(Log4jCompatibilityTest.class);
-//		log.configureDebugEnabled(true);
         final String log4jVersion = Package.getPackage("org.apache.log4j").getImplementationVersion();
         final String log4j_message = "Log4j version: ";
         final String test_message = "Test log4j message";

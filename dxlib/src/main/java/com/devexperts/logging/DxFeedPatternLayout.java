@@ -12,42 +12,39 @@
 package com.devexperts.logging;
 
 import java.nio.charset.Charset;
-import java.util.*;
+import java.util.Collections;
+import java.util.Map;
+import java.util.function.BiConsumer;
 
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.*;
 import org.apache.logging.log4j.core.config.plugins.*;
 import org.apache.logging.log4j.core.layout.*;
-import org.apache.logging.log4j.core.pattern.*;
+import org.apache.logging.log4j.core.pattern.MessagePatternConverter;
 
 /**
- * Custom pattern layout with particular conversion pattern: {@link  #PATTERN} for log4j2.
+ * Custom pattern layout for log4j2. Message formatting is delegated to {@link LogFormatter}.
  */
 @SuppressWarnings("unused") //used by Log4j2
 @Plugin(name = "dxFeedPatternLayout", category = Node.CATEGORY, elementType = Layout.ELEMENT_TYPE, printObject = true)
 public class DxFeedPatternLayout extends AbstractStringLayout {
-    // Outputs the first 1M lines of the stack trace as a workaround to make Log4j2 stacktrace format as Log4j
-    private static final String PATTERN = "%p{length=1} %d{yyMMdd HHmmss.SSS} [%t] %c{1} - %dxm%n{%ex{1000000}%n}";
-    private static final String SHORT_PATTERN = "%p{length=1} %d{yyMMdd HHmmss.SSS} %dxm%n";
-    private static final String PATTERN_KEY = "Converter";
-
-    private final PatternFormatter[] patternFormatters;
-    private final PatternFormatter[] shortPatternFormatters;
+    private final BiConsumer<Object, StringBuilder> msgConsumer;
+    private final LogFormatter logFormatter;
 
     private DxFeedPatternLayout(Configuration configuration) {
         super(configuration, Charset.defaultCharset(), null, null);
-        patternFormatters = createFormatters(configuration, PATTERN);
-        shortPatternFormatters = createFormatters(configuration, SHORT_PATTERN);
+        MessagePatternConverter messagePatternConverter = MessagePatternConverter.newInstance(configuration, null);
+        msgConsumer = messagePatternConverter::format;
+        logFormatter = new LogFormatter();
     }
 
     @Override
     public String toSerializable(LogEvent event) {
-        StringBuilder sb = getStringBuilder();
-        format(event, sb);
-        String text = sb.toString();
-        trimToMaxSize(sb);
-        return text;
+        StringBuilder text = getStringBuilder();
+        String s = format(event, text).toString();
+        trimToMaxSize(text);
+        return s;
     }
 
     @Override
@@ -59,34 +56,16 @@ public class DxFeedPatternLayout extends AbstractStringLayout {
         trimToMaxSize(text);
     }
 
-    private void format(LogEvent event, StringBuilder sb) {
-        // First backspace is a signal to skip thread name and logger name output
-        PatternFormatter[] formatters = event.getMessage().getFormattedMessage().charAt(0) == '\b'
-            ? shortPatternFormatters
-            : patternFormatters;
-        for (PatternFormatter formatter : formatters)
-            formatter.format(event, sb);
-    }
-
-    private static PatternFormatter[] createFormatters(Configuration configuration, String pattern) {
-        PatternParser parser = configuration.getComponent(PATTERN_KEY);
-        if (parser == null) {
-            parser = new PatternParser(configuration, PATTERN_KEY, LogEventPatternConverter.class);
-            configuration.addComponent(PATTERN_KEY, parser);
-            parser = configuration.getComponent(PATTERN_KEY);
-        }
-        List<PatternFormatter> list = parser.parse(pattern, true, false);
-        return list.toArray(new PatternFormatter[list.size()]);
+    private StringBuilder format(LogEvent event, StringBuilder text) {
+        char level = event.getLevel().name().charAt(0);
+        logFormatter.format(level, event.getTimeMillis(), event.getThreadName(), event.getLoggerName(), msgConsumer,
+            event, text);
+        return text;
     }
 
     @Override
     public Map<String, String> getContentFormat() {
-        Map<String, String> result = new HashMap<>();
-        result.put("structured", "false");
-        result.put("formatType", "conversion");
-        result.put("format", PATTERN);
-        result.put("shortFormat", SHORT_PATTERN);
-        return result;
+        return Collections.emptyMap();
     }
 
     @Override
@@ -99,10 +78,7 @@ public class DxFeedPatternLayout extends AbstractStringLayout {
     }
 
     /**
-     * Creates a DxFeedPatternLayout using the default options and the given configuration. Options include using UTF-8,
-     * the default conversion pattern, exceptions being written.
-     *
-     * @see #PATTERN Default conversion pattern
+     * Creates a DxFeedPatternLayout using the default options and the given configuration. Options include using UTF-8.
      */
     @PluginFactory
     public static DxFeedPatternLayout createDefaultLayout(@PluginConfiguration Configuration configuration) {

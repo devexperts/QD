@@ -11,7 +11,6 @@
  */
 package com.devexperts.logging;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.logging.Level;
 
@@ -99,7 +98,7 @@ class Log4j2Logging extends DefaultLogging {
     }
 
     private static RollingFileAppender createFileAppender(String name, String logFile, String maxSizeKey,
-        Map<String, Exception> errors) throws IOException
+        Map<String, Exception> errors)
     {
         RollingFileAppender.Builder builder = RollingFileAppender.newBuilder();
         builder.setConfiguration(new NullConfiguration());

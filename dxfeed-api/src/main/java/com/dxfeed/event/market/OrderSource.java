@@ -225,6 +225,13 @@ public final class OrderSource extends IndexedEventSource {
     public static final OrderSource XEUR = new OrderSource("XEUR", PUB_ORDER);
 
     /**
+     * CBOE Futures Exchange.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource CFE = new OrderSource("CFE", PUB_ORDER);
+
+    /**
      * Determines whether specified source identifier refers to special order source.
      * Special order sources are used for wrapping non-order events into order events.
      *

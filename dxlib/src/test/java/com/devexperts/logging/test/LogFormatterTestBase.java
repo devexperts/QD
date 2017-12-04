@@ -11,6 +11,7 @@
  */
 package com.devexperts.logging.test;
 
+import java.io.*;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.regex.Pattern;
@@ -31,6 +32,27 @@ public abstract class LogFormatterTestBase extends TestCase {
 
     public LogFormatterTestBase(String name) {
         super(name);
+    }
+
+    protected static String loadFile(final File file) throws IOException {
+        InputStream is = null;
+        try {
+            is = new BufferedInputStream(new FileInputStream(file), 1024);
+
+            final Reader reader = new InputStreamReader(is);
+            final StringBuilder result = new StringBuilder();
+            char[] buf = new char[1024];
+            int count;
+            while ((count = reader.read(buf)) != -1) {
+                result.append(buf, 0, count);
+            }
+
+            return result.toString();
+        } finally {
+            if (is != null) {
+                is.close();
+            }
+        }
     }
 
     /**

@@ -14,24 +14,24 @@ package com.devexperts.logging;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.*;
 
 import com.devexperts.io.URLInputStream;
+import com.devexperts.util.*;
 
 class ThreadNameFormatter implements Comparable<ThreadNameFormatter> {
 
     /**
      * Configuration as a set of pairs (pattern, replacement).
      */
-    private static final Map<Pattern, String> PATTERNS = new LinkedHashMap<Pattern, String>();
+    private static final Map<Pattern, String> PATTERNS = new LinkedHashMap<>();
 
     private static final int MAX_NAME_CONVERSIONS_CACHE_SIZE = 1000;
 
     /**
      * Thread name replacement cache: (thread name, replacement string).
      */
-    private static final Map<String, ThreadNameFormatter> NAME_CONVERSIONS = new ConcurrentHashMap<String, ThreadNameFormatter>();
+    private static final IndexedSet<String, ThreadNameFormatter> NAME_CONVERSIONS = SynchronizedIndexedSet.create(ThreadNameFormatter::getThreadName);
 
     static {
         loadPatterns();
@@ -107,11 +107,11 @@ class ThreadNameFormatter implements Comparable<ThreadNameFormatter> {
      * @return Formatted thread name
      */
     static String formatThreadName(long time, String thread_name) {
-        ThreadNameFormatter entry = NAME_CONVERSIONS.get(thread_name);
+        ThreadNameFormatter entry = NAME_CONVERSIONS.getByKey(thread_name);
         if (entry == null) {
             cleanupNameConversionsIfNeeded();
             entry = new ThreadNameFormatter(thread_name, calculateThreadNameReplacement(thread_name));
-            NAME_CONVERSIONS.put(thread_name, entry);
+            NAME_CONVERSIONS.put(entry);
         }
         entry.last_time = time;
         return entry.replacement_name;
@@ -120,10 +120,15 @@ class ThreadNameFormatter implements Comparable<ThreadNameFormatter> {
     private static void cleanupNameConversionsIfNeeded() {
         if (NAME_CONVERSIONS.size() <= MAX_NAME_CONVERSIONS_CACHE_SIZE)
             return; // everything is Ok
-        ThreadNameFormatter[] entries = NAME_CONVERSIONS.values().toArray(new ThreadNameFormatter[NAME_CONVERSIONS.size()]);
-        Arrays.sort(entries);
-        for (int i = 0; i < entries.length - MAX_NAME_CONVERSIONS_CACHE_SIZE / 2; i++)
-            NAME_CONVERSIONS.remove(entries[i].thread_name);
+
+        synchronized (NAME_CONVERSIONS) {
+            if (NAME_CONVERSIONS.size() <= MAX_NAME_CONVERSIONS_CACHE_SIZE)
+                return; // everything is Ok
+            ThreadNameFormatter[] entries = NAME_CONVERSIONS.toArray(new ThreadNameFormatter[NAME_CONVERSIONS.size()]);
+            QuickSort.sort(entries);
+            for (int i = 0; i < entries.length - MAX_NAME_CONVERSIONS_CACHE_SIZE / 2; i++)
+                NAME_CONVERSIONS.removeKey(entries[i].thread_name);
+        }
     }
 
     private static String calculateThreadNameReplacement(String thread_name) {
@@ -151,6 +156,10 @@ class ThreadNameFormatter implements Comparable<ThreadNameFormatter> {
     ThreadNameFormatter(String thread_name, String replacement_name) {
         this.thread_name = thread_name;
         this.replacement_name = replacement_name;
+    }
+
+    private String getThreadName() {
+        return thread_name;
     }
 
     public int compareTo(ThreadNameFormatter o) {

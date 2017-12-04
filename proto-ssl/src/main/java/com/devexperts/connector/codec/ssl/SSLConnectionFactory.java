@@ -325,12 +325,19 @@ public class SSLConnectionFactory extends CodecConnectionFactory {
             engine.setEnabledProtocols(protocolsArr);
         if (cipherSuitesArr != null)
             engine.setEnabledCipherSuites(cipherSuitesArr);
+        engine.setUseClientMode(!isServer);
         if (isServer) {
-            engine.setUseClientMode(false);
-            engine.setWantClientAuth(needClientAuth);
-            engine.setNeedClientAuth(wantClientAuth);
-        } else
-            engine.setUseClientMode(true);
+            // SSLEngine javadoc says that the below 2 setters override each other to update common ternary state.
+            // To best suit any engine implementation we always make calls to each of them in a proper order,
+            // selected to enforce strictest auth requirement.
+            if (needClientAuth) {
+                engine.setWantClientAuth(wantClientAuth);
+                engine.setNeedClientAuth(true);
+            } else {
+                engine.setNeedClientAuth(false);
+                engine.setWantClientAuth(wantClientAuth);
+            }
+        }
         return new SSLConnection(getDelegate(), this, transportConnection, engine, getExecutorProvider().newReference());
     }
 
