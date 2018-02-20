@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -360,7 +360,7 @@ public class CFI implements Serializable {
         new Value('R', "Registered", "Securities are recorded in the name of the owner on the books of the issuer or the issuer's registrar and can only be transferred to another owner when endorsed by the registered owner."),
         new Value('N', "Bearer/Registered", "Securities issued in both bearer and registered form but with the same identification number."),
         new Value('Z', "Bearer depository receipt", "Receipt - in bearer form - for securities issued in a foreign market to promote trading outside the home country of the underlying securities."),
-        new Value('A', "Registered depository receipt (e.g. ADR)", "Receipt - in registered form � for securities issued in a foreign market to promote trading outside the home country of the underlying securities."),
+        new Value('A', "Registered depository receipt (e.g. ADR)", "Receipt - in registered form ? for securities issued in a foreign market to promote trading outside the home country of the underlying securities."),
         new Value('G', "Regulation 144 A", "A Securities & Exchange Commission rule modifying a two-year holding period requirement on privately placed securities to permit qualified institutional buyers to trade these positions among themselves."),
         new Value('S', "Regulation S", "Rights acquired through a contractual agreement between the Investor (Restricted Securities Holder) and the Company (Issuer). Registration Rights entitle investors to force a company to register the investors' shares of company stock with the Securities and Exchange Commission (SEC) and state securities commissions. This registration, in turn, enables the investors to sell their shares to the public."),
         new Value('H', "Regulation 144 A bearer depositary receipt"),
@@ -502,7 +502,7 @@ public class CFI implements Serializable {
     private static final Attribute ENTITLEMENTS = new Attribute("Entitlements (Rights)", "Financial instruments providing the holder the privilege to subscribe to or to receive specific assets on terms specified.",
         new Value('A', "Allotment rights", "Privileges allotted to existing security holders, entitling them to receive new securities free of charge."),
         new Value('S', "Subscription rights", "Privileges allotted to existing security holders, entitling them to subscribe to new securities at a price normally lower than the prevailing market price."),
-        new Value('P', "Purchase rights", "Anti-takeover device that gives a prospective acquiree�s shareholders the right to buy shares of the firm or shares of anyone who acquires the firm at a deep discount to their fair market value."),
+        new Value('P', "Purchase rights", "Anti-takeover device that gives a prospective acquiree?s shareholders the right to buy shares of the firm or shares of anyone who acquires the firm at a deep discount to their fair market value."),
         new Value('W', "Warrants", "Financial instruments which permit the holder to purchase a specified amount of a financial instrument, commodity, currency or other during a specified period at a specified price."),
         new Value('M', "Others (Miscellaneous)", "Entitlements (Rights) which do not fit into any of above Groups."));
 

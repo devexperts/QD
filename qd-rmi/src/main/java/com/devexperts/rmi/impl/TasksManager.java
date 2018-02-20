@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -24,11 +24,9 @@ import com.devexperts.rmi.task.RMIChannelType;
  * The server side of {@link RMIConnection}.
  */
 class TasksManager {
-
     private final RMIConnection connection;
     private final RunningTask runningTasks = new RunningTask();
     private final Queue<RMITaskResponse> completedTasks = new ConcurrentLinkedQueue<>();
-
 
     TasksManager(RMIConnection connection) {
         this.connection = connection;
@@ -38,7 +36,6 @@ class TasksManager {
         runningTasks.add(taskImpl);
         if (connection.closed) {
             taskImpl.cancel(RMIExceptionType.DISCONNECTION);
-            return;
         }
     }
 
@@ -103,5 +100,9 @@ class TasksManager {
             else
                 task.cancelWithConfirmation();
         }
+    }
+
+    boolean hasRunningTask() {
+        return runningTasks.hasServerChannelTask();
     }
 }

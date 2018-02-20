@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -138,13 +138,17 @@ class DelegateGen {
     }
 
     DelegateGen map(String eventPropertyName, String fieldPropertyName, String fieldName, FieldType fieldType) {
-        String getterPrefix = Stream.of("get", "is")
-            .filter(prefix -> eventClass.getMethod(prefix + eventPropertyName) != null)
+        String getterName = Stream.of("get" + eventPropertyName + "AsDouble", "get" + eventPropertyName, "is" + eventPropertyName)
+            .filter(name -> eventClass.getMethod(name) != null)
             .findFirst().orElse(null);
-        CodeGenType eventPropertyType = getterPrefix != null ? eventClass.getMethod(getterPrefix + eventPropertyName).getReturnType() : null;
+        // TODO search for appropriate setter below
+        String setterName = getterName == null ? null :
+            getterName.startsWith("get") ? "set" + getterName.substring(3) :
+                getterName.startsWith("is") ? "set" + getterName.substring(2) : null;
+        CodeGenType eventPropertyType = getterName != null ? eventClass.getMethod(getterName).getReturnType() : null;
         FieldMapping fieldMapping = new FieldMapping(eventPropertyName, eventPropertyType,
             new RecordField(fieldPropertyName, eventName, fieldName, fieldType),
-            getterPrefix);
+            getterName, setterName);
         fieldMappings.add(fieldMapping);
         codeGenerators.add(fieldMapping);
         factoryGen.addRecordField(record, fieldMapping.field);
@@ -161,7 +165,7 @@ class DelegateGen {
     }
 
     DelegateGen field(String fieldPropertyName, String fieldName, FieldType fieldType) {
-        FieldMapping fieldMapping = new FieldMapping(null, null, new RecordField(fieldPropertyName, eventName, fieldName, fieldType), null);
+        FieldMapping fieldMapping = new FieldMapping(null, null, new RecordField(fieldPropertyName, eventName, fieldName, fieldType), null, null);
         fieldMappings.add(fieldMapping);
         factoryGen.addRecordField(record, fieldMapping.field);
         mappingGen.addRecordField(fieldMapping.field);
@@ -499,15 +503,17 @@ class DelegateGen {
         final String eventPropertyName;
         final CodeGenType eventPropertyType;
         final RecordField field;
-        final String getterPrefix;
+        final String getterName;
+        final String setterName;
 
         boolean internal;
 
-        FieldMapping(String eventPropertyName, CodeGenType eventPropertyType, RecordField field, String getterPrefix) {
+        FieldMapping(String eventPropertyName, CodeGenType eventPropertyType, RecordField field, String getterName, String setterName) {
             this.eventPropertyName = eventPropertyName;
             this.eventPropertyType = eventPropertyType;
             this.field = field;
-            this.getterPrefix = getterPrefix;
+            this.getterName = getterName;
+            this.setterName = setterName;
         }
 
         void setTimeness(int timenessId) {
@@ -526,14 +532,14 @@ class DelegateGen {
             FieldType.TypeMapper mapper = field.fieldType.mapper;
             String getter = mapper.generateGetter(eventPropertyType, "m.get" + field.propertyName + "%s(cursor)");
             mapper.configureImports(cg, eventPropertyType);
-            cg.code("event.set" + eventPropertyName + "(" + getter + ");");
+            cg.code("event." + setterName + "(" + getter + ");");
         }
 
         @Override
         void generatePutEventCodePiece(ClassGen cg) {
             if (internal)
                 return;
-            String value = "event." + getterPrefix + eventPropertyName + "()";
+            String value = "event." + getterName + "()";
             FieldType.TypeMapper mapper = field.fieldType.mapper;
             mapper.configureImports(cg, eventPropertyType);
             cg.code(mapper.generateSetter(eventPropertyType, "m.set" + field.propertyName + "%s(cursor, %s);", value));

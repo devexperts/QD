@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -54,7 +54,7 @@ class Log4j2Logging extends DefaultLogging {
         Configuration config = ctx.getConfiguration();
 
         Map<String, Exception> errors = new LinkedHashMap<>();
-        config.getRootLogger().setLevel(INFO);
+        config.getRootLogger().setLevel(DEBUG);
         String errFile = getProperty(Logging.ERR_FILE_PROPERTY, null);
         for (Map.Entry<String, Appender> entry : config.getRootLogger().getAppenders().entrySet()) {
             entry.getValue().stop();
@@ -78,7 +78,7 @@ class Log4j2Logging extends DefaultLogging {
                 .setTarget(ConsoleAppender.Target.SYSTEM_OUT)
                 .build();
 
-        config.getRootLogger().addAppender(appender, INFO,
+        config.getRootLogger().addAppender(appender, DEBUG,
             errFile == null ? null : ThresholdFilter.createFilter(WARN, DENY, ACCEPT));
 
         if (errFile != null) {

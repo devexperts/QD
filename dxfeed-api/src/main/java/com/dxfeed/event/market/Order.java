@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -51,6 +51,7 @@ import com.dxfeed.model.market.OrderBookModel;
  * <li>{@link #getSequence() sequence} - sequence of this order;
  * <li>{@link #getPrice() price} - price of this order;
  * <li>{@link #getSize() size} - size of this order;
+ * <li>{@link #getSizeAsDouble() sizeAsDouble} - size of this order as floating number with fractions;
  * <li>{@link #getCount() count} - number of individual orders in this aggregate order;
  * <li>{@link #getExchangeCode() exchangeCode} - exchange code of this order;
  * <li>{@link #getOrderSide() orderSide} - side of this order;

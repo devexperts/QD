@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,7 +20,6 @@ import com.devexperts.util.IndexedSet;
 
 @ThreadSafe
 class RunningTask {
-
     private final IndexedSet<Long, RMITaskImpl<?>> serverChannelTasks = IndexedSet.createLong(RMITaskImpl.TASK_INDEXER_BY_ID);
     private final EnumMap<RMIChannelType,  Map<Long, IndexedSet<Long, RMITaskImpl<?>>>> mapNestedTask =
             new EnumMap<>(RMIChannelType.class);
@@ -38,7 +37,7 @@ class RunningTask {
         set.add(task);
     }
 
-    //for inner task
+    // for inner task
     synchronized void remove(RMITaskImpl<?> task) {
         assert task.isNestedTask();
         IndexedSet<Long, RMITaskImpl<?>> set = getMap(task.getChannel().getType()).get(task.getChannelId());
@@ -55,6 +54,10 @@ class RunningTask {
         if (set != null && !set.isEmpty()) {
             for (RMITaskImpl<?> runTask : set)
                 runTask.completeExceptionally(RMIExceptionType.CHANNEL_CLOSED, null);
+        }
+        if (owner.getChannelType() == RMIChannelType.SERVER_CHANNEL) {
+            //noinspection SuspiciousMethodCalls
+            serverChannelTasks.remove(owner);
         }
     }
 
@@ -92,6 +95,10 @@ class RunningTask {
         RMITaskImpl<?>[] channelTasksArray = serverChannelTasks.toArray(new RMITaskImpl[serverChannelTasks.size()]);
         for (RMITaskImpl<?> task : channelTasksArray)
             task.cancel(RMIExceptionType.DISCONNECTION);
+    }
+
+    boolean hasServerChannelTask() {
+        return !serverChannelTasks.isEmpty(); // volatile read
     }
 
     private  Map<Long, IndexedSet<Long, RMITaskImpl<?>>> getMap(RMIChannelType type) {

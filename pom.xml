@@ -3,7 +3,7 @@
   !++
   QDS - Quick Data Signalling Library
   !-
-  Copyright (C) 2002 - 2017 Devexperts LLC
+  Copyright (C) 2002 - 2018 Devexperts LLC
   !-
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
   If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.257</version>
+    <version>3.258</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -105,14 +105,8 @@
         <dependency>
             <groupId>com.devexperts.timetest</groupId>
             <artifactId>agent</artifactId>
-            <version>1.1.1</version>
+            <version>${timetest.version}</version>
             <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.devexperts.qd</groupId>
-                    <artifactId>dxlib</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
     </dependencies>
 
@@ -156,6 +150,7 @@
         <slf4j.version>1.7.22</slf4j.version>
         <aspectj.version>1.8.2</aspectj.version>
         <junit.version>4.12</junit.version>
+        <timetest.version>1.3</timetest.version>
         <!-- same version as used by cometd above -->
     </properties>
 
@@ -301,7 +296,7 @@
                         <versionTagPrefix>qd-qds-</versionTagPrefix>
                     </flowInitContext>
                     <squash>true</squash>
-                    <scmCommentPrefix>[release] </scmCommentPrefix>
+                    <scmCommentPrefix>[release] </scmCommentPrefix>
                 </configuration>
             </plugin>
             <plugin>
@@ -439,7 +434,7 @@
                                 <artifactItem>
                                     <groupId>com.devexperts.timetest</groupId>
                                     <artifactId>agent</artifactId>
-                                    <version>1.1.1</version>
+                                    <version>${timetest.version}</version>
                                     <outputDirectory>${project.build.directory}</outputDirectory>
                                     <destFileName>timetest.jar</destFileName>
                                 </artifactItem>

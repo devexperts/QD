@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -78,7 +78,7 @@ import com.dxfeed.model.market.OrderBookModel;
  * Use the source code of {@link AbstractIndexedEventModel} for clarification on transactions and snapshot logic.
  */
 public class OrderBase extends MarketEvent implements IndexedEvent<String> {
-    private static final long serialVersionUID = 2;
+    private static final long serialVersionUID = 3;
 
     // ========================= public static =========================
 
@@ -187,7 +187,7 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
     private long timeSequence;
     private int timeNanoPart;
     private double price = Double.NaN;
-    private long size;
+    private double size = Double.NaN;
     private long count;
     private int flags;
 
@@ -393,8 +393,9 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
      * Returns size of this order.
      * @return size of this order.
      */
+    @XmlTransient
     public long getSize() {
-        return size;
+        return (long) size;
     }
 
     /**
@@ -402,6 +403,23 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
      * @param size size of this order.
      */
     public void setSize(long size) {
+        this.size = size;
+    }
+
+    /**
+     * Returns size of this order as floating number with fractions.
+     * @return size of this order as floating number with fractions.
+     */
+    @XmlElement(name = "size")
+    public double getSizeAsDouble() {
+        return size;
+    }
+
+    /**
+     * Changes size of this order as floating number with fractions.
+     * @param size size of this order as floating number with fractions.
+     */
+    public void setSizeAsDouble(double size) {
         this.size = size;
     }
 

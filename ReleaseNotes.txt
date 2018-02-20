@@ -1,3 +1,13 @@
+QDS 3.258:
+
+* [QD-1060] Prepare QD 3.258 release
+* [QD-1058] Remove IDE-specific files from the repository
+* [QD-1055] [Schedule] Add holidays for 2018
+* [QD-1056] BUG FIX: RMI: Memory leak on server side during normal RMI operation
+* [QD-1057] Files are updated for year 2018 in copyright
+* [QD-1053] dxlib: Exception stack trace not logged with log4j2
+* [QD-1059] dxFeed API: Add support of fractions to size and volume fields in all events
+
 QDS 3.257:
 
 * [QD-1051] dxlib: NPE on log event formatting

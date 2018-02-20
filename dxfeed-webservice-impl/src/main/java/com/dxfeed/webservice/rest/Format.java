@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,8 +11,7 @@
  */
 package com.dxfeed.webservice.rest;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.StringTokenizer;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -48,6 +47,17 @@ public enum Format {
         case JSON:
             DXFeedJson.writeTo(result, out, indent);
             break;
+        default:
+            throw new AssertionError();
+        }
+    }
+
+    public Object readFrom(InputStream in, Class valueType) throws IOException {
+        switch (this) {
+        case XML:
+            return DXFeedXml.readFrom(in);
+        case JSON:
+            return DXFeedJson.readFrom(in, valueType);
         default:
             throw new AssertionError();
         }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -46,7 +46,7 @@ public final class TradeDelegate extends MarketEventDelegateImpl<Trade> {
         event.setTimeNanoPart(m.getTimeNanoPart(cursor));
         event.setExchangeCode(m.getExchangeCode(cursor));
         event.setPrice(m.getPrice(cursor));
-        event.setSize(m.getSize(cursor));
+        event.setSizeAsDouble(m.getSizeDouble(cursor));
         event.setFlags(m.getFlags(cursor));
         if (event.getTickDirection() == Direction.UNDEFINED) {
             // if direction is not provided via flags field - compute it from tick field if provided
@@ -56,7 +56,7 @@ public final class TradeDelegate extends MarketEventDelegateImpl<Trade> {
             else if (tick == 2)
                 event.setTickDirection(Direction.ZERO_DOWN);
         }
-        event.setDayVolume(m.getDayVolume(cursor));
+        event.setDayVolumeAsDouble(m.getDayVolumeDouble(cursor));
         event.setDayTurnover(m.getDayTurnover(cursor));
         return event;
     }
@@ -69,11 +69,11 @@ public final class TradeDelegate extends MarketEventDelegateImpl<Trade> {
         m.setTimeNanoPart(cursor, event.getTimeNanoPart());
         m.setExchangeCode(cursor, event.getExchangeCode());
         m.setPrice(cursor, event.getPrice());
-        m.setSize(cursor, (int) event.getSize());
+        m.setSizeDouble(cursor, event.getSizeAsDouble());
         m.setFlags(cursor, event.getFlags());
         Direction d = event.getTickDirection();
         m.setTick(cursor, d == Direction.UP || d == Direction.ZERO_UP ? 1 : d == Direction.DOWN || d == Direction.ZERO_DOWN ? 2 : 0);
-        m.setDayVolume(cursor, event.getDayVolume());
+        m.setDayVolumeDouble(cursor, event.getDayVolumeAsDouble());
         m.setDayTurnover(cursor, event.getDayTurnover());
         return cursor;
     }

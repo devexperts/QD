@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -463,8 +463,8 @@ public class AuthorizationTest {
 
     @Test
     public void testCloseAuthContextOnLoginHandler() throws InterruptedException {
-    String clientAddress = "(:" + NTU.port(60) + "[login=" + CloseLoginHandlerFactory.FACTORY_NAME + "good])" +
-        "(:" + NTU.port(65) + "[login=" + CloseLoginHandlerFactory.FACTORY_NAME + "bad])";
+        String clientAddress = "(:" + NTU.port(60) + "[login=" + CloseLoginHandlerFactory.FACTORY_NAME + "good])" +
+            "(:" + NTU.port(65) + "[login=" + CloseLoginHandlerFactory.FACTORY_NAME + "bad])";
         initClient(clientAddress, "IBM");
         String serverAddress = NTU.LOCAL_HOST + ":" + NTU.port(60) + "[auth=user:password]";
         initServer(serverAddress);

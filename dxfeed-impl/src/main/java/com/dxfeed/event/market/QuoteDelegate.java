@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -46,11 +46,11 @@ public class QuoteDelegate extends MarketEventDelegateImpl<Quote> {
         event.setBidTime(m.getBidTimeMillis(cursor));
         event.setBidExchangeCode(m.getBidExchangeCode(cursor));
         event.setBidPrice(m.getBidPrice(cursor));
-        event.setBidSize(m.getBidSize(cursor));
+        event.setBidSizeAsDouble(m.getBidSizeDouble(cursor));
         event.setAskTime(m.getAskTimeMillis(cursor));
         event.setAskExchangeCode(m.getAskExchangeCode(cursor));
         event.setAskPrice(m.getAskPrice(cursor));
-        event.setAskSize(m.getAskSize(cursor));
+        event.setAskSizeAsDouble(m.getAskSizeDouble(cursor));
         event.setTimeMillisSequence(m.getSequence(cursor));
         return event;
     }
@@ -62,11 +62,11 @@ public class QuoteDelegate extends MarketEventDelegateImpl<Quote> {
         m.setBidTimeMillis(cursor, event.getBidTime());
         m.setBidExchangeCode(cursor, event.getBidExchangeCode());
         m.setBidPrice(cursor, event.getBidPrice());
-        m.setBidSize(cursor, (int) event.getBidSize());
+        m.setBidSizeDouble(cursor, event.getBidSizeAsDouble());
         m.setAskTimeMillis(cursor, event.getAskTime());
         m.setAskExchangeCode(cursor, event.getAskExchangeCode());
         m.setAskPrice(cursor, event.getAskPrice());
-        m.setAskSize(cursor, (int) event.getAskSize());
+        m.setAskSizeDouble(cursor, event.getAskSizeAsDouble());
         m.setSequence(cursor, event.getTimeMillisSequence());
         return cursor;
     }

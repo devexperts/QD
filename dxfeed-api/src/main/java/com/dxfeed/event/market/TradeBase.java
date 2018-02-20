@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,8 +11,7 @@
  */
 package com.dxfeed.event.market;
 
-import javax.xml.bind.annotation.XmlSchemaType;
-import javax.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.*;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 import com.devexperts.util.TimeFormat;
@@ -34,7 +33,7 @@ import com.dxfeed.impl.XmlTimeAdapter;
  * last trade price during ETH and accumulated volume during ETH.
  */
 public abstract class TradeBase extends MarketEvent implements LastingEvent<String> {
-    private static final long serialVersionUID = 0;
+    private static final long serialVersionUID = 1;
 
     // ========================= public static =========================
 
@@ -66,8 +65,8 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
     private int timeNanoPart;
     private char exchangeCode;
     private double price = Double.NaN;
-    private long size;
-    private long dayVolume;
+    private double size = Double.NaN;
+    private double dayVolume = Double.NaN;
     private double dayTurnover = Double.NaN;
     private int flags;
 
@@ -219,8 +218,9 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
      * Returns size of the last trade.
      * @return size of the last trade.
      */
+    @XmlTransient
     public long getSize() {
-        return size;
+        return (long) size;
     }
 
     /**
@@ -232,11 +232,29 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
     }
 
     /**
+     * Returns size of the last trade as floating number with fractions.
+     * @return size of the last trade as floating number with fractions.
+     */
+    @XmlElement(name = "size")
+    public double getSizeAsDouble() {
+        return size;
+    }
+
+    /**
+     * Changes size of the last trade as floating number with fractions.
+     * @param size size of the last trade as floating number with fractions.
+     */
+    public void setSizeAsDouble(double size) {
+        this.size = size;
+    }
+
+    /**
      * Returns total volume traded for a day.
      * @return total volume traded for a day.
      */
+    @XmlTransient
     public long getDayVolume() {
-        return dayVolume;
+        return (long) dayVolume;
     }
 
     /**
@@ -244,6 +262,23 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
      * @param dayVolume total volume traded for a day.
      */
     public void setDayVolume(long dayVolume) {
+        this.dayVolume = dayVolume;
+    }
+
+    /**
+     * Returns total volume traded for a day as floating number with fractions.
+     * @return total volume traded for a day as floating number with fractions.
+     */
+    @XmlElement(name = "dayVolume")
+    public double getDayVolumeAsDouble() {
+        return dayVolume;
+    }
+
+    /**
+     * Changes total volume traded for a day as floating number with fractions.
+     * @param dayVolume total volume traded for a day as floating number with fractions.
+     */
+    public void setDayVolumeAsDouble(double dayVolume) {
         this.dayVolume = dayVolume;
     }
 

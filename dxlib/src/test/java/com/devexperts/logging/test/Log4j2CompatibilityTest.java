@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -36,14 +36,14 @@ public class Log4j2CompatibilityTest extends LogFormatterTestBase {
     protected void setUp() throws Exception {
         super.setUp();
 
-        initLogFormatter();
         System.getProperties().setProperty(Logging.LOG_CLASS_NAME, "com.devexperts.logging.Log4j2Logging");
+        initLogFormatter();
 
         // Create log file in folder that will be eventually cleared - "deleteOnExit" does not work for log files.
         BUILD_TEST_DIR.mkdirs();
         logFile = File.createTempFile("test.", ".log", BUILD_TEST_DIR);
         final Properties props = new Properties();
-        props.load(Log4jCompatibilityTest.class.getResourceAsStream("/test.log4j2.properties"));
+        props.load(Log4j2CompatibilityTest.class.getResourceAsStream("/test.log4j2.properties"));
         props.setProperty("appender.file.fileName", logFile.getPath());
         LoggerContext context = (LoggerContext) LogManager.getContext(false);
         ConfigurationFactory.setConfigurationFactory(new PropertiesConfigurationFactory() {
@@ -56,7 +56,7 @@ public class Log4j2CompatibilityTest extends LogFormatterTestBase {
                     .build();
             }
         });
-        context.setConfigLocation(Log4jCompatibilityTest.class.getResource("/test.log4j2.properties").toURI());
+        context.setConfigLocation(Log4j2CompatibilityTest.class.getResource("/test.log4j2.properties").toURI());
     }
 
     protected void initLogFormatter() {
@@ -71,10 +71,14 @@ public class Log4j2CompatibilityTest extends LogFormatterTestBase {
         final String test_message = "Test log4j message";
         logger.debug(log4j_message + log4jVersion);
         logger.debug(test_message);
+        logger.debug("error", new IllegalArgumentException());
+        logger.debug(test_message);
 
         final String content = loadFile(logFile);
-        assertTrue("'" + log4j_message + "' not found in the log", content.indexOf(log4j_message) != -1);
-        assertTrue("'" + test_message + "' not found in log file", content.indexOf(test_message) != -1);
+        assertTrue("'" + log4j_message + "' not found in the log", content.contains(log4j_message));
+        assertTrue("'" + test_message + "' not found in log file", content.contains(test_message));
+        assertTrue("Exception not found in log file", content.contains(IllegalArgumentException.class.getName()));
+        assertTrue("Exception stack trace not found in log file", content.contains("\tat " + getClass().getName()));
     }
 
     public void testDevexpertsLogging() throws IOException {
@@ -82,8 +86,12 @@ public class Log4j2CompatibilityTest extends LogFormatterTestBase {
         log.configureDebugEnabled(true);
         final String test_message = "Test com.devexperts.logging message";
         log.debug(test_message);
+        log.debug("error", new IllegalArgumentException());
+        log.debug(test_message);
 
         final String content = loadFile(logFile);
-        assertTrue("'" + test_message + "' not found in log file", content.indexOf(test_message) != -1);
+        assertTrue("'" + test_message + "' not found in log file", content.contains(test_message));
+        assertTrue("Exception not found in log file", content.contains(IllegalArgumentException.class.getName()));
+        assertTrue("Exception stack trace not found in log file", content.contains("\tat " + getClass().getName()));
     }
 }

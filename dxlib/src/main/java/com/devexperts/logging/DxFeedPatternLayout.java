@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,8 @@
  */
 package com.devexperts.logging;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.Map;
@@ -29,13 +31,30 @@ import org.apache.logging.log4j.core.pattern.MessagePatternConverter;
 @SuppressWarnings("unused") //used by Log4j2
 @Plugin(name = "dxFeedPatternLayout", category = Node.CATEGORY, elementType = Layout.ELEMENT_TYPE, printObject = true)
 public class DxFeedPatternLayout extends AbstractStringLayout {
+    private static final String LINE_SEP = DefaultLogging.getProperty("line.separator", "\n");
+
     private final BiConsumer<Object, StringBuilder> msgConsumer;
     private final LogFormatter logFormatter;
 
     private DxFeedPatternLayout(Configuration configuration) {
         super(configuration, Charset.defaultCharset(), null, null);
         MessagePatternConverter messagePatternConverter = MessagePatternConverter.newInstance(configuration, null);
-        msgConsumer = messagePatternConverter::format;
+        msgConsumer = (o, sb) -> {
+            // Format message
+            messagePatternConverter.format(o, sb);
+            if (o instanceof LogEvent) {
+                // Format exception
+                Throwable throwable = ((LogEvent) o).getThrown();
+                if (throwable != null) {
+                    sb.append(LINE_SEP);
+                    StringWriter w = new StringWriter();
+                    throwable.printStackTrace(new PrintWriter(w));
+                    sb.append(w.getBuffer());
+                    // Remove extra line separator
+                    sb.setLength(sb.length() - LINE_SEP.length());
+                }
+            }
+        };
         logFormatter = new LogFormatter();
     }
 

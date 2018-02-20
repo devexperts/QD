@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,9 +11,10 @@
  */
 package com.dxfeed.webservice;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
+import java.lang.reflect.Method;
 import java.util.*;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlTransient;
 
 import com.dxfeed.event.*;
@@ -22,11 +23,13 @@ import com.dxfeed.webservice.comet.DataMessage;
 import com.dxfeed.webservice.rest.Events;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.cfg.MapperConfig;
 import com.fasterxml.jackson.databind.introspect.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.*;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.fasterxml.jackson.databind.util.BeanUtil;
 
 public class DXFeedJson {
     private static final String EVENTS_FILTER_ID = "EVENTS-FILTER-ID";
@@ -44,6 +47,10 @@ public class DXFeedJson {
 
     public static void writeTo(Object result, OutputStream out, String indent) throws IOException {
         mapper(indent).writeValue(out, result);
+    }
+
+    public static Object readFrom(InputStream in, Class valueType) throws IOException {
+        return MAPPER.readValue(in, valueType);
     }
 
     private static ObjectMapper mapper(String indent) {
@@ -78,10 +85,73 @@ public class DXFeedJson {
     }
 
     static class EventsIntrospector extends JacksonAnnotationIntrospector {
+        private final Map<Class, PropertiesMapper> map = new HashMap<>();
+
+        @Override
+        public Object findNamingStrategy(AnnotatedClass ac) {
+            PropertiesMapper mapper = map.get(ac.getAnnotated());
+            if (mapper == null)
+                map.put(ac.getAnnotated(), mapper = new PropertiesMapper(ac));
+            return mapper;
+        }
+
         @Override
         public Object findFilterId(Annotated a) {
             return (a instanceof AnnotatedClass) &&
                 EventType.class.isAssignableFrom(a.getRawType()) ? EVENTS_FILTER_ID : null;
+        }
+    }
+
+    static class PropertiesMapper extends PropertyNamingStrategy {
+        private final Map<Method, String> map = new HashMap<>();
+
+        PropertiesMapper(AnnotatedClass ac) {
+            Set<String> removed = new HashSet<>();
+            Map<String, String> renamed = new HashMap<>();
+            // First phase: map points to default property name
+            for (AnnotatedMethod am : ac.memberMethods()) {
+                String propertyName = getDefaultPropertyName(am);
+                map.put(am.getAnnotated(), propertyName);
+                if (removed.contains(propertyName))
+                    continue;
+                if (am.getAnnotation(XmlTransient.class) != null) {
+                    removed.add(propertyName);
+                    continue;
+                }
+                XmlElement ele = am.getAnnotation(XmlElement.class);
+                if (ele != null && !"##default".equals(ele.name())) {
+                    String old = renamed.get(propertyName);
+                    if (old != null && !old.equals(ele.name())) {
+                        throw new IllegalArgumentException("Conflicting names for " + propertyName +
+                            ": " + old + " with " + ele.name());
+                    }
+                    renamed.put(propertyName, ele.name());
+                }
+            }
+            // Second phase: map points to resolved property name
+            for (Map.Entry<Method, String> e : map.entrySet()) {
+                String pName = e.getValue();
+                e.setValue(removed.contains(pName) ? pName + "Removed123456" : renamed.getOrDefault(pName, pName));
+            }
+        }
+
+        private String getDefaultPropertyName(AnnotatedMethod am) {
+            String s = BeanUtil.okNameForMutator(am, "get");
+            if (s == null)
+                s = BeanUtil.okNameForMutator(am, "is");
+            if (s == null)
+                s = BeanUtil.okNameForMutator(am, "set");
+            return s != null ? s : am.getName();
+        }
+
+        @Override
+        public String nameForGetterMethod(MapperConfig<?> config, AnnotatedMethod method, String defaultName) {
+            return map.get(method.getAnnotated());
+        }
+
+        @Override
+        public String nameForSetterMethod(MapperConfig<?> config, AnnotatedMethod method, String defaultName) {
+            return map.get(method.getAnnotated());
         }
     }
 

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -404,11 +404,11 @@ class MIC implements Serializable {
         add("IT", "Italy", "Milano", "EMDR", "E-MID - E-MIDER MARKET", "", "www.e-mid.it", "Market for the trading of multi-currency derivative financial instruments", "June 2008", "Active", true);
         add("IT", "Italy", "Milano", "ETFP", "ELECTRONIC OPEN-END FUNDS AND ETC MARKET", "ETFplus", "www.borsaitaliana.it", "ETFplus is the Borsa Italiana electronic regulated market where, through authorised intermediaries, it is possible to trade the following financial instruments: ETFs (Exchange Traded Funds), ETCs (Exchange Traded Commodities),Structured ETFs.", "September 2007", "Active", true);
         add("IT", "Italy", "Milano", "ETLX", "EUROTLX", "", "www.eurotlx.com", "Multilateral Trading Facility for bonds and equities.", "August 2007", "Active", true);
-        add("IT", "Italy", "Milano", "EXPA", "EXPANDI MARKET", "", "www.borsaitaliana.it", "Borsa Italiana�s Expandi market is created for those small and mid size companies operating in traditional sectors, with success in their respective fields, who can demonstrate a consolidated economical - financial track record.", "September 2007", "Active", true);
+        add("IT", "Italy", "Milano", "EXPA", "EXPANDI MARKET", "", "www.borsaitaliana.it", "Borsa Italiana?s Expandi market is created for those small and mid size companies operating in traditional sectors, with success in their respective fields, who can demonstrate a consolidated economical - financial track record.", "September 2007", "Active", true);
         add("IT", "Italy", "Milano", "HMTF", "HI-MTF", "", "www.himtf.com", "Multilateral Trading Facilities for bonds and equities.", "November 2007", "Active", true);
         add("IT", "Italy", "Milano", "MACX", "MERCATO ALTERNATIVO DEL CAPITALE", "MAC", "www.borsaitaliana.it", "The Alternative Capital Market (MAC), organised and managed by Borsa Italiana, is an alternative trading system dedicated to small entreprises.", "October 2007", "Active", true);
-        add("IT", "Italy", "Milano", "MOTX", "ELECTRONIC BOND MARKET", "MOT", "www.borsaitaliana.it", "Mot is Borsa Italiana�s Electronic Bond and Government Securities Market for the trading of: Government Securities (BOT; BTP; BTPi; CCT; CTZ); Local Authority bonds; Bank and corporate \"plain vanilla\" and structured non convertible bonds; Eurobonds, foreign bonds and asset backed securities.", "September 2007", "Active", true);
-        add("IT", "Italy", "Milano", "MTAA", "ELECTRONIC SHARE MARKET", "MTA", "www.borsaitaliana.it", "Borsa Italiana�s electronic market on which shares, convertible bonds, warrants and option rights are traded.", "September 2007", "Active", true);
+        add("IT", "Italy", "Milano", "MOTX", "ELECTRONIC BOND MARKET", "MOT", "www.borsaitaliana.it", "Mot is Borsa Italiana?s Electronic Bond and Government Securities Market for the trading of: Government Securities (BOT; BTP; BTPi; CCT; CTZ); Local Authority bonds; Bank and corporate \"plain vanilla\" and structured non convertible bonds; Eurobonds, foreign bonds and asset backed securities.", "September 2007", "Active", true);
+        add("IT", "Italy", "Milano", "MTAA", "ELECTRONIC SHARE MARKET", "MTA", "www.borsaitaliana.it", "Borsa Italiana?s electronic market on which shares, convertible bonds, warrants and option rights are traded.", "September 2007", "Active", true);
         add("IT", "Italy", "Milano", "MTAX", "MTAX", "MTAX", "www.borsaitaliana.it", "MTAX is Borsa Italiana electronic markets on which shares, convertible bonds, warrants and option rights are traded. Unification of MTA and MTAX on March 3rd 2008. MTAA is the MIC to use.", "April 2008", "Deleted", false);
         add("IT", "Italy", "Milano", "SEDX", "SECURITISED DERIVATIVES MARKET", "SeDeX", "www.borsaitaliana.it", "SeDeX is Borsa Italiana's electronic regulated market where, through authorised intermediaries, it is possible to trade securitised derivatives, i.e. so-called derivatives with leverage effect (covered warrants and leverage certificates) and derivatives without leverage effect which fit medium-long term investment logics (investment certificates).", "September 2007", "Active", true);
         add("IT", "Italy", "Milano", "TLAB", "TRADINGLAB", "TLX", "www.tradinglab.it", "Does not longer exist as such.", "August 2007", "Deleted", false);
@@ -663,7 +663,7 @@ class MIC implements Serializable {
         add("GB", "United Kingdom", "London", "EMTS", "EUROMTS", "EMTS", "www.euromts-ltd.com", "", "Before June 2005", "Active", true);
         add("GB", "United Kingdom", "London", "FAIR", "CANTOR SPREADFAIR", "", "www.spreadfair.com", "Cantor Spreadfair is currently an Alternative Trading System under FSA rules, and will be Multilateral Trading System under the new rules post MiFID introduction on 1st November 2007.", "September 2007", "Active", true);
         add("GB", "United Kingdom", "London", "FXMT", "FXMARKETSPACE LIMITED", "", "www.fxmarketspace.com", "", "July 2007", "Active", true);
-        add("GB", "United Kingdom", "London", "GEMX", "GEMMA (Gilt Edged Market Makers�Association)", "GEMMA", "", "", "Before June 2005", "Active", true);
+        add("GB", "United Kingdom", "London", "GEMX", "GEMMA (Gilt Edged Market Makers?Association)", "GEMMA", "", "", "Before June 2005", "Active", true);
         add("GB", "United Kingdom", "London", "GFIC", "GFI CREDITMATCH", "", "www.gfigroup.com", "Electronic Trading platform for Credit Derivatives and Bonds.", "August 2007", "Active", true);
         add("GB", "United Kingdom", "London", "GFIF", "GFI FOREXMATCH", "", "www.gfigroup.com", "Electronic Trading platform for OTC currency derivatives.", "August 2007", "Active", true);
         add("GB", "United Kingdom", "London", "GFIN", "GFI ENERGYMATCH", "", "www.gfigroup.com", "Electronic trading for OTC Commodity derivatives (both physical and swaps).", "August 2007", "Active", true);

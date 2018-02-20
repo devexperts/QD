@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -139,12 +139,48 @@ public class TradeHistoryMapping extends CandleEventMapping {
         setInt(cursor, iVolume, size);
     }
 
+    @Deprecated
+    public double getSizeDouble(RecordCursor cursor) {
+        return getInt(cursor, iVolume);
+    }
+
+    @Deprecated
+    public void setSizeDouble(RecordCursor cursor, double size) {
+        setInt(cursor, iVolume, (int) size);
+    }
+
+    @Deprecated
+    public int getSizeDecimal(RecordCursor cursor) {
+        return Decimal.composeDecimal(getInt(cursor, iVolume), 0);
+    }
+
+    @Deprecated
+    public void setSizeDecimal(RecordCursor cursor, int size) {
+        setInt(cursor, iVolume, (int) Decimal.toDouble(size));
+    }
+
     public int getVolume(RecordCursor cursor) {
         return getInt(cursor, iVolume);
     }
 
     public void setVolume(RecordCursor cursor, int volume) {
         setInt(cursor, iVolume, volume);
+    }
+
+    public double getVolumeDouble(RecordCursor cursor) {
+        return getInt(cursor, iVolume);
+    }
+
+    public void setVolumeDouble(RecordCursor cursor, double volume) {
+        setInt(cursor, iVolume, (int) volume);
+    }
+
+    public int getVolumeDecimal(RecordCursor cursor) {
+        return Decimal.composeDecimal(getInt(cursor, iVolume), 0);
+    }
+
+    public void setVolumeDecimal(RecordCursor cursor, int volume) {
+        setInt(cursor, iVolume, (int) Decimal.toDouble(volume));
     }
 
     @Deprecated

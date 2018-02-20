@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -49,10 +49,10 @@ public final class DailyCandleDelegate extends CandleEventDelegateImpl<DailyCand
         event.setHigh(m.getHigh(cursor));
         event.setLow(m.getLow(cursor));
         event.setClose(m.getClose(cursor));
-        event.setVolume(m.getVolume(cursor));
+        event.setVolumeAsDouble(m.getVolumeDouble(cursor));
         event.setVWAP(m.getVWAP(cursor));
-        event.setBidVolume(m.getBidVolume(cursor));
-        event.setAskVolume(m.getAskVolume(cursor));
+        event.setBidVolumeAsDouble(m.getBidVolumeDouble(cursor));
+        event.setAskVolumeAsDouble(m.getAskVolumeDouble(cursor));
         event.setOpenInterest(m.getOpenInterest(cursor));
         event.setImpVolatility(m.getImpVolatility(cursor));
         return event;
@@ -69,10 +69,10 @@ public final class DailyCandleDelegate extends CandleEventDelegateImpl<DailyCand
         m.setHigh(cursor, event.getHigh());
         m.setLow(cursor, event.getLow());
         m.setClose(cursor, event.getClose());
-        m.setVolume(cursor, event.getVolume());
+        m.setVolumeDouble(cursor, event.getVolumeAsDouble());
         m.setVWAP(cursor, event.getVWAP());
-        m.setBidVolume(cursor, event.getBidVolume());
-        m.setAskVolume(cursor, event.getAskVolume());
+        m.setBidVolumeDouble(cursor, event.getBidVolumeAsDouble());
+        m.setAskVolumeDouble(cursor, event.getAskVolumeAsDouble());
         m.setOpenInterest(cursor, event.getOpenInterest());
         m.setImpVolatility(cursor, event.getImpVolatility());
         return cursor;

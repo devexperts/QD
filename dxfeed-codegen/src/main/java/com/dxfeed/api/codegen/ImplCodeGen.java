@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -93,11 +93,11 @@ public class ImplCodeGen {
             map("BidTime", "Bid.Time", FieldType.TIME).optional().
             map("BidExchangeCode", "Bid.Exchange", FieldType.CHAR).alt("recordExchange").compositeOnly().optional().
             map("BidPrice", "Bid.Price", FieldType.DECIMAL_AS_DOUBLE).
-            map("BidSize", "Bid.Size", FieldType.INT).
+            map("BidSize", "Bid.Size", FieldType.INT_AS_DOUBLE).
             map("AskTime", "Ask.Time", FieldType.TIME).optional().
             map("AskExchangeCode", "Ask.Exchange", FieldType.CHAR).alt("recordExchange").compositeOnly().optional().
             map("AskPrice", "Ask.Price", FieldType.DECIMAL_AS_DOUBLE).
-            map("AskSize", "Ask.Size", FieldType.INT).
+            map("AskSize", "Ask.Size", FieldType.INT_AS_DOUBLE).
             // assign of TimeMillisSequence must go after bid/ask time
             assign("TimeMillisSequence", "#Sequence#").
             injectPutEventCode("#Sequence=event.getTimeMillisSequence()#;").
@@ -128,7 +128,7 @@ public class ImplCodeGen {
             map("TimeNanoPart", "Last.TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
             map("ExchangeCode", "Last.Exchange", FieldType.CHAR).alt("recordExchange").compositeOnly().optional().
             map("Price", "Last.Price", FieldType.DECIMAL_AS_DOUBLE).
-            map("Size", "Last.Size", FieldType.INT).
+            map("Size", "Last.Size", FieldType.INT_AS_DOUBLE).
             field("Tick", "Last.Tick", FieldType.INT).optional().
             field("Change", "Last.Change", FieldType.DECIMAL_AS_DOUBLE).optional().
             map("Flags", "Last.Flags", FieldType.INT).optional().
@@ -146,7 +146,7 @@ public class ImplCodeGen {
                 "Direction d = event.getTickDirection();",
                 "m.setTick(cursor, d == Direction.UP || d == Direction.ZERO_UP ? 1 : d == Direction.DOWN || d == Direction.ZERO_DOWN ? 2 : 0);"
             ).
-            map("DayVolume", "Volume", FieldType.DECIMAL_AS_LONG).optional().
+            map("DayVolume", "Volume", FieldType.DECIMAL_AS_LONG_AS_DOUBLE).optional().
             map("DayTurnover", "DayTurnover", FieldType.DECIMAL_AS_DOUBLE).optional().
             field("Date", "Date", FieldType.INT).compositeOnly().phantom("reuters.phantom"). // phantom field -- see QD-503
             field("Operation", "Operation", FieldType.INT).compositeOnly().phantom("reuters.phantom"). // phantom field -- see QD-503
@@ -165,9 +165,9 @@ public class ImplCodeGen {
             map("TimeNanoPart", "Last.TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
             map("ExchangeCode", "ETHLast.Exchange", FieldType.CHAR).alt("recordExchange").compositeOnly().optional().
             map("Price", "ETHLast.Price", FieldType.DECIMAL_AS_DOUBLE).
-            map("Size", "ETHLast.Size", FieldType.INT).
+            map("Size", "ETHLast.Size", FieldType.INT_AS_DOUBLE).
             map("Flags", "ETHLast.Flags", FieldType.INT).
-            map("DayVolume", "ETHVolume", FieldType.DECIMAL_AS_LONG).optional().
+            map("DayVolume", "ETHVolume", FieldType.DECIMAL_AS_LONG_AS_DOUBLE).optional().
             map("DayTurnover", "ETHDayTurnover", FieldType.DECIMAL_AS_DOUBLE).optional().
             publishable();
 
@@ -203,7 +203,7 @@ public class ImplCodeGen {
             field("Time", FieldType.TIME).
             field("Type", FieldType.CHAR).
             field("Price", FieldType.DECIMAL_AS_DOUBLE).
-            field("Size", FieldType.INT).
+            field("Size", FieldType.INT_AS_DOUBLE).
             field("TimeInForce", FieldType.CHAR).
             field("Symbol", FieldType.STRING);
 
@@ -248,7 +248,7 @@ public class ImplCodeGen {
                 "#Sequence=(int)event.getTimeSequence()#;"
             ).
             map("Price", "Price", FieldType.DECIMAL_AS_DOUBLE).
-            map("Size", "Size", FieldType.INT).
+            map("Size", "Size", FieldType.INT_AS_DOUBLE).
             map("Count", "Count", FieldType.INT).onlySuffixes("com.dxfeed.event.order.impl.Order.suffixes.count", "").
             map("Flags", "Flags", FieldType.INT).
             map("MarketMaker", "MMID", FieldType.SHORT_STRING).onlySuffixes(
@@ -283,7 +283,7 @@ public class ImplCodeGen {
                 "#Sequence=(int)event.getTimeSequence()#;"
             ).
             map("Price", "Price", FieldType.DECIMAL_AS_DOUBLE).
-            map("Size", "Size", FieldType.INT).
+            map("Size", "Size", FieldType.INT_AS_DOUBLE).
             map("Count", "Count", FieldType.INT).onlySuffixes("com.dxfeed.event.order.impl.SpreadOrder.suffixes.count", "").
             map("Flags", "Flags", FieldType.INT).
             map("SpreadSymbol", "SpreadSymbol", FieldType.STRING).
@@ -305,7 +305,7 @@ public class ImplCodeGen {
             map("Time", "BidTime", "Bid.Time", FieldType.TIME).optional().
             assign("Sequence", "0").
             map("Price", "BidPrice", "Bid.Price", FieldType.DECIMAL_AS_DOUBLE).
-            map("Size", "BidSize", "Bid.Size", FieldType.INT).
+            map("Size", "BidSize", "Bid.Size", FieldType.INT_AS_DOUBLE).
             map("ExchangeCode", "BidExchangeCode", "Bid.Exchange", FieldType.CHAR).internal().
             assign("ExchangeCode", "m.getRecordExchange() == 0 ? #ExchangeCode# : m.getRecordExchange()").
             assign("OrderSide", "Side.BUY").
@@ -320,7 +320,7 @@ public class ImplCodeGen {
             map("Time", "AskTime", "Ask.Time", FieldType.TIME).optional().
             assign("Sequence", "0").
             map("Price", "AskPrice", "Ask.Price", FieldType.DECIMAL_AS_DOUBLE).
-            map("Size", "AskSize", "Ask.Size", FieldType.INT).
+            map("Size", "AskSize", "Ask.Size", FieldType.INT_AS_DOUBLE).
             map("ExchangeCode", "AskExchangeCode", "Ask.Exchange", FieldType.CHAR).internal().
             assign("ExchangeCode", "m.getRecordExchange() == 0 ? #ExchangeCode# : m.getRecordExchange()").
             assign("OrderSide", "Side.SELL").
@@ -338,7 +338,7 @@ public class ImplCodeGen {
             map("Time", "BidTime", "MMBid.Time", FieldType.TIME).optional().
             assign("Sequence", "0").
             map("Price", "BidPrice", "MMBid.Price", FieldType.DECIMAL_AS_DOUBLE).
-            map("Size", "BidSize", "MMBid.Size", FieldType.INT).
+            map("Size", "BidSize", "MMBid.Size", FieldType.INT_AS_DOUBLE).
             map("Count", "BidCount", "MMBid.Count", FieldType.INT).optional().
             assign("OrderSide", "Side.BUY").
             assign("Scope", "Scope.AGGREGATE");
@@ -353,7 +353,7 @@ public class ImplCodeGen {
             map("Time", "AskTime", "MMAsk.Time", FieldType.TIME).optional().
             assign("Sequence", "0").
             map("Price", "AskPrice", "MMAsk.Price", FieldType.DECIMAL_AS_DOUBLE).
-            map("Size", "AskSize", "MMAsk.Size", FieldType.INT).
+            map("Size", "AskSize", "MMAsk.Size", FieldType.INT_AS_DOUBLE).
             map("Count", "AskCount", "MMAsk.Count", FieldType.INT).optional().
             assign("OrderSide", "Side.SELL").
             assign("Scope", "Scope.AGGREGATE");
@@ -367,7 +367,7 @@ public class ImplCodeGen {
             map("TimeNanoPart", "TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
             map("ExchangeCode", "Exchange", FieldType.CHAR).
             map("Price", "Price", FieldType.DECIMAL_AS_DOUBLE).
-            map("Size", "Size", FieldType.INT).
+            map("Size", "Size", FieldType.INT_AS_DOUBLE).
             map("BidPrice", "Bid.Price", FieldType.DECIMAL_AS_DOUBLE).
             map("AskPrice", "Ask.Price", FieldType.DECIMAL_AS_DOUBLE).
             map("ExchangeSaleConditions", "SaleConditions", "ExchangeSaleConditions", FieldType.SHORT_STRING).
@@ -385,7 +385,7 @@ public class ImplCodeGen {
             field("ExchangeCode", "Exchange", FieldType.CHAR).optional().          // exists in scheme, but currently unmapped
             assign("Count", "1").
             map("Close", "Price", FieldType.DECIMAL_AS_DOUBLE).
-            map("Volume", "Size", FieldType.INT).
+            map("Volume", "Size", FieldType.INT_AS_DOUBLE).
             field("BidPrice", "Bid", FieldType.DECIMAL_AS_DOUBLE).optional().  // exists in scheme, but currently unmapped
             field("AskPrice", "Ask", FieldType.DECIMAL_AS_DOUBLE).optional().  // exists in scheme, but currently unmapped
             assign("Open", "event.getClose()").
@@ -404,10 +404,10 @@ public class ImplCodeGen {
             map("High", "High", FieldType.DECIMAL_AS_DOUBLE).
             map("Low", "Low", FieldType.DECIMAL_AS_DOUBLE).
             map("Close", "Close", FieldType.DECIMAL_AS_DOUBLE).
-            map("Volume", "Volume", FieldType.DECIMAL_AS_LONG).optional().
+            map("Volume", "Volume", FieldType.DECIMAL_AS_LONG_AS_DOUBLE).optional().
             map("VWAP", "VWAP", FieldType.DECIMAL_AS_DOUBLE).optional().
-            map("BidVolume", "Bid.Volume", FieldType.DECIMAL_AS_LONG).exceptSuffixes(BID_ASK_VOLUME_SUFFIXES).optional().
-            map("AskVolume", "Ask.Volume", FieldType.DECIMAL_AS_LONG).exceptSuffixes(BID_ASK_VOLUME_SUFFIXES).optional().
+            map("BidVolume", "Bid.Volume", FieldType.DECIMAL_AS_LONG_AS_DOUBLE).exceptSuffixes(BID_ASK_VOLUME_SUFFIXES).optional().
+            map("AskVolume", "Ask.Volume", FieldType.DECIMAL_AS_LONG_AS_DOUBLE).exceptSuffixes(BID_ASK_VOLUME_SUFFIXES).optional().
             publishable();
 
         // use common mapping for "Candle" record, just generate Trade records and bind them to Candle delegate
@@ -420,10 +420,10 @@ public class ImplCodeGen {
             field("High", FieldType.DECIMAL_AS_DOUBLE).
             field("Low", FieldType.DECIMAL_AS_DOUBLE).
             field("Close", FieldType.DECIMAL_AS_DOUBLE).
-            field("Volume", FieldType.DECIMAL_AS_LONG).optional().
+            field("Volume", FieldType.DECIMAL_AS_LONG_AS_DOUBLE).optional().
             field("VWAP", FieldType.DECIMAL_AS_DOUBLE).optional().
-            field("Bid.Volume", FieldType.DECIMAL_AS_LONG).exceptSuffixes(BID_ASK_VOLUME_SUFFIXES).optional().
-            field("Ask.Volume", FieldType.DECIMAL_AS_LONG).exceptSuffixes(BID_ASK_VOLUME_SUFFIXES).optional();
+            field("Bid.Volume", FieldType.DECIMAL_AS_LONG_AS_DOUBLE).exceptSuffixes(BID_ASK_VOLUME_SUFFIXES).optional().
+            field("Ask.Volume", FieldType.DECIMAL_AS_LONG_AS_DOUBLE).exceptSuffixes(BID_ASK_VOLUME_SUFFIXES).optional();
 
         ctx.delegate("DailyCandle", DailyCandle.class, "Candle", "Trade."). // use common mapping for "Candle" record
             suffixes(TRADE_RECORD_SUFFIXES).
@@ -435,10 +435,10 @@ public class ImplCodeGen {
             map("High", FieldType.DECIMAL_AS_DOUBLE).
             map("Low", FieldType.DECIMAL_AS_DOUBLE).
             map("Close", FieldType.DECIMAL_AS_DOUBLE).
-            map("Volume", FieldType.DECIMAL_AS_LONG).optional().
+            map("Volume", FieldType.DECIMAL_AS_LONG_AS_DOUBLE).optional().
             map("VWAP", FieldType.DECIMAL_AS_DOUBLE).optional().
-            map("BidVolume", "Bid.Volume", FieldType.DECIMAL_AS_LONG).exceptSuffixes(BID_ASK_VOLUME_SUFFIXES).optional().
-            map("AskVolume", "Ask.Volume", FieldType.DECIMAL_AS_LONG).exceptSuffixes(BID_ASK_VOLUME_SUFFIXES).optional().
+            map("BidVolume", "Bid.Volume", FieldType.DECIMAL_AS_LONG_AS_DOUBLE).exceptSuffixes(BID_ASK_VOLUME_SUFFIXES).optional().
+            map("AskVolume", "Ask.Volume", FieldType.DECIMAL_AS_LONG_AS_DOUBLE).exceptSuffixes(BID_ASK_VOLUME_SUFFIXES).optional().
             map("OpenInterest", FieldType.DECIMAL_AS_LONG).onlySuffixes(null, TRADE_DAILY_ONLY_SUFFIXES).optional().
             map("ImpVolatility", FieldType.DECIMAL_AS_DOUBLE).onlySuffixes(null, TRADE_DAILY_ONLY_SUFFIXES).optional().
             publishable();

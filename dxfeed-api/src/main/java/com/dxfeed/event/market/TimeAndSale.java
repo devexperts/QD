@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,8 +11,7 @@
  */
 package com.dxfeed.event.market;
 
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.*;
 
 import com.devexperts.util.TimeFormat;
 import com.devexperts.util.TimeUtil;
@@ -46,6 +45,7 @@ import com.dxfeed.model.TimeSeriesEventModel;
  * <li>{@link #getExchangeCode() exchangeCode} - exchange code of this time and sale event;
  * <li>{@link #getPrice() price} - price of this time and sale event;
  * <li>{@link #getSize() size} - size of this time and sale event;
+ * <li>{@link #getSizeAsDouble() sizeAsDouble} - size of this time and sale event as floating number with fractions;
  * <li>{@link #getBidPrice() bidPrice} - the current bid price on the market when this time and sale event had occurred;
  * <li>{@link #getAskPrice() askPrice} - the current ask price on the market when this time and sale event had occurred;
  * <li>{@link #getExchangeSaleConditions() exchangeSaleConditions} - sale conditions provided for this event by data feed;
@@ -84,7 +84,7 @@ import com.dxfeed.model.TimeSeriesEventModel;
  */
 @XmlRootElement(name = "TimeAndSale")
 public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> {
-    private static final long serialVersionUID = 2;
+    private static final long serialVersionUID = 3;
 
     // ========================= public static =========================
 
@@ -136,7 +136,7 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
     private int timeNanoPart;
     private char exchangeCode;
     private double price = Double.NaN;
-    private long size;
+    private double size = Double.NaN;
     private double bidPrice = Double.NaN;
     private double askPrice = Double.NaN;
     private String exchangeSaleConditions;
@@ -331,8 +331,9 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
      * Returns size of this time and sale event.
      * @return size of this time and sale event.
      */
+    @XmlTransient
     public long getSize() {
-        return size;
+        return (long) size;
     }
 
     /**
@@ -340,6 +341,23 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
      * @param size size of this time and sale event.
      */
     public void setSize(long size) {
+        this.size = size;
+    }
+
+    /**
+     * Returns size of this time and sale event as floating number with fractions.
+     * @return size of this time and sale event as floating number with fractions.
+     */
+    @XmlElement(name = "size")
+    public double getSizeAsDouble() {
+        return size;
+    }
+
+    /**
+     * Changes size of this time and sale event as floating number with fractions.
+     * @param size size of this time and sale event as floating number with fractions.
+     */
+    public void setSizeAsDouble(double size) {
         this.size = size;
     }
 

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -38,10 +38,12 @@ import com.dxfeed.impl.XmlTimeAdapter;
  * <li>{@link #getBidExchangeCode() bidExchangeCode} -  bid exchange code;
  * <li>{@link #getBidPrice() bidPrice} - bid price;
  * <li>{@link #getBidSize() bidSize} - bid size;
+ * <li>{@link #getBidSizeAsDouble() bidSizeAsDouble} - bid size as floating number with fractions;
  * <li>{@link #getAskTime() askTime} - time of the last ask change;
  * <li>{@link #getAskExchangeCode() askExchangeCode} -  ask exchange code;
  * <li>{@link #getAskPrice() askPrice} - ask price;
- * <li>{@link #getAskSize() askSize} - ask size.
+ * <li>{@link #getAskSize() askSize} - ask size;
+ * <li>{@link #getAskSizeAsDouble() askSizeAsDouble} - ask size as floating number with fractions.
  * </ul>
  *
  * Bid corresponds to the best (maximal price) order to buy, while
@@ -54,7 +56,7 @@ import com.dxfeed.impl.XmlTimeAdapter;
  */
 @XmlRootElement(name = "Quote")
 public class Quote extends MarketEvent implements LastingEvent<String> {
-    private static final long serialVersionUID = 0;
+    private static final long serialVersionUID = 1;
 
     /**
      * Maximum allowed sequence value.
@@ -67,11 +69,11 @@ public class Quote extends MarketEvent implements LastingEvent<String> {
     private long bidTime;
     private char bidExchangeCode;
     private double bidPrice = Double.NaN;
-    private long bidSize;
+    private double bidSize = Double.NaN;
     private long askTime;
     private char askExchangeCode;
     private double askPrice = Double.NaN;
-    private long askSize;
+    private double askSize = Double.NaN;
 
     /**
      * Creates new quote with default values.
@@ -219,8 +221,9 @@ public class Quote extends MarketEvent implements LastingEvent<String> {
      * Returns bid size.
      * @return bid size.
      */
+    @XmlTransient
     public long getBidSize() {
-        return bidSize;
+        return (long) bidSize;
     }
 
     /**
@@ -228,6 +231,23 @@ public class Quote extends MarketEvent implements LastingEvent<String> {
      * @param bidSize bid size.
      */
     public void setBidSize(long bidSize) {
+        this.bidSize = bidSize;
+    }
+
+    /**
+     * Returns bid size as floating number with fractions.
+     * @return bid size as floating number with fractions.
+     */
+    @XmlElement(name = "bidSize")
+    public double getBidSizeAsDouble() {
+        return bidSize;
+    }
+
+    /**
+     * Changes bid size as floating number with fractions.
+     * @param bidSize bid size as floating number with fractions.
+     */
+    public void setBidSizeAsDouble(double bidSize) {
         this.bidSize = bidSize;
     }
 
@@ -295,8 +315,9 @@ public class Quote extends MarketEvent implements LastingEvent<String> {
      * Returns ask size.
      * @return ask size.
      */
+    @XmlTransient
     public long getAskSize() {
-        return askSize;
+        return (long) askSize;
     }
 
     /**
@@ -304,6 +325,23 @@ public class Quote extends MarketEvent implements LastingEvent<String> {
      * @param askSize ask size.
      */
     public void setAskSize(long askSize) {
+        this.askSize = askSize;
+    }
+
+    /**
+     * Returns ask size as floating number with fractions.
+     * @return ask size as floating number with fractions.
+     */
+    @XmlElement(name = "askSize")
+    public double getAskSizeAsDouble() {
+        return askSize;
+    }
+
+    /**
+     * Changes ask size as floating number with fractions.
+     * @param askSize ask size as floating number with fractions.
+     */
+    public void setAskSizeAsDouble(double askSize) {
         this.askSize = askSize;
     }
 

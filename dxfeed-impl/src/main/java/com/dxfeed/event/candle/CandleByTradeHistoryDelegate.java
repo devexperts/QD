@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -46,7 +46,7 @@ public final class CandleByTradeHistoryDelegate extends CandleEventDelegateImpl<
         event.setIndex((((long) m.getTimeSeconds(cursor)) << 32) | (m.getSequence(cursor) & 0xFFFFFFFFL));
         event.setCount(1);
         event.setClose(m.getClose(cursor));
-        event.setVolume(m.getVolume(cursor));
+        event.setVolumeAsDouble(m.getVolumeDouble(cursor));
         event.setOpen(event.getClose());
         event.setHigh(event.getClose());
         event.setLow(event.getClose());
@@ -60,7 +60,7 @@ public final class CandleByTradeHistoryDelegate extends CandleEventDelegateImpl<
         m.setTimeSeconds(cursor, (int) (event.getIndex() >>> 32));
         m.setSequence(cursor, (int) event.getIndex());
         m.setClose(cursor, event.getClose());
-        m.setVolume(cursor, (int) event.getVolume());
+        m.setVolumeDouble(cursor, event.getVolumeAsDouble());
         return cursor;
     }
 // END: CODE AUTOMATICALLY GENERATED

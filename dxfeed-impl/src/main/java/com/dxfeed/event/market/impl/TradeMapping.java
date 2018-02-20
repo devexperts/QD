@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -232,12 +232,48 @@ public class TradeMapping extends MarketEventMapping {
         setInt(cursor, iSize, lastSize);
     }
 
+    @Deprecated
+    public double getLastSizeDouble(RecordCursor cursor) {
+        return getInt(cursor, iSize);
+    }
+
+    @Deprecated
+    public void setLastSizeDouble(RecordCursor cursor, double lastSize) {
+        setInt(cursor, iSize, (int) lastSize);
+    }
+
+    @Deprecated
+    public int getLastSizeDecimal(RecordCursor cursor) {
+        return Decimal.composeDecimal(getInt(cursor, iSize), 0);
+    }
+
+    @Deprecated
+    public void setLastSizeDecimal(RecordCursor cursor, int lastSize) {
+        setInt(cursor, iSize, (int) Decimal.toDouble(lastSize));
+    }
+
     public int getSize(RecordCursor cursor) {
         return getInt(cursor, iSize);
     }
 
     public void setSize(RecordCursor cursor, int size) {
         setInt(cursor, iSize, size);
+    }
+
+    public double getSizeDouble(RecordCursor cursor) {
+        return getInt(cursor, iSize);
+    }
+
+    public void setSizeDouble(RecordCursor cursor, double size) {
+        setInt(cursor, iSize, (int) size);
+    }
+
+    public int getSizeDecimal(RecordCursor cursor) {
+        return Decimal.composeDecimal(getInt(cursor, iSize), 0);
+    }
+
+    public void setSizeDecimal(RecordCursor cursor, int size) {
+        setInt(cursor, iSize, (int) Decimal.toDouble(size));
     }
 
     @Deprecated

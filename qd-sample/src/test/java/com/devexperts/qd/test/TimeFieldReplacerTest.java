@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -74,6 +74,9 @@ public class TimeFieldReplacerTest {
     private <T extends EventType<?>> void testEvent(Class<T> clazz, T initialEvent, Consumer<T> checker,
         String recordFilterSpec) throws InterruptedException
     {
+        // 0. Start TestTimeProvider if needed (should be done as first action)
+        if (strategyType == StrategyType.CURRENT)
+            TestTimeProvider.start(CURRENT_TIME_MILLIS);
         // 1. Create endpoint with PUBLISHER role and connect to tape file
         DXEndpoint endpoint = DXEndpoint.newBuilder()
             .withRole(DXEndpoint.Role.PUBLISHER)
@@ -94,15 +97,8 @@ public class TimeFieldReplacerTest {
         List<T> events = new ArrayList<>();
         sub.addEventListener(events::addAll);
         sub.addSymbols(initialEvent.getEventSymbol());
-        String fieldReplacerConfig;
-        if (replace) {
-            if (strategyType == StrategyType.CURRENT)
-                TestTimeProvider.start(CURRENT_TIME_MILLIS);
-            fieldReplacerConfig = "[fieldReplacer=time:" + recordFilterSpec + ":"
-                + strategyType.createConfiguration(TimePeriod.valueOf(STRATEGY_TIME_MILLIS).toString()) + "]";
-        } else {
-            fieldReplacerConfig = "";
-        }
+        String fieldReplacerConfig = replace ? "[fieldReplacer=time:" + recordFilterSpec + ":"
+            + strategyType.createConfiguration(TimePeriod.valueOf(STRATEGY_TIME_MILLIS).toString()) + "]" : "";
         endpoint.connect("file:" + FILE_WRITE_TO + fieldReplacerConfig).awaitNotConnected();
         endpoint.closeAndAwaitTermination();
         // 4. Check that events are changed as required

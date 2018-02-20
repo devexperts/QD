@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -31,7 +31,9 @@ import javax.xml.bind.annotation.XmlRootElement;
  * <li>{@link #getExchangeCode() exchangeCode} - exchange code of the last trade;
  * <li>{@link #getPrice() price} - price of the last trade;
  * <li>{@link #getSize() size} - size of the last trade;
+ * <li>{@link #getSizeAsDouble() sizeAsDouble} - size of the last trade as floating number with fractions;
  * <li>{@link #getDayVolume() dayVolume} - total volume traded for a day;
+ * <li>{@link #getDayVolumeAsDouble() dayVolumeAsDouble} - total volume traded for a day as floating number with fractions;
  * <li>{@link #getDayTurnover() dayTurnover} - total turnover traded for a day;
  * <li>{@link #getTickDirection() tickDirection} - tick direction of the last trade;
  * <li>{@link #isExtendedTradingHours() extendedTradingHours} - whether the last trade was in extended trading hours.

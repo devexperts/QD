@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2017 Devexperts LLC
+ * Copyright (C) 2002 - 2018 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -49,6 +49,13 @@ enum FieldType {
         .addAccess(Access.createWithAccessPattern("", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
         .setMapper(new DecimalMapper(int.class))
     ),
+    INT_AS_DOUBLE(new Builder()
+        .addField(new Field(false, SerialFieldType.COMPACT_INT))
+        .addAccess(Access.createWithAccessPattern("", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Double", "double", "Double.NaN", "getInt(cursor, %s)", "setInt(cursor, %s, (int)%s)"))
+        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "Decimal.composeDecimal(getInt(cursor, %s), 0)", "setInt(cursor, %s, (int)Decimal.toDouble(%s))"))
+        .setMapper(new DefaultMapper("Double", double.class))
+    ),
     DECIMAL_AS_DOUBLE(new Builder()
         .addField(new Field(false, SerialFieldType.DECIMAL))
         .addAccess(Access.createWithAccessPattern("", "double", "Double.NaN", "Decimal.toDouble(getInt(cursor, %s))", "setInt(cursor, %s, Decimal.compose(%s))"))
@@ -63,6 +70,14 @@ enum FieldType {
         .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
         .addImport(new ClassName(Decimal.class))
         .setMapper(new DecimalMapper(long.class))
+    ),
+    DECIMAL_AS_LONG_AS_DOUBLE(new Builder()
+        .addField(new Field(false, SerialFieldType.DECIMAL))
+        .addAccess(Access.createWithAccessPattern("", "long", "0", "(long)Decimal.toDouble(getInt(cursor, %s))", "setInt(cursor, %s, Decimal.composeDecimal(%s, 0))"))
+        .addAccess(Access.createWithAccessPattern("Double", "double", "Double.NaN", "Decimal.toDouble(getInt(cursor, %s))", "setInt(cursor, %s, Decimal.compose(%s))"))
+        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
+        .addImport(new ClassName(Decimal.class))
+        .setMapper(new DefaultMapper("Double", double.class))
     ),
     DECIMAL_OR_INT_AS_LONG(new Builder()
         .addField(new Field(false, SerialFieldType.DECIMAL))
