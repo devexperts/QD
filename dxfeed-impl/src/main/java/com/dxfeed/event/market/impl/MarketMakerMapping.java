@@ -35,11 +35,11 @@ public class MarketMakerMapping extends MarketEventMapping {
         iMarketMaker = MappingUtil.findIntField(record, "MMID", true);
         iBidTime = MappingUtil.findIntField(record, "MMBid.Time", false);
         iBidPrice = MappingUtil.findIntField(record, "MMBid.Price", true);
-        iBidSize = MappingUtil.findIntField(record, "MMBid.Size", true);
+        iBidSize = findIntField("MMBid.Size", true);
         iBidCount = MappingUtil.findIntField(record, "MMBid.Count", false);
         iAskTime = MappingUtil.findIntField(record, "MMAsk.Time", false);
         iAskPrice = MappingUtil.findIntField(record, "MMAsk.Price", true);
-        iAskSize = MappingUtil.findIntField(record, "MMAsk.Size", true);
+        iAskSize = findIntField("MMAsk.Size", true);
         iAskCount = MappingUtil.findIntField(record, "MMAsk.Count", false);
         putNonDefaultPropertyName("MMExchange", "ExchangeCode");
         putNonDefaultPropertyName("MMID", "MarketMaker");
@@ -197,56 +197,56 @@ public class MarketMakerMapping extends MarketEventMapping {
 
     @Deprecated
     public int getMMBidSize(RecordCursor cursor) {
-        return getInt(cursor, iBidSize);
+        return getAsInt(cursor, iBidSize);
     }
 
     @Deprecated
     public void setMMBidSize(RecordCursor cursor, int _MMBidSize) {
-        setInt(cursor, iBidSize, _MMBidSize);
+        setAsInt(cursor, iBidSize, _MMBidSize);
     }
 
     @Deprecated
     public double getMMBidSizeDouble(RecordCursor cursor) {
-        return getInt(cursor, iBidSize);
+        return getAsDouble(cursor, iBidSize);
     }
 
     @Deprecated
     public void setMMBidSizeDouble(RecordCursor cursor, double _MMBidSize) {
-        setInt(cursor, iBidSize, (int) _MMBidSize);
+        setAsDouble(cursor, iBidSize, _MMBidSize);
     }
 
     @Deprecated
     public int getMMBidSizeDecimal(RecordCursor cursor) {
-        return Decimal.composeDecimal(getInt(cursor, iBidSize), 0);
+        return getAsDecimal(cursor, iBidSize);
     }
 
     @Deprecated
     public void setMMBidSizeDecimal(RecordCursor cursor, int _MMBidSize) {
-        setInt(cursor, iBidSize, (int) Decimal.toDouble(_MMBidSize));
+        setAsDecimal(cursor, iBidSize, _MMBidSize);
     }
 
     public int getBidSize(RecordCursor cursor) {
-        return getInt(cursor, iBidSize);
+        return getAsInt(cursor, iBidSize);
     }
 
     public void setBidSize(RecordCursor cursor, int bidSize) {
-        setInt(cursor, iBidSize, bidSize);
+        setAsInt(cursor, iBidSize, bidSize);
     }
 
     public double getBidSizeDouble(RecordCursor cursor) {
-        return getInt(cursor, iBidSize);
+        return getAsDouble(cursor, iBidSize);
     }
 
     public void setBidSizeDouble(RecordCursor cursor, double bidSize) {
-        setInt(cursor, iBidSize, (int) bidSize);
+        setAsDouble(cursor, iBidSize, bidSize);
     }
 
     public int getBidSizeDecimal(RecordCursor cursor) {
-        return Decimal.composeDecimal(getInt(cursor, iBidSize), 0);
+        return getAsDecimal(cursor, iBidSize);
     }
 
     public void setBidSizeDecimal(RecordCursor cursor, int bidSize) {
-        setInt(cursor, iBidSize, (int) Decimal.toDouble(bidSize));
+        setAsDecimal(cursor, iBidSize, bidSize);
     }
 
     @Deprecated
@@ -365,56 +365,56 @@ public class MarketMakerMapping extends MarketEventMapping {
 
     @Deprecated
     public int getMMAskSize(RecordCursor cursor) {
-        return getInt(cursor, iAskSize);
+        return getAsInt(cursor, iAskSize);
     }
 
     @Deprecated
     public void setMMAskSize(RecordCursor cursor, int _MMAskSize) {
-        setInt(cursor, iAskSize, _MMAskSize);
+        setAsInt(cursor, iAskSize, _MMAskSize);
     }
 
     @Deprecated
     public double getMMAskSizeDouble(RecordCursor cursor) {
-        return getInt(cursor, iAskSize);
+        return getAsDouble(cursor, iAskSize);
     }
 
     @Deprecated
     public void setMMAskSizeDouble(RecordCursor cursor, double _MMAskSize) {
-        setInt(cursor, iAskSize, (int) _MMAskSize);
+        setAsDouble(cursor, iAskSize, _MMAskSize);
     }
 
     @Deprecated
     public int getMMAskSizeDecimal(RecordCursor cursor) {
-        return Decimal.composeDecimal(getInt(cursor, iAskSize), 0);
+        return getAsDecimal(cursor, iAskSize);
     }
 
     @Deprecated
     public void setMMAskSizeDecimal(RecordCursor cursor, int _MMAskSize) {
-        setInt(cursor, iAskSize, (int) Decimal.toDouble(_MMAskSize));
+        setAsDecimal(cursor, iAskSize, _MMAskSize);
     }
 
     public int getAskSize(RecordCursor cursor) {
-        return getInt(cursor, iAskSize);
+        return getAsInt(cursor, iAskSize);
     }
 
     public void setAskSize(RecordCursor cursor, int askSize) {
-        setInt(cursor, iAskSize, askSize);
+        setAsInt(cursor, iAskSize, askSize);
     }
 
     public double getAskSizeDouble(RecordCursor cursor) {
-        return getInt(cursor, iAskSize);
+        return getAsDouble(cursor, iAskSize);
     }
 
     public void setAskSizeDouble(RecordCursor cursor, double askSize) {
-        setInt(cursor, iAskSize, (int) askSize);
+        setAsDouble(cursor, iAskSize, askSize);
     }
 
     public int getAskSizeDecimal(RecordCursor cursor) {
-        return Decimal.composeDecimal(getInt(cursor, iAskSize), 0);
+        return getAsDecimal(cursor, iAskSize);
     }
 
     public void setAskSizeDecimal(RecordCursor cursor, int askSize) {
-        setInt(cursor, iAskSize, (int) Decimal.toDouble(askSize));
+        setAsDecimal(cursor, iAskSize, askSize);
     }
 
     @Deprecated

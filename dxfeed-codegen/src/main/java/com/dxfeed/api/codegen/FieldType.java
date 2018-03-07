@@ -16,6 +16,7 @@ import java.util.*;
 import com.devexperts.io.Marshalled;
 import com.devexperts.qd.SerialFieldType;
 import com.devexperts.qd.util.*;
+import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimeUtil;
 
 enum FieldType {
@@ -49,11 +50,11 @@ enum FieldType {
         .addAccess(Access.createWithAccessPattern("", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
         .setMapper(new DecimalMapper(int.class))
     ),
-    INT_AS_DOUBLE(new Builder()
-        .addField(new Field(false, SerialFieldType.COMPACT_INT))
-        .addAccess(Access.createWithAccessPattern("", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
-        .addAccess(Access.createWithAccessPattern("Double", "double", "Double.NaN", "getInt(cursor, %s)", "setInt(cursor, %s, (int)%s)"))
-        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "Decimal.composeDecimal(getInt(cursor, %s), 0)", "setInt(cursor, %s, (int)Decimal.toDouble(%s))"))
+    INT_AS_DOUBLE(new Builder() // TODO this field type is more appropriate to name SIZE as it is tied to size type configuration
+        .addField(new Field(false, "dxscheme.size"))
+        .addAccess(Access.createWithAccessPattern("", "int", "0", "getAsInt(cursor, %s)", "setAsInt(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Double", "double", "Double.NaN", "getAsDouble(cursor, %s)", "setAsDouble(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getAsDecimal(cursor, %s)", "setAsDecimal(cursor, %s, %s)"))
         .setMapper(new DefaultMapper("Double", double.class))
     ),
     DECIMAL_AS_DOUBLE(new Builder()
@@ -270,16 +271,22 @@ enum FieldType {
         final boolean required;
         final boolean isObject;
         final SerialFieldType serialType;
+        final String typeSelector;
         final String suffix;
 
         Field(boolean isObject, SerialFieldType serialType) {
-            this(true, "", isObject, serialType);
+            this(true, isObject, serialType, null, "");
         }
 
-        Field(boolean required, String suffix, boolean isObject, SerialFieldType serialType) {
+        Field(boolean isObject, String typeSelector) {
+            this(true, isObject, null, typeSelector, "");
+        }
+
+        Field(boolean required, boolean isObject, SerialFieldType serialType, String typeSelector, String suffix) {
             this.required = required;
             this.isObject = isObject;
             this.serialType = serialType;
+            this.typeSelector = typeSelector;
             this.suffix = suffix;
         }
 

@@ -33,7 +33,7 @@ public class TradeHistoryMapping extends CandleEventMapping {
         iSequence = MappingUtil.findIntField(record, "Sequence", true);
         iExchangeCode = MappingUtil.findIntField(record, "Exchange", false);
         iClose = MappingUtil.findIntField(record, "Price", true);
-        iVolume = MappingUtil.findIntField(record, "Size", true);
+        iVolume = findIntField("Size", true);
         iBidPrice = MappingUtil.findIntField(record, "Bid", false);
         iAskPrice = MappingUtil.findIntField(record, "Ask", false);
         putNonDefaultPropertyName("Exchange", "ExchangeCode");
@@ -131,56 +131,56 @@ public class TradeHistoryMapping extends CandleEventMapping {
 
     @Deprecated
     public int getSize(RecordCursor cursor) {
-        return getInt(cursor, iVolume);
+        return getAsInt(cursor, iVolume);
     }
 
     @Deprecated
     public void setSize(RecordCursor cursor, int size) {
-        setInt(cursor, iVolume, size);
+        setAsInt(cursor, iVolume, size);
     }
 
     @Deprecated
     public double getSizeDouble(RecordCursor cursor) {
-        return getInt(cursor, iVolume);
+        return getAsDouble(cursor, iVolume);
     }
 
     @Deprecated
     public void setSizeDouble(RecordCursor cursor, double size) {
-        setInt(cursor, iVolume, (int) size);
+        setAsDouble(cursor, iVolume, size);
     }
 
     @Deprecated
     public int getSizeDecimal(RecordCursor cursor) {
-        return Decimal.composeDecimal(getInt(cursor, iVolume), 0);
+        return getAsDecimal(cursor, iVolume);
     }
 
     @Deprecated
     public void setSizeDecimal(RecordCursor cursor, int size) {
-        setInt(cursor, iVolume, (int) Decimal.toDouble(size));
+        setAsDecimal(cursor, iVolume, size);
     }
 
     public int getVolume(RecordCursor cursor) {
-        return getInt(cursor, iVolume);
+        return getAsInt(cursor, iVolume);
     }
 
     public void setVolume(RecordCursor cursor, int volume) {
-        setInt(cursor, iVolume, volume);
+        setAsInt(cursor, iVolume, volume);
     }
 
     public double getVolumeDouble(RecordCursor cursor) {
-        return getInt(cursor, iVolume);
+        return getAsDouble(cursor, iVolume);
     }
 
     public void setVolumeDouble(RecordCursor cursor, double volume) {
-        setInt(cursor, iVolume, (int) volume);
+        setAsDouble(cursor, iVolume, volume);
     }
 
     public int getVolumeDecimal(RecordCursor cursor) {
-        return Decimal.composeDecimal(getInt(cursor, iVolume), 0);
+        return getAsDecimal(cursor, iVolume);
     }
 
     public void setVolumeDecimal(RecordCursor cursor, int volume) {
-        setInt(cursor, iVolume, (int) Decimal.toDouble(volume));
+        setAsDecimal(cursor, iVolume, volume);
     }
 
     @Deprecated

@@ -395,7 +395,7 @@ public abstract class DXEndpoint {
          * {@code STREAM_FEED} endpoint is similar to {@link #FEED} and also connects to the remote data feed provider,
          * but is designed for bulk parsing of data from files. {@link DXEndpoint#getFeed()} method
          * returns feed object that subscribes to the data from the opened files and receives events from them.
-         * Events from the files are not conflated and are processed as fast as possible.
+         * Events from the files are not conflated, are not skipped, and are processed as fast as possible.
          * Note, that in this role, {@link DXFeed#getLastEvent} method does not work.
          */
         STREAM_FEED,
@@ -411,6 +411,16 @@ public abstract class DXEndpoint {
          * <a href="#defaultPropertiesSection">default properties section</a>.
          */
         PUBLISHER,
+
+        /**
+         * {@code STREAM_PUBLISHER} endpoint is similar to {@link #PUBLISHER} and also connects to the remote publisher hub,
+         * but is designed for bulk publishing of data. {@link DXEndpoint#getPublisher()} method returns
+         * a publisher object that publishes events to all connected feeds.
+         * Published events are not conflated, are not skipped, and are processed as fast as possible.
+         * Note, that in this role, {@link DXFeed#getLastEvent} method does not work and
+         * time-series subscription is not supported.
+         */
+        STREAM_PUBLISHER,
 
         /**
          * {@code LOCAL_HUB} endpoint is a local hub without ability to establish network connections.

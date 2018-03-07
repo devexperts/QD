@@ -24,6 +24,7 @@ import com.devexperts.io.URLInputStream;
 import com.devexperts.qd.*;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.stats.QDStats;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
 import com.devexperts.rmi.impl.RMISupportingDXEndpoint;
@@ -70,6 +71,21 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
             return new DistributorAdapter.Factory(qdEndpoint, null);
         case PUBLISHER:
             return new AgentAdapter.Factory(qdEndpoint, null);
+        case STREAM_PUBLISHER:
+            return new AgentAdapter.Factory(qdEndpoint, null) {
+                @Override
+                public MessageAdapter createAdapter(QDStats stats) {
+                    // TODO here we lost capability to configure channels via connector spec, if it ever worked here
+                    return new AgentAdapter(endpoint, ticker, stream, history, getFilter(), stats) {
+                        @Override
+                        protected QDAgent createAgent(QDCollector collector, SubscriptionFilter filter, String keyProperties) {
+                            QDAgent agent = super.createAgent(collector, filter, keyProperties);
+                            agent.setBufferOverflowStrategy(QDAgent.BufferOverflowStrategy.BLOCK);
+                            return agent;
+                        }
+                    };
+                }
+            };
         default:
             throw new UnsupportedOperationException("Connection is not supported in " + role + " role");
         }
@@ -155,7 +171,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
     }
 
     public static EnumSet<QDContract> getRoleContracts(Role role) {
-        return role == Role.STREAM_FEED ?
+        return role == Role.STREAM_FEED || role == Role.STREAM_PUBLISHER ?
             EnumSet.of(QDContract.STREAM) :
             EnumSet.of(QDContract.TICKER, QDContract.STREAM, QDContract.HISTORY);
     }
@@ -469,7 +485,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
     }
 
     private void createDelegates(EventDelegateFactory factory, DataRecord record) {
-        Collection<EventDelegate<?>> delegates = role == Role.STREAM_FEED ?
+        Collection<EventDelegate<?>> delegates = role == Role.STREAM_FEED || role == Role.STREAM_PUBLISHER ?
             factory.createStreamOnlyDelegates(record) : factory.createDelegates(record);
         if (delegates == null)
             return;

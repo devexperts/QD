@@ -1,3 +1,9 @@
+* [QD-1063] BUG FIX: TapeConnector stops working prematurely
+  - DXEndpoint.Role.STREAM_PUBLISHER role is created to support tape writing at maximum speed
+  - ConvertTapeFile sample is provided to demonstrate proper use of dxFeed API for tape conversion
+* [QD-1064] dxFeed API: Implement support of fractions to size and volume fields in all events
+  - Run JVM with "-Ddxscheme.size=decimal" to make size fields fractional (volume fields are always fractional)
+
 QDS 3.258:
 
 * [QD-1060] Prepare QD 3.258 release

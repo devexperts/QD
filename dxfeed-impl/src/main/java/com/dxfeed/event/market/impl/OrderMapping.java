@@ -35,7 +35,7 @@ public class OrderMapping extends OrderBaseMapping {
         iTimeNanoPart = MappingUtil.findIntField(record, "TimeNanoPart", false);
         iSequence = MappingUtil.findIntField(record, "Sequence", true);
         iPrice = MappingUtil.findIntField(record, "Price", true);
-        iSize = MappingUtil.findIntField(record, "Size", true);
+        iSize = findIntField("Size", true);
         iCount = MappingUtil.findIntField(record, "Count", false);
         iFlags = MappingUtil.findIntField(record, "Flags", true);
         iMarketMaker = MappingUtil.findIntField(record, "MMID", false);
@@ -103,27 +103,27 @@ public class OrderMapping extends OrderBaseMapping {
     }
 
     public int getSize(RecordCursor cursor) {
-        return getInt(cursor, iSize);
+        return getAsInt(cursor, iSize);
     }
 
     public void setSize(RecordCursor cursor, int size) {
-        setInt(cursor, iSize, size);
+        setAsInt(cursor, iSize, size);
     }
 
     public double getSizeDouble(RecordCursor cursor) {
-        return getInt(cursor, iSize);
+        return getAsDouble(cursor, iSize);
     }
 
     public void setSizeDouble(RecordCursor cursor, double size) {
-        setInt(cursor, iSize, (int) size);
+        setAsDouble(cursor, iSize, size);
     }
 
     public int getSizeDecimal(RecordCursor cursor) {
-        return Decimal.composeDecimal(getInt(cursor, iSize), 0);
+        return getAsDecimal(cursor, iSize);
     }
 
     public void setSizeDecimal(RecordCursor cursor, int size) {
-        setInt(cursor, iSize, (int) Decimal.toDouble(size));
+        setAsDecimal(cursor, iSize, size);
     }
 
     public int getCount(RecordCursor cursor) {

@@ -37,11 +37,11 @@ public class QuoteMapping extends MarketEventMapping {
         iBidTime = MappingUtil.findIntField(record, "Bid.Time", false);
         iBidExchangeCode = MappingUtil.findIntField(record, "Bid.Exchange", false);
         iBidPrice = MappingUtil.findIntField(record, "Bid.Price", true);
-        iBidSize = MappingUtil.findIntField(record, "Bid.Size", true);
+        iBidSize = findIntField("Bid.Size", true);
         iAskTime = MappingUtil.findIntField(record, "Ask.Time", false);
         iAskExchangeCode = MappingUtil.findIntField(record, "Ask.Exchange", false);
         iAskPrice = MappingUtil.findIntField(record, "Ask.Price", true);
-        iAskSize = MappingUtil.findIntField(record, "Ask.Size", true);
+        iAskSize = findIntField("Ask.Size", true);
         putNonDefaultPropertyName("Bid.Exchange", "BidExchangeCode");
         putNonDefaultPropertyName("Ask.Exchange", "AskExchangeCode");
     }
@@ -137,27 +137,27 @@ public class QuoteMapping extends MarketEventMapping {
     }
 
     public int getBidSize(RecordCursor cursor) {
-        return getInt(cursor, iBidSize);
+        return getAsInt(cursor, iBidSize);
     }
 
     public void setBidSize(RecordCursor cursor, int bidSize) {
-        setInt(cursor, iBidSize, bidSize);
+        setAsInt(cursor, iBidSize, bidSize);
     }
 
     public double getBidSizeDouble(RecordCursor cursor) {
-        return getInt(cursor, iBidSize);
+        return getAsDouble(cursor, iBidSize);
     }
 
     public void setBidSizeDouble(RecordCursor cursor, double bidSize) {
-        setInt(cursor, iBidSize, (int) bidSize);
+        setAsDouble(cursor, iBidSize, bidSize);
     }
 
     public int getBidSizeDecimal(RecordCursor cursor) {
-        return Decimal.composeDecimal(getInt(cursor, iBidSize), 0);
+        return getAsDecimal(cursor, iBidSize);
     }
 
     public void setBidSizeDecimal(RecordCursor cursor, int bidSize) {
-        setInt(cursor, iBidSize, (int) Decimal.toDouble(bidSize));
+        setAsDecimal(cursor, iBidSize, bidSize);
     }
 
     public long getAskTimeMillis(RecordCursor cursor) {
@@ -227,27 +227,27 @@ public class QuoteMapping extends MarketEventMapping {
     }
 
     public int getAskSize(RecordCursor cursor) {
-        return getInt(cursor, iAskSize);
+        return getAsInt(cursor, iAskSize);
     }
 
     public void setAskSize(RecordCursor cursor, int askSize) {
-        setInt(cursor, iAskSize, askSize);
+        setAsInt(cursor, iAskSize, askSize);
     }
 
     public double getAskSizeDouble(RecordCursor cursor) {
-        return getInt(cursor, iAskSize);
+        return getAsDouble(cursor, iAskSize);
     }
 
     public void setAskSizeDouble(RecordCursor cursor, double askSize) {
-        setInt(cursor, iAskSize, (int) askSize);
+        setAsDouble(cursor, iAskSize, askSize);
     }
 
     public int getAskSizeDecimal(RecordCursor cursor) {
-        return Decimal.composeDecimal(getInt(cursor, iAskSize), 0);
+        return getAsDecimal(cursor, iAskSize);
     }
 
     public void setAskSizeDecimal(RecordCursor cursor, int askSize) {
-        setInt(cursor, iAskSize, (int) Decimal.toDouble(askSize));
+        setAsDecimal(cursor, iAskSize, askSize);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }

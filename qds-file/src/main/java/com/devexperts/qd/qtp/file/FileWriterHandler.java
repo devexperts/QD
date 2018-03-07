@@ -34,7 +34,7 @@ public class FileWriterHandler extends AbstractConnectionHandler<TapeConnector> 
     }
 
     public void init() {
-        adapter.setMessageListener(provider -> state.messagesAvailable());
+        adapter.setMessageListener(state);
         adapter.start();
         // note: open by itself cannot fail. The actual files are open when we start writing there.
         writer.open();
@@ -59,9 +59,12 @@ public class FileWriterHandler extends AbstractConnectionHandler<TapeConnector> 
             state.awaitAvailable();
             if (isClosed())
                 return; // bail out if closed
-            state.messagesAreAvailable = false;
-            adapter.retrieveMessages(writer); // retrieve all messages
-            state.processed();
+            boolean hasMore = true;
+            try {
+                hasMore = adapter.retrieveMessages(writer);
+            } finally {
+                state.processed(hasMore);
+            }
         }
     }
 
@@ -77,6 +80,7 @@ public class FileWriterHandler extends AbstractConnectionHandler<TapeConnector> 
         } catch (Throwable t) {
             log.error("Failed to close adapter", t);
         }
+        state.close();
         if (reason == null || reason instanceof RuntimeException || reason instanceof Error) {
             // QTP worker thread had already logged any unchecked exceptions
             log.info("Writing stopped");
@@ -85,14 +89,16 @@ public class FileWriterHandler extends AbstractConnectionHandler<TapeConnector> 
         }
     }
 
-    private static class State {
-        volatile boolean messagesAreAvailable = true;
-        volatile boolean processed = false;
+    private static class State implements MessageListener {
+        private volatile boolean messagesAreAvailable = true;
+        private volatile boolean processed = false;
 
-        void messagesAvailable() {
-            if (messagesAreAvailable)
-                return;
-            notifyAvailableSync();
+        State() {}
+
+        // messagesAvailable() could be invoked by several concurrent threads at a time.
+        public void messagesAvailable(MessageProvider provider) {
+            if (!messagesAreAvailable)
+                notifyAvailableSync();
         }
 
         private synchronized void notifyAvailableSync() {
@@ -103,21 +109,34 @@ public class FileWriterHandler extends AbstractConnectionHandler<TapeConnector> 
             }
         }
 
-        synchronized void processed() {
+        synchronized void close() {
+            // Do whatever to wakeup all waiting threads.
+            messagesAreAvailable = true;
+            processed = true;
+            notifyAll();
+        }
+
+        // awaitProcessed() could be invoked by several concurrent threads at a time.
+        synchronized void awaitProcessed() throws InterruptedException {
+            while (!processed)
+                wait();
+        }
+
+        // awaitAvailable() and processed() are supposed to be invoked in pairs by a SINGLE working thread.
+        synchronized void awaitAvailable() throws InterruptedException {
+            while (!messagesAreAvailable)
+                wait();
+            messagesAreAvailable = false;
+        }
+
+        // awaitAvailable() and processed() are supposed to be invoked in pairs by a SINGLE working thread.
+        synchronized void processed(boolean hasMore) {
+            if (hasMore)
+                messagesAreAvailable = true;
             if (!messagesAreAvailable) {
                 processed = true;
                 notifyAll();
             }
-        }
-
-        synchronized void awaitAvailable() throws InterruptedException {
-            while (!messagesAreAvailable)
-                wait();
-        }
-
-        synchronized void awaitProcessed() throws InterruptedException {
-            while (!processed)
-                wait();
         }
     }
 }

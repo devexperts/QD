@@ -38,7 +38,7 @@ public class TimeAndSaleMapping extends MarketEventMapping {
         iTimeNanoPart = MappingUtil.findIntField(record, "TimeNanoPart", false);
         iExchangeCode = MappingUtil.findIntField(record, "Exchange", true);
         iPrice = MappingUtil.findIntField(record, "Price", true);
-        iSize = MappingUtil.findIntField(record, "Size", true);
+        iSize = findIntField("Size", true);
         iBidPrice = MappingUtil.findIntField(record, "Bid.Price", true);
         iAskPrice = MappingUtil.findIntField(record, "Ask.Price", true);
         iSaleConditions = MappingUtil.findIntField(record, "ExchangeSaleConditions", true);
@@ -120,27 +120,27 @@ public class TimeAndSaleMapping extends MarketEventMapping {
     }
 
     public int getSize(RecordCursor cursor) {
-        return getInt(cursor, iSize);
+        return getAsInt(cursor, iSize);
     }
 
     public void setSize(RecordCursor cursor, int size) {
-        setInt(cursor, iSize, size);
+        setAsInt(cursor, iSize, size);
     }
 
     public double getSizeDouble(RecordCursor cursor) {
-        return getInt(cursor, iSize);
+        return getAsDouble(cursor, iSize);
     }
 
     public void setSizeDouble(RecordCursor cursor, double size) {
-        setInt(cursor, iSize, (int) size);
+        setAsDouble(cursor, iSize, size);
     }
 
     public int getSizeDecimal(RecordCursor cursor) {
-        return Decimal.composeDecimal(getInt(cursor, iSize), 0);
+        return getAsDecimal(cursor, iSize);
     }
 
     public void setSizeDecimal(RecordCursor cursor, int size) {
-        setInt(cursor, iSize, (int) Decimal.toDouble(size));
+        setAsDecimal(cursor, iSize, size);
     }
 
     public double getBidPrice(RecordCursor cursor) {

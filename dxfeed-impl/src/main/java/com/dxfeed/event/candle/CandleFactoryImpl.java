@@ -32,7 +32,7 @@ public final class CandleFactoryImpl extends EventDelegateFactory implements Rec
         builder.addRequiredField("TradeHistory", "Sequence", SerialFieldType.SEQUENCE, SchemeFieldTime.SECOND_TIME_INT_FIELD);
         builder.addOptionalField("TradeHistory", "Exchange", SerialFieldType.UTF_CHAR, "Candle", "ExchangeCode", true);
         builder.addRequiredField("TradeHistory", "Price", SerialFieldType.DECIMAL);
-        builder.addRequiredField("TradeHistory", "Size", SerialFieldType.COMPACT_INT);
+        builder.addRequiredField("TradeHistory", "Size", SystemProperties.getProperty("dxscheme.size", "").equalsIgnoreCase("decimal") ? SerialFieldType.DECIMAL : SerialFieldType.COMPACT_INT);
         builder.addOptionalField("TradeHistory", "Bid", SerialFieldType.DECIMAL, "Candle", "BidPrice", true);
         builder.addOptionalField("TradeHistory", "Ask", SerialFieldType.DECIMAL, "Candle", "AskPrice", true);
 

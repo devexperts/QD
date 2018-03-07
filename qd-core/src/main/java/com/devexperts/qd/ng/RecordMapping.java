@@ -14,9 +14,9 @@ package com.devexperts.qd.ng;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.devexperts.qd.DataField;
-import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.*;
 import com.devexperts.qd.kit.AbstractDataField;
+import com.devexperts.qd.util.Decimal;
 
 /**
  * Base class for record mappings.
@@ -85,5 +85,89 @@ public abstract class RecordMapping {
 
     protected final void setObj(RecordCursor cursor, int obj_field_index, Object value) {
         cursor.setObjMappedImpl(record, obj_field_index, value);
+    }
+
+    protected final int findIntField(String localName, boolean required) {
+        DataField field = record.findFieldByName(localName);
+        if (field instanceof DataIntField)
+            return (field.getIndex() << 8) | (field.getSerialType().getId() & 0xff);
+        if (required)
+            throw new IllegalArgumentException("Required int field " + localName + " is missing in record " + record);
+        return Integer.MIN_VALUE;
+    }
+
+    protected final int getAsInt(RecordCursor cursor, int fieldId) {
+        int raw = cursor.getIntMappedImpl(record, fieldId >> 8);
+        switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
+        case 0:
+            return raw;
+        case SerialFieldType.Bits.FLAG_DECIMAL:
+            return (int) Decimal.toDouble(raw);
+        default:
+            throw new IllegalArgumentException();
+        }
+    }
+
+    protected final double getAsDouble(RecordCursor cursor, int fieldId) {
+        int raw = cursor.getIntMappedImpl(record, fieldId >> 8);
+        switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
+        case 0:
+            return raw;
+        case SerialFieldType.Bits.FLAG_DECIMAL:
+            return Decimal.toDouble(raw);
+        default:
+            throw new IllegalArgumentException();
+        }
+    }
+
+    protected final int getAsDecimal(RecordCursor cursor, int fieldId) {
+        int raw = cursor.getIntMappedImpl(record, fieldId >> 8);
+        switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
+        case 0:
+            return Decimal.composeDecimal(raw, 0);
+        case SerialFieldType.Bits.FLAG_DECIMAL:
+            return raw;
+        default:
+            throw new IllegalArgumentException();
+        }
+    }
+
+    protected final void setAsInt(RecordCursor cursor, int fieldId, int value) {
+        switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
+        case 0:
+            cursor.setIntMappedImpl(record, fieldId >> 8, value);
+            break;
+        case SerialFieldType.Bits.FLAG_DECIMAL:
+            cursor.setIntMappedImpl(record, fieldId >> 8, Decimal.composeDecimal(value, 0));
+            break;
+        default:
+            throw new IllegalArgumentException();
+        }
+    }
+
+    protected final void setAsDouble(RecordCursor cursor, int fieldId, double value) {
+        switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
+        case 0:
+            cursor.setIntMappedImpl(record, fieldId >> 8, (int) value);
+            break;
+        case SerialFieldType.Bits.FLAG_DECIMAL:
+            cursor.setIntMappedImpl(record, fieldId >> 8, Decimal.compose(value));
+            break;
+        default:
+            throw new IllegalArgumentException();
+        }
+    }
+
+    protected final void setAsDecimal(RecordCursor cursor, int fieldId, int value) {
+        switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
+        case 0:
+            cursor.setIntMappedImpl(record, fieldId >> 8, (int) Decimal.toDouble(value));
+            break;
+        case SerialFieldType.Bits.FLAG_DECIMAL:
+            cursor.setIntMappedImpl(record, fieldId >> 8, value);
+            break;
+        default:
+            throw new IllegalArgumentException();
+        }
     }
 }

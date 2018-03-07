@@ -82,8 +82,13 @@ class MappingGen {
             if (f.isActive()) {
                 for (Map.Entry<FieldType.Field, String> e : f.fieldToFullNameMap.entrySet()) {
                     boolean required = f.required && e.getKey().required;
-                    cg.code(e.getValue() + " = MappingUtil." + (e.getKey().isObject ? "findObjField" : "findIntField")
-                        + "(record, \"" + e.getKey().getFullName(f.fieldName) + "\", " + required + ");");
+                    if (e.getKey().typeSelector != null) {
+                        cg.code(e.getValue() + " = " + (e.getKey().isObject ? "findObjField" : "findIntField")
+                            + "(\"" + e.getKey().getFullName(f.fieldName) + "\", " + required + ");");
+                    } else {
+                        cg.code(e.getValue() + " = MappingUtil." + (e.getKey().isObject ? "findObjField" : "findIntField")
+                            + "(record, \"" + e.getKey().getFullName(f.fieldName) + "\", " + required + ");");
+                    }
                 }
                 for (Map.Entry<FieldType.Variable, String> e : f.variableToFullNameMap.entrySet())
                     e.getKey().generateInitialization(cg, f.suffixToFullNameMap);

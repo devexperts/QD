@@ -36,7 +36,7 @@ public class TradeETHMapping extends MarketEventMapping {
         iTimeNanoPart = MappingUtil.findIntField(record, "Last.TimeNanoPart", false);
         iExchangeCode = MappingUtil.findIntField(record, "ETHLast.Exchange", false);
         iPrice = MappingUtil.findIntField(record, "ETHLast.Price", true);
-        iSize = MappingUtil.findIntField(record, "ETHLast.Size", true);
+        iSize = findIntField("ETHLast.Size", true);
         iFlags = MappingUtil.findIntField(record, "ETHLast.Flags", true);
         iDayVolume = MappingUtil.findIntField(record, "ETHVolume", false);
         iDayTurnover = MappingUtil.findIntField(record, "ETHDayTurnover", false);
@@ -219,56 +219,56 @@ public class TradeETHMapping extends MarketEventMapping {
 
     @Deprecated
     public int getETHLastSize(RecordCursor cursor) {
-        return getInt(cursor, iSize);
+        return getAsInt(cursor, iSize);
     }
 
     @Deprecated
     public void setETHLastSize(RecordCursor cursor, int _ETHLastSize) {
-        setInt(cursor, iSize, _ETHLastSize);
+        setAsInt(cursor, iSize, _ETHLastSize);
     }
 
     @Deprecated
     public double getETHLastSizeDouble(RecordCursor cursor) {
-        return getInt(cursor, iSize);
+        return getAsDouble(cursor, iSize);
     }
 
     @Deprecated
     public void setETHLastSizeDouble(RecordCursor cursor, double _ETHLastSize) {
-        setInt(cursor, iSize, (int) _ETHLastSize);
+        setAsDouble(cursor, iSize, _ETHLastSize);
     }
 
     @Deprecated
     public int getETHLastSizeDecimal(RecordCursor cursor) {
-        return Decimal.composeDecimal(getInt(cursor, iSize), 0);
+        return getAsDecimal(cursor, iSize);
     }
 
     @Deprecated
     public void setETHLastSizeDecimal(RecordCursor cursor, int _ETHLastSize) {
-        setInt(cursor, iSize, (int) Decimal.toDouble(_ETHLastSize));
+        setAsDecimal(cursor, iSize, _ETHLastSize);
     }
 
     public int getSize(RecordCursor cursor) {
-        return getInt(cursor, iSize);
+        return getAsInt(cursor, iSize);
     }
 
     public void setSize(RecordCursor cursor, int size) {
-        setInt(cursor, iSize, size);
+        setAsInt(cursor, iSize, size);
     }
 
     public double getSizeDouble(RecordCursor cursor) {
-        return getInt(cursor, iSize);
+        return getAsDouble(cursor, iSize);
     }
 
     public void setSizeDouble(RecordCursor cursor, double size) {
-        setInt(cursor, iSize, (int) size);
+        setAsDouble(cursor, iSize, size);
     }
 
     public int getSizeDecimal(RecordCursor cursor) {
-        return Decimal.composeDecimal(getInt(cursor, iSize), 0);
+        return getAsDecimal(cursor, iSize);
     }
 
     public void setSizeDecimal(RecordCursor cursor, int size) {
-        setInt(cursor, iSize, (int) Decimal.toDouble(size));
+        setAsDecimal(cursor, iSize, size);
     }
 
     @Deprecated
