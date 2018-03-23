@@ -167,7 +167,8 @@ public class Slicer implements PropertyChangeListener {
                 System.out.println("Invalid value for avgBookSizes: must be a list of 5 comma-separated values");
                 System.exit(-1);
             }
-            for (int i = 0; i < 5; i++) avgBookSizes[i] = Long.parseLong(bookSizes[i]);
+            for (int i = 0; i < 5; i++)
+                avgBookSizes[i] = Long.parseLong(bookSizes[i]);
         }
         scheduleDef = properties.getProperty("schedule", "");
         if (scheduleDef.length() > 0)
@@ -436,7 +437,8 @@ public class Slicer implements PropertyChangeListener {
             // last order time should not go backwards
             time = Math.max(lastOrderTime, time);
             // skip everything before this trading session
-            if (time < sessionStartTime) continue;
+            if (time < sessionStartTime)
+                continue;
 
             orderCount++;
             Slice slice = prepareSlice(order.getEventSymbol(), time);
@@ -446,10 +448,10 @@ public class Slicer implements PropertyChangeListener {
             if (useCompositeOrderOrQuote) {
                 slice.getBook().put((long) order.getOrderSide().getCode(), order);
             } else {
-                if (order.getSize() == 0)
-                    slice.getBook().remove(order.getIndex());
-                else
+                if (order.hasSize())
                     slice.getBook().put(order.getIndex(), order);
+                else
+                    slice.getBook().remove(order.getIndex());
             }
 
             slice.lastBookUpdate = time;
@@ -467,7 +469,8 @@ public class Slicer implements PropertyChangeListener {
 
             long time = sale.getTime();
             // skip everything before this trading session
-            if (time < sessionStartTime) continue;
+            if (time < sessionStartTime)
+                continue;
 
             // ignore events too far back in time
             if (time < lastSaleTime - oldThreshold) {
@@ -612,11 +615,11 @@ public class Slicer implements PropertyChangeListener {
                 if (o1.getOrderSide() == Side.BUY && o2.getOrderSide() == Side.SELL) {
                     bbo.append(o1.getPrice());
                     bbo.append(", ");
-                    bbo.append(o1.getSize());
+                    bbo.append(o1.getSizeAsDouble());
                     bbo.append(", ");
                     bbo.append(o2.getPrice());
                     bbo.append(", ");
-                    bbo.append(o2.getSize());
+                    bbo.append(o2.getSizeAsDouble());
                     bbo.append(", ");
 
                     oneSidedBook = false;
@@ -635,7 +638,7 @@ public class Slicer implements PropertyChangeListener {
                 if (o.getOrderSide() == Side.BUY) {
                     bbo.append(o.getPrice());
                     bbo.append(", ");
-                    bbo.append(o.getSize());
+                    bbo.append(o.getSizeAsDouble());
                     bbo.append(", 0, 0, ");
 
                     if (calcAvgBookPrices) {
@@ -649,7 +652,7 @@ public class Slicer implements PropertyChangeListener {
                     bbo.append("0, 0, ");
                     bbo.append(o.getPrice());
                     bbo.append(", ");
-                    bbo.append(o.getSize());
+                    bbo.append(o.getSizeAsDouble());
                     bbo.append(", ");
 
                     if (calcAvgBookPrices) {
@@ -671,14 +674,15 @@ public class Slicer implements PropertyChangeListener {
             output.append(bookAvgPrices);
 
             // calculate vwap and cumulative size by time-and-sales
-            long cumulativeSize = 0;
+            double cumulativeSize = 0;
             double VWAP = 0;
 
             for (TimeAndSale sale : slice.sales) {
-                cumulativeSize += sale.getSize();
-                VWAP += sale.getPrice() * sale.getSize();
+                cumulativeSize += sale.getSizeAsDouble();
+                VWAP += sale.getPrice() * sale.getSizeAsDouble();
             }
-            if (cumulativeSize > 0) VWAP /= cumulativeSize;
+            if (cumulativeSize > 0)
+                VWAP /= cumulativeSize;
 
             // finalize output
             output.append(VWAP);
@@ -708,12 +712,12 @@ public class Slicer implements PropertyChangeListener {
             direction = -1;
         if (side == Side.SELL)
             bboIndex++;
-        long cumulativeSize = 0;
+        double cumulativeSize = 0;
         double avgPrice = 0;
 
         for (int i = bboIndex; i >= 0 && i < sortedBook.size() && cumulativeSize < size; i += direction) {
             Order o = sortedBook.get(i);
-            long orderSize = o.getSize();
+            double orderSize = o.getSizeAsDouble();
             if (cumulativeSize + orderSize > size) {
                 orderSize = size - cumulativeSize;
                 cumulativeSize = size;
@@ -722,7 +726,8 @@ public class Slicer implements PropertyChangeListener {
             avgPrice += o.getPrice() * orderSize;
         }
 
-        if (cumulativeSize > 0) avgPrice /= cumulativeSize;
+        if (cumulativeSize > 0)
+            avgPrice /= cumulativeSize;
 
         String result = "0, ";
         if (avgPrice > 0)

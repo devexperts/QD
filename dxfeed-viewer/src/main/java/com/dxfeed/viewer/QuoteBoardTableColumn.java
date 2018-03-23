@@ -28,8 +28,7 @@ enum QuoteBoardTableColumn {
                 !Double.isNaN(quoteTableRow.askPrice)))
                 state = State.COMMON;
 
-            return textValue(
-                quoteTableRow.symbol, state, true, SwingConstants.LEFT);
+            return textValue(quoteTableRow.symbol, state, true, SwingConstants.LEFT);
         }
     },
     DESCRIPTION("Description", 150) {
@@ -48,12 +47,12 @@ enum QuoteBoardTableColumn {
     },
     LAST("Last", 30) {
         public ViewerCellValue getValue(QuoteBoardTableRow quoteTableRow, TimeZone timeZone) {
-            return doubleValue(quoteTableRow.lastPrice, quoteTableRow.lastState, quoteTableRow.lastUpdateTime);
+            return priceValue(quoteTableRow.lastPrice, quoteTableRow.lastState, quoteTableRow.lastUpdateTime);
         }
     },
     LAST_SIZE("LSize", 10) {
         public ViewerCellValue getValue(QuoteBoardTableRow quoteTableRow, TimeZone timeZone) {
-            return longValue(quoteTableRow.lastSize, quoteTableRow.lastUpdateTime);
+            return sizeValue(quoteTableRow.lastSize, quoteTableRow.lastUpdateTime);
         }
     },
     LAST_EXCHANGE("LX", 1) {
@@ -68,7 +67,7 @@ enum QuoteBoardTableColumn {
             if (Double.isNaN(netChange)) {
                 netChangeStr = ViewerCellValue.NA;
             } else {
-                netChangeStr = ViewerCellValue.formatPrice(Math.round(netChange * 1e6) / 1e6);
+                netChangeStr = ViewerCellValue.formatPrice(Math.floor(netChange * 1e10 + 0.5) / 1e10);
                 if (netChange > 0)
                     netChangeStr = "+" + netChangeStr;
             }
@@ -77,12 +76,12 @@ enum QuoteBoardTableColumn {
     },
     BID("Bid", 30) {
         public ViewerCellValue getValue(QuoteBoardTableRow quoteTableRow, TimeZone timeZone) {
-            return doubleValue(quoteTableRow.bidPrice, quoteTableRow.bidState, quoteTableRow.bidUpdateTime);
+            return priceValue(quoteTableRow.bidPrice, quoteTableRow.bidState, quoteTableRow.bidUpdateTime);
         }
     },
     BID_SIZE("BSize", 10) {
         public ViewerCellValue getValue(QuoteBoardTableRow quoteTableRow, TimeZone timeZone) {
-            return longValue(quoteTableRow.bidSize, quoteTableRow.bidUpdateTime);
+            return sizeValue(quoteTableRow.bidSize, quoteTableRow.bidUpdateTime);
         }
     },
     BID_EXCHANGE("BX", 1) {
@@ -92,12 +91,12 @@ enum QuoteBoardTableColumn {
     },
     ASK("Ask", 30) {
         public ViewerCellValue getValue(QuoteBoardTableRow quoteTableRow, TimeZone timeZone) {
-            return doubleValue(quoteTableRow.askPrice, quoteTableRow.askState, quoteTableRow.askUpdateTime);
+            return priceValue(quoteTableRow.askPrice, quoteTableRow.askState, quoteTableRow.askUpdateTime);
         }
     },
     ASK_SIZE("ASize", 10) {
         public ViewerCellValue getValue(QuoteBoardTableRow quoteTableRow, TimeZone timeZone) {
-            return longValue(quoteTableRow.askSize, quoteTableRow.askUpdateTime);
+            return sizeValue(quoteTableRow.askSize, quoteTableRow.askUpdateTime);
         }
     },
     ASK_EXCHANGE("AX", 1) {
@@ -107,27 +106,27 @@ enum QuoteBoardTableColumn {
     },
     VOLUME("Volume", 50) {
         public ViewerCellValue getValue(QuoteBoardTableRow quoteTableRow, TimeZone timeZone) {
-            return longValue(quoteTableRow.volume, quoteTableRow.volumeUpdateTime);
+            return sizeValue(quoteTableRow.volume, quoteTableRow.volumeUpdateTime);
         }
     },
     OPEN("Open", 30) {
         public ViewerCellValue getValue(QuoteBoardTableRow quoteTableRow, TimeZone timeZone) {
-            return doubleValue(quoteTableRow.openPrice, State.COMMON, quoteTableRow.openUpdateTime);
+            return priceValue(quoteTableRow.openPrice, State.COMMON, quoteTableRow.openUpdateTime);
         }
     },
     HIGH("High", 30) {
         public ViewerCellValue getValue(QuoteBoardTableRow quoteTableRow, TimeZone timeZone) {
-            return doubleValue(quoteTableRow.highPrice, State.COMMON, quoteTableRow.highUpdateTime);
+            return priceValue(quoteTableRow.highPrice, State.COMMON, quoteTableRow.highUpdateTime);
         }
     },
     LOW("Low", 30) {
         public ViewerCellValue getValue(QuoteBoardTableRow quoteTableRow, TimeZone timeZone) {
-            return doubleValue(quoteTableRow.lowPrice, State.COMMON, quoteTableRow.lowUpdateTime);
+            return priceValue(quoteTableRow.lowPrice, State.COMMON, quoteTableRow.lowUpdateTime);
         }
     },
     CLOSE("Close", 30) {
         public ViewerCellValue getValue(QuoteBoardTableRow quoteTableRow, TimeZone timeZone) {
-            return doubleValue(quoteTableRow.closePrice, State.COMMON, quoteTableRow.closeUpdateTime);
+            return priceValue(quoteTableRow.closePrice, State.COMMON, quoteTableRow.closeUpdateTime);
         }
     },
     CLOSE_DATE("Close Day", 30) {
@@ -137,7 +136,7 @@ enum QuoteBoardTableColumn {
     },
     PREV_CLOSE("Prev.Close", 30) {
         public ViewerCellValue getValue(QuoteBoardTableRow quoteTableRow, TimeZone timeZone) {
-            return doubleValue(quoteTableRow.prevClosePrice, State.COMMON, quoteTableRow.prevCloseUpdateTime);
+            return priceValue(quoteTableRow.prevClosePrice, State.COMMON, quoteTableRow.prevCloseUpdateTime);
         }
     },
     PREV_CLOSE_DAY("Prev.Close Day", 30) {
@@ -147,7 +146,7 @@ enum QuoteBoardTableColumn {
     },
     OPEN_INTEREST("Open Interest", 30) {
         public ViewerCellValue getValue(QuoteBoardTableRow quoteTableRow, TimeZone timeZone) {
-            return longValue(quoteTableRow.openInterest, quoteTableRow.openInterestTime);
+            return sizeValue(quoteTableRow.openInterest, quoteTableRow.openInterestTime);
         }
     },
     HALTED("Halted", 30) {
@@ -173,13 +172,13 @@ enum QuoteBoardTableColumn {
     LOW_LIMIT_PRICE("Low Limit Price", 30) {
         @Override
         public ViewerCellValue getValue(QuoteBoardTableRow quoteTableRow, TimeZone timeZone) {
-            return doubleValue(quoteTableRow.lowLimitPrice, State.COMMON, 0);
+            return priceValue(quoteTableRow.lowLimitPrice, State.COMMON, 0);
         }
     },
     HIGH_LIMIT_PRICE("High Limit Price", 30) {
         @Override
         public ViewerCellValue getValue(QuoteBoardTableRow quoteTableRow, TimeZone timeZone) {
-            return doubleValue(quoteTableRow.highLimitPrice, State.COMMON, 0);
+            return priceValue(quoteTableRow.highLimitPrice, State.COMMON, 0);
         }
     }
 

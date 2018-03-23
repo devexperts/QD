@@ -36,12 +36,12 @@ class QuoteBoardCellSupport {
         }
     }
 
-    static ViewerCellValue doubleValue(double value, State state, long updateTime) {
+    static ViewerCellValue priceValue(double value, State state, long updateTime) {
         return textValue(ViewerCellValue.formatPrice(value), Double.isNaN(value) ? State.NOT_AVAILABLE : state, updateTime, SwingConstants.RIGHT);
     }
 
-    static ViewerCellValue longValue(long value, long updateTime) {
-        return textValue(ViewerCellValue.formatSize(value), value == Long.MIN_VALUE ? State.NOT_AVAILABLE : State.COMMON, updateTime, SwingConstants.RIGHT);
+    static ViewerCellValue sizeValue(double value, long updateTime) {
+        return textValue(ViewerCellValue.formatSize(value), Double.isNaN(value) ? State.NOT_AVAILABLE : State.COMMON, updateTime, SwingConstants.RIGHT);
     }
 
     static ViewerCellValue exchangeValue(char value, long updateTime) {
@@ -49,18 +49,7 @@ class QuoteBoardCellSupport {
     }
 
     static ViewerCellValue timeValue(long value, long updateTime, TimeZone timeZone) {
-        String description;
-        State state;
-
-        if (value == 0 || value == Long.MAX_VALUE) {
-            description = ViewerCellValue.NA;
-            state = State.NOT_AVAILABLE;
-        } else {
-            description = ViewerCellValue.formatTime(value, timeZone);
-            state = State.COMMON;
-        }
-
-        return textValue(description, state, updateTime, SwingConstants.CENTER);
+        return textValue(ViewerCellValue.formatTime(value, timeZone), value == 0 || value == Long.MAX_VALUE ? State.NOT_AVAILABLE : State.COMMON, updateTime, SwingConstants.CENTER);
     }
 
     static ViewerCellValue dayIdValue(int value, long updateTime) {
@@ -87,6 +76,6 @@ class QuoteBoardCellSupport {
     }
 
     static ViewerCellValue textValue(String text, State state, boolean isUpdated, int alignment) {
-        return new ViewerCellValue(text, (isUpdated ? state.updatedColor : state.color), null, alignment, null);
+        return new ViewerCellValue(text, isUpdated ? state.updatedColor : state.color, null, alignment);
     }
 }

@@ -89,8 +89,8 @@ public class DXFeedCandleChart {
     double maxY;
 
     private void initCandleRange() {
-        minY = Double.MAX_VALUE;
-        maxY = Double.MIN_VALUE;
+        minY = Double.POSITIVE_INFINITY;
+        maxY = Double.NEGATIVE_INFINITY;
         for (Candle candle : candles.getEventsList()) {
             minY = Math.min(minY, candle.getLow());
             maxY = Math.max(maxY, candle.getHigh());

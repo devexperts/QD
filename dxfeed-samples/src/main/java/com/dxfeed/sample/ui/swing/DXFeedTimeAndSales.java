@@ -97,7 +97,7 @@ public class DXFeedTimeAndSales {
 
     private synchronized void timeAndSalesReceived() {
         ArrayList<TimeAndSale> rows = new ArrayList<>(timeAndSales.getEventsList());
-        Collections.sort(rows, (o1, o2) -> o1.getTime() > o2.getTime() ? 1 : o1.getTime() < o2.getTime() ? -1 : 0);
+        Collections.sort(rows, Comparator.comparing(TimeAndSale::getTime));
         tableModel.setRowCount(0);
         for (TimeAndSale timeAndSale : rows) {
             tableModel.addRow(new Object[] {
@@ -105,7 +105,7 @@ public class DXFeedTimeAndSales {
                 timeAndSale.getIndex(),
                 timeAndSale.getExchangeCode(),
                 timeAndSale.getPrice(),
-                timeAndSale.getSize(),
+                timeAndSale.getSizeAsDouble(),
                 timeAndSale.getBidPrice(),
                 timeAndSale.getAskPrice(),
                 timeAndSale.getExchangeSaleConditions()

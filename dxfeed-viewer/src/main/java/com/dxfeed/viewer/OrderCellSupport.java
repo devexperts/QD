@@ -78,7 +78,7 @@ class OrderCellSupport {
         new Color(0, 67, 132)
     };
 
-    private static Color selectColor(boolean isDisabled, boolean isUpdated, State state) {
+    private static Color selectColor(boolean isUpdated, boolean isDisabled, State state) {
         return isDisabled ? State.NOT_AVAILABLE.color : isUpdated ? state.updatedColor : state.color;
     }
 
@@ -93,27 +93,27 @@ class OrderCellSupport {
         return clr;
     }
 
-    public static ViewerCellValue textValue(String text, int alignment, boolean isUpdated, boolean isDisabled, int priceGroup, int scheme) {
-        return new ViewerCellValue(text, selectColor(isDisabled, isUpdated, State.COMMON), selectBackground(priceGroup, scheme), alignment, null);
+    public static ViewerCellValue textValue(String text, boolean isUpdated, boolean isDisabled, int priceGroup, int scheme, int alignment, double value) {
+        return new ViewerCellValue(text, selectColor(isUpdated, isDisabled, State.COMMON), selectBackground(priceGroup, scheme), alignment, value);
+    }
+
+    public static ViewerCellValue textValue(String text, boolean isUpdated, boolean isDisabled, int priceGroup, int scheme, int alignment) {
+        return textValue(text, isUpdated, isDisabled, priceGroup, scheme, alignment, 0);
     }
 
     public static ViewerCellValue exchangeValue(char exchange, boolean isUpdated, boolean isDisabled, int priceGroup, int scheme) {
-        return textValue(formatExchange(exchange), SwingConstants.CENTER, isUpdated, isDisabled, priceGroup, scheme);
+        return textValue(formatExchange(exchange), isUpdated, isDisabled, priceGroup, scheme, SwingConstants.CENTER);
     }
 
-    public static ViewerCellValue doubleValue(double price, boolean isUpdated, boolean isDisabled, int priceGroup, int scheme) {
-        return textValue(formatPrice(price), SwingConstants.RIGHT, isUpdated, isDisabled, priceGroup, scheme);
+    public static ViewerCellValue priceValue(double price, boolean isUpdated, boolean isDisabled, int priceGroup, int scheme) {
+        return textValue(formatPrice(price), isUpdated, isDisabled, priceGroup, scheme, SwingConstants.RIGHT, price);
     }
 
-    public static ViewerCellValue longValue(long size, int alignment, boolean isUpdated, boolean isDisabled, int priceGroup, int scheme) {
-        return textValue(formatSize(size), alignment, isUpdated, isDisabled, priceGroup, scheme);
-    }
-
-    public static ViewerCellValue longValue(long size, int alignment, boolean isUpdated, boolean isDisabled, int priceGroup, int scheme, double value) {
-        return new ViewerCellValue(formatSize(size), selectColor(isDisabled, isUpdated, State.COMMON), selectBackground(priceGroup, scheme), alignment, value, null);
+    public static ViewerCellValue sizeValue(double size, boolean isUpdated, boolean isDisabled, int priceGroup, int scheme) {
+        return textValue(formatSize(size), isUpdated, isDisabled, priceGroup, scheme, SwingConstants.CENTER, size);
     }
 
     public static ViewerCellValue timeValue(long time, boolean isUpdated, boolean isDisabled, int priceGroup, int scheme, TimeZone tz) {
-        return textValue(formatTime(time, tz), SwingConstants.CENTER, isUpdated, isDisabled, priceGroup, scheme);
+        return textValue(formatTime(time, tz), isUpdated, isDisabled, priceGroup, scheme, SwingConstants.CENTER);
     }
 }

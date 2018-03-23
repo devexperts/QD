@@ -124,8 +124,8 @@ class TickChartRendererPanel extends JPanel {
     private boolean repaintRequired = true;
     private boolean drawCrosshairX = false;
     private boolean drawCrosshairY = false;
-    private double minPrice = Double.MAX_VALUE;
-    private double maxPrice = Double.MIN_VALUE;
+    private double minPrice = Double.POSITIVE_INFINITY;
+    private double maxPrice = Double.NEGATIVE_INFINITY;
     private int totalTickCount = 0;
     private int visibleTickCount = 0;
     private int chartHeightExMargins = 0;
@@ -393,8 +393,8 @@ class TickChartRendererPanel extends JPanel {
     }
 
     private void computeChartZoomFactors() {
-        minPrice = Double.MAX_VALUE;
-        maxPrice = Double.MIN_VALUE;
+        minPrice = Double.POSITIVE_INFINITY;
+        maxPrice = Double.NEGATIVE_INFINITY;
 
         long firstVisibleTime = visibleTickCount > 0 ? drawnTimes.get(visibleTickCount - 1) : 0;
         // get min and max values for zooming

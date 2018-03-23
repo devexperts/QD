@@ -41,8 +41,9 @@ import com.dxfeed.model.market.OrderBookModel;
  * multiple sources for the same market symbol and are distinguished by their
  * {@link #getIndex index}. Index is a unique per symbol identifier of the event.
  * It is unique across all the sources of depth information for the symbol.
- * The event with {@link #getSize() size} of {@code 0} is a signal to remove
- * previously received order for the corresponding index.
+ * The event with {@link #getSizeAsDouble() sizeAsDouble} either {@code 0} or {@link Double#NaN NaN}
+ * is a signal to remove previously received order for the corresponding index.
+ * The method {@link #hasSize() hasSize} is a convenient method to test for size presence.
  *
  * <h3><a name="eventFlagsSection">Event flags, transactions and snapshots</a></h3>
  *
@@ -57,12 +58,12 @@ import com.dxfeed.model.market.OrderBookModel;
  * {@link #getIndex() index} contain source-specific event index which is always zero in
  * an event that is marked with {@link #SNAPSHOT_END} bit in {@link #getEventFlags() eventFlags}.
  *
- * <p> Note, that it is always the case that {@link #getSize() size} is {@code 0}
- * for an order with {@link #REMOVE_EVENT} bit in {@link #getEventFlags() eventFlags},
+ * <p> Note that for an order with {@link #REMOVE_EVENT} bit in {@link #getEventFlags() eventFlags}
+ * it is always the case that {@link #getSizeAsDouble() sizeAsDouble} is either {@code 0} or {@link Double#NaN NaN},
  * so no additional logic to process this bit is required for orders.
- * Transactions and snapshots may include orders with {@link #getSize() size} of {@code 0}. The filtering that
- * distinguishes those events as removals of orders shall be performed after all the transactions and snapshot
- * processing.
+ * Transactions and snapshots may include orders with {@link #getSizeAsDouble() sizeAsDouble} of {@code 0}.
+ * The filtering that distinguishes those events as removals of orders shall be performed after
+ * all transactions and snapshot processing.
  *
  * <p> Some aggregated feeds (like CME market depth) are mapped into two distinct source ids (one for
  * buy orders and one for sell orders), but updates and transactions may span both. It is important to keep a
@@ -390,8 +391,8 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
     }
 
     /**
-     * Returns size of this order.
-     * @return size of this order.
+     * Returns size of this order as integer number (rounded toward zero).
+     * @return size of this order as integer number (rounded toward zero).
      */
     @XmlTransient
     public long getSize() {
@@ -399,8 +400,8 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
     }
 
     /**
-     * Changes size of this order.
-     * @param size size of this order.
+     * Changes size of this order as integer number (rounded toward zero).
+     * @param size size of this order as integer number (rounded toward zero).
      */
     public void setSize(long size) {
         this.size = size;
@@ -421,6 +422,14 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
      */
     public void setSizeAsDouble(double size) {
         this.size = size;
+    }
+
+    /**
+     * Returns {@code true} if this order has some size (sizeAsDouble is neither {@code 0} nor {@link Double#NaN NaN}).
+     * @return {@code true} if this order has some size (sizeAsDouble is neither {@code 0} nor {@link Double#NaN NaN}).
+     */
+    public boolean hasSize() {
+        return size != 0 && !Double.isNaN(size);
     }
 
     /**

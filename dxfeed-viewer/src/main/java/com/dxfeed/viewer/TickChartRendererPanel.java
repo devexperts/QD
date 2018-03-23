@@ -134,10 +134,10 @@ public class TickChartRendererPanel extends JPanel {
     private boolean drawCrosshairX = false;
     private boolean drawCrosshairY = false;
 
-    private double minPrice = Double.MAX_VALUE;
-    private double maxPrice = Double.MIN_VALUE;
-    private long minSize = Long.MAX_VALUE;
-    private long maxSize = Long.MIN_VALUE;
+    private double minPrice = Double.POSITIVE_INFINITY;
+    private double maxPrice = Double.NEGATIVE_INFINITY;
+    private double minSize = Double.POSITIVE_INFINITY;
+    private double maxSize = Double.NEGATIVE_INFINITY;
 
     private int totalTickCount = 0;
     private int visibleTickCount = 0;
@@ -164,8 +164,8 @@ public class TickChartRendererPanel extends JPanel {
     private String symbol = "";
     private int sizeChartHeight;
     private int priceChartHeight;
-    private long maxBuySize;
-    private long maxSellSize;
+    private double maxBuySize;
+    private double maxSellSize;
 
     @SuppressWarnings("unchecked")
     public TickChartRendererPanel(List<? extends TimeAndSale> timeAndSales, List<? extends Order> bidOrders,
@@ -190,6 +190,10 @@ public class TickChartRendererPanel extends JPanel {
         return String.format("%.2f", price);          // always cut to 2 digits, sorry 4-digit prices...
     }
 
+    private static String size2String(double size) {
+        return size == (long) size ? Long.toString((long) size) : String.format("%.2f", size); // always cut to 2 digits
+    }
+
     public void selectTicks(int start, int end) {
         selectionStart = start;
         selectionEnd = end;
@@ -200,7 +204,8 @@ public class TickChartRendererPanel extends JPanel {
         int tickIndex = -1;
         if (x > CHART_LEFT_MARGIN && x < CHART_LEFT_MARGIN + chartWidthExMargins && visibleTickCount > 0) {
             tickIndex = (CHART_LEFT_MARGIN + chartWidthExMargins - x) / tickDisplayWidth;
-            if (tickIndex > visibleTickCount - 1) tickIndex = -1;
+            if (tickIndex > visibleTickCount - 1)
+                tickIndex = -1;
         }
         return tickIndex;
     }
@@ -248,8 +253,10 @@ public class TickChartRendererPanel extends JPanel {
         autoZoom = false;
         int w = tickDisplayWidth;
         w += amount;
-        if (w > chartWidthExMargins) w = chartWidthExMargins;
-        if (w < MIN_TICK_DISPLAY_WIDTH) w = MIN_TICK_DISPLAY_WIDTH;
+        if (w > chartWidthExMargins)
+            w = chartWidthExMargins;
+        if (w < MIN_TICK_DISPLAY_WIDTH)
+            w = MIN_TICK_DISPLAY_WIDTH;
         tickDisplayWidth = w;
         setRepaintRequired(true);
         repaint();
@@ -328,7 +335,7 @@ public class TickChartRendererPanel extends JPanel {
                         int y_priorTickBid = getChartYCoordinateForPrice(priorTimeAndSale.getBidPrice());
                         int y_priorTickAsk = getChartYCoordinateForPrice(priorTimeAndSale.getAskPrice());
 
-                        int curTickSizeBarHeight = getChartBarHeightForSize(curTimeAndSale.getSize());
+                        int curTickSizeBarHeight = getChartBarHeightForSize(curTimeAndSale.getSizeAsDouble());
 
                         // size bar
                         selectSizeColor(curTimeAndSale);
@@ -477,20 +484,22 @@ public class TickChartRendererPanel extends JPanel {
         totalTickCount = timeAndSales.size();
         if (totalTickCount > 0) {
             // compute scaled tick display width
-            if (autoZoom) doAutoZoom();
+            if (autoZoom)
+                doAutoZoom();
             visibleTickCount = chartWidthExMargins / tickDisplayWidth;
         }
-        if (visibleTickCount > totalTickCount) visibleTickCount = totalTickCount;
+        if (visibleTickCount > totalTickCount)
+            visibleTickCount = totalTickCount;
     }
 
     private void computeChartZoomFactors() {
-        minPrice = Double.MAX_VALUE;
-        maxPrice = Double.MIN_VALUE;
-        minSize = Long.MAX_VALUE;
-        maxSize = Long.MIN_VALUE;
+        minPrice = Double.POSITIVE_INFINITY;
+        maxPrice = Double.NEGATIVE_INFINITY;
+        minSize = Double.POSITIVE_INFINITY;
+        maxSize = Double.NEGATIVE_INFINITY;
 
-        maxBuySize = Long.MIN_VALUE;
-        maxSellSize = Long.MIN_VALUE;
+        maxBuySize = Double.NEGATIVE_INFINITY;
+        maxSellSize = Double.NEGATIVE_INFINITY;
 
         // get min and max values for zooming
         for (int i = 0; i < visibleTickCount; i++) {
@@ -500,22 +509,32 @@ public class TickChartRendererPanel extends JPanel {
             double bidPrice = timeAndSale.getBidPrice();
             double askPrice = timeAndSale.getAskPrice();
             Side side = timeAndSale.getAggressorSide();
-            long size = timeAndSale.getSize();
+            double size = timeAndSale.getSizeAsDouble();
 
-            if (price < minPrice) minPrice = price;
-            if (bidPrice > 0 && bidPrice < minPrice) minPrice = bidPrice;
-            if (askPrice > 0 && askPrice < minPrice) minPrice = askPrice;
-            if (size < minSize) minSize = size;
+            if (minPrice > price)
+                minPrice = price;
+            if (minPrice > bidPrice)
+                minPrice = bidPrice;
+            if (minPrice > askPrice)
+                minPrice = askPrice;
+            if (minSize > size)
+                minSize = size;
 
-            if (price > maxPrice) maxPrice = price;
-            if (bidPrice > 0 && bidPrice > maxPrice) maxPrice = bidPrice;
-            if (askPrice > 0 && askPrice > maxPrice) maxPrice = askPrice;
-            if (size > maxSize) maxSize = size;
+            if (maxPrice < price)
+                maxPrice = price;
+            if (maxPrice < bidPrice)
+                maxPrice = bidPrice;
+            if (maxPrice < askPrice)
+                maxPrice = askPrice;
+            if (maxSize < size)
+                maxSize = size;
 
             if (side == Side.SELL) {
-                if (size > maxSellSize) maxSellSize = size;
+                if (maxSellSize < size)
+                    maxSellSize = size;
             } else {
-                if (size > maxBuySize) maxBuySize = size;
+                if (maxBuySize < size)
+                    maxBuySize = size;
             }
         }
 
@@ -591,9 +610,10 @@ public class TickChartRendererPanel extends JPanel {
         return price;
     }
 
-    private int getChartBarHeightForSize(long size) {
+    private int getChartBarHeightForSize(double size) {
         int y = (int) Math.floor(size * zoomFactorForSizeChart);
-        if (size > 0 && y == 0) y = 1;
+        if (size > 0 && y == 0)
+            y = 1;
         return y;
     }
 
@@ -607,35 +627,37 @@ public class TickChartRendererPanel extends JPanel {
     private void drawVerticalBook() {
         // draw bbo
         if (bidOrders.size() > 0 && askOrders.size() > 0) {
-            long bidMaxSize = getMaxAggregatedSize(bidOrders);
-            long askMaxSize = getMaxAggregatedSize(askOrders);
+            double bidMaxSize = getMaxAggregatedSize(bidOrders);
+            double askMaxSize = getMaxAggregatedSize(askOrders);
 
-            long maxSize = Math.max(bidMaxSize, askMaxSize);
-            double sizeZoomFactor = (VERTICAL_BOOK_WIDTH - 2) * 1.0d / maxSize;
+            double maxSize = Math.max(bidMaxSize, askMaxSize);
+            double sizeZoomFactor = (VERTICAL_BOOK_WIDTH - 2) / maxSize;
 
             // aggregate sizes
             int askIndex = 0;
             double askBestPrice = askOrders.get(askIndex).getPrice();
-            long askSize = askOrders.get(askIndex).getSize();
+            double askSize = askOrders.get(askIndex).getSizeAsDouble();
             while (askIndex + 1 < askOrders.size() && askOrders.get(askIndex + 1).getPrice() == askBestPrice) {
-                askSize += askOrders.get(askIndex + 1).getSize();
+                askSize += askOrders.get(askIndex + 1).getSizeAsDouble();
                 askIndex++;
             }
 
             // aggregate sizes
             int bidIndex = 0;
             double bidBestPrice = bidOrders.get(bidIndex).getPrice();
-            long bidSize = bidOrders.get(bidIndex).getSize();
+            double bidSize = bidOrders.get(bidIndex).getSizeAsDouble();
             while (bidIndex + 1 < bidOrders.size() && bidOrders.get(bidIndex + 1).getPrice() == bidBestPrice) {
-                bidSize += bidOrders.get(bidIndex + 1).getSize();
+                bidSize += bidOrders.get(bidIndex + 1).getSizeAsDouble();
                 bidIndex++;
             }
 
             int y_price = getChartYCoordinateForPrice(askBestPrice);
             int y_nextPrice = getChartYCoordinateForPrice(bidBestPrice);
 
-            if (y_price < CHART_TOP_MARGIN) y_price = CHART_TOP_MARGIN;
-            if (y_nextPrice > priceChartHeight + CHART_TOP_MARGIN) y_nextPrice = priceChartHeight + CHART_TOP_MARGIN;
+            if (y_price < CHART_TOP_MARGIN)
+                y_price = CHART_TOP_MARGIN;
+            if (y_nextPrice > priceChartHeight + CHART_TOP_MARGIN)
+                y_nextPrice = priceChartHeight + CHART_TOP_MARGIN;
 
             final int h = y_nextPrice - y_price;
             // draw bar
@@ -647,13 +669,17 @@ public class TickChartRendererPanel extends JPanel {
             chartG2D.setColor(color.brighter());
 
             int askSizeBarWidth = (int) (askSize * sizeZoomFactor) - 1;
-            if (askSizeBarWidth > VERTICAL_BOOK_WIDTH - 2) askSizeBarWidth = VERTICAL_BOOK_WIDTH - 2;
-            if (askSizeBarWidth == 0 && askSize > 0) askSizeBarWidth = 1;
+            if (askSizeBarWidth > VERTICAL_BOOK_WIDTH - 2)
+                askSizeBarWidth = VERTICAL_BOOK_WIDTH - 2;
+            if (askSizeBarWidth == 0 && askSize > 0)
+                askSizeBarWidth = 1;
             chartG2D.fillRect(getWidth() - VERTICAL_BOOK_WIDTH - 1, y_price + 2, askSizeBarWidth, h / 2 - 2);
 
             int bidSizeBarWidth = (int) (bidSize * sizeZoomFactor) - 1;
-            if (bidSizeBarWidth > VERTICAL_BOOK_WIDTH - 2) bidSizeBarWidth = VERTICAL_BOOK_WIDTH - 2;
-            if (bidSizeBarWidth == 0 && bidSize > 0) bidSizeBarWidth = 1;
+            if (bidSizeBarWidth > VERTICAL_BOOK_WIDTH - 2)
+                bidSizeBarWidth = VERTICAL_BOOK_WIDTH - 2;
+            if (bidSizeBarWidth == 0 && bidSize > 0)
+                bidSizeBarWidth = 1;
             chartG2D.fillRect(getWidth() - VERTICAL_BOOK_WIDTH - 1, y_price + h / 2 + 1, bidSizeBarWidth, h / 2 - 1);
 
             //chartG2D.setColor(COLOR_BID);
@@ -682,8 +708,8 @@ public class TickChartRendererPanel extends JPanel {
             */
 
             chartG2D.setColor(COLOR_VERTICAL_BOOK_BBO_TEXT);
-            String strPrice = Double.toString(bidBestPrice);
-            String strSize = Long.toString(bidSize);
+            String strPrice = ViewerCellValue.formatPrice(bidBestPrice);
+            String strSize = ViewerCellValue.formatSize(bidSize);
 
             FontMetrics metrics = chartG2D.getFontMetrics(chartG2D.getFont());
             Rectangle2D bounds = metrics.getStringBounds(strPrice, null);
@@ -696,8 +722,8 @@ public class TickChartRendererPanel extends JPanel {
                 chartG2D.drawString(strSize, getWidth() - (int) bounds.getWidth() - 2, y_price + h - (int) bounds.getHeight() / 2 + 3);
             }
 
-            strPrice = Double.toString(askBestPrice);
-            strSize = Long.toString(askSize);
+            strPrice = ViewerCellValue.formatPrice(askBestPrice);
+            strSize = ViewerCellValue.formatSize(askSize);
 
             bounds = metrics.getStringBounds(strPrice, null);
             if ((int) bounds.getHeight() < h - 4) {
@@ -709,30 +735,35 @@ public class TickChartRendererPanel extends JPanel {
                 chartG2D.drawString(strSize, getWidth() - (int) bounds.getWidth() - 2, y_price + (int) bounds.getHeight() / 2 + 4);
             }
 
-            if (bidIndex < bidOrders.size() - 1) drawVerticalBookBidOrAsk(true, bidOrders, bidIndex, sizeZoomFactor);
-            if (askIndex < askOrders.size() - 1) drawVerticalBookBidOrAsk(false, askOrders, askIndex, sizeZoomFactor);
+            if (bidIndex < bidOrders.size() - 1)
+                drawVerticalBookBidOrAsk(true, bidOrders, bidIndex, sizeZoomFactor);
+            if (askIndex < askOrders.size() - 1)
+                drawVerticalBookBidOrAsk(false, askOrders, askIndex, sizeZoomFactor);
         }
     }
 
-    private long getMaxAggregatedSize(List<? extends Order> orders) {
-        long maxSize = 0;
+    private double getMaxAggregatedSize(List<? extends Order> orders) {
+        double maxSize = 0;
         if (orders.size() > 0) {
-            long curSize = 0;
+            double curSize = 0;
             double curPrice = 0;
             for (Order o : orders) {
                 if (o.getPrice() != curPrice) {
-                    if (curSize > maxSize) maxSize = curSize;
+                    if (curSize > maxSize)
+                        maxSize = curSize;
                     // next price level started
                     curPrice = o.getPrice();
-                    curSize = o.getSize();
+                    curSize = o.getSizeAsDouble();
                 } else {
                     // continuing current price level
-                    curSize += o.getSize();
+                    curSize += o.getSizeAsDouble();
                 }
-                if (o.getPrice() < minPrice || o.getPrice() > maxPrice) break;
+                if (o.getPrice() < minPrice || o.getPrice() > maxPrice)
+                    break;
             }
             // check for last price level
-            if (curSize > maxSize) maxSize = curSize;
+            if (curSize > maxSize)
+                maxSize = curSize;
         }
         return maxSize;
     }
@@ -753,7 +784,8 @@ public class TickChartRendererPanel extends JPanel {
                 final double nextPrice = o.getPrice();
                 y_nextPrice = getChartYCoordinateForPrice(nextPrice);
 
-                if (price != nextPrice) priceGroup++;
+                if (price != nextPrice)
+                    priceGroup++;
 
                 if (isBid) {
                     if (y_price < CHART_TOP_MARGIN || y_price > priceChartHeight + CHART_TOP_MARGIN) {
@@ -778,9 +810,11 @@ public class TickChartRendererPanel extends JPanel {
                 chartG2D.fillRect(getWidth() - VERTICAL_BOOK_WIDTH - 2, y_curPrice + 1, VERTICAL_BOOK_WIDTH, h);
                 // draw size
                 chartG2D.setColor(color.brighter());
-                int sizeBarWidth = (int) (o.getSize() * sizeZoomFactor) - 1;
-                if (sizeBarWidth > VERTICAL_BOOK_WIDTH - 2) sizeBarWidth = VERTICAL_BOOK_WIDTH - 2;
-                if (sizeBarWidth == 0 && o.getSize() > 0) sizeBarWidth = 1;
+                int sizeBarWidth = (int) (o.getSizeAsDouble() * sizeZoomFactor) - 1;
+                if (sizeBarWidth > VERTICAL_BOOK_WIDTH - 2)
+                    sizeBarWidth = VERTICAL_BOOK_WIDTH - 2;
+                if (sizeBarWidth == 0 && o.getSizeAsDouble() > 0)
+                    sizeBarWidth = 1;
                 chartG2D.fillRect(getWidth() - VERTICAL_BOOK_WIDTH - 1, y_curPrice + 2, sizeBarWidth, h - 2);
 
                 if (nextPrice >= minPrice && nextPrice < maxPrice) {
@@ -791,8 +825,8 @@ public class TickChartRendererPanel extends JPanel {
 
                 // draw price and size
                 chartG2D.setColor(COLOR_VERTICAL_BOOK_TEXT);
-                String strPrice = Double.toString(nextPrice);
-                String strSize = Long.toString(o.getSize());
+                String strPrice = ViewerCellValue.formatPrice(nextPrice);
+                String strSize = ViewerCellValue.formatSize(o.getSizeAsDouble());
 
                 FontMetrics metrics = chartG2D.getFontMetrics(chartG2D.getFont());
                 Rectangle2D bounds = metrics.getStringBounds(strPrice, null);
@@ -850,13 +884,13 @@ public class TickChartRendererPanel extends JPanel {
 
                 int y_curTickSize = CHART_TOP_MARGIN + chartHeightExMargins - sizeChartHeight / 2;
                 if (curTimeAndSale.getAggressorSide() == Side.SELL) {
-                    y_curTickSize += getChartBarHeightForSize(curTimeAndSale.getSize()) + (int) bounds.getHeight() + 1;
+                    y_curTickSize += getChartBarHeightForSize(curTimeAndSale.getSizeAsDouble()) + (int) bounds.getHeight() + 1;
                 } else {
-                    y_curTickSize -= getChartBarHeightForSize(curTimeAndSale.getSize()) + 1;
+                    y_curTickSize -= getChartBarHeightForSize(curTimeAndSale.getSizeAsDouble()) + 1;
                 }
 
                 selectSizeColor(curTimeAndSale);
-                drawCrosshairLabel(g, price2String(curTimeAndSale.getSize()), x_crossHair, y_curTickSize, chartG2D.getColor());
+                drawCrosshairLabel(g, size2String(curTimeAndSale.getSizeAsDouble()), x_crossHair, y_curTickSize, chartG2D.getColor());
 
                 if (tickIndexAtCrosshair < visibleTickCount - 1) {
                     selectTickColor(timeAndSales.get(tickIndexAtCrosshair + 1), curTimeAndSale);
@@ -885,9 +919,9 @@ public class TickChartRendererPanel extends JPanel {
                 VolumeAtPriceBar volumeAtPriceBar = volumeAtPriceChart.getVolumeAtY(y_crossHair - CHART_TOP_MARGIN);
                 if (volumeAtPriceBar != null) {
                     if (volumeAtPriceBar.getBuySize() + volumeAtPriceBar.getUndefinedSize() > 0) {
-                        final String strBuyVolumeAtCrosshair = Long.toString(volumeAtPriceBar.getBuySize());
-                        final String strUndefinedVolumeAtCrosshair = Long.toString(volumeAtPriceBar.getUndefinedSize());
-                        //String strBuyAndUndefinedVolumeAtCrosshair = Long.toString(volumeAtPriceBar.getBuySize() + volumeAtPriceBar.getUndefinedSize());
+                        final String strBuyVolumeAtCrosshair = size2String(volumeAtPriceBar.getBuySize());
+                        final String strUndefinedVolumeAtCrosshair = size2String(volumeAtPriceBar.getUndefinedSize());
+                        //String strBuyAndUndefinedVolumeAtCrosshair = size2String(volumeAtPriceBar.getBuySize() + volumeAtPriceBar.getUndefinedSize());
 
                         bounds = metrics.getStringBounds(strUndefinedVolumeAtCrosshair, null);
                         int buyVolumeWidth = (int) bounds.getWidth();
@@ -909,7 +943,7 @@ public class TickChartRendererPanel extends JPanel {
                     }
 
                     if (volumeAtPriceBar.getSellSize() > 0) {
-                        final String strSellVolumeAtCrosshair = Long.toString(volumeAtPriceBar.getSellSize());
+                        final String strSellVolumeAtCrosshair = size2String(volumeAtPriceBar.getSellSize());
                         bounds = metrics.getStringBounds(strSellVolumeAtCrosshair, null);
                         drawCrosshairLabel(g, strSellVolumeAtCrosshair, LEFT_MARGIN + VOLUME_AT_PRICE_CHART_WIDTH / 2 -
                             (int) bounds.getWidth() - 5, y_crossHair + (int) bounds.getHeight() / 2, COLOR_VOLUME_SELL);
@@ -939,7 +973,8 @@ public class TickChartRendererPanel extends JPanel {
     private void drawTimeLineProtrusionAxises() {
         final FontMetrics metrics = chartG2D.getFontMetrics(chartG2D.getFont());
         for (int protrusionLevel : TIMELINE_PROTRUSIONS) {
-            if (protrusionLevel == TIMELINE_PROTRUSION_MS || protrusionLevel > maxProtrusionLevel) continue;
+            if (protrusionLevel == TIMELINE_PROTRUSION_MS || protrusionLevel > maxProtrusionLevel)
+                continue;
             chartG2D.setColor(COLOR_TRADE_TIMELINE[protrusionLevel]);
             final int y_timeLine = CHART_TOP_MARGIN + chartHeightExMargins + 2 + protrusionLevel * TIMELINE_PROTRUSION_MULTIPLIER;
             chartG2D.drawLine(CHART_LEFT_MARGIN, y_timeLine, CHART_LEFT_MARGIN + chartWidthExMargins, y_timeLine);
@@ -1000,15 +1035,19 @@ public class TickChartRendererPanel extends JPanel {
         String strMaxPrice = price2String(maxPrice);
         String strLastTickBid = "";
         String strLastTickAsk = "";
-        if (!Double.isNaN(curTimeAndSale.getBidPrice())) strLastTickBid = price2String(curTimeAndSale.getBidPrice());
-        if (!Double.isNaN(curTimeAndSale.getAskPrice())) strLastTickAsk = price2String(curTimeAndSale.getAskPrice());
+        if (!Double.isNaN(curTimeAndSale.getBidPrice()))
+            strLastTickBid = price2String(curTimeAndSale.getBidPrice());
+        if (!Double.isNaN(curTimeAndSale.getAskPrice()))
+            strLastTickAsk = price2String(curTimeAndSale.getAskPrice());
 
         String strMaxBuySize = "";
         String strMaxSellSize = "";
-        if (maxBuySize > 0) strMaxBuySize = Long.toString(maxBuySize);
-        if (maxSellSize > 0) strMaxSellSize = Long.toString(maxSellSize);
+        if (maxBuySize > 0)
+            strMaxBuySize = size2String(maxBuySize);
+        if (maxSellSize > 0)
+            strMaxSellSize = size2String(maxSellSize);
 
-        String strLastTickSize = Long.toString(curTimeAndSale.getSize());
+        String strLastTickSize = size2String(curTimeAndSale.getSizeAsDouble());
         FontMetrics metrics = chartG2D.getFontMetrics(chartG2D.getFont());
         Stroke oldStroke = chartG2D.getStroke();
         chartG2D.setStroke(SIMPLE_STROKE);

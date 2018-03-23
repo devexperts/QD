@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.259</version>
+    <version>3.260</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -102,12 +102,6 @@
             <version>1.0</version>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>com.devexperts.timetest</groupId>
-            <artifactId>agent</artifactId>
-            <version>${timetest.version}</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <properties>
@@ -150,7 +144,6 @@
         <slf4j.version>1.7.22</slf4j.version>
         <aspectj.version>1.8.2</aspectj.version>
         <junit.version>4.12</junit.version>
-        <timetest.version>1.3</timetest.version>
         <!-- same version as used by cometd above -->
     </properties>
 
@@ -418,30 +411,6 @@
                     <skipAfterFailureCount>42</skipAfterFailureCount>
                     <redirectTestOutputToFile>true</redirectTestOutputToFile>
                 </configuration>
-            </plugin>
-            <!-- maven-dependency-plugin is used to copy "timetest" agent into target directory -->
-            <plugin>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>copy-timetest-agent</id>
-                        <phase>process-test-classes</phase>
-                        <goals>
-                            <goal>copy</goal>
-                        </goals>
-                        <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>com.devexperts.timetest</groupId>
-                                    <artifactId>agent</artifactId>
-                                    <version>${timetest.version}</version>
-                                    <outputDirectory>${project.build.directory}</outputDirectory>
-                                    <destFileName>timetest.jar</destFileName>
-                                </artifactItem>
-                            </artifactItems>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>

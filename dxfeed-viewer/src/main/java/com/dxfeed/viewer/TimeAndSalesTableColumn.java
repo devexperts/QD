@@ -42,25 +42,25 @@ enum TimeAndSalesTableColumn implements EventTableColumn<TimeAndSale> {
     BID("Bid", 50) {
         @Override
         public ViewerCellValue getValue(TimeAndSale timeAndSale, boolean isUpdated, boolean isDisabled, int tag, int scheme, TimeZone timeZone) {
-            return doubleValue(timeAndSale.getBidPrice(), isUpdated, !timeAndSale.isValidTick() || timeAndSale.getBidPrice() > timeAndSale.getAskPrice() || timeAndSale.getPrice() > timeAndSale.getAskPrice());
+            return priceValue(timeAndSale.getBidPrice(), isUpdated, !timeAndSale.isValidTick() || timeAndSale.getBidPrice() > timeAndSale.getAskPrice() || timeAndSale.getPrice() > timeAndSale.getAskPrice());
         }
     },
     ASK("Ask", 50) {
         @Override
         public ViewerCellValue getValue(TimeAndSale timeAndSale, boolean isUpdated, boolean isDisabled, int tag, int scheme, TimeZone timeZone) {
-            return doubleValue(timeAndSale.getAskPrice(), isUpdated, !timeAndSale.isValidTick() || timeAndSale.getBidPrice() > timeAndSale.getAskPrice() || timeAndSale.getPrice() < timeAndSale.getBidPrice());
+            return priceValue(timeAndSale.getAskPrice(), isUpdated, !timeAndSale.isValidTick() || timeAndSale.getBidPrice() > timeAndSale.getAskPrice() || timeAndSale.getPrice() < timeAndSale.getBidPrice());
         }
     },
     PRICE("Price", 50) {
         @Override
         public ViewerCellValue getValue(TimeAndSale timeAndSale, boolean isUpdated, boolean isDisabled, int tag, int scheme, TimeZone timeZone) {
-            return doubleValue(timeAndSale.getPrice(), isUpdated, !timeAndSale.isValidTick() || timeAndSale.getPrice() < timeAndSale.getBidPrice() || timeAndSale.getPrice() > timeAndSale.getAskPrice());
+            return priceValue(timeAndSale.getPrice(), isUpdated, !timeAndSale.isValidTick() || timeAndSale.getPrice() < timeAndSale.getBidPrice() || timeAndSale.getPrice() > timeAndSale.getAskPrice());
         }
     },
     SIZE("Size", 50) {
         @Override
         public ViewerCellValue getValue(TimeAndSale timeAndSale, boolean isUpdated, boolean isDisabled, int tag, int scheme, TimeZone timeZone) {
-            return longValue(timeAndSale.getSize(), isUpdated, !timeAndSale.isValidTick());
+            return sizeValue(timeAndSale.getSizeAsDouble(), isUpdated, !timeAndSale.isValidTick());
         }
     },
     SALE_CONDITIONS("Conditions", 30) {

@@ -14,36 +14,39 @@ package com.dxfeed.viewer.tickchart;
 import com.dxfeed.event.market.TimeAndSale;
 
 public class VolumeAtPriceBar {
-    private long buySize = 0;
-    private long sellSize = 0;
-    private long undefinedSize = 0;
+    private double buySize;
+    private double sellSize;
+    private double undefinedSize;
 
-    public long getBuySize() {
+    public double getBuySize() {
         return buySize;
     }
 
-    public long getSellSize() {
+    public double getSellSize() {
         return sellSize;
     }
 
-    public long getUndefinedSize() {
+    public double getUndefinedSize() {
         return undefinedSize;
     }
 
-    public long getMaxSize() {
-        return buySize + undefinedSize > sellSize? buySize + undefinedSize : sellSize;
-    }
-
-    public VolumeAtPriceBar(TimeAndSale timeAndSale) {
-        add(timeAndSale);
+    public double getMaxSize() {
+        return Math.max(buySize + undefinedSize, sellSize);
     }
 
     public void add(TimeAndSale timeAndSale) {
         switch (timeAndSale.getAggressorSide()) {
-        case BUY: this.buySize += timeAndSale.getSize(); break;
-        case SELL: this.sellSize += timeAndSale.getSize(); break;
-        case UNDEFINED: this.undefinedSize += timeAndSale.getSize(); break;
-        default: throw new IllegalStateException(timeAndSale.toString());
+        case BUY:
+            buySize += timeAndSale.getSizeAsDouble();
+            break;
+        case SELL:
+            sellSize += timeAndSale.getSizeAsDouble();
+            break;
+        case UNDEFINED:
+            undefinedSize += timeAndSale.getSizeAsDouble();
+            break;
+        default:
+            throw new IllegalStateException(timeAndSale.toString());
         }
     }
 }

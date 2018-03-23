@@ -22,19 +22,19 @@ class QuoteBoardTableRow {
     final String symbol;
 
     double lastPrice = Double.NaN;
-    long lastSize = Long.MIN_VALUE;
+    double lastSize = Double.NaN;
     State lastState = State.NOT_AVAILABLE;
     char lastExchange = Character.MAX_VALUE;
     long lastUpdateTime = Long.MAX_VALUE;
 
     double bidPrice = Double.NaN;
-    long bidSize = Long.MIN_VALUE;
+    double bidSize = Double.NaN;
     State bidState = State.NOT_AVAILABLE;
     char bidExchange = Character.MAX_VALUE;
     long bidUpdateTime = Long.MAX_VALUE;
 
     double askPrice = Double.NaN;
-    long askSize = Long.MIN_VALUE;
+    double askSize = Double.NaN;
     State askState = State.NOT_AVAILABLE;
     char askExchange = Character.MAX_VALUE;
     long askUpdateTime = Long.MAX_VALUE;
@@ -48,7 +48,7 @@ class QuoteBoardTableRow {
     double prevClosePrice = Double.NaN;
     int prevDayId = Integer.MAX_VALUE;
     PriceType prevDayCloseType = PriceType.PRELIMINARY;
-    long openInterest = Long.MIN_VALUE;
+    double openInterest = Double.NaN;
 
     boolean tradingHalted = false;
     String haltStatusReason;
@@ -64,7 +64,7 @@ class QuoteBoardTableRow {
     long prevCloseUpdateTime = Long.MAX_VALUE;
     long openInterestTime = Long.MAX_VALUE;
 
-    long volume = Long.MIN_VALUE;
+    double volume = Double.NaN;
     long volumeUpdateTime = Long.MAX_VALUE;
 
     String description;
@@ -76,43 +76,43 @@ class QuoteBoardTableRow {
     }
 
     public void updateQuote(Quote quote, long curTime) {
-        if (bidPrice != quote.getBidPrice() || bidSize != quote.getBidSize() || bidExchange != quote.getBidExchangeCode()) {
+        if (bidPrice != quote.getBidPrice() || bidSize != quote.getBidSizeAsDouble() || bidExchange != quote.getBidExchangeCode()) {
             bidUpdateTime = curTime;
             if (bidPrice != quote.getBidPrice()) {
                 bidState = stateFor(quote.getBidPrice(), bidPrice);
                 bidPrice = quote.getBidPrice();
             }
-            bidSize = quote.getBidSize();
-            if (bidSize == 0)
+            bidSize = quote.getBidSizeAsDouble();
+            if (Double.isNaN(bidSize) || bidSize == 0)
                 bidState = State.COMMON;
             bidExchange = quote.getBidExchangeCode();
         }
-        if (askPrice != quote.getAskPrice() || askSize != quote.getAskSize() || askExchange != quote.getAskExchangeCode()) {
+        if (askPrice != quote.getAskPrice() || askSize != quote.getAskSizeAsDouble() || askExchange != quote.getAskExchangeCode()) {
             askUpdateTime = curTime;
             if (askPrice != quote.getAskPrice()) {
                 askState = stateFor(quote.getAskPrice(), askPrice);
                 askPrice = quote.getAskPrice();
             }
-            askSize = quote.getAskSize();
-            if (askSize == 0)
+            askSize = quote.getAskSizeAsDouble();
+            if (Double.isNaN(askSize) || askSize == 0)
                 askState = State.COMMON;
             askExchange = quote.getAskExchangeCode();
         }
     }
 
     public void updateTrade(Trade trade, long curTime) {
-        if (lastPrice != trade.getPrice() || lastSize != trade.getSize() || lastExchange != trade.getExchangeCode()) {
+        if (lastPrice != trade.getPrice() || lastSize != trade.getSizeAsDouble() || lastExchange != trade.getExchangeCode()) {
             lastUpdateTime = curTime;
             if (lastPrice != trade.getPrice()) {
                 lastState = stateFor(trade.getPrice(), lastPrice);
                 lastPrice = trade.getPrice();
             }
-            lastSize = trade.getSize();
+            lastSize = trade.getSizeAsDouble();
             lastExchange = trade.getExchangeCode();
         }
-        if (volume != trade.getDayVolume()) {
+        if (volume != trade.getDayVolumeAsDouble()) {
             volumeUpdateTime = curTime;
-            volume = trade.getDayVolume();
+            volume = trade.getDayVolumeAsDouble();
         }
     }
 
@@ -170,15 +170,17 @@ class QuoteBoardTableRow {
     }
 
     public static QuoteBoardCellSupport.State stateFor(double newValue, double oldValue) {
-        QuoteBoardCellSupport.State result = stateFor(newValue - oldValue);
-        if (result == State.NOT_AVAILABLE && !Double.isNaN(newValue))
-            result = State.FIRST_TIME;
-        return result;
+        return Double.isNaN(newValue) ? State.NOT_AVAILABLE :
+            Double.isNaN(oldValue) ? State.FIRST_TIME :
+            newValue > oldValue ? State.INCREASED :
+            newValue < oldValue ? State.DECREASED :
+            State.COMMON;
     }
 
     public static QuoteBoardCellSupport.State stateFor(double value) {
         return Double.isNaN(value) ? State.NOT_AVAILABLE :
             value > 0 ? State.INCREASED :
-            value < 0 ? State.DECREASED : State.COMMON;
+            value < 0 ? State.DECREASED :
+            State.COMMON;
     }
 }

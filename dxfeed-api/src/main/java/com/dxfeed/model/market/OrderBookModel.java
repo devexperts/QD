@@ -301,7 +301,7 @@ public final class OrderBookModel {
             return -1;
         } else {
             // Both orders are non-individual orders
-            int c = compareLong(o2.getSize(), o1.getSize()); // desc
+            int c = Double.compare(o2.getSizeAsDouble(), o1.getSizeAsDouble()); // desc
             if (c != 0) return c;
             c = compareLong(o1.getTimeSequence(), o2.getTimeSequence()); // asc
             if (c != 0) return c;
@@ -364,7 +364,7 @@ public final class OrderBookModel {
 
     private void correctOrderSize(Order order, int mul, int div) {
         if (order.getScope() != Scope.ORDER && mul != div) {
-            order.setSize(order.getSize() * mul / div);
+            order.setSizeAsDouble(order.getSizeAsDouble() * mul / div);
         }
     }
 
@@ -374,7 +374,7 @@ public final class OrderBookModel {
 
     private static boolean shallAddToBook(Order order) {
         // add order node to book if order size is non-zero or order is composite
-        return order.getSize() != 0 || order.getScope() == Scope.COMPOSITE;
+        return order.hasSize() || order.getScope() == Scope.COMPOSITE;
     }
 
     private static int compareLong(long l1, long l2) {
@@ -449,7 +449,7 @@ public final class OrderBookModel {
             boolean accept = corrector.acceptEvent(order, corrections);
             // process corrections emitted by acceptEvent method
             for (Order correction : corrections) {
-                assert correction.getSize() == 0; // removal is the only kind of correction
+                assert !correction.hasSize(); // removal is the only kind of correction
                 OrderBookList correctBook = getBookForOrder(correction);
                 Node<Order> oldNode = correctBook.getNode(correction);
                 if (oldNode != null)

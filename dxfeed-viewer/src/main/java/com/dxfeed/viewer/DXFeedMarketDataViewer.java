@@ -405,7 +405,7 @@ public class DXFeedMarketDataViewer implements Runnable {
         forceSelectSymbol(symbol);
     }
 
-    private double adjustMaxSizeForZoomFactor(long size) {
+    private double adjustMaxSizeForZoomFactor(double size) {
         double adjustedMaxSize;
         if (size <= 5) {
             adjustedMaxSize = 10;
@@ -430,7 +430,7 @@ public class DXFeedMarketDataViewer implements Runnable {
     }
 
     private void calibrateGraphRendererZoomFactors() {
-        long maxSize = Math.max(bidTableModel.getMaxSize(), askTableModel.getMaxSize());
+        double maxSize = Math.max(bidTableModel.getMaxSize(), askTableModel.getMaxSize());
         double zoomFactor = adjustMaxSizeForZoomFactor(maxSize);
 
         if (bidSizeGraphRenderer.setMaxValue(zoomFactor)) {
@@ -2105,33 +2105,26 @@ public class DXFeedMarketDataViewer implements Runnable {
     private static class TimezoneComboBoxSupport {
         private final ArrayList<String> tzDisplayNames = new ArrayList<>();
         private final ArrayList<String> tzIDs = new ArrayList<>();
-        private final String defaultTz = TimeZone.getDefault().getID();
-        private JComboBox<String> tzComboBox;
-        private JTextField tzComboBoxTextField;
+        private final JComboBox<String> tzComboBox;
+        private final JTextField tzComboBoxTextField;
         private int selectedIndex = -1;
 
         TimezoneComboBoxSupport(JComboBox<String> tzComboBox) {
             this.tzComboBox = tzComboBox;
             this.tzComboBoxTextField = (JTextField) tzComboBox.getEditor().getEditorComponent();
-            int itemIndex = 0;
+            TimeZone defaultTz = TimeZone.getDefault();
             for (String tzID : TimeZone.getAvailableIDs()) {
                 if (!(tzID.startsWith("Etc") || tzID.startsWith("SystemV"))) {
-                    TimeZone zone = TimeZone.getTimeZone(tzID);
-                    int offset = zone.getRawOffset() / 1000;
-                    int hour = offset / 3600;
-                    int minutes = (offset % 3600) / 60;
-
-                    String tzDisplayName = String.format("(GMT%+03d:%02d) %s", hour, minutes, tzID.replace("_", " "));
-                    tzComboBox.addItem(tzDisplayName);
-                    tzDisplayNames.add(tzDisplayName);
-                    tzIDs.add(tzID);
-                    if (tzID.equals(defaultTz)) {
-                        tzComboBox.setSelectedIndex(itemIndex);
-                        selectedIndex = itemIndex;
-                    }
-                    itemIndex++;
+                    if (tzID.equals(defaultTz.getID()))
+                        selectedIndex = tzIDs.size();
+                    addTimeZone(TimeZone.getTimeZone(tzID));
                 }
             }
+            if (selectedIndex < 0) {
+                selectedIndex = tzIDs.size();
+                addTimeZone(TimeZone.getDefault());
+            }
+            tzComboBox.setSelectedIndex(selectedIndex);
 
             tzComboBoxTextField.addActionListener(e -> doSearch());
 
@@ -2148,6 +2141,16 @@ public class DXFeedMarketDataViewer implements Runnable {
                     super.focusGained(e);
                 }
             });
+        }
+
+        private void addTimeZone(TimeZone tz) {
+            int offset = tz.getRawOffset() / 1000;
+            int hour = offset / 3600;
+            int minutes = (offset % 3600) / 60;
+            String tzDisplayName = String.format("(GMT%+03d:%02d) %s", hour, minutes, tz.getID().replace("_", " "));
+            tzComboBox.addItem(tzDisplayName);
+            tzDisplayNames.add(tzDisplayName);
+            tzIDs.add(tz.getID());
         }
 
         private String getSelectedTimezoneID() {

@@ -25,24 +25,26 @@ public class VolumeAtPriceChart {
     private int height;
     private int width;
     private int barHeight;
-    private long maxSize;
+    private double maxSize;
     private double priceStep;
     private ArrayList<VolumeAtPriceBar> volumeAtPrice;
 
     public VolumeAtPriceChart(double maxPrice, double minPrice, int width, int height, int barHeight, Color buyColor, Color sellColor, Color undefinedColor) {
         this.maxPrice = maxPrice;
         this.minPrice = minPrice;
-        this.maxSize = Long.MIN_VALUE;
+        this.maxSize = Double.NEGATIVE_INFINITY;
 
         this.height = height;
         this.width = width;
         this.barHeight = barHeight < 3 ? 3 : barHeight > height ? height : barHeight;
-        while (this.barHeight > 3 && height % this.barHeight > 1) this.barHeight--;
+        while (this.barHeight > 3 && height % this.barHeight > 1)
+            this.barHeight--;
         int numIntervals = height / this.barHeight;
         this.priceStep = (maxPrice - minPrice) / numIntervals;
 
         this.volumeAtPrice = new ArrayList<>(numIntervals);
-        for (int i = 0; i < numIntervals; i++) this.volumeAtPrice.add(null);
+        for (int i = 0; i < numIntervals; i++)
+            this.volumeAtPrice.add(null);
 
         this.buyColor = buyColor;
         this.sellColor = sellColor;
@@ -51,24 +53,22 @@ public class VolumeAtPriceChart {
 
     public void add(TimeAndSale timeAndSale) {
         int i = (int) ((maxPrice - timeAndSale.getPrice()) / priceStep);
-        if (i >= volumeAtPrice.size()) i = volumeAtPrice.size() - 1;
+        if (i >= volumeAtPrice.size())
+            i = volumeAtPrice.size() - 1;
 
         VolumeAtPriceBar volumeAtPriceBar = volumeAtPrice.get(i);
+        if (volumeAtPriceBar == null)
+            volumeAtPrice.set(i, volumeAtPriceBar = new VolumeAtPriceBar());
 
-        if (volumeAtPriceBar == null) {
-            volumeAtPriceBar = new VolumeAtPriceBar(timeAndSale);
-        } else {
-            volumeAtPriceBar.add(timeAndSale);
-        }
-
-        if (volumeAtPriceBar.getMaxSize() > maxSize) maxSize = volumeAtPriceBar.getMaxSize();
-
-        volumeAtPrice.set(i, volumeAtPriceBar);
+        volumeAtPriceBar.add(timeAndSale);
+        if (maxSize < volumeAtPriceBar.getMaxSize())
+            maxSize = volumeAtPriceBar.getMaxSize();
     }
 
     public VolumeAtPriceBar getVolumeAtY(int y) {
         int i = (int) (y / barHeight);
-        if (i >= volumeAtPrice.size()) i = volumeAtPrice.size() - 1;
+        if (i >= volumeAtPrice.size())
+            i = volumeAtPrice.size() - 1;
         return volumeAtPrice.get(i);
     }
 

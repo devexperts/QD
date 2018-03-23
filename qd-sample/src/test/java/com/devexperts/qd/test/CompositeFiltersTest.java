@@ -168,19 +168,54 @@ public class CompositeFiltersTest extends TestCase {
         DataRecord r1 = SCHEME.getRecord(0);
         DataRecord r2 = SCHEME.getRecord(1);
 
-        RecordOnlyFilter r1_or_r2 = (RecordOnlyFilter) CompositeFilters.makeOr(CompositeFilters.forRecords(Collections.singleton(r1)),
-            CompositeFilters.forRecords(Collections.singleton(r2)));
-        assertTrue(r1_or_r2.acceptRecord(r1));
-        assertTrue(r1_or_r2.acceptRecord(r2));
+        RecordOnlyFilter r1f = CompositeFilters.forRecords(Collections.singleton(r1));
+        RecordOnlyFilter r2f = CompositeFilters.forRecords(Collections.singleton(r2));
+        checkFilters(r1, r2, r1f, r2f);
 
-        RecordOnlyFilter r1_and_r2 = (RecordOnlyFilter) CompositeFilters.makeAnd(CompositeFilters.forRecords(Collections.singleton(r1)),
-            CompositeFilters.forRecords(Collections.singleton(r2)));
-        assertFalse(r1_and_r2.acceptRecord(r1));
-        assertFalse(r1_and_r2.acceptRecord(r2));
+        r1f = new RecordOnlyFilter(SCHEME) {
+            @Override
+            public boolean acceptRecord(DataRecord record) {
+                return record == r1;
+            }
 
-        RecordOnlyFilter not_r1 = (RecordOnlyFilter) CompositeFilters.makeNot(CompositeFilters.forRecords(Collections.singleton(r1)));
-        assertFalse(not_r1.acceptRecord(r1));
-        assertTrue(not_r1.acceptRecord(r2));
+            @Override
+            public String getDefaultName() {
+                return "r1";
+            }
+        };
+        r2f = new RecordOnlyFilter(SCHEME) {
+            @Override
+            public boolean acceptRecord(DataRecord record) {
+                return record == r2;
+            }
+
+            @Override
+            public String getDefaultName() {
+                return "r2";
+            }
+        };
+        checkFilters(r1, r2, r1f, r2f);
+    }
+
+    private void checkFilters(DataRecord r1, DataRecord r2, RecordOnlyFilter r1f, RecordOnlyFilter r2f) {
+        QDFilter r1_or_r2 = CompositeFilters.makeOr(r1f, r2f);
+        checkRecord(r1_or_r2, r1, true);
+        checkRecord(r1_or_r2, r2, true);
+
+        QDFilter r1_and_r2 = CompositeFilters.makeAnd(r1f, r2f);
+        checkRecord(r1_and_r2, r1, false);
+        checkRecord(r1_and_r2, r2, false);
+
+        QDFilter not_r1 = CompositeFilters.makeNot(r1f);
+        checkRecord(not_r1, r1, false);
+        checkRecord(not_r1, r2, true);
+    }
+
+    private void checkRecord(QDFilter filter, DataRecord record, boolean expected) {
+        assertEquals(expected, filter.accept(null, record, 0, null));
+        assertEquals(expected, filter.accept(null, record, record.getScheme().getCodec().getWildcardCipher(), "*"));
+        assertEquals(expected, filter.accept(null, record, 0, "TestTestTest"));
+        assertEquals(expected, ((RecordOnlyFilter) filter).acceptRecord(record)); // also checks proper filter class
     }
 
     public void testOptimize() {

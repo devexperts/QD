@@ -20,28 +20,26 @@ import com.devexperts.util.TimeFormat;
 
 class ViewerCellValue implements Comparable<ViewerCellValue> {
     private static final NumberFormat PRICE_FORMAT = new DecimalFormat(".00########", new DecimalFormatSymbols(Locale.US));
-    private static final NumberFormat SIZE_FORMAT = new DecimalFormat("#,###", new DecimalFormatSymbols(Locale.US));
+    private static final NumberFormat SIZE_FORMAT = new DecimalFormat(".##########", new DecimalFormatSymbols(Locale.US));
 
     public static final String NA = "N/A";
 
-    private String text;
-    private Color color;
-    private Color background;
-    private int alignment;
-    private double value;
-    private TimeZone timeZone;
+    private final String text;
+    private final Color color;
+    private final Color background;
+    private final int alignment;
+    private final double value;
 
-    ViewerCellValue(String text, Color color, Color background, int alignment, TimeZone timeZone) {
-        this(text, color, background, alignment, 0.0, timeZone);
+    ViewerCellValue(String text, Color color, Color background, int alignment) {
+        this(text, color, background, alignment, 0);
     }
 
-    ViewerCellValue(String text, Color color, Color background, int alignment, double value, TimeZone timeZone) {
+    ViewerCellValue(String text, Color color, Color background, int alignment, double value) {
         this.text = text;
         this.color = color;
         this.background = background;
         this.alignment = alignment;
         this.value = value;
-        this.timeZone = timeZone;
     }
 
     String getText() {
@@ -78,9 +76,11 @@ class ViewerCellValue implements Comparable<ViewerCellValue> {
         }
     }
 
-    static String formatSize(long size) {
-        if (size == Long.MIN_VALUE)
+    static String formatSize(double size) {
+        if (Double.isNaN(size))
             return NA;
+        if (size == 0)
+            return "0";
         synchronized (SIZE_FORMAT) {
             return SIZE_FORMAT.format(size);
         }
@@ -91,6 +91,8 @@ class ViewerCellValue implements Comparable<ViewerCellValue> {
     }
 
     static String formatTime(long time, TimeZone tz) {
+        if (time == 0 || time == Long.MAX_VALUE)
+            return NA;
         return TimeFormat.getInstance(tz).withMillis().format(time);
     }
 

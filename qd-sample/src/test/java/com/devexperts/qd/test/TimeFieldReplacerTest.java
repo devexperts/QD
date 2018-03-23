@@ -14,12 +14,12 @@ package com.devexperts.qd.test;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.function.Consumer;
+import java.util.function.ToLongFunction;
 
 import com.devexperts.test.TraceRunnerWithParametersFactory;
-import com.devexperts.timetest.TestTimeProvider;
 import com.devexperts.util.TimePeriod;
-import com.dxfeed.api.*;
+import com.dxfeed.api.DXEndpoint;
+import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.event.EventType;
 import com.dxfeed.event.candle.Candle;
 import com.dxfeed.event.candle.CandleSymbol;
@@ -28,9 +28,7 @@ import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import static org.junit.Assert.assertEquals;
-
-@Ignore
+@SuppressWarnings("unchecked")
 @RunWith(Parameterized.class)
 @Parameterized.UseParametersRunnerFactory(TraceRunnerWithParametersFactory.class)
 public class TimeFieldReplacerTest {
@@ -38,11 +36,12 @@ public class TimeFieldReplacerTest {
 
     private static final long INITIAL_TIME_MILLIS = 123_000;
     private static final long STRATEGY_TIME_MILLIS = 234_000;
-    private static final long CURRENT_TIME_MILLIS = 345_000;
 
     private final boolean replace;
     private final StrategyType strategyType;
     private final String fileFormat;
+
+    private long testStartTime;
 
     public TimeFieldReplacerTest(boolean replace, StrategyType strategyType, String fileFormat) {
         this.replace = replace;
@@ -67,71 +66,67 @@ public class TimeFieldReplacerTest {
 
     @After
     public void tearDown() {
-        TestTimeProvider.reset();
+        //noinspection ResultOfMethodCallIgnored
         FILE_WRITE_TO.toFile().delete();
     }
 
-    private <T extends EventType<?>> void testEvent(Class<T> clazz, T initialEvent, Consumer<T> checker,
-        String recordFilterSpec) throws InterruptedException
+    private <T extends EventType<?>> void testEvent(T initialEvent, ToLongFunction<T>... timeExtractors)
+        throws InterruptedException
     {
-        // 0. Start TestTimeProvider if needed (should be done as first action)
-        if (strategyType == StrategyType.CURRENT)
-            TestTimeProvider.start(CURRENT_TIME_MILLIS);
+        // 0. Remember when test was started, truncated to whole seconds
+        testStartTime = System.currentTimeMillis() / 1000 * 1000;
+
         // 1. Create endpoint with PUBLISHER role and connect to tape file
         DXEndpoint endpoint = DXEndpoint.newBuilder()
             .withRole(DXEndpoint.Role.PUBLISHER)
             .withProperty(DXEndpoint.DXFEED_WILDCARD_ENABLE_PROPERTY, "true")
             .build();
-        DXPublisher publisher = endpoint.getPublisher();
-
         endpoint.connect("tape:" + FILE_WRITE_TO + "[format=" + fileFormat + "]");
+
         // 2. Publish event and close endpoint
-        publisher.publishEvents(Collections.singletonList(initialEvent));
+        endpoint.getPublisher().publishEvents(Collections.singletonList(initialEvent));
         endpoint.awaitProcessed();
         endpoint.closeAndAwaitTermination();
+
         // 3. Read published events
         endpoint = DXEndpoint.newBuilder()
             .withRole(DXEndpoint.Role.STREAM_FEED)
             .build();
-        DXFeedSubscription<T> sub = endpoint.getFeed().createSubscription(clazz);
+        DXFeedSubscription<T> sub = endpoint.getFeed().createSubscription((Class<T>) initialEvent.getClass());
         List<T> events = new ArrayList<>();
         sub.addEventListener(events::addAll);
         sub.addSymbols(initialEvent.getEventSymbol());
-        String fieldReplacerConfig = replace ? "[fieldReplacer=time:" + recordFilterSpec + ":"
-            + strategyType.createConfiguration(TimePeriod.valueOf(STRATEGY_TIME_MILLIS).toString()) + "]" : "";
-        endpoint.connect("file:" + FILE_WRITE_TO + fieldReplacerConfig).awaitNotConnected();
+        String fieldReplacerConfig = replace ? "[fieldReplacer=time:*:"
+            + String.format(strategyType.config, TimePeriod.valueOf(STRATEGY_TIME_MILLIS).toString()) + "]" : "";
+        endpoint.connect("file:" + FILE_WRITE_TO + fieldReplacerConfig);
+        endpoint.awaitNotConnected();
         endpoint.closeAndAwaitTermination();
+
         // 4. Check that events are changed as required
-        assertEquals(1, events.size());
-        T modifiedEvent = events.get(0);
-        checker.accept(modifiedEvent);
+        for (T modifiedEvent : events)
+            for (ToLongFunction<T> timeExtractor : timeExtractors)
+                Assert.assertTrue(initialEvent + " --> " + modifiedEvent, checkTime(timeExtractor.applyAsLong(modifiedEvent)));
     }
 
     @Test
     public void testTimeAndSale() throws Exception {
         TimeAndSale initialEvent = new TimeAndSale("IBM");
         initialEvent.setTime(INITIAL_TIME_MILLIS);
-        testEvent(TimeAndSale.class, initialEvent, resultEvent -> {
-            assertExpectedTime(resultEvent.getTime());
-        }, "*");
+        testEvent(initialEvent, TimeAndSale::getTime);
     }
 
     @Test
     public void testTrade() throws Exception {
         Trade initialEvent = new Trade("IBM");
         initialEvent.setTime(INITIAL_TIME_MILLIS);
-        testEvent(Trade.class, initialEvent, resultEvent -> {
-            assertExpectedTime(resultEvent.getTime());
-        }, "*");
+        testEvent(initialEvent, Trade::getTime);
     }
 
     @Test
     public void testTradeETH() throws Exception {
         TradeETH initialEvent = new TradeETH("IBM");
         initialEvent.setTime(INITIAL_TIME_MILLIS);
-        testEvent(TradeETH.class, initialEvent, resultEvent -> {
-            assertExpectedTime(resultEvent.getTime());
-        }, "*");
+        testEvent(initialEvent, TradeETH::getTime);
     }
 
     @Test
@@ -139,9 +134,7 @@ public class TimeFieldReplacerTest {
         Order initialEvent = new Order("IBM");
         initialEvent.setOrderSide(Side.BUY);
         initialEvent.setTime(INITIAL_TIME_MILLIS);
-        testEvent(Order.class, initialEvent, resultEvent -> {
-            assertExpectedTime(resultEvent.getTime());
-        }, "*");
+        testEvent(initialEvent, Order::getTime);
     }
 
     @Test
@@ -149,90 +142,57 @@ public class TimeFieldReplacerTest {
         SpreadOrder initialEvent = new SpreadOrder("IBM");
         initialEvent.setOrderSide(Side.BUY);
         initialEvent.setTime(INITIAL_TIME_MILLIS);
-        testEvent(SpreadOrder.class, initialEvent, resultEvent -> {
-            assertExpectedTime(resultEvent.getTime());
-        }, "*");
+        testEvent(initialEvent, SpreadOrder::getTime);
     }
 
     @Test
     public void testCandle() throws Exception {
         Candle initialEvent = new Candle(CandleSymbol.valueOf("IBM"));
         initialEvent.setTime(INITIAL_TIME_MILLIS);
-        testEvent(Candle.class, initialEvent, resultEvent -> {
-            assertExpectedTime(resultEvent.getTime());
-        }, "*");
+        testEvent(initialEvent, Candle::getTime);
     }
 
     @Test
     public void testQuote() throws Exception {
         Quote initialEvent = new Quote("IBM");
-        initialEvent.setAskTime(INITIAL_TIME_MILLIS);
         initialEvent.setBidTime(INITIAL_TIME_MILLIS);
-        testEvent(Quote.class, initialEvent, resultEvent -> {
-            assertExpectedTime(resultEvent.getAskTime());
-            assertExpectedTime(resultEvent.getBidTime());
-        }, "*");
+        initialEvent.setAskTime(INITIAL_TIME_MILLIS);
+        testEvent(initialEvent, Quote::getBidTime, Quote::getAskTime);
     }
 
+    @Test
     public void testProfile() throws Exception {
         Profile initialEvent = new Profile("IBM");
         initialEvent.setHaltStartTime(INITIAL_TIME_MILLIS);
         initialEvent.setHaltEndTime(INITIAL_TIME_MILLIS);
-        testEvent(Profile.class, initialEvent, resultEvent -> {
-            assertExpectedTime(resultEvent.getHaltStartTime());
-            assertExpectedTime(resultEvent.getHaltEndTime());
-        }, "*");
+        testEvent(initialEvent, Profile::getHaltStartTime, Profile::getHaltEndTime);
     }
 
-    private void assertExpectedTime(long timeMillis) {
-        assertEquals(getExpectedTime(), timeMillis);
-    }
-
-    private long getExpectedTime() {
+    private boolean checkTime(long time) {
         if (replace) {
             switch (strategyType) {
             case CURRENT:
-                return CURRENT_TIME_MILLIS;
+                return time >= testStartTime && time <= System.currentTimeMillis();
             case INCREASE:
-                return INITIAL_TIME_MILLIS + STRATEGY_TIME_MILLIS;
+                return time == INITIAL_TIME_MILLIS + STRATEGY_TIME_MILLIS;
             case DECREASE:
-                return INITIAL_TIME_MILLIS - STRATEGY_TIME_MILLIS;
+                return time == INITIAL_TIME_MILLIS - STRATEGY_TIME_MILLIS;
             case SPECIFIED:
-                return STRATEGY_TIME_MILLIS;
+                return time == STRATEGY_TIME_MILLIS;
             default:
                 throw new AssertionError();
             }
         }
-        return INITIAL_TIME_MILLIS;
+        return time == INITIAL_TIME_MILLIS;
     }
 
     private enum StrategyType {
-        CURRENT {
-            @Override
-            String createConfiguration(String time) {
-                return "current";
-            }
-        },
-        INCREASE {
-            @Override
-            String createConfiguration(String time) {
-                return "+" + time;
-            }
-        },
-        DECREASE {
-            @Override
-            String createConfiguration(String time) {
-                return "-" + time;
-            }
-        },
-        SPECIFIED {
-            @Override
-            String createConfiguration(String time) {
-                return time;
-            }
-        };
+        CURRENT("current"), INCREASE("+%s"), DECREASE("-%s"), SPECIFIED("%s");
 
-        abstract String createConfiguration(String time);
+        final String config;
+
+        StrategyType(String config) {
+            this.config = config;
+        }
     }
-
 }

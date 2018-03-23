@@ -1,3 +1,12 @@
+
+QDS 3.260:
+
+* [QD-1065] Remove dependency on timetest library
+* [QD-1066] BUG FIX: default negation of custom RecordOnly filters shall produce FastRecordFilter
+* [QD-1067] dxFeed API: Use fractional sizes internally for aggregations and checks
+
+QDS 3.259:
+
 * [QD-1063] BUG FIX: TapeConnector stops working prematurely
   - DXEndpoint.Role.STREAM_PUBLISHER role is created to support tape writing at maximum speed
   - ConvertTapeFile sample is provided to demonstrate proper use of dxFeed API for tape conversion

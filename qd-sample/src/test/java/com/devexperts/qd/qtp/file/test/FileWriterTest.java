@@ -19,22 +19,18 @@ import com.devexperts.qd.qtp.*;
 import com.devexperts.qd.qtp.file.*;
 import com.devexperts.qd.test.TestDataProvider;
 import com.devexperts.qd.test.TestDataScheme;
-import com.devexperts.timetest.TestTimeProvider;
 import com.devexperts.util.TimePeriod;
 import org.junit.*;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 
-@Ignore
 public class FileWriterTest {
     private static final String NAME_PREFIX = "FileWriterTest-tape-";
     private static final String NAME_SUFFIX = ".qds.tmp";
 
     private static final long SEED = 20131112;
-    private static final int RECORD_CNT = 1000;
-    private static final int BLOCKS = 1000;
-    private static final long TIME_STEP = 10;
+    private static final int RECORD_CNT = 10;
+    private static final int A_LOT_OF_FILES = 10;
 
     private final DataScheme scheme = new TestDataScheme(20131112);
 
@@ -42,7 +38,6 @@ public class FileWriterTest {
 
     @After
     public void tearDown() throws Exception {
-        TestTimeProvider.reset();
         if (fileWriter != null) {
             fileWriter.close();
         }
@@ -50,6 +45,7 @@ public class FileWriterTest {
         File[] files = getDataFiles();
         if (files != null)
             for (File file : files)
+                //noinspection ResultOfMethodCallIgnored
                 file.delete();
     }
 
@@ -66,22 +62,23 @@ public class FileWriterTest {
         fileWriter.addSendMessageType(MessageType.STREAM_DATA);
 
         TestDataProvider provider = new TestDataProvider(scheme, SEED, RECORD_CNT, false);
-        long time = System.currentTimeMillis();
         HeartbeatPayload heartbeatPayload = new HeartbeatPayload();
-        for (int i = 0; i < BLOCKS; i++) {
-            heartbeatPayload.setTimeMillis(time + i * TIME_STEP);
+        // Try to create A_LOT_OF_FILES with 10 blocks each (first and last ones are shorter to avoid overflows)
+        long time = System.currentTimeMillis() / params.getSplit().getTime() * params.getSplit().getTime();
+        for (int i = 1; i < A_LOT_OF_FILES * 10 - 2; i++) {
+            heartbeatPayload.setTimeMillis(time + i * params.getSplit().getTime() / 10);
             fileWriter.visitHeartbeat(heartbeatPayload);
-            while (fileWriter.visitData(provider, MessageType.STREAM_DATA)) {
-                // visit all data from provider
-            }
+            fileWriter.visitData(provider, MessageType.STREAM_DATA);
         }
         fileWriter.close();
+
+        // Test that we have created A_LOT_OF_FILES files.
+        assertEquals(A_LOT_OF_FILES, getDataFiles().length);
     }
 
     // [QD-771] Tools: FileWriter shall release completed files as time passes.
     @Test
     public void testFilesAreReleasedAsTimePasses() throws IOException, InterruptedException {
-        TestTimeProvider.start();
         // Create split
         TimePeriod split = TimePeriod.valueOf("1s");
         // Create file writer
@@ -90,27 +87,21 @@ public class FileWriterTest {
         params.setSplit(split);
         fileWriter = new FileWriterImpl(NAME_PREFIX + "~" + NAME_SUFFIX, scheme, params).open();
         fileWriter.addSendMessageType(MessageType.STREAM_DATA);
+
         // Visit some data and write records to ".data" file.
         TestDataProvider provider = new TestDataProvider(scheme, SEED, RECORD_CNT, false);
         HeartbeatPayload heartbeatPayload = new HeartbeatPayload();
         heartbeatPayload.setTimeMillis(System.currentTimeMillis());
         fileWriter.visitHeartbeat(heartbeatPayload);
         fileWriter.visitData(provider, MessageType.STREAM_DATA);
-        TestTimeProvider.waitUntilThreadsAreFrozen(1000);
         // Close first file by timeout.
-        for (int i = 0; i <= Math.round(1d * split.getTime() * FileConstants.MAX_OPEN_FACTOR / FileConstants.MAX_BUFFER_TIME); i++) {
-            TestTimeProvider.increaseTime(FileConstants.MAX_BUFFER_TIME);
-            TestTimeProvider.waitUntilThreadsAreFrozen(1000);
-        }
+        Thread.sleep(split.getTime() * FileConstants.MAX_OPEN_FACTOR + FileConstants.MAX_BUFFER_TIME);
         // Write data, should be stored to the second file.
-        while (fileWriter.visitData(provider, MessageType.STREAM_DATA)) {
-            // Visit all data from provider.
-        }
+        fileWriter.visitData(provider, MessageType.STREAM_DATA);
         // Close for flushing.
         fileWriter.close();
+
         // Test that we created 2 files.
-        File[] dataFiles = getDataFiles();
-        assertNotNull(dataFiles);
-        assertEquals(2, dataFiles.length);
+        assertEquals(2, getDataFiles().length);
     }
 }

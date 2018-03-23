@@ -36,9 +36,9 @@ import com.dxfeed.event.LastingEvent;
  * <li>{@link #getSequence() sequence} - sequence of the last trade;
  * <li>{@link #getExchangeCode() exchangeCode} - exchange code of the last trade;
  * <li>{@link #getPrice() price} - price of the last trade;
- * <li>{@link #getSize() size} - size of the last trade;
+ * <li>{@link #getSize() size} - size of the last trade as integer number (rounded toward zero);
  * <li>{@link #getSizeAsDouble() sizeAsDouble} - size of the last trade as floating number with fractions;
- * <li>{@link #getDayVolume() dayVolume} - total extended trading hours volume traded for a day;
+ * <li>{@link #getDayVolume() dayVolume} - total extended trading hours volume traded for a day as integer number (rounded toward zero);
  * <li>{@link #getDayVolumeAsDouble() dayVolumeAsDouble} - total extended trading hours volume traded for a day as floating number with fractions;
  * <li>{@link #getDayTurnover() dayTurnover} - total extended trading hours turnover traded for a day;
  * <li>{@link #getTickDirection() tickDirection} - tick direction of the last trade;
@@ -47,8 +47,8 @@ import com.dxfeed.event.LastingEvent;
  *
  * <h3>Trading sessions</h3>
  *
- * The {@code TradeETH} event defines last trade {@link #getPrice() price}, {@link #getSize() size},
- * {@link #getDayVolume() dayVolume} and {@link #getDayTurnover() dayTurnover}
+ * The {@code TradeETH} event defines last trade {@link #getPrice() price}, {@link #getSizeAsDouble() sizeAsDouble},
+ * {@link #getDayVolumeAsDouble() dayVolumeAsDouble} and {@link #getDayTurnover() dayTurnover}
  * for trades that happen during extended trading hours. This event is not defined for symbols that has no
  * concept of ETH.
  *
@@ -62,7 +62,7 @@ import com.dxfeed.event.LastingEvent;
  * and total volume and turnover of the pre and post market trading session (excluding the volume and turnover of a regular trading session).
  *
  * Note, that during per and post market sessions, {@link Trade} event also updates, but only its
- * {@link Trade#getDayVolume() dayVolume} and {@link Trade#getDayTurnover() dayTurnover} properties change
+ * {@link Trade#getDayVolumeAsDouble() dayVolumeAsDouble} and {@link Trade#getDayTurnover() dayTurnover} properties change
  * to reflect the overall official volume and turnover as reported by exchanges.
  * During post market trading session, exchanges may correct their official RTH last trading price, which results
  * in the update to {@link Trade} event.
@@ -70,12 +70,12 @@ import com.dxfeed.event.LastingEvent;
  * <h3>Volume and Turnover</h3>
  *
  * <p>Note that one can compute volume-weighted average price (VWAP) for extended trading hours by this formula:
- * <br><code>vwap = {@link #getDayTurnover() dayTurnover} / {@link #getDayVolume() dayVolume};</code>
+ * <br><code>vwap = {@link #getDayTurnover() dayTurnover} / {@link #getDayVolumeAsDouble() dayVolumeAsDouble};</code>
  *
  * <h3>Daily reset</h3>
  *
  * Daily reset procedure that happens on a schedule during non-trading hours resets {@code TradeETH}
- * {@link #getDayVolume() dayVolume} to zero and {@link #getDayTurnover() dayTurnover} to {@link Double#NaN NaN}
+ * {@link #getDayVolumeAsDouble() dayVolumeAsDouble} and {@link #getDayTurnover() dayTurnover} to {@link Double#NaN NaN}
  * in preparation to the next day's pre-market trading session
  * (or for regular trading if there is no pre-market) while leaving all other properties intact.
  * They reflect information about the last known ETH trade until the next ETH trade happens.
@@ -83,7 +83,7 @@ import com.dxfeed.event.LastingEvent;
  * <h3>The most recent last trade price</h3>
  *
  * The most recent last trade price ("extended last price") in the market can be found by combining information from both
- * {@link Trade} and {@link TradeETH} events using {@link #isExtendedTradingHours()} method to figure out
+ * {@link Trade} and {@link TradeETH} events using {@link #isExtendedTradingHours() isExtendedTradingHours} method to figure out
  * which trading session had the most recent trade. The following piece of code finds the most
  * recent last trade price from the given {@link DXFeed feed} for a given {@code symbol},
  * assuming there is a {@link DXFeedSubscription subscription} for both {@link Trade} and {@link TradeETH} events

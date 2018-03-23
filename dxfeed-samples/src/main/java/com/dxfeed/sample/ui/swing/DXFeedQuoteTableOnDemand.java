@@ -200,11 +200,11 @@ public class DXFeedQuoteTableOnDemand {
                 SYMBOLS.get(i),
                 trade.getPrice(),
                 trade.getExchangeCode(),
-                trade.getSize(),
+                trade.getSizeAsDouble(),
                 quote.getBidPrice(),
                 quote.getAskPrice(),
-                quote.getBidSize(),
-                quote.getAskSize(),
+                quote.getBidSizeAsDouble(),
+                quote.getAskSizeAsDouble(),
             });
         }
     }

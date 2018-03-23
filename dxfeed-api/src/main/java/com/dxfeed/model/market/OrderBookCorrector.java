@@ -137,31 +137,31 @@ public class OrderBookCorrector {
             return true;
         if (order.getScope() != Scope.AGGREGATE)
             return true;
-        if (order.getSize() == 0) {
+        if (!order.hasSize()) {
             book.orders.removeKey(order.getIndex());
             return true;
         }
         for (Order better : book.orders)
-            if (better.getIndex() != order.getIndex() && better.getSize() > 0 &&
+            if (better.getIndex() != order.getIndex() && better.getSizeAsDouble() > 0 &&
                 (sameSlot(better, order) && better.getTime() > order.getTime()) ||
                 better.getTime() > order.getTime() + keepTTL ||
                 bidAskFlip(better, order) && better.getTime() > order.getTime() + flipTTL)
             {
-                Order old = book.orders.put(copy(order, -order.getSize()));
-                if (old != null && old.getSize() > 0)
+                Order old = book.orders.put(copy(order, -order.getSizeAsDouble()));
+                if (old != null && old.getSizeAsDouble() > 0)
                     corrections.add(copy(order, 0));
                 return false;
             }
         Order old = book.orders.getByKey(order.getIndex());
-        if (old != null && old.getSize() < 0 && old.getOrderSide() == order.getOrderSide() && old.getPrice() == order.getPrice() && old.getTime() >= order.getTime())
+        if (old != null && old.getSizeAsDouble() < 0 && old.getOrderSide() == order.getOrderSide() && old.getPrice() == order.getPrice() && old.getTime() >= order.getTime())
             return false;
         for (Order worse : book.orders)
-            if (worse.getIndex() != order.getIndex() && worse.getSize() > 0 &&
+            if (worse.getIndex() != order.getIndex() && worse.getSizeAsDouble() > 0 &&
                 (sameSlot(worse, order) && worse.getTime() <= order.getTime()) ||
                 worse.getTime() <= order.getTime() - keepTTL ||
                 bidAskFlip(worse, order) && worse.getTime() <= order.getTime() - flipTTL)
             {
-                book.orders.put(copy(worse, -worse.getSize())); // in situ replacement is not ConcurrentModification
+                book.orders.put(copy(worse, -worse.getSizeAsDouble())); // in situ replacement is not ConcurrentModification
                 corrections.add(copy(worse, 0));
             }
         book.orders.put(order);
@@ -185,7 +185,7 @@ public class OrderBookCorrector {
         return order1.getOrderSide() != order2.getOrderSide() && Double.compare(order1.getPrice(), order2.getPrice()) * (order1.getOrderSide().getCode() - order2.getOrderSide().getCode()) <= 0;
     }
 
-    static Order copy(Order old, long size) {
+    static Order copy(Order old, double size) {
         Order order = new Order(old.getEventSymbol());
         order.setIndex(old.getIndex());
         order.setOrderSide(old.getOrderSide());
@@ -195,7 +195,7 @@ public class OrderBookCorrector {
         order.setExchangeCode(old.getExchangeCode());
         order.setMarketMaker(old.getMarketMaker());
         order.setPrice(old.getPrice());
-        order.setSize(size);
+        order.setSizeAsDouble(size);
         return order;
     }
 }

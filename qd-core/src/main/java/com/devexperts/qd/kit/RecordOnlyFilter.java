@@ -62,6 +62,11 @@ public abstract class RecordOnlyFilter extends QDFilter {
         return Kind.RECORD_ONLY;
     }
 
+    @Override
+    public QDFilter negate() {
+        return new FastRecordFilter(new NotFilter(unwrap()), true);
+    }
+
     /**
      * This final implementation always returns {@code true}.
      */

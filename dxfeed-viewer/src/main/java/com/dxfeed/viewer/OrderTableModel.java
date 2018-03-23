@@ -23,9 +23,9 @@ class OrderTableModel extends EventTableModel<Order> {
     private final ObservableListModel<Order> list;
 
     private final Set<Order> updatedOrders = new HashSet<Order>();
-    private long maxSize = 0;
+    private double maxSize = 0;
 
-    long getMaxSize() {
+    double getMaxSize() {
         return maxSize;
     }
 
@@ -56,7 +56,8 @@ class OrderTableModel extends EventTableModel<Order> {
     }
 
     public void processOrders(List<? extends Order> orderEvents) {
-        if (frozen) return;
+        if (frozen)
+            return;
 
         events.clear();
         isUpdated.clear();
@@ -83,8 +84,8 @@ class OrderTableModel extends EventTableModel<Order> {
             // we only calculate max size for histogram zooming for first 15 price levels and watching percent diff from top price in the book to filter out the trash on lower levels
             boolean thisPriceIsTrash = isTrashPrice(order.getPrice(), topPrice);
 
-            if (priceGroup <= 15 && !thisPriceIsTrash && order.getSize() > maxSize)
-                maxSize = order.getSize();
+            if (priceGroup <= 15 && !thisPriceIsTrash && order.getSizeAsDouble() > maxSize)
+                maxSize = order.getSizeAsDouble();
             isDisabled.add(thisPriceIsTrash); // special disabled coloring for prices outside of filtering margins
         }
 

@@ -89,7 +89,7 @@ public class DXFeedMarketDepth {
                 order.getExchangeCode(),
                 order.getMarketMaker(),
                 order.getPrice(),
-                order.getSize()
+                order.getSizeAsDouble()
             });
         }
     }

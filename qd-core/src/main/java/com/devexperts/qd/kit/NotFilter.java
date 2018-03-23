@@ -30,7 +30,7 @@ public class NotFilter extends QDFilter implements QDFilter.UpdateListener {
 
     @Override
     public Kind getKind() {
-        Kind kind = delegate.getKind();
+        Kind kind= delegate.getKind();
         if (kind.isRecordOnly())
             return Kind.RECORD_ONLY;
         else if (kind.isSymbolOnly())
@@ -44,6 +44,8 @@ public class NotFilter extends QDFilter implements QDFilter.UpdateListener {
         DataScheme scheme = getScheme();
         if (scheme == null)
             scheme = record.getScheme(); // for backwards compatibility
+        // TODO the below code incorrectly passes wildcard disregarding other criteria like contract or record
+        // TODO refactor with explicit split of all filters into individual single criteria filters plus expressions
         if (cipher == scheme.getCodec().getWildcardCipher())
             return true;
         return !delegate.accept(contract, record, cipher, symbol);
@@ -51,7 +53,7 @@ public class NotFilter extends QDFilter implements QDFilter.UpdateListener {
 
     @Override
     public QDFilter negate() {
-        return delegate == null ? QDFilter.ANYTHING : delegate;
+        return delegate;
     }
 
     @Override
@@ -112,15 +114,12 @@ public class NotFilter extends QDFilter implements QDFilter.UpdateListener {
     @Override
     public String getDefaultName() {
         StringBuilder sb = new StringBuilder();
-        SyntaxPrecedence precedence = delegate == null ? SyntaxPrecedence.TOKEN : delegate.getSyntaxPrecedence();
+        SyntaxPrecedence precedence = delegate.getSyntaxPrecedence();
         boolean parenthesis = precedence == SyntaxPrecedence.AND || precedence == SyntaxPrecedence.OR;
         sb.append('!');
         if (parenthesis)
             sb.append('(');
-        if (delegate == null)
-            sb.append('*');
-        else
-            sb.append(delegate);
+        sb.append(delegate);
         if (parenthesis)
             sb.append(')');
         return sb.toString();

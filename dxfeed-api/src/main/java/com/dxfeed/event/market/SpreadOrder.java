@@ -14,6 +14,7 @@ package com.dxfeed.event.market;
 import java.util.Collection;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.DXPublisher;
 import com.dxfeed.model.AbstractIndexedEventModel;
 import com.dxfeed.model.IndexedEventModel;
@@ -34,8 +35,9 @@ import com.dxfeed.model.IndexedEventModel;
  * multiple sources for the same market symbol and are distinguished by their
  * {@link #getIndex index}.
  * It is unique across all the sources of depth information for the symbol.
- * The event with {@link #getSize() size} of {@code 0} is a signal to remove
- * previously received order for the corresponding index.
+ * The event with {@link #getSizeAsDouble() sizeAsDouble} either {@code 0} or {@link Double#NaN NaN}
+ * is a signal to remove previously received order for the corresponding index.
+ * The method {@link #hasSize() hasSize} is a convenient method to test for size presence.
  *
  * <h3>Properties</h3>
  *
@@ -50,7 +52,7 @@ import com.dxfeed.model.IndexedEventModel;
  * <li>{@link #getTimeNanoPart() timeNanoPart} - microseconds and nanoseconds time part of this order;
  * <li>{@link #getSequence() sequence} - sequence of this order;
  * <li>{@link #getPrice() price} - price of this order;
- * <li>{@link #getSize() size} - size of this order;
+ * <li>{@link #getSize() size} - size of this order as integer number (rounded toward zero);
  * <li>{@link #getSizeAsDouble() sizeAsDouble} - size of this order as floating number with fractions;
  * <li>{@link #getCount() count} - number of individual orders in this aggregate order;
  * <li>{@link #getExchangeCode() exchangeCode} - exchange code of this order;
@@ -89,7 +91,7 @@ import com.dxfeed.model.IndexedEventModel;
  *
  * <h3>Limitations</h3>
  *
- * This event type cannot be used with {@link com.dxfeed.api.DXFeed#getLastEvent DXFeed.getLastEvent} method.
+ * This event type cannot be used with {@link DXFeed#getLastEvent DXFeed.getLastEvent} method.
  *
  * <h3>Implementation details</h3>
  *

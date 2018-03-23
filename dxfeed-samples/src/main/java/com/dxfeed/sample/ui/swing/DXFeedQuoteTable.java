@@ -173,17 +173,17 @@ public class DXFeedQuoteTable {
                 summary.getDayHighPrice(),
                 summary.getDayLowPrice(),
                 summary.getDayOpenPrice(),
-                quote.getBidSize(),
-                quote.getAskSize(),
-                trade.getSize(),
-                trade.getDayVolume(),
+                quote.getBidSizeAsDouble(),
+                quote.getAskSizeAsDouble(),
+                trade.getSizeAsDouble(),
+                trade.getDayVolumeAsDouble(),
                 profile.getDescription(),
             });
         }
     }
 
     private String formatNetChange(double netChange) {
-        netChange = Math.round(netChange * 1e6) / 1e6;
+        netChange = Math.floor(netChange * 1e10 + 0.5) / 1e10;
         String netChangeStr = Double.toString(netChange);
         return (netChange > 0 ? "+" : "") + netChangeStr;
     }

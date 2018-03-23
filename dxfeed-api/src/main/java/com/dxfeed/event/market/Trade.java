@@ -16,8 +16,8 @@ import javax.xml.bind.annotation.XmlRootElement;
 /**
  * Trade event is a snapshot of the price and size of the last trade during regular trading hours
  * and an overall day volume and day turnover.
- * It represents the most recent information that is available about the regular last trade price on
- * the market at any given moment of time.
+ * It represents the most recent information that is available about the regular last trade on the market
+ * at any given moment of time.
  *
  * <h3>Properties</h3>
  *
@@ -30,9 +30,9 @@ import javax.xml.bind.annotation.XmlRootElement;
  * <li>{@link #getSequence() sequence} - sequence of the last trade;
  * <li>{@link #getExchangeCode() exchangeCode} - exchange code of the last trade;
  * <li>{@link #getPrice() price} - price of the last trade;
- * <li>{@link #getSize() size} - size of the last trade;
+ * <li>{@link #getSize() size} - size of the last trade as integer number (rounded toward zero);
  * <li>{@link #getSizeAsDouble() sizeAsDouble} - size of the last trade as floating number with fractions;
- * <li>{@link #getDayVolume() dayVolume} - total volume traded for a day;
+ * <li>{@link #getDayVolume() dayVolume} - total volume traded for a day as integer number (rounded toward zero);
  * <li>{@link #getDayVolumeAsDouble() dayVolumeAsDouble} - total volume traded for a day as floating number with fractions;
  * <li>{@link #getDayTurnover() dayTurnover} - total turnover traded for a day;
  * <li>{@link #getTickDirection() tickDirection} - tick direction of the last trade;
@@ -43,15 +43,15 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * The {@code Trade} event defines last trade {@link #getPrice() price} as officially defined
  * by the corresponding exchange for its <b>regular trading hours</b> (RTH).
- * It also include an official exchange {@link #getDayVolume() dayVolume} and {@link #getDayTurnover() dayTurnover}
+ * It also include an official exchange {@link #getDayVolumeAsDouble() dayVolumeAsDouble} and {@link #getDayTurnover() dayTurnover}
  * <b>for the whole trading day</b>. So, {@code Trade} event captures all the official numbers
  * that are typically reported by exchange.
  *
  * <p>Trades that happen in <b>extended trading hours</b> (ETH, pre-market and post-market trading sessions),
  * which are typically defined for stocks and ETFs, do not update last trade {@link #getTime() time},
- * {@link #getExchangeCode() exchangeCode}, {@link #getPrice() price}, {@link #getSize() size},
+ * {@link #getExchangeCode() exchangeCode}, {@link #getPrice() price}, {@link #getSizeAsDouble() sizeAsDouble},
  * and {@link #getTickDirection() tickDirection} in the {@code Trade} event, but they do update
- * {@link #getDayVolume() dayVolume} and {@link #getDayTurnover() dayTurnover}.
+ * {@link #getDayVolumeAsDouble() dayVolumeAsDouble} and {@link #getDayTurnover() dayTurnover}.
  *
  * <p>During extended trading hours a {@link TradeETH} event is generated on each trade with its
  * {@link TradeETH#isExtendedTradingHours() extendedTradingHours} property set to {@code true}.</p>
@@ -65,12 +65,12 @@ import javax.xml.bind.annotation.XmlRootElement;
  * or lows are reached or other properties change.
  *
  * <p>Note that one can compute volume-weighted average price (VWAP) for a day by this formula:
- * <br><code>vwap = {@link #getDayTurnover() dayTurnover} / {@link #getDayVolume() dayVolume};</code>
+ * <br><code>vwap = {@link #getDayTurnover() dayTurnover} / {@link #getDayVolumeAsDouble() dayVolumeAsDouble};</code>
  *
  * <h3>Daily reset</h3>
  *
  * Daily reset procedure that happens on a schedule during non-trading hours resets {@code Trade}
- * {@link #getDayVolume() dayVolume} to zero and {@link #getDayTurnover() dayTurnover} to {@link Double#NaN NaN}
+ * {@link #getDayVolumeAsDouble() dayVolumeAsDouble} and {@link #getDayTurnover() dayTurnover} to {@link Double#NaN NaN}
  * in preparation to the next day's pre-market trading session
  * (or for regular trading if there is no pre-market) while leaving all other properties intact.
  * They reflect information about the last known RTH trade until the next RTH trade happens.

@@ -23,18 +23,18 @@ class TimeAndSalesCellSupport {
     private static final Color ALERT_COLOR = new Color(86, 0, 0, 218);
 
     public static ViewerCellValue textValue(String text, int alignment, boolean isUpdated, boolean isAlert) {
-        return new ViewerCellValue(text, (isUpdated ? UPDATED_COLOR : DEFAULT_COLOR), (isAlert? ALERT_COLOR : null), alignment, null);
+        return new ViewerCellValue(text, (isUpdated ? UPDATED_COLOR : DEFAULT_COLOR), (isAlert? ALERT_COLOR : null), alignment);
     }
 
     public static ViewerCellValue exchangeValue(char exchange, boolean isUpdated, boolean isAlert) {
         return textValue(formatExchange(exchange), SwingConstants.CENTER, isUpdated, isAlert);
     }
 
-    public static ViewerCellValue doubleValue(double price, boolean isUpdated, boolean isAlert) {
+    public static ViewerCellValue priceValue(double price, boolean isUpdated, boolean isAlert) {
         return textValue(formatPrice(price), SwingConstants.RIGHT, isUpdated, isAlert);
     }
 
-    public static ViewerCellValue longValue(long size, boolean isUpdated, boolean isAlert) {
+    public static ViewerCellValue sizeValue(double size, boolean isUpdated, boolean isAlert) {
         return textValue(formatSize(size), SwingConstants.RIGHT, isUpdated, isAlert);
     }
 

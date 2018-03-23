@@ -44,7 +44,7 @@ import com.dxfeed.model.TimeSeriesEventModel;
  *                                       {@link #getTime() time};
  * <li>{@link #getExchangeCode() exchangeCode} - exchange code of this time and sale event;
  * <li>{@link #getPrice() price} - price of this time and sale event;
- * <li>{@link #getSize() size} - size of this time and sale event;
+ * <li>{@link #getSize() size} - size of this time and sale event as integer number (rounded toward zero);
  * <li>{@link #getSizeAsDouble() sizeAsDouble} - size of this time and sale event as floating number with fractions;
  * <li>{@link #getBidPrice() bidPrice} - the current bid price on the market when this time and sale event had occurred;
  * <li>{@link #getAskPrice() askPrice} - the current ask price on the market when this time and sale event had occurred;
@@ -328,8 +328,8 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
     }
 
     /**
-     * Returns size of this time and sale event.
-     * @return size of this time and sale event.
+     * Returns size of this time and sale event as integer number (rounded toward zero).
+     * @return size of this time and sale event as integer number (rounded toward zero).
      */
     @XmlTransient
     public long getSize() {
@@ -337,8 +337,8 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
     }
 
     /**
-     * Changes size of this time and sale event.
-     * @param size size of this time and sale event.
+     * Changes size of this time and sale event as integer number (rounded toward zero).
+     * @param size size of this time and sale event as integer number (rounded toward zero).
      */
     public void setSize(long size) {
         this.size = size;

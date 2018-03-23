@@ -42,39 +42,34 @@ enum OrderTableColumn implements EventTableColumn<Order> {
                 id = STOCK_EXCHANGE_MAP.get(order.getExchangeCode());
             }
 
-            return textValue(id, SwingConstants.CENTER, isUpdated, isDisabled, tag, scheme);
+            return textValue(id, isUpdated, isDisabled, tag, scheme, SwingConstants.CENTER);
         }
     },
     PRICE("Price", 50){
         public ViewerCellValue getValue(Order order, boolean isUpdated, boolean isDisabled, int tag, int scheme, TimeZone timeZone) {
-            return doubleValue(order.getPrice(), isUpdated, isDisabled, tag, scheme);
+            return priceValue(order.getPrice(), isUpdated, isDisabled, tag, scheme);
         }
     },
     SIZE("Size", 50){
         public ViewerCellValue getValue(Order order, boolean isUpdated, boolean isDisabled, int tag, int scheme, TimeZone timeZone) {
-            return longValue(order.getSize(), SwingConstants.CENTER, isUpdated, isDisabled, tag, scheme, order.getSize());
+            return sizeValue(order.getSizeAsDouble(), isUpdated, isDisabled, tag, scheme);
         }
     },
-
     TIME("Time", 130){
         public ViewerCellValue getValue(Order order, boolean isUpdated, boolean isDisabled, int tag, int scheme, TimeZone timeZone) {
             return timeValue(order.getTime(), isUpdated, isDisabled, tag, scheme, timeZone);
         }
     },
-
     SCOPE("Scope", 30){
         public ViewerCellValue getValue(Order order, boolean isUpdated, boolean isDisabled, int tag, int scheme, TimeZone timeZone) {
-            return textValue(order.getScope().name(), SwingConstants.CENTER, isUpdated, isDisabled, tag, scheme);
+            return textValue(order.getScope().name(), isUpdated, isDisabled, tag, scheme, SwingConstants.CENTER);
         }
     },
-
     PRICE_GROUP("Price Group", 30){
         public ViewerCellValue getValue(Order order, boolean isUpdated, boolean isDisabled, int tag, int scheme, TimeZone timeZone) {
-            return longValue(tag, SwingConstants.CENTER, isUpdated, isDisabled, tag, scheme);
+            return textValue(Integer.toString(tag), isUpdated, isDisabled, tag, scheme, SwingConstants.CENTER);
         }
-    },
-
-    ;
+    };
 
     final String caption;
     final int preferredWidth;
@@ -92,8 +87,8 @@ enum OrderTableColumn implements EventTableColumn<Order> {
         return preferredWidth;
     }
 
-    private static final Map<Character, String> STOCK_EXCHANGE_MAP = new HashMap<Character, String>();
-    private static final Map<Character, String> OPTION_EXCHANGE_MAP = new HashMap<Character, String>();
+    private static final Map<Character, String> STOCK_EXCHANGE_MAP = new HashMap<>();
+    private static final Map<Character, String> OPTION_EXCHANGE_MAP = new HashMap<>();
 
     static {
         STOCK_EXCHANGE_MAP.put('A', "AMEX");

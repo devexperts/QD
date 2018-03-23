@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.259</version>
+        <version>3.260</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -141,14 +141,6 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
-            <!-- Run time-test agent -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <argLine>-javaagent:${project.build.directory}/timetest.jar</argLine>
-                </configuration>
             </plugin>
         </plugins>
     </build>

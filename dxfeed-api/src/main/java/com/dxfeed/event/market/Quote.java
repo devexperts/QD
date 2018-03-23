@@ -21,10 +21,9 @@ import com.dxfeed.event.impl.TimeNanosUtil;
 import com.dxfeed.impl.XmlTimeAdapter;
 
 /**
- * Quote event is a snapshot of the best bid and ask prices,
- * and other fields that change with each quote.
- * It represents the most recent information that is available about the best quote on
- * the market at any given moment of time.
+ * Quote event is a snapshot of the best bid and ask prices, and other fields that change with each quote.
+ * It represents the most recent information that is available about the best quote on the market
+ * at any given moment of time.
  *
  * <h3>Properties</h3>
  *
@@ -37,16 +36,16 @@ import com.dxfeed.impl.XmlTimeAdapter;
  * <li>{@link #getBidTime() bidTime} - time of the last bid change;
  * <li>{@link #getBidExchangeCode() bidExchangeCode} -  bid exchange code;
  * <li>{@link #getBidPrice() bidPrice} - bid price;
- * <li>{@link #getBidSize() bidSize} - bid size;
+ * <li>{@link #getBidSize() bidSize} - bid size as integer number (rounded toward zero);
  * <li>{@link #getBidSizeAsDouble() bidSizeAsDouble} - bid size as floating number with fractions;
  * <li>{@link #getAskTime() askTime} - time of the last ask change;
  * <li>{@link #getAskExchangeCode() askExchangeCode} -  ask exchange code;
  * <li>{@link #getAskPrice() askPrice} - ask price;
- * <li>{@link #getAskSize() askSize} - ask size;
+ * <li>{@link #getAskSize() askSize} - ask size as integer number (rounded toward zero);
  * <li>{@link #getAskSizeAsDouble() askSizeAsDouble} - ask size as floating number with fractions.
  * </ul>
  *
- * Bid corresponds to the best (maximal price) order to buy, while
+ * Bid corresponds to the best (maximal price) order to buy,
  * ask corresponds to the best (minimal price) order to sell.
  *
  * <h3>Implementation details</h3>
@@ -218,8 +217,8 @@ public class Quote extends MarketEvent implements LastingEvent<String> {
     }
 
     /**
-     * Returns bid size.
-     * @return bid size.
+     * Returns bid size as integer number (rounded toward zero).
+     * @return bid size as integer number (rounded toward zero).
      */
     @XmlTransient
     public long getBidSize() {
@@ -227,8 +226,8 @@ public class Quote extends MarketEvent implements LastingEvent<String> {
     }
 
     /**
-     * Changes bid size.
-     * @param bidSize bid size.
+     * Changes bid size as integer number (rounded toward zero).
+     * @param bidSize bid size as integer number (rounded toward zero).
      */
     public void setBidSize(long bidSize) {
         this.bidSize = bidSize;
@@ -312,8 +311,8 @@ public class Quote extends MarketEvent implements LastingEvent<String> {
     }
 
     /**
-     * Returns ask size.
-     * @return ask size.
+     * Returns ask size as integer number (rounded toward zero).
+     * @return ask size as integer number (rounded toward zero).
      */
     @XmlTransient
     public long getAskSize() {
@@ -321,8 +320,8 @@ public class Quote extends MarketEvent implements LastingEvent<String> {
     }
 
     /**
-     * Changes ask size.
-     * @param askSize ask size.
+     * Changes ask size as integer number (rounded toward zero).
+     * @param askSize ask size as integer number (rounded toward zero).
      */
     public void setAskSize(long askSize) {
         this.askSize = askSize;

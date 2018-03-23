@@ -22,8 +22,8 @@ import com.dxfeed.impl.XmlTimeAdapter;
 
 /**
  * Base class for common fields of {@link Trade} and {@link TradeETH} events.
- * Trade events represent the most recent information that is available about the last trade on
- * the market at any given moment of time.
+ * Trade events represent the most recent information that is available about the last trade on the market
+ * at any given moment of time.
  *
  * <p>{@link Trade} event represents last trade information for <b>regular trading hours</b>
  * (RTH) with an official volume <b>for the whole trading day</b>.
@@ -215,8 +215,8 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
     }
 
     /**
-     * Returns size of the last trade.
-     * @return size of the last trade.
+     * Returns size of the last trade as integer number (rounded toward zero).
+     * @return size of the last trade as integer number (rounded toward zero).
      */
     @XmlTransient
     public long getSize() {
@@ -224,8 +224,8 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
     }
 
     /**
-     * Changes size of the last trade.
-     * @param size size of the last trade.
+     * Changes size of the last trade as integer number (rounded toward zero).
+     * @param size size of the last trade as integer number (rounded toward zero).
      */
     public void setSize(long size) {
         this.size = size;
@@ -249,8 +249,8 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
     }
 
     /**
-     * Returns total volume traded for a day.
-     * @return total volume traded for a day.
+     * Returns total volume traded for a day as integer number (rounded toward zero).
+     * @return total volume traded for a day as integer number (rounded toward zero).
      */
     @XmlTransient
     public long getDayVolume() {
@@ -258,8 +258,8 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
     }
 
     /**
-     * Changes total volume traded for a day.
-     * @param dayVolume total volume traded for a day.
+     * Changes total volume traded for a day as integer number (rounded toward zero).
+     * @param dayVolume total volume traded for a day as integer number (rounded toward zero).
      */
     public void setDayVolume(long dayVolume) {
         this.dayVolume = dayVolume;
