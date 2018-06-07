@@ -181,7 +181,7 @@ public class ImplCodeGen {
             map("DayClosePrice", "DayClose.Price", FieldType.DECIMAL_AS_DOUBLE).optional().
             map("PrevDayId", "PrevDayId", FieldType.DATE).
             map("PrevDayClosePrice", "PrevDayClose.Price", FieldType.DECIMAL_AS_DOUBLE).
-            map("PrevDayVolume", "PrevDayVolume", FieldType.DECIMAL_AS_DOUBLE).compositeOnly().optional().
+            map("PrevDayVolume", "PrevDayVolume", FieldType.DECIMAL_AS_DOUBLE).optional().
             map("OpenInterest", "OpenInterest", FieldType.INT).compositeOnly().optional().
             map("Flags", "Flags", FieldType.INT).optional().
             publishable();

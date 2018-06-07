@@ -267,6 +267,17 @@ public class TimeFormatTest extends TestCase {
         assertEquals(GMT.withTimeZone().format(d1), GMT.withTimeZone().format(d2));
     }
 
+    public void testDateOutsideIsoRangeFormat() {
+        Date d1 = new Date(Long.MIN_VALUE);
+        assertEquals(Long.toString(Long.MIN_VALUE), TimeFormat.GMT.format(d1));
+
+        Date d2 = new Date(Long.MAX_VALUE);
+        assertEquals(Long.toString(Long.MAX_VALUE), TimeFormat.GMT.format(d2));
+
+        Date d3 = new Date(TimeUtil.DAY << 32);
+        assertEquals(Long.toString(d3.getTime()), TimeFormat.GMT.format(d3));
+    }
+
     public void testIsoFormat() {
         // Samples from http://www.w3schools.com/schema/schema_dtypes_date.asp
         // Test parsing

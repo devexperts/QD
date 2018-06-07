@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.260</version>
+        <version>3.261</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -48,6 +48,11 @@
             <artifactId>dxfeed-api</artifactId>
             <type>jar</type>
             <classifier>javadoc</classifier>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.devexperts.qd</groupId>
+            <artifactId>qds-file</artifactId>
             <version>${project.version}</version>
         </dependency>
 

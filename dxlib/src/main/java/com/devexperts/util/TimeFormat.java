@@ -61,6 +61,10 @@ public class TimeFormat {
         DEFAULT.formats.setTimeZone(DEFAULT.timezone);
     }
 
+    // Add 1 extra day to accomodate time zone offset (up to 14 hours)
+    private static final long MIN_TIME = (DayUtil.getDayIdByYearMonthDay(10101) - 1) * TimeUtil.DAY;
+    private static final long MAX_TIME = (DayUtil.getDayIdByYearMonthDay(99991231) + 2) * TimeUtil.DAY;
+
     private static final char END_CHAR = '$';
     private static final char DATE_SEPARATOR = '-';
     private static final char TIME_SEPARATOR = ':';
@@ -471,6 +475,9 @@ public class TimeFormat {
      *
      * <p> When {@code time.getTime() == 0} this method returns string "0".
      *
+     * <p> When {@code time} yyyyMMdd representation is outside [00010101, 99991231] range this method returns string
+     * representing {@code time.getTime()} long value.
+     *
      * @param time date and time to format.
      * @return string representation of data and time.
      * @throws NullPointerException if time is null.
@@ -489,11 +496,14 @@ public class TimeFormat {
     }
 
     private String formatFast(long time) {
+        if (time < MIN_TIME || time > MAX_TIME)
+            return Long.toString(time);
+
         int timeOffset = format.getTimeZone().getOffset(time);
         int ymd = DayUtil.getYearMonthDayByDayId((int) MathUtil.div(time + timeOffset, TimeUtil.DAY));
         int dayTime = (int) MathUtil.rem(time + timeOffset, TimeUtil.DAY);
         if (ymd < 10101 || ymd > 99991231)
-            throw new IllegalArgumentException("time cannot be formatted " + time);
+            return Long.toString(time);
 
         char[] chars = new char[format.standardLength];
         int offset = 0;

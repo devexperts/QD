@@ -147,6 +147,7 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             builder.addOptionalField(recordName, "DayClose.Price", SerialFieldType.DECIMAL, "Summary", "DayClosePrice", true);
             builder.addRequiredField(recordName, "PrevDayId", SerialFieldType.DATE);
             builder.addRequiredField(recordName, "PrevDayClose.Price", SerialFieldType.DECIMAL);
+            builder.addOptionalField(recordName, "PrevDayVolume", SerialFieldType.DECIMAL, "Summary", "PrevDayVolume", true);
             builder.addOptionalField(recordName, "Flags", SerialFieldType.COMPACT_INT, "Summary", "Flags", true);
         }
 

@@ -28,7 +28,7 @@ public interface CometDMonitoringMXBean {
 
     @Description("Dump sessions statistics averaged by total running time")
     public String dumpSessionsAverage(
-        @Description("Order by column ('id', 'queue', 'read_mps', 'read', 'write_mps', 'write', 'time, 'inactivity')")
+        @Description("Order by column (id, queue, read_mps, read, write_mps, write, time, inactivity)")
         String sortColumn,
         @Description("Limit number of sessions")
         int limit);
@@ -38,7 +38,7 @@ public interface CometDMonitoringMXBean {
 
     @Description("Dump sessions statistics (total values)")
     public String dumpSessionsTotal(
-        @Description("Order by column ('id', 'queue', 'read_mps', 'read', 'write_mps', 'write', 'time, 'inactivity')")
+        @Description("Order by column (id, queue, read_mps, read, write_mps, write, time, inactivity)")
         String sortColumn,
         @Description("Limit number of sessions")
         int limit);

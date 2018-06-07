@@ -1,3 +1,12 @@
+QDS 3.261:
+
+* [QD-1079] Fix flaky FileWriterTest.testFilesAreReleasedAsTimePasses
+* [QD-1078] dxlib: TimeFormat shall format dates outside 0000-9999 year range as long values
+* [QD-1077] dxFeed API: Mixed content error in Javadoc
+* [QD-1039] [Webservice] Add qds-file.jar into dxfeed-webservice.war
+* [QD-1070] Update jackson to 2.9.4
+* [QD-1012] dxlib: Unescaped text in @Description annotations
+* [QD-1069] dxFeedAPI: Add PrevDayVolume to regional Summary events
 
 QDS 3.260:
 

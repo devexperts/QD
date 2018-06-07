@@ -12,7 +12,7 @@
 package com.devexperts.qd.qtp.file.test;
 
 import java.io.File;
-import java.io.IOException;
+import java.lang.reflect.Field;
 
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.qtp.*;
@@ -54,7 +54,7 @@ public class FileWriterTest {
     }
 
     @Test
-    public void testWriteALotOfFiles() throws IOException {
+    public void testWriteALotOfFiles() {
         FileWriterParams.Default params = new FileWriterParams.Default();
         params.setFormat(FileFormat.TEXT);
         params.setSplit(TimePeriod.valueOf("1s"));
@@ -78,7 +78,7 @@ public class FileWriterTest {
 
     // [QD-771] Tools: FileWriter shall release completed files as time passes.
     @Test
-    public void testFilesAreReleasedAsTimePasses() throws IOException, InterruptedException {
+    public void testFilesAreReleasedAsTimePasses() throws InterruptedException, NoSuchFieldException, IllegalAccessException {
         // Create split
         TimePeriod split = TimePeriod.valueOf("1s");
         // Create file writer
@@ -94,14 +94,18 @@ public class FileWriterTest {
         heartbeatPayload.setTimeMillis(System.currentTimeMillis());
         fileWriter.visitHeartbeat(heartbeatPayload);
         fileWriter.visitData(provider, MessageType.STREAM_DATA);
-        // Close first file by timeout.
-        Thread.sleep(split.getTime() * FileConstants.MAX_OPEN_FACTOR + FileConstants.MAX_BUFFER_TIME);
-        // Write data, should be stored to the second file.
-        fileWriter.visitData(provider, MessageType.STREAM_DATA);
-        // Close for flushing.
-        fileWriter.close();
-
-        // Test that we created 2 files.
-        assertEquals(2, getDataFiles().length);
+        //easiest way to check that file was closed is to rely on implementation details and check that
+        //private field 'dataOut' is set to null (according to current logic)
+        Field dataOut = fileWriter.getClass().getDeclaredField("dataOut");
+        dataOut.setAccessible(true);
+        // await that file was closed by timeout. It's hard to predict actual wait time due to
+        // FileWriterImpl.FlushThread logic + and environment load
+        long waitTime = split.getTime() * FileConstants.MAX_OPEN_FACTOR + 3 * FileConstants.MAX_BUFFER_TIME + 10000;
+        long failureTime = System.currentTimeMillis() + waitTime;
+        while (System.currentTimeMillis() < failureTime && dataOut.get(fileWriter) != null) {
+            Thread.sleep(100);
+        }
+        if (dataOut.get(fileWriter) != null)
+            Assert.fail("File with split period " + split + " wasn't closed in " + waitTime / 1000 + "s");
     }
 }

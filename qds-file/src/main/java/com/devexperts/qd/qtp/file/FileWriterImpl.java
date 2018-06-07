@@ -247,7 +247,7 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
      * while writeData is in progress.
      */
     private synchronized void reopenFiles(String dataFilePath) throws IOException {
-        closeCurrentFiles(); // close all previously open files
+        closeCurrentFiles(nextSplitTime); // close all previously open files
         if (storageLimited)
             deleteOldFiles();
         position = 0;
@@ -313,7 +313,7 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
     @Override
     public synchronized void close() {
         try {
-            closeCurrentFiles();
+            closeCurrentFiles(nextSplitTime);
         } finally {
             FileUtils.tryClose(flushThread, null);
             flushThread = null;
@@ -327,9 +327,13 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
     /**
      * It can be invoked from FlushThread when data is not coming too long and from close when done.
      */
-    private synchronized void closeCurrentFiles() {
+    private synchronized void closeCurrentFiles(long expectedNextSplitTime) {
         if (dataOut == null)
             return; // already closed
+        //check to ensure that expected file will be closed
+        //done due to thread-safety reasons, FlushThread may try to close 'new' files
+        if (expectedNextSplitTime != nextSplitTime)
+            return;
         try {
             writeFooter();
         } catch (IOException e) {
@@ -579,7 +583,7 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
                         }
                         // Check that file should be closed by timeout and close if needed.
                         if (rounds * FileConstants.MAX_BUFFER_TIME >= FileConstants.MAX_OPEN_FACTOR * split.getTime()) {
-                            closeCurrentFiles();
+                            closeCurrentFiles(curNextSplitTime);
                         }
                     }
                     Thread.sleep(FileConstants.MAX_BUFFER_TIME);

@@ -136,11 +136,11 @@ public class DXFeedJson {
         }
 
         private String getDefaultPropertyName(AnnotatedMethod am) {
-            String s = BeanUtil.okNameForMutator(am, "get");
+            String s = BeanUtil.okNameForMutator(am, "get", true);
             if (s == null)
-                s = BeanUtil.okNameForMutator(am, "is");
+                s = BeanUtil.okNameForMutator(am, "is", true);
             if (s == null)
-                s = BeanUtil.okNameForMutator(am, "set");
+                s = BeanUtil.okNameForMutator(am, "set", true);
             return s != null ? s : am.getName();
         }
 
