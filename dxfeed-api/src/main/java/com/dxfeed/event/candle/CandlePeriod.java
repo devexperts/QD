@@ -184,7 +184,7 @@ public class CandlePeriod implements CandleSymbolAttribute<CandlePeriod> {
         int i = 0;
         for (; i < s.length(); i++) {
             char c = s.charAt(i);
-            if ((c < '0' || c > '9') && c != '.' && c != '-')
+            if ((c < '0' || c > '9') && c != '.' && c != '-' && c != '+' && c != 'e' && c != 'E')
                 break;
         }
         String value = s.substring(0, i);

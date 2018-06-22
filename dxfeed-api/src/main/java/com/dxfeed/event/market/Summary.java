@@ -12,6 +12,7 @@
 package com.dxfeed.event.market;
 
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
 
 import com.devexperts.util.DayUtil;
 import com.devexperts.util.TimeFormat;
@@ -47,6 +48,10 @@ import com.dxfeed.event.LastingEvent;
  * for regional exchange trading session summaries.
  */
 @XmlRootElement(name = "Summary")
+@XmlType(propOrder = {
+    "dayId", "dayOpenPrice", "dayHighPrice", "dayLowPrice", "dayClosePrice", "dayClosePriceType",
+    "prevDayId", "prevDayClosePrice", "prevDayClosePriceType", "prevDayVolume", "openInterest"
+})
 public class Summary extends MarketEvent implements LastingEvent<String> {
     private static final long serialVersionUID = 0;
 

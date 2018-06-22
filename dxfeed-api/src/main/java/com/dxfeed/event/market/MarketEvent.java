@@ -11,6 +11,8 @@
  */
 package com.dxfeed.event.market;
 
+import javax.xml.bind.annotation.XmlType;
+
 import com.dxfeed.event.EventType;
 
 /**
@@ -22,6 +24,7 @@ import com.dxfeed.event.EventType;
  * <p>Event symbol for a market event is a market symbol {@link String}.
  * See {@link MarketEventSymbols} class for a description of market event symbology.
  */
+@XmlType(propOrder = {"eventSymbol", "eventTime"})
 public abstract class MarketEvent implements EventType<String> {
     private static final long serialVersionUID = 0;
 

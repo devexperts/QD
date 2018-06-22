@@ -465,7 +465,14 @@ public class ImplCodeGen {
             publishable();
 
         ctx.delegate("TheoPrice", TheoPrice.class, "TheoPrice").
-            map("Time", "Theo.Time", FieldType.TIME).
+            withPlainEventFlags().
+            map("Time", "Theo.Time", FieldType.TIME).time(0).internal().
+            map("Sequence", "Theo.Sequence", FieldType.SEQUENCE).time(1).optional().internal().
+            assign("Index", "(((long)#Time.Seconds#) << 32) | (#Sequence# & 0xFFFFFFFFL)").
+            injectPutEventCode(
+                "#Time.Seconds=(int)(event.getIndex() >>> 32)#;",
+                "#Sequence=(int)event.getIndex()#;"
+            ).
             map("Price", "Theo.Price", FieldType.DECIMAL_AS_DOUBLE).
             map("UnderlyingPrice", "Theo.UnderlyingPrice", FieldType.DECIMAL_AS_DOUBLE).
             map("Delta", "Theo.Delta", FieldType.DECIMAL_AS_DOUBLE).
@@ -475,6 +482,8 @@ public class ImplCodeGen {
             publishable();
 
         ctx.delegate("Underlying", Underlying.class, "Underlying").
+            withPlainEventFlags().
+            mapTimeAndSequenceToIndex().optional().prevOptional().
             map("Volatility", FieldType.DECIMAL_AS_DOUBLE).optional().
             map("FrontVolatility", FieldType.DECIMAL_AS_DOUBLE).optional().
             map("BackVolatility", FieldType.DECIMAL_AS_DOUBLE).optional().
@@ -483,13 +492,19 @@ public class ImplCodeGen {
 
         ctx.delegate("Series", Series.class, "Series").
             withPlainEventFlags().
-            map("Expiration", "Expiration", FieldType.DATE).time(0).internal().
-            map("Sequence", "Sequence", FieldType.SEQUENCE).time(1).internal().
-            assign("Index", "((long)#Expiration# << 32) | (#Sequence# & 0xFFFFFFFFL)").
+            map("Void", "Void", FieldType.VOID).time(0).optional().internal().
+            map("Index", "Index", FieldType.INT).time(1).optional().internal().
+            map("Time", "Time", FieldType.TIME).optional().internal().
+            map("Sequence", "Sequence", FieldType.SEQUENCE).optional().internal().
+            assign("Index", "((long)#Index#)").
+            assign("TimeSequence", "(((long)#Time.Seconds#) << 32) | (#Sequence# & 0xFFFFFFFFL)").
             injectPutEventCode(
-                "#Expiration=(int)(event.getIndex() >> 32)#;",
-                "#Sequence=(int)event.getIndex()#;"
+                "int index = (int)event.getIndex();",
+                "#Index=index#;",
+                "#Time.Seconds=(int)(event.getTimeSequence() >>> 32)#;",
+                "#Sequence=(int)event.getTimeSequence()#;"
             ).
+            map("Expiration", "Expiration", FieldType.DATE).
             map("Volatility", FieldType.DECIMAL_AS_DOUBLE).
             map("PutCallRatio", FieldType.DECIMAL_AS_DOUBLE).
             map("ForwardPrice", FieldType.DECIMAL_AS_DOUBLE).

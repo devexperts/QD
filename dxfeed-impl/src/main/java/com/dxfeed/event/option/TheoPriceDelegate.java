@@ -43,7 +43,8 @@ public final class TheoPriceDelegate extends EventDelegate<TheoPrice> {
     @Override
     public TheoPrice getEvent(TheoPrice event, RecordCursor cursor) {
         super.getEvent(event, cursor);
-        event.setTime(m.getTimeMillis(cursor));
+        event.setEventFlags(cursor.getEventFlags());
+        event.setIndex((((long) m.getTimeSeconds(cursor)) << 32) | (m.getSequence(cursor) & 0xFFFFFFFFL));
         event.setPrice(m.getPrice(cursor));
         event.setUnderlyingPrice(m.getUnderlyingPrice(cursor));
         event.setDelta(m.getDelta(cursor));
@@ -56,7 +57,9 @@ public final class TheoPriceDelegate extends EventDelegate<TheoPrice> {
     @Override
     public RecordCursor putEvent(TheoPrice event, RecordBuffer buf) {
         RecordCursor cursor = super.putEvent(event, buf);
-        m.setTimeMillis(cursor, event.getTime());
+        cursor.setEventFlags(event.getEventFlags());
+        m.setTimeSeconds(cursor, (int) (event.getIndex() >>> 32));
+        m.setSequence(cursor, (int) event.getIndex());
         m.setPrice(cursor, event.getPrice());
         m.setUnderlyingPrice(cursor, event.getUnderlyingPrice());
         m.setDelta(cursor, event.getDelta());

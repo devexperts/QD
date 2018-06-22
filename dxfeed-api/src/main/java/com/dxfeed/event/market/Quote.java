@@ -54,6 +54,10 @@ import com.dxfeed.impl.XmlTimeAdapter;
  * for regional exchange best quotes.
  */
 @XmlRootElement(name = "Quote")
+@XmlType(propOrder = {
+    "sequence", "timeNanoPart", "bidTime", "bidExchangeCode", "bidPrice", "bidSizeAsDouble",
+    "askTime", "askExchangeCode", "askPrice", "askSizeAsDouble"
+})
 public class Quote extends MarketEvent implements LastingEvent<String> {
     private static final long serialVersionUID = 1;
 

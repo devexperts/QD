@@ -1,3 +1,33 @@
+QDS 3.262:
+
+* [QD-1081] Agent can loss data after resubscription
+* [QD-1085] Endless reading of corrupted file
+* [QD-1084] dxFeed API: CandlePeriod.toString is not parsable
+* [QD-1083] dxFeed webservice: Invalid fields in Json serialization
+  - Serialization format for XML and Json fixed: removed redundant fields, fields in Json are reordered
+  according to XML format, refer to XML Schema (dxfeed-event.xsd) for changes.
+* [QD-1074] dxFeed API: Add Time and Index fields to Series event, do not represent Expiration as time field
+  - Index field isn't compatible with previous version (saved Series events shall be generated from scratch)
+  - Index field contains internal information to distinguish events in series flow
+* [QD-1072] dxFeed API: Add Time and Sequence fields to Underlying, TheoPrice events
+* [QD-1038] QD shall limit number of historical data by default for missing Indexed and TimeSeries events
+  - Introduced system properties in format com.dxfeed.api.impl.HistorySubscriptionFilterImpl.maxRecordCount.+'recordName'
+     com.dxfeed.api.impl.HistorySubscriptionFilterImpl.maxRecordCount.Candle=8000
+     com.dxfeed.api.impl.HistorySubscriptionFilterImpl.maxRecordCount.TimeAndSale=1000
+  - Introduced system properties for event categories:
+     com.dxfeed.api.impl.HistorySubscriptionFilterImpl.maxRecordCount.candle=8000
+     com.dxfeed.api.impl.HistorySubscriptionFilterImpl.maxRecordCount.timeSeries=1000
+     com.dxfeed.api.impl.HistorySubscriptionFilterImpl.maxRecordCount.indexed=Integer.MAX_VALUE
+   - 'candle category' - Candle, Trade.*
+   - 'timeSeries category' - Underlying, TheoPrice, Greeks, TimeAndSale, TradeHistory
+   - 'indexed category' - records with QD time not in candle & timeSeries categories (Order* events, MarketMaker, Series)
+  - In order to leave max record count for 'Candle' events back-compatible this record wasn't included in timeSeries category
+  - Event max record count will be chosen in the next priority: 'event property' has bigger priority than 'category property',
+    'category property' has bigger priority than 'old-fashioned property'
+  - Old-fashioned system properties have lowest priority:
+     com.dxfeed.api.impl.HistorySubscriptionFilterImpl.candleMaxRecordCount=8000
+     com.dxfeed.api.impl.HistorySubscriptionFilterImpl.tradeMaxRecordCount=1000
+
 QDS 3.261:
 
 * [QD-1079] Fix flaky FileWriterTest.testFilesAreReleasedAsTimePasses

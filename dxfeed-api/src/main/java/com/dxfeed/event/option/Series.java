@@ -11,14 +11,14 @@
  */
 package com.dxfeed.event.option;
 
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.*;
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
-import com.devexperts.util.DayUtil;
-import com.devexperts.util.TimeFormat;
+import com.devexperts.util.*;
 import com.dxfeed.event.IndexedEvent;
 import com.dxfeed.event.IndexedEventSource;
 import com.dxfeed.event.market.MarketEvent;
+import com.dxfeed.impl.XmlTimeAdapter;
 import com.dxfeed.ipf.option.OptionSeries;
 import com.dxfeed.model.AbstractIndexedEventModel;
 import com.dxfeed.model.IndexedEventModel;
@@ -45,6 +45,8 @@ import com.dxfeed.model.IndexedEventModel;
  * <li>{@link #getEventSymbol() eventSymbol} - symbol of this event;
  * <li>{@link #getEventFlags() eventFlags} - transactional event flags;
  * <li>{@link #getIndex() index} - unique per-symbol index of this series;
+ * <li>{@link #getTime() time} - time of this series;
+ * <li>{@link #getSequence() sequence} - sequence of this series;
  * <li>{@link #getExpiration() expiration} - day id of expiration;
  * <li>{@link #getVolatility() volatility} - implied volatility index for this series based on VIX methodology;
  * <li>{@link #getPutCallRatio() putCallRatio} - ratio of put traded volume to call traded volume for a day;
@@ -74,8 +76,18 @@ import com.dxfeed.model.IndexedEventModel;
  * This event is implemented on top of QDS records {@code Series}.
  */
 @XmlRootElement(name = "Series")
+@XmlType(propOrder = {
+    "eventFlags", "index", "time", "sequence",
+    "expiration", "volatility", "putCallRatio", "forwardPrice", "dividend", "interest"
+})
 public class Series extends MarketEvent implements IndexedEvent<String> {
     private static final long serialVersionUID = 1;
+
+    /**
+     * Maximum allowed sequence value.
+     * @see #setSequence(int)
+     */
+    public static final int MAX_SEQUENCE = (1 << 22) - 1;
 
     /*
      * EventFlags property has several significant bits that are packed into an integer in the following way:
@@ -88,6 +100,8 @@ public class Series extends MarketEvent implements IndexedEvent<String> {
     private int eventFlags;
 
     private long index;
+    private long timeSequence;
+    private int expiration;
     private double volatility = Double.NaN;
     private double putCallRatio = Double.NaN;
     private double forwardPrice = Double.NaN;
@@ -136,8 +150,6 @@ public class Series extends MarketEvent implements IndexedEvent<String> {
 
     /**
      * Returns unique per-symbol index of this series.
-     * Most significant 32 bits of index contain {@link #getExpiration() Expiration} value,
-     * so changing {@link #setExpiration(int) Expiration} also changes index.
      * @return unique per-symbol index of this series.
      */
     @Override
@@ -147,8 +159,6 @@ public class Series extends MarketEvent implements IndexedEvent<String> {
 
     /**
      * Changes unique per-symbol index of this series.
-     * Most significant 32 bits of index contain {@link #getExpiration() Expiration} value,
-     * so changing index also changes {@link #getExpiration() Expiration}.
      * @param index unique per-symbol index of this series.
      */
     @Override
@@ -157,24 +167,83 @@ public class Series extends MarketEvent implements IndexedEvent<String> {
     }
 
     /**
+     * Returns time and sequence of this series packaged into single long value.
+     * This method is intended for efficient series time priority comparison.
+     * @return time and sequence of this series.
+     */
+    @XmlTransient
+    public long getTimeSequence() {
+        return timeSequence;
+    }
+
+    /**
+     * Changes time and sequence of this series.
+     * <b>Do not use this method directly.</b>
+     * Change {@link #setTime(long) time} and/or {@link #setSequence(int) sequence}.
+     *
+     * @param timeSequence the time and sequence.
+     * @see #getTimeSequence()
+     */
+    public void setTimeSequence(long timeSequence) {
+        this.timeSequence = timeSequence;
+    }
+
+    /**
+     * Returns time of this series.
+     * Time is measured in milliseconds between the current time and midnight, January 1, 1970 UTC.
+     * @return time of this series.
+     */
+    @XmlJavaTypeAdapter(type=long.class, value=XmlTimeAdapter.class)
+    public long getTime() {
+        return (timeSequence >> 32) * 1000 + ((timeSequence >> 22) & 0x3ff);
+    }
+
+    /**
+     * Changes time of this series.
+     * Time is measured in milliseconds between the current time and midnight, January 1, 1970 UTC.
+     * @param time time of this series.
+     */
+    public void setTime(long time) {
+        timeSequence = ((long) TimeUtil.getSecondsFromTime(time) << 32) | ((long) TimeUtil.getMillisFromTime(time) << 22) | getSequence();
+    }
+
+    /**
+     * Returns sequence number of this series to distinguish series that have the same
+     * {@link #getTime() time}. This sequence number does not have to be unique and
+     * does not need to be sequential. Sequence can range from 0 to {@link #MAX_SEQUENCE}.
+     * @return sequence of this series.
+     */
+    public int getSequence() {
+        return (int) timeSequence & MAX_SEQUENCE;
+    }
+
+    /**
+     * Changes {@link #getSequence()} sequence number} of this series.
+     * @param sequence the sequence.
+     * @throws IllegalArgumentException if sequence is below zero or above {@link #MAX_SEQUENCE}.
+     * @see #getSequence()
+     */
+    public void setSequence(int sequence) {
+        if (sequence < 0 || sequence > MAX_SEQUENCE)
+            throw new IllegalArgumentException();
+        timeSequence = (timeSequence & ~MAX_SEQUENCE) | sequence;
+    }
+
+    /**
      * Returns day id of expiration.
      * Example: {@link DayUtil#getDayIdByYearMonthDay DayUtil.getDayIdByYearMonthDay}(20090117).
-     * Most significant 32 bits of {@link #getIndex() Index} contain day id of expiration,
-     * so changing {@link #setIndex(long) Index} also changes day id of expiration.
      * @return day id of expiration.
      */
     public int getExpiration() {
-        return (int) (index >> 32);
+        return expiration;
     }
 
     /**
      * Changes day id of expiration.
-     * Most significant 32 bits of {@link #getIndex() Index} contain day id of expiration,
-     * so changing day id of expiration also changes {@link #getIndex() Index}.
      * @param expiration day id of expiration.
      */
     public void setExpiration(int expiration) {
-        this.index = ((long) expiration << 32) | (index & 0xFFFFFFFFL);
+        this.expiration = expiration;
     }
 
     /**
@@ -271,6 +340,8 @@ public class Series extends MarketEvent implements IndexedEvent<String> {
             ", eventTime=" + TimeFormat.DEFAULT.withMillis().format(getEventTime()) +
             ", eventFlags=0x" + Integer.toHexString(getEventFlags()) +
             ", index=0x" + Long.toHexString(index) +
+            ", time=" + TimeFormat.DEFAULT.withMillis().format(getTime()) +
+            ", sequence=" + getSequence() +
             ", expiration=" + DayUtil.getYearMonthDayByDayId(getExpiration()) +
             ", volatility=" + volatility +
             ", putCallRatio=" + putCallRatio +

@@ -78,6 +78,10 @@ import com.dxfeed.model.market.OrderBookModel;
  * It relies on the code of {@link AbstractIndexedEventModel} to handle this logic.
  * Use the source code of {@link AbstractIndexedEventModel} for clarification on transactions and snapshot logic.
  */
+@XmlType(propOrder = {
+    "eventFlags", "index", "time", "timeNanoPart", "sequence", "source",
+    "price", "sizeAsDouble", "count", "exchangeCode", "orderSide", "scope"
+})
 public class OrderBase extends MarketEvent implements IndexedEvent<String> {
     private static final long serialVersionUID = 3;
 

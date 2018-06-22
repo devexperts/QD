@@ -14,8 +14,9 @@ package com.dxfeed.webservice;
 import java.io.*;
 import java.lang.reflect.Method;
 import java.util.*;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlTransient;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
+import javax.xml.bind.annotation.*;
 
 import com.dxfeed.event.*;
 import com.dxfeed.event.candle.CandleSymbol;
@@ -27,16 +28,13 @@ import com.fasterxml.jackson.databind.cfg.MapperConfig;
 import com.fasterxml.jackson.databind.introspect.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.*;
-import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.fasterxml.jackson.databind.util.BeanUtil;
 
 public class DXFeedJson {
-    private static final String EVENTS_FILTER_ID = "EVENTS-FILTER-ID";
-    private static final EventsFilter EVENTS_FILTER = new EventsFilter();
     private static final DataModule DATA_MODULE = new DataModule();
+    private static final String[] EMPTY_SORT_ORDER = new String[0];
     private static final EventsIntrospector ANNOTATION_INTROSPECTOR = new EventsIntrospector();
-    private static final EventsFilterProvider FILTER_PROVIDER = new EventsFilterProvider();
 
     public static final ObjectMapper MAPPER = newMapper(false);
     public static final ObjectMapper MAPPER_INDENT = newMapper(true);
@@ -80,25 +78,46 @@ public class DXFeedJson {
          * date-time mapping.
          */
         mapper.setAnnotationIntrospector(ANNOTATION_INTROSPECTOR);
-        mapper.setFilters(FILTER_PROVIDER);
         return mapper;
     }
 
     static class EventsIntrospector extends JacksonAnnotationIntrospector {
-        private final Map<Class, PropertiesMapper> map = new HashMap<>();
+        private final Map<Class<?>, PropertiesMapper> names = new ConcurrentHashMap<>();
+        private final Map<Class<?>, String[]> orders = new ConcurrentHashMap<>();
 
+        // Add support to ignore fields using XmlTransient annotation
         @Override
-        public Object findNamingStrategy(AnnotatedClass ac) {
-            PropertiesMapper mapper = map.get(ac.getAnnotated());
-            if (mapper == null)
-                map.put(ac.getAnnotated(), mapper = new PropertiesMapper(ac));
-            return mapper;
+        public boolean hasIgnoreMarker(AnnotatedMember m) {
+            if (m.getAnnotation(XmlTransient.class) != null)
+                return true;
+            return super.hasIgnoreMarker(m);
         }
 
+        // Add support for field ordering using XmlType annotation
         @Override
-        public Object findFilterId(Annotated a) {
-            return (a instanceof AnnotatedClass) &&
-                EventType.class.isAssignableFrom(a.getRawType()) ? EVENTS_FILTER_ID : null;
+        public String[] findSerializationPropertyOrder(AnnotatedClass ac) {
+            String[] result = orders.computeIfAbsent(ac.getAnnotated(), clazz -> {
+                List<XmlType> types = new ArrayList<>(5);
+                while (clazz != null) {
+                    XmlType type = clazz.getAnnotation(XmlType.class);
+                    if (type != null)
+                        types.add(type);
+                    clazz = clazz.getSuperclass();
+                }
+                Collections.reverse(types);
+                String[] order = types.stream()
+                    .flatMap(xmlType -> Stream.of(xmlType.propOrder()))
+                    .map(name -> name.toUpperCase().equals(name) ? name.toLowerCase() : name)
+                    .toArray(String[]::new);
+                return (order.length > 0) ? order : EMPTY_SORT_ORDER;
+            });
+            return (result.length > 0) ? result : null;
+        }
+
+        // Add support to rename fields using XmlElement annotation
+        @Override
+        public Object findNamingStrategy(AnnotatedClass ac) {
+            return names.computeIfAbsent(ac.getAnnotated(), clazz -> new PropertiesMapper(ac));
         }
     }
 
@@ -152,25 +171,6 @@ public class DXFeedJson {
         @Override
         public String nameForSetterMethod(MapperConfig<?> config, AnnotatedMethod method, String defaultName) {
             return map.get(method.getAnnotated());
-        }
-    }
-
-    static class EventsFilter extends SimpleBeanPropertyFilter {
-        @Override
-        protected boolean include(BeanPropertyWriter writer) {
-            return writer.getAnnotation(XmlTransient.class) == null;
-        }
-
-        @Override
-        protected boolean include(PropertyWriter writer) {
-            return true;
-        }
-    }
-
-    static class EventsFilterProvider extends FilterProvider {
-        @Override
-        public BeanPropertyFilter findFilter(Object filterId) {
-            return filterId == EVENTS_FILTER_ID ? EVENTS_FILTER : null;
         }
     }
 

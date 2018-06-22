@@ -32,6 +32,10 @@ import com.dxfeed.impl.XmlTimeAdapter;
  * <b>extended trading hours</b> (ETH, pre market and post market trading sessions). It represents
  * last trade price during ETH and accumulated volume during ETH.
  */
+@XmlType(propOrder = {
+    "time", "timeNanoPart", "sequence", "exchangeCode", "price", "sizeAsDouble",
+    "dayVolumeAsDouble", "dayTurnover", "tickDirection", "extendedTradingHours"
+})
 public abstract class TradeBase extends MarketEvent implements LastingEvent<String> {
     private static final long serialVersionUID = 1;
 

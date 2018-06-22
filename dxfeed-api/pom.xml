@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.261</version>
+        <version>3.262</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -58,6 +58,7 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <createJavaDocAnnotations>false</createJavaDocAnnotations>
                     <transformSchemas>
                         <transformSchema>
                             <uri>http://schema.dxfeed.com/event</uri>
@@ -65,27 +66,27 @@
                             <toFile>dxfeed-event.xsd</toFile>
                         </transformSchema>
                     </transformSchemas>
-                    <includes>
-                        <include>com/dxfeed/event/market/package-info.java</include>
-                        <include>com/dxfeed/event/market/Quote.java</include>
-                        <include>com/dxfeed/event/market/Trade.java</include>
-                        <include>com/dxfeed/event/market/TradeETH.java</include>
-                        <include>com/dxfeed/event/market/Summary.java</include>
-                        <include>com/dxfeed/event/market/Profile.java</include>
-                        <include>com/dxfeed/event/market/TimeAndSale.java</include>
-                        <include>com/dxfeed/event/market/Order.java</include>
-                        <include>com/dxfeed/event/market/SpreadOrder.java</include>
-                        <include>com/dxfeed/event/candle/package-info.java</include>
-                        <include>com/dxfeed/event/candle/Candle.java</include>
-                        <include>com/dxfeed/event/misc/package-info.java</include>
-                        <include>com/dxfeed/event/misc/Configuration.java</include>
-                        <include>com/dxfeed/event/misc/Message.java</include>
-                        <include>com/dxfeed/event/option/package-info.java</include>
-                        <include>com/dxfeed/event/option/Greeks.java</include>
-                        <include>com/dxfeed/event/option/Series.java</include>
-                        <include>com/dxfeed/event/option/TheoPrice.java</include>
-                        <include>com/dxfeed/event/option/Underlying.java</include>
-                    </includes>
+                    <sources>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/market/package-info.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/market/Quote.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/market/Trade.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/market/TradeETH.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/market/Summary.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/market/Profile.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/market/TimeAndSale.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/market/Order.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/market/SpreadOrder.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/candle/package-info.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/candle/Candle.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/misc/package-info.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/misc/Configuration.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/misc/Message.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/option/package-info.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/option/Greeks.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/option/Series.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/option/TheoPrice.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/option/Underlying.java</source>
+                    </sources>
                 </configuration>
             </plugin>
             <plugin>

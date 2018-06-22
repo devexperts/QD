@@ -83,6 +83,11 @@ import com.dxfeed.model.TimeSeriesEventModel;
  * This event is implemented on top of QDS record {@code TimeAndSale}.
  */
 @XmlRootElement(name = "TimeAndSale")
+@XmlType(propOrder = {
+    "eventFlags", "index", "time", "timeNanoPart", "sequence", "exchangeCode", "price", "sizeAsDouble",
+    "bidPrice", "askPrice", "exchangeSaleConditions", "tradeThroughExempt", "aggressorSide", "spreadLeg",
+    "extendedTradingHours", "validTick", "type", "buyer", "seller"
+})
 public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> {
     private static final long serialVersionUID = 3;
 

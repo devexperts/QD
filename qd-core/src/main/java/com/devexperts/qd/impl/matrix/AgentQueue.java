@@ -104,15 +104,19 @@ final class AgentQueue {
         do {
             // UPDATE_QUEUE in ticker uses QUEUE_BIT to indicate whether item has data
             int update = asub.getInt(aindex + UPDATE_QUEUE);
+            boolean retainSnapshotBit = queueOfs == SNAPSHOT_QUEUE && (update & QUEUE_BIT) == 0;
             if ((update & QUEUE_BIT) != 0) {
                 if (!sink.hasCapacity())
                     return nRetrieved | RETRIEVE_NO_CAPACITY_BIT; // no more capacity
                 int key = asub.getInt(aindex + KEY);
                 int rid = asub.getInt(aindex + RID);
-                // SNAPSHOT_QUEUE in ticker stores mark when QUEUE_BIT is not set
+                // SNAPSHOT_QUEUE in ticker stores mark when QUEUE_BIT is not set and QUEUE_BIT in UPDATE_QUEUE is set
                 int mark = asub.getInt(aindex + SNAPSHOT_QUEUE);
-                if ((mark & QUEUE_BIT) != 0)
+                if ((mark & QUEUE_BIT) != 0) {
+                    // tag item as retrieved-at-least-once, but retain pointer in SNAPSHOT_QUEUE
+                    asub.setInt(aindex + SNAPSHOT_QUEUE, mark & ~QUEUE_BIT);
                     mark = 0; // not a mark -- snapshot queue next is/will be stored here
+                }
                 // Attachment (if needed)
                 Object attachment = agent.hasAttachmentStrategy() ? asub.getObj(aindex, ATTACHMENT) : null;
                 // reset queue bit first (this marks item as retrieved)
@@ -121,7 +125,7 @@ final class AgentQueue {
                 if (ticker.getRecordData(agent, sink, key, rid, mark, attachment))
                     nRetrieved++;
             }
-            aindex = retrieveNextQueued(agent, aindex, queueOfs);
+            aindex = retrieveNextQueued(agent, aindex, queueOfs, retainSnapshotBit);
         } while (aindex != EOL && nRetrieved < nRetrieveLimit);
         return nRetrieved;
     }
@@ -367,9 +371,15 @@ final class AgentQueue {
 
     // SYNC: local
     private int retrieveNextQueued(Agent agent, int aindex, int queueOfs) {
+        return retrieveNextQueued(agent, aindex, queueOfs, false);
+    }
+
+    // SYNC: local
+    private int retrieveNextQueued(Agent agent, int aindex, int queueOfs, boolean retainQueueBit) {
         SubMatrix asub = agent.sub;
-        int next = asub.getInt(aindex + queueOfs) & ~QUEUE_BIT;
-        asub.setInt(aindex + queueOfs, 0);
+        int state = asub.getInt(aindex + queueOfs);
+        int next = state & ~QUEUE_BIT;
+        asub.setInt(aindex + queueOfs, retainQueueBit ? state & QUEUE_BIT : 0);
         head = next;
         if (next == EOL)
             tail = EOL;

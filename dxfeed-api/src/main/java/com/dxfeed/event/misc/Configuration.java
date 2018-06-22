@@ -12,8 +12,7 @@
 package com.dxfeed.event.misc;
 
 import java.io.*;
-import javax.xml.bind.annotation.XmlAnyElement;
-import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.*;
 
 import com.devexperts.io.IOUtil;
 import com.devexperts.io.Marshalled;
@@ -38,6 +37,7 @@ import com.dxfeed.event.LastingEvent;
  * This event is implemented on top of QDS record {@code Configuration}.
  */
 @XmlRootElement(name = "Configuration")
+@XmlType(propOrder = { "eventSymbol", "eventTime", "version", "attachment" })
 public class Configuration implements LastingEvent<String>, Serializable {
     private static final long serialVersionUID = 0;
 

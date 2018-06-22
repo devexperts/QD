@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.devexperts.qd.*;
 import com.devexperts.qd.monitoring.ConnectorsMonitoringTask;
 import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordProvider;
 import com.devexperts.qd.stats.QDStats;
 
 public class SubscriptionStress implements Runnable {
@@ -38,19 +39,13 @@ public class SubscriptionStress implements Runnable {
     private final String[] symbols;
     private final ConnectorsMonitoringTask monitoring;
     private final AtomicLong ops = new AtomicLong();
-    private final ThreadLocal<Random> rnd = new ThreadLocal<Random>() {
-        @Override
-        protected Random initialValue() {
-            return new Random(BASE_RND.nextLong());
-        }
-    };
+    private final ThreadLocal<Random> rnd = ThreadLocal.withInitial(() -> new Random(BASE_RND.nextLong()));
 
     public SubscriptionStress() {
         stats = new QDStats(QDStats.SType.ANY);
-        ticker = QDFactory.getDefaultFactory().createTicker(SCHEME, stats);
+        ticker = QDFactory.getDefaultFactory().tickerBuilder().withScheme(SCHEME).withStats(stats).build();
         //ticker.setStoreEverything(true);
         monitoring = new ConnectorsMonitoringTask(stats);
-
         symbols = new String[SYMBOLS];
         for (int i = 0; i < SYMBOLS; i++) {
             String s = String.format("%06d", i);
@@ -84,14 +79,14 @@ public class SubscriptionStress implements Runnable {
 
     private void retrieveData(QDAgent agent) {
         RecordBuffer buf = RecordBuffer.getInstance();
-        agent.retrieveData(buf);
+        agent.retrieve(buf);
         buf.release();
     }
 
     private void runAdder() {
         QDAgent agent = ticker.agentBuilder().build();
         int times = rnd.get().nextInt(MAX_TIMES);
-        int max = rnd.get().nextInt(MAX_BATCH);
+        int max = rnd.get().nextInt(MAX_BATCH) + 1;
         for (int i = 0; i < times; i++) {
             RecordBuffer buf = RecordBuffer.getInstance();
             int n = rnd.get().nextInt(max);
@@ -107,7 +102,7 @@ public class SubscriptionStress implements Runnable {
     private void runAdderRemover() {
         QDAgent agent = ticker.agentBuilder().build();
         int times = rnd.get().nextInt(MAX_TIMES);
-        int max = rnd.get().nextInt(MAX_BATCH);
+        int max = rnd.get().nextInt(MAX_BATCH) + 1;
         for (int i = 0; i < times; i++) {
             RecordBuffer buf = RecordBuffer.getInstance();
             int n = rnd.get().nextInt(max);
@@ -126,7 +121,7 @@ public class SubscriptionStress implements Runnable {
     private void runSetter() {
         QDAgent agent = ticker.agentBuilder().build();
         int times = rnd.get().nextInt(MAX_TIMES);
-        int max = rnd.get().nextInt(MAX_BATCH);
+        int max = rnd.get().nextInt(MAX_BATCH) + 1;
         for (int i = 0; i < times; i++) {
             RecordBuffer buf = RecordBuffer.getInstance();
             int n = rnd.get().nextInt(max);
@@ -145,11 +140,11 @@ public class SubscriptionStress implements Runnable {
         int first = rnd.get().nextInt(2);
         for (int i = first; i < first + times; i++) {
             boolean add = i % 2 == 0;
-            SubscriptionProvider provider =	add ? dist.getAddedSubscriptionProvider() : dist.getRemovedSubscriptionProvider();
+            RecordProvider provider = add ? dist.getAddedRecordProvider() : dist.getRemovedRecordProvider();
             RecordBuffer buf = RecordBuffer.getInstance();
-            provider.retrieveSubscription(buf);
+            provider.retrieve(buf);
             if (add)
-                dist.processData(buf);
+                dist.process(buf);
             buf.release();
         }
         dist.close();

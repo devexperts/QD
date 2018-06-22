@@ -43,6 +43,8 @@ public final class UnderlyingDelegate extends EventDelegate<Underlying> {
     @Override
     public Underlying getEvent(Underlying event, RecordCursor cursor) {
         super.getEvent(event, cursor);
+        event.setEventFlags(cursor.getEventFlags());
+        event.setIndex((((long) m.getTimeSeconds(cursor)) << 32) | (m.getSequence(cursor) & 0xFFFFFFFFL));
         event.setVolatility(m.getVolatility(cursor));
         event.setFrontVolatility(m.getFrontVolatility(cursor));
         event.setBackVolatility(m.getBackVolatility(cursor));
@@ -53,6 +55,9 @@ public final class UnderlyingDelegate extends EventDelegate<Underlying> {
     @Override
     public RecordCursor putEvent(Underlying event, RecordBuffer buf) {
         RecordCursor cursor = super.putEvent(event, buf);
+        cursor.setEventFlags(event.getEventFlags());
+        m.setTimeSeconds(cursor, (int) (event.getIndex() >>> 32));
+        m.setSequence(cursor, (int) event.getIndex());
         m.setVolatility(cursor, event.getVolatility());
         m.setFrontVolatility(cursor, event.getFrontVolatility());
         m.setBackVolatility(cursor, event.getBackVolatility());

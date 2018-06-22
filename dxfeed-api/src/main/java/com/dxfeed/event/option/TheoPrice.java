@@ -11,14 +11,16 @@
  */
 package com.dxfeed.event.option;
 
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlSchemaType;
+import javax.xml.bind.annotation.*;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 import com.devexperts.util.TimeFormat;
-import com.dxfeed.event.LastingEvent;
+import com.devexperts.util.TimeUtil;
+import com.dxfeed.event.*;
 import com.dxfeed.event.market.MarketEvent;
 import com.dxfeed.impl.XmlTimeAdapter;
+import com.dxfeed.model.AbstractIndexedEventModel;
+import com.dxfeed.model.TimeSeriesEventModel;
 
 /**
  * Theo price is a snapshot of the theoretical option price computation that is
@@ -36,13 +38,35 @@ import com.dxfeed.impl.XmlTimeAdapter;
  *
  * <ul>
  * <li>{@link #getEventSymbol() eventSymbol} - symbol of this event;
- * <li>{@link #getTime() time} - time of the last theo price computation;
+ * <li>{@link #getEventFlags() eventFlags} - transactional event flags;
+ * <li>{@link #getIndex() index} - unique per-symbol index of this event;
+ * <li>{@link #getTime() time} - timestamp of this event in milliseconds;
+ * <li>{@link #getSequence() sequence} - sequence number of this event to distinguish events that have the same {@link #getTime() time};
  * <li>{@link #getUnderlyingPrice() underlyingPrice} - underlying price at the time of theo price computation;
  * <li>{@link #getDelta() delta} - delta of the theoretical price;
  * <li>{@link #getGamma() gamma} -  gamma of the theoretical price;
  * <li>{@link #getDividend() dividend} - implied simple dividend return of the corresponding option series;
  * <li>{@link #getInterest() interest} - implied simple interest return of the corresponding option series.
  * </ul>
+ *
+ * <h3><a name="eventFlagsSection">Event flags, transactions and snapshots</a></h3>
+ *
+ * Some TheoPrice sources provide a consistent view of the set of known TheoPrice.
+ * The corresponding information is carried in {@link #getEventFlags() eventFlags} property.
+ * The logic behind this property is detailed in {@link IndexedEvent} class documentation.
+ * Multiple event sources for the same symbol are not supported for TheoPrice, thus
+ * {@link #getSource() source} property is always {@link IndexedEventSource#DEFAULT DEFAULT}.
+ *
+ * <p>{@link TimeSeriesEventModel} class handles all the snapshot and transaction logic and conveniently represents
+ * a list current of time-series events order by their {@link #getTime() time}.
+ * It relies on the code of {@link AbstractIndexedEventModel} to handle this logic.
+ * Use the source code of {@link AbstractIndexedEventModel} for clarification on transactions and snapshot logic.
+ *
+ * <h3>Publishing TheoPrice</h3>
+ *
+ * Publishing of TheoPrice events follows the general rules explained in {@link TimeSeriesEvent} class
+ * documentation.
+ *
  *
  * <p>See <a href="package-summary.html#model">the model section</a> for a mathematical background on
  * the values in this event.
@@ -52,10 +76,33 @@ import com.dxfeed.impl.XmlTimeAdapter;
  * This event is implemented on top of QDS records {@code TheoPrice}.
  */
 @XmlRootElement(name = "TheoPrice")
-public class TheoPrice extends MarketEvent implements LastingEvent<String> {
+@XmlType(propOrder = {
+    "eventFlags", "index", "time", "sequence", "price", "underlyingPrice", "delta", "gamma", "dividend", "interest"
+})
+public class TheoPrice extends MarketEvent implements TimeSeriesEvent<String>, LastingEvent<String> {
     private static final long serialVersionUID = 0;
 
-    private long time;
+    // ========================= public static =========================
+
+    /**
+     * Maximum allowed sequence value.
+     * @see #setSequence(int)
+     */
+    public static final int MAX_SEQUENCE = (1 << 22) - 1;
+
+    // ========================= instance =========================
+
+    /*
+     * EventFlags property has several significant bits that are packed into an integer in the following way:
+     *    31..7    6    5    4    3    2    1    0
+     * +---------+----+----+----+----+----+----+----+
+     * |         | SM |    | SS | SE | SB | RE | TX |
+     * +---------+----+----+----+----+----+----+----+
+     */
+
+    private int eventFlags;
+
+    private long index;
     private double price = Double.NaN;
     private double underlyingPrice = Double.NaN;
     private double delta = Double.NaN;
@@ -77,22 +124,92 @@ public class TheoPrice extends MarketEvent implements LastingEvent<String> {
     }
 
     /**
-     * Returns time of the last theo price computation.
-     * Time is measured in milliseconds between the current time and midnight, January 1, 1970 UTC.
-     * @return time of the last theo price computation.
+     * {@inheritDoc}
+     */
+    @Override
+    @XmlTransient
+    public IndexedEventSource getSource() {
+        return IndexedEventSource.DEFAULT;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int getEventFlags() {
+        return eventFlags;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setEventFlags(int eventFlags) {
+        this.eventFlags = eventFlags;
+    }
+
+    /**
+     * Returns unique per-symbol index of this event.
+     * The index is composed of {@link #getTime() time} and {@link #getSequence() sequence}.
+     * Changing either time or sequence changes event index.
+     * @return unique index of this event.
+     */
+    public long getIndex() {
+        return index;
+    }
+
+    /**
+     * Changes unique per-symbol index of this event.
+     * The index is composed of {@link #getTime() time} and {@link #getSequence() sequence} and
+     * invocation of this method changes time and sequence.
+     * <b>Do not use this method directly.</b>
+     * Change {@link #setTime(long) time} and/or {@link #setSequence(int) sequence}.
+     *
+     * @param index the event index.
+     * @see #getIndex()
+     */
+    public void setIndex(long index) {
+        this.index = index;
+    }
+
+    /**
+     * Returns timestamp of the event in milliseconds.
+     * @return timestamp of the event in milliseconds
      */
     @XmlJavaTypeAdapter(type=long.class, value=XmlTimeAdapter.class)
     @XmlSchemaType(name="dateTime")
     public long getTime() {
-        return time;
+        return (index >> 32) * 1000 + ((index >> 22) & 0x3ff);
     }
 
     /**
-     * Changes time of the last theo price computation.
-     * @param time time of the last theo price computation.
+     * Changes timestamp of the event in milliseconds.
+     * @param time timestamp of the event in milliseconds.
+     * @see #getTime()
      */
     public void setTime(long time) {
-        this.time = time;
+        index = ((long) TimeUtil.getSecondsFromTime(time) << 32) | ((long) TimeUtil.getMillisFromTime(time) << 22) | getSequence();
+    }
+
+    /**
+     * Returns sequence number of this event to distinguish events that have the same
+     * {@link #getTime() time}. This sequence number does not have to be unique and
+     * does not need to be sequential. Sequence can range from 0 to {@link #MAX_SEQUENCE}.
+     */
+    public int getSequence() {
+        return (int) index & MAX_SEQUENCE;
+    }
+
+    /**
+     * Changes {@link #getSequence()} sequence number} of this event.
+     * @param sequence the sequence.
+     * @throws IllegalArgumentException if sequence is below zero or above {@link #MAX_SEQUENCE}.
+     * @see #getSequence()
+     */
+    public void setSequence(int sequence) {
+        if (sequence < 0 || sequence > MAX_SEQUENCE)
+            throw new IllegalArgumentException();
+        index = (index & ~MAX_SEQUENCE) | sequence;
     }
 
     /**
@@ -179,10 +296,7 @@ public class TheoPrice extends MarketEvent implements LastingEvent<String> {
         this.dividend = dividend;
     }
 
-    /**
-     * Returns string representation of this theo price object.
-     * @return string representation of this theo price object.
-     */
+
     /**
      * Returns implied simple interest return of the corresponding option series.
      * See <a href="package-summary.html#model">the model section</a> for an explanation this simple interest return \( R(\tau) \).
@@ -205,7 +319,9 @@ public class TheoPrice extends MarketEvent implements LastingEvent<String> {
     public String toString() {
         return "TheoPrice{" + getEventSymbol() +
             ", eventTime=" + TimeFormat.DEFAULT.withMillis().format(getEventTime()) +
-            ", time=" + TimeFormat.DEFAULT.format(time) +
+            ", eventFlags=0x" + Integer.toHexString(getEventFlags()) +
+            ", time=" + TimeFormat.DEFAULT.withMillis().format(getTime()) +
+            ", sequence=" + getSequence() +
             ", price=" + price +
             ", underlyingPrice=" + underlyingPrice +
             ", delta=" + delta +

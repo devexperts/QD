@@ -44,7 +44,9 @@ public final class SeriesDelegate extends EventDelegate<Series> {
     public Series getEvent(Series event, RecordCursor cursor) {
         super.getEvent(event, cursor);
         event.setEventFlags(cursor.getEventFlags());
-        event.setIndex(((long) m.getExpiration(cursor) << 32) | (m.getSequence(cursor) & 0xFFFFFFFFL));
+        event.setIndex(((long) m.getIndex(cursor)));
+        event.setTimeSequence((((long) m.getTimeSeconds(cursor)) << 32) | (m.getSequence(cursor) & 0xFFFFFFFFL));
+        event.setExpiration(m.getExpiration(cursor));
         event.setVolatility(m.getVolatility(cursor));
         event.setPutCallRatio(m.getPutCallRatio(cursor));
         event.setForwardPrice(m.getForwardPrice(cursor));
@@ -57,8 +59,11 @@ public final class SeriesDelegate extends EventDelegate<Series> {
     public RecordCursor putEvent(Series event, RecordBuffer buf) {
         RecordCursor cursor = super.putEvent(event, buf);
         cursor.setEventFlags(event.getEventFlags());
-        m.setExpiration(cursor, (int) (event.getIndex() >> 32));
-        m.setSequence(cursor, (int) event.getIndex());
+        int index = (int) event.getIndex();
+        m.setIndex(cursor, index);
+        m.setTimeSeconds(cursor, (int) (event.getTimeSequence() >>> 32));
+        m.setSequence(cursor, (int) event.getTimeSequence());
+        m.setExpiration(cursor, event.getExpiration());
         m.setVolatility(cursor, event.getVolatility());
         m.setPutCallRatio(cursor, event.getPutCallRatio());
         m.setForwardPrice(cursor, event.getForwardPrice());

@@ -11,7 +11,7 @@
  */
 package com.dxfeed.event.market;
 
-import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.*;
 
 import com.devexperts.util.TimeFormat;
 import com.dxfeed.event.LastingEvent;
@@ -46,6 +46,10 @@ import com.dxfeed.event.LastingEvent;
  * This event is implemented on top of QDS record {@code Profile}.
  */
 @XmlRootElement(name = "Profile")
+@XmlType(propOrder = {
+    "description", "shortSaleRestriction", "tradingStatus", "statusReason",
+    "haltStartTime", "haltEndTime", "highLimitPrice", "lowLimitPrice"
+})
 public class Profile extends MarketEvent implements LastingEvent<String> {
     private static final long serialVersionUID = 0;
 
@@ -126,6 +130,7 @@ public class Profile extends MarketEvent implements LastingEvent<String> {
      * Returns short sale restriction status of the security instrument.
      * @return {@code true} if short sale of the security instrument is restricted.
      */
+    @XmlTransient
     public boolean isShortSaleRestricted() {
         return getShortSaleRestriction() == ShortSaleRestriction.ACTIVE;
     }
@@ -160,6 +165,7 @@ public class Profile extends MarketEvent implements LastingEvent<String> {
      * Returns trading halt status of the security instrument.
      * @return {@code true} if trading of the security instrument is halted.
      */
+    @XmlTransient
     public boolean isTradingHalted() {
         return getTradingStatus() == TradingStatus.HALTED;
     }

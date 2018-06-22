@@ -11,7 +11,7 @@
  */
 package com.dxfeed.event.market;
 
-import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.*;
 
 import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.DXFeedSubscription;
@@ -129,6 +129,7 @@ public class TradeETH extends TradeBase {
      * @return {@code true} if last trade was in extended trading hours.
      * @deprecated Use {@link #isExtendedTradingHours()} instead.
      */
+    @XmlTransient
     @Deprecated
     public boolean isETH() {
         return isExtendedTradingHours();

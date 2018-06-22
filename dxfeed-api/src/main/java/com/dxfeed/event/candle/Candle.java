@@ -87,6 +87,10 @@ import com.dxfeed.model.TimeSeriesEventModel;
  * candle symbol attributes like {@link CandlePrice} for an efficient support of bid-ask charting.
  */
 @XmlRootElement(name = "Candle")
+@XmlType(propOrder = {
+    "eventSymbol", "eventTime", "eventFlags", "index", "time", "sequence",
+    "count", "open", "high", "low", "close", "volumeAsDouble", "VWAP", "bidVolumeAsDouble", "askVolumeAsDouble"
+})
 public class Candle implements TimeSeriesEvent<CandleSymbol>, LastingEvent<CandleSymbol> {
     private static final long serialVersionUID = 3;
 

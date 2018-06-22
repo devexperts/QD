@@ -12,8 +12,7 @@
 package com.dxfeed.event.misc;
 
 import java.io.*;
-import javax.xml.bind.annotation.XmlAnyElement;
-import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.*;
 
 import com.devexperts.io.IOUtil;
 import com.devexperts.io.Marshalled;
@@ -40,6 +39,7 @@ import com.dxfeed.event.EventType;
  * This event is implemented on top of QDS record {@code Message}.
  */
 @XmlRootElement(name = "Message")
+@XmlType(propOrder = { "eventSymbol", "eventTime", "attachment" })
 public class Message implements EventType<String> {
     private static final long serialVersionUID = 0;
 

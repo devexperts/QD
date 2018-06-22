@@ -69,6 +69,9 @@ import com.dxfeed.model.TimeSeriesEventModel;
  * This event is implemented on top of QDS record {@code Greeks}.
  */
 @XmlRootElement(name = "Greeks")
+@XmlType(propOrder = {
+    "eventFlags", "index", "time", "sequence", "price", "volatility", "delta", "gamma", "theta", "rho", "vega"
+})
 public class Greeks extends MarketEvent implements TimeSeriesEvent<String>, LastingEvent<String> {
     private static final long serialVersionUID = 1;
 

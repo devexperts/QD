@@ -81,16 +81,16 @@ public class IndexedEventsPromiseTest extends TestCase {
         assertTrue(!promise.isDone());
 
         // now publish snapshot
-        publish(300, 10.01, IndexedEvent.SNAPSHOT_BEGIN);
+        publish(3, 300, 10.01, IndexedEvent.SNAPSHOT_BEGIN);
         assertTrue(!promise.isDone());
         assertNoTasks();
-        publish(200, 10.02, 0);
+        publish(2, 200, 10.02, 0);
         assertTrue(!promise.isDone());
         assertNoTasks();
-        publish(100, 10.03, 0);
+        publish(1, 100, 10.03, 0);
         assertTrue(!promise.isDone());
         assertNoTasks();
-        publish(0, Double.NaN, IndexedEvent.SNAPSHOT_END | IndexedEvent.REMOVE_EVENT);
+        publish(0, 0, Double.NaN, IndexedEvent.SNAPSHOT_END | IndexedEvent.REMOVE_EVENT);
         assertTrue(promise.isDone());
         assertNoAddedOrRemoved();
         runTask(); // process remove sub
@@ -99,9 +99,9 @@ public class IndexedEventsPromiseTest extends TestCase {
         assertNoAddedOrRemoved();
         List<Series> list = promise.getResult();
         assertEquals(3, list.size());
-        assertSeries(list.get(0), 100, 10.03);
-        assertSeries(list.get(1), 200, 10.02);
-        assertSeries(list.get(2), 300, 10.01);
+        assertSeries(list.get(0), 1, 100, 10.03);
+        assertSeries(list.get(1), 2, 200, 10.02);
+        assertSeries(list.get(2), 3, 300, 10.01);
     }
 
     private void assertNoAddedOrRemoved() {
@@ -109,16 +109,18 @@ public class IndexedEventsPromiseTest extends TestCase {
         assertEquals(0, removed.size());
     }
 
-    private void publish(int expiration, double volatility, int eventFlags) {
+    private void publish(long index, int expiration, double volatility, int eventFlags) {
         Series series = new Series(SYMBOL);
+        series.setIndex(index);
         series.setExpiration(expiration);
         series.setEventFlags(eventFlags);
         series.setVolatility(volatility);
         publisher.publishEvents(Collections.singletonList(series));
     }
 
-    private void assertSeries(Series series, int expiration, double volatility) {
+    private void assertSeries(Series series, long index, int expiration, double volatility) {
         assertEquals(SYMBOL, series.getEventSymbol());
+        assertEquals(index, series.getIndex());
         assertEquals(expiration, series.getExpiration());
         assertEquals(0, series.getEventFlags());
         assertEquals(volatility, series.getVolatility());

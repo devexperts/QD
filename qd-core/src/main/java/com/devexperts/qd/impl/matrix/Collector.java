@@ -154,16 +154,25 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
      * TICKER [SNAPSHOT_QUEUE]  ,       [UPDATE_QUEUE] combinations:
      *               0 | 0      ,            0 | 0       empty
      *       QUEUE_BIT | 0      ,            0 | 0       just subscribed to the item, no data yet
-     *       QUEUE_BIT | <next> ,    QUEUE_BIT | <next>  data arrived, added to both snapshot & update queues
-     *       QUEUE_BIT | <next> ,            0 | 0       data retrieved via update queue, still in snapshot queue
+     *       QUEUE_BIT | <next> ,    QUEUE_BIT | <next>  data arrived, added to both snapshot & update queues (see NB)
+     *               0 | <next> ,            0 | 0       data retrieved via update queue, still in snapshot queue
      *               0 | 0      ,            0 | <next>  data retrieved via snapshot queue, still in update queue
      *               0 | <mark> ,    QUEUE_BIT | <next>  more data arrived, queue mark recorded
-     *               0 | <mark> ,            0 | 0       data retrieved via update queue
+     *               0 | <next> ,            0 | <next>  data removed via unsubscribe
+     *       QUEUE_BIT | *      ,            0 | *       resubscribe before queues where fully retrieved
+     *
+     * NB:   QUEUE_BIT | <next> ,    QUEUE_BIT | <next>  this state may be entered spuriously
+     *                                                   when new event arrives while <next> in snapshot queue is set
+     *                                                   and event is already retrieved via update queue
      *
      * <next> == EOL (special non-zero value) when the item is last in the queue
      *
+     * The only possible state, which contains <mark> is *NO* QUEUE_BIT in SNAPSHOT_QUEUE and QUEUE_BIT in UPDATE_QUEUE
+     *
      * QUEUE_BIT in SNAPSHOT_QUEUE means -- this item waits for/has snapshot
-     *                absence of the bit -- this item has queue mark stored
+     *                                      sometimes this bit can be set even if event is already processed
+     *                absence of the bit -- queue mark              if QUEUE_BIT in UPDATE_QUEUE
+     *                                      next in snapshot queue  otherwise
      * QUEUE_BIT in UPDATE_QUEUE means   -- this item has data to be sent
      *                absence of the bit -- this item has no data to be sent
      *--------------------------------------------------------------------------------------------------------------*/

@@ -35,7 +35,8 @@ public final class OptionFactoryImpl extends EventDelegateFactory implements Rec
         builder.addRequiredField("Greeks", "Rho", SerialFieldType.DECIMAL);
         builder.addRequiredField("Greeks", "Vega", SerialFieldType.DECIMAL);
 
-        builder.addRequiredField("TheoPrice", "Theo.Time", SerialFieldType.TIME);
+        builder.addRequiredField("TheoPrice", "Theo.Time", SerialFieldType.TIME, SchemeFieldTime.FIRST_TIME_INT_FIELD);
+        builder.addOptionalField("TheoPrice", "Theo.Sequence", SerialFieldType.SEQUENCE, "TheoPrice", "Sequence", true, SchemeFieldTime.SECOND_TIME_INT_FIELD);
         builder.addRequiredField("TheoPrice", "Theo.Price", SerialFieldType.DECIMAL);
         builder.addRequiredField("TheoPrice", "Theo.UnderlyingPrice", SerialFieldType.DECIMAL);
         builder.addRequiredField("TheoPrice", "Theo.Delta", SerialFieldType.DECIMAL);
@@ -43,13 +44,18 @@ public final class OptionFactoryImpl extends EventDelegateFactory implements Rec
         builder.addOptionalField("TheoPrice", "Theo.Dividend", SerialFieldType.DECIMAL, "TheoPrice", "Dividend", true);
         builder.addOptionalField("TheoPrice", "Theo.Interest", SerialFieldType.DECIMAL, "TheoPrice", "Interest", true);
 
+        builder.addOptionalField("Underlying", "Time", SerialFieldType.TIME, "Underlying", "Time", true, SchemeFieldTime.FIRST_TIME_INT_FIELD);
+        builder.addOptionalField("Underlying", "Sequence", SerialFieldType.SEQUENCE, "Underlying", "Sequence", true, SchemeFieldTime.SECOND_TIME_INT_FIELD);
         builder.addOptionalField("Underlying", "Volatility", SerialFieldType.DECIMAL, "Underlying", "Volatility", true);
         builder.addOptionalField("Underlying", "FrontVolatility", SerialFieldType.DECIMAL, "Underlying", "FrontVolatility", true);
         builder.addOptionalField("Underlying", "BackVolatility", SerialFieldType.DECIMAL, "Underlying", "BackVolatility", true);
         builder.addOptionalField("Underlying", "PutCallRatio", SerialFieldType.DECIMAL, "Underlying", "PutCallRatio", true);
 
-        builder.addRequiredField("Series", "Expiration", SerialFieldType.DATE, SchemeFieldTime.FIRST_TIME_INT_FIELD);
-        builder.addRequiredField("Series", "Sequence", SerialFieldType.SEQUENCE, SchemeFieldTime.SECOND_TIME_INT_FIELD);
+        builder.addOptionalField("Series", "Void", SerialFieldType.VOID, "Series", "Void", true, SchemeFieldTime.FIRST_TIME_INT_FIELD);
+        builder.addOptionalField("Series", "Index", SerialFieldType.COMPACT_INT, "Series", "Index", true, SchemeFieldTime.SECOND_TIME_INT_FIELD);
+        builder.addOptionalField("Series", "Time", SerialFieldType.TIME, "Series", "Time", true);
+        builder.addOptionalField("Series", "Sequence", SerialFieldType.SEQUENCE, "Series", "Sequence", true);
+        builder.addRequiredField("Series", "Expiration", SerialFieldType.DATE);
         builder.addRequiredField("Series", "Volatility", SerialFieldType.DECIMAL);
         builder.addRequiredField("Series", "PutCallRatio", SerialFieldType.DECIMAL);
         builder.addRequiredField("Series", "ForwardPrice", SerialFieldType.DECIMAL);
@@ -67,9 +73,11 @@ public final class OptionFactoryImpl extends EventDelegateFactory implements Rec
         } else if (record.getMapping(TheoPriceMapping.class) != null) {
             result.add(new TheoPriceDelegate(record, QDContract.TICKER, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB)));
             result.add(new TheoPriceDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
+            result.add(new TheoPriceDelegate(record, QDContract.HISTORY, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.TIME_SERIES)));
         } else if (record.getMapping(UnderlyingMapping.class) != null) {
             result.add(new UnderlyingDelegate(record, QDContract.TICKER, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB)));
             result.add(new UnderlyingDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
+            result.add(new UnderlyingDelegate(record, QDContract.HISTORY, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.TIME_SERIES)));
         } else if (record.getMapping(SeriesMapping.class) != null) {
             result.add(new SeriesDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
             result.add(new SeriesDelegate(record, QDContract.HISTORY, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB)));

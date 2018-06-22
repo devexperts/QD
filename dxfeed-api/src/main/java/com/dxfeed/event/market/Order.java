@@ -13,6 +13,7 @@ package com.dxfeed.event.market;
 
 import java.util.Collection;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
 
 import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.DXPublisher;
@@ -108,6 +109,7 @@ import com.dxfeed.model.market.OrderBookModel;
  * where {@code <source-id>} is up to 3 ASCII characters with a mnemonic for the source like "NTV".
  */
 @XmlRootElement(name = "Order")
+@XmlType(propOrder = { "marketMaker" })
 public class Order extends OrderBase {
     private static final long serialVersionUID = 0;
 

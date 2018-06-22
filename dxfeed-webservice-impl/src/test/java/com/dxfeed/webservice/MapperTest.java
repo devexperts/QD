@@ -22,6 +22,12 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
+/**
+ * Test mapping to/from XML/Json.
+ *
+ * Note that in order to create {@link Format#XML} full JAXB context must be created,
+ * so any error in XML serialization (incorrect JAXB annotations) will show up in this test.
+ */
 public class MapperTest {
     @Test
     public void testQuote() throws IOException {

@@ -380,7 +380,10 @@ public class FileReader implements MessageReader {
                 initNextAddress();
             } else {
                 // rescan file list on every failure and start from the next
-                rescanFileList(lastFileTime + 1);
+                boolean hasNextFile = rescanFileList(lastFileTime + 1);
+                // no cycle and no next file --- stop reading
+                if (!hasNextFile && !params.isCycle())
+                    return;
             }
         }
     }
