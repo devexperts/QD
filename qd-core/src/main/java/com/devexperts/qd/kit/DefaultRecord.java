@@ -207,17 +207,17 @@ public class DefaultRecord implements DataRecord {
 
     @Override
     public void writeFields(BufferedOutput out, RecordCursor cursor) throws IOException {
-        for (int i = 0; i < intFields.length; i++)
-            intFields[i].writeInt(out, cursor.getInt(i));
-        for (int i = 0; i < objFields.length; i++)
-            objFields[i].writeObj(out, cursor.getObj(i));
+        for (AbstractDataIntField field : intFields)
+            field.write(out, cursor);
+        for (AbstractDataObjField field : objFields)
+            field.write(out, cursor);
     }
 
     @Override
     public void readFields(BufferedInput in, RecordCursor cursor) throws IOException {
-        for (int i = 0; i < intFields.length; i++)
-            cursor.setInt(i, intFields[i].readInt(in));
-        for (int i = 0; i < objFields.length; i++)
-            cursor.setObj(i, objFields[i].readObj(in));
+        for (AbstractDataIntField field : intFields)
+            field.read(in, cursor);
+        for (AbstractDataObjField field : objFields)
+            field.read(in, cursor);
     }
 }

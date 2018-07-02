@@ -98,7 +98,14 @@ public final class StringField extends AbstractDataObjField {
             else
                 out.writeUTFString(value.toString());
         } else {
-            writeObj((DataOutput) out, value);
+            if (value == null || value instanceof String)
+                IOUtil.writeCharArray(out, (String) value);
+            else if (value instanceof char[])
+                IOUtil.writeCharArray(out, (char[]) value);
+            else if (value instanceof byte[])
+                IOUtil.writeCharArray(out, new String((byte[]) value, StandardCharsets.UTF_8));
+            else
+                IOUtil.writeCharArray(out, value.toString());
         }
     }
 

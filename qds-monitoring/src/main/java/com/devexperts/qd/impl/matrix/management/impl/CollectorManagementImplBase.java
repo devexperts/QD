@@ -218,9 +218,9 @@ public abstract class CollectorManagementImplBase extends CollectorManagement im
             rb.td(record.getName());
             rb.td(cursor.getDecodedSymbol());
             for (int i = 0; i < record.getIntFieldCount(); i++)
-                rb.td(record.getIntField(i).toString(cursor.getInt(i)));
+                rb.td(record.getIntField(i).getString(cursor));
             for (int i = 0; i < record.getObjFieldCount(); i++)
-                rb.td(record.getObjField(i).toString(cursor.getObj(i)));
+                rb.td(record.getObjField(i).getString(cursor));
             if (contract.usesEventFlags())
                 rb.td(EventFlag.formatEventFlags(cursor.getEventFlags(), MessageType.forData(contract)));
         }
@@ -292,8 +292,8 @@ public abstract class CollectorManagementImplBase extends CollectorManagement im
             rb.td(cursor.getRecord().getName());
             rb.td(cursor.getDecodedSymbol());
             if (contract.hasTime()) {
-                rb.td(cursor.getRecord().getIntField(0).toString(cursor.getInt(0)));
-                rb.td(cursor.getRecord().getIntField(1).toString(cursor.getInt(1)));
+                rb.td(cursor.getRecord().getIntField(0).getString(cursor));
+                rb.td(cursor.getRecord().getIntField(1).getString(cursor));
                 rb.td(cursor.getTime());
             }
         }

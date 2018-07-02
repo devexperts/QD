@@ -17,6 +17,8 @@ import java.util.StringTokenizer;
 import com.devexperts.io.Chunk;
 import com.devexperts.io.ChunkedInput;
 import com.devexperts.qd.*;
+import com.devexperts.qd.kit.VoidIntField;
+import com.devexperts.qd.qtp.BuiltinFields;
 import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.qtp.text.TextQTPParser;
 
@@ -135,7 +137,13 @@ class PostingThread extends Thread {
             helpRecordNotFound(name);
             return;
         }
-        SchemeDump.printRecord(record);
+        System.out.print(record.getName() + "\t" + BuiltinFields.EVENT_SYMBOL_FIELD_NAME);
+        for (int i = 0; i < record.getIntFieldCount(); i++)
+            if (!(record.getIntField(i) instanceof VoidIntField))
+                System.out.print("\t" + record.getIntField(i).getPropertyName());
+        for (int i = 0; i < record.getObjFieldCount(); i++)
+            System.out.print("\t" + record.getObjField(i).getPropertyName());
+        System.out.println();
     }
 
 }

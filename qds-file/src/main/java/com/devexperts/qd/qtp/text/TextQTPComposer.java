@@ -16,6 +16,7 @@ import java.io.UnsupportedEncodingException;
 
 import com.devexperts.io.BufferedOutput;
 import com.devexperts.qd.*;
+import com.devexperts.qd.kit.VoidIntField;
 import com.devexperts.qd.ng.EventFlag;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.qtp.*;
@@ -76,7 +77,7 @@ public class TextQTPComposer extends AbstractQTPComposer {
 
     // extension point
     protected boolean acceptField(DataField f) {
-        return true;
+        return !(f instanceof VoidIntField);
     }
 
     // ------------------------ session control ------------------------
@@ -214,6 +215,14 @@ public class TextQTPComposer extends AbstractQTPComposer {
         if (acceptField(field)) {
             separator();
             write(field.toString(value));
+        }
+    }
+
+    @Override
+    protected void writeField(DataField field, RecordCursor cursor) {
+        if (acceptField(field)) {
+            separator();
+            write(field.getString(cursor));
         }
     }
 

@@ -62,7 +62,7 @@ class DumpSubscriptionVisitor implements CollectorVisitor {
                 if (history) {
                     for (int i = 0; i < 2; i++) {
                         System.out.print('\t');
-                        System.out.print(r.getIntField(i).toString(cursor.getInt(i)));
+                        System.out.print(r.getIntField(i).getString(cursor));
                     }
                 }
                 System.out.println();

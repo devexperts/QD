@@ -1,3 +1,8 @@
+QDS 3.263:
+
+* [QD-976] Introduce WideDecimal format
+  - Run JVM with "-Ddxscheme.price=wide -Ddxscheme.size=wide" to make all price, size and volume fields WideDecimal
+
 QDS 3.262:
 
 * [QD-1081] Agent can loss data after resubscription

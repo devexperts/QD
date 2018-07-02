@@ -14,6 +14,7 @@ package com.dxfeed.api.impl;
 import java.util.Collection;
 
 import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.SerialFieldType;
 
 public abstract class EventDelegateFactory {
     public void buildScheme(SchemeBuilder builder) {}
@@ -28,5 +29,18 @@ public abstract class EventDelegateFactory {
 
     protected String getBaseRecordName(String recordName) {
         return recordName;
+    }
+
+    protected SerialFieldType select(SerialFieldType type, String... typeSelectors) {
+        for (int i = typeSelectors.length; --i >= 0;) {
+            String selector = System.getProperty(typeSelectors[i]);
+            if ("wide".equalsIgnoreCase(selector))
+                type = SerialFieldType.WIDE_DECIMAL;
+            if ("tiny".equalsIgnoreCase(selector) || "decimal".equalsIgnoreCase(selector))
+                type = SerialFieldType.DECIMAL;
+            if ("int".equalsIgnoreCase(selector))
+                type = SerialFieldType.COMPACT_INT;
+        }
+        return type;
     }
 }

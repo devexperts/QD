@@ -11,7 +11,12 @@
  */
 package com.devexperts.qd;
 
+import java.io.IOException;
+
+import com.devexperts.io.BufferedInput;
+import com.devexperts.io.BufferedOutput;
 import com.devexperts.qd.kit.AbstractDataField;
+import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordMapping;
 
 /**
@@ -80,4 +85,12 @@ public interface DataField {
      * enough detail to skip the serialized value of this field if necessary.
      */
     public SerialFieldType getSerialType();
+
+    public String getString(RecordCursor cursor);
+
+    public void setString(RecordCursor cursor, String value);
+
+    public void write(BufferedOutput out, RecordCursor cursor) throws IOException;
+
+    public void read(BufferedInput in, RecordCursor cursor) throws IOException;
 }

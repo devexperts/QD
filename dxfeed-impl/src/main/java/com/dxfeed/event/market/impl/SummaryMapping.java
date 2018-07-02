@@ -32,13 +32,13 @@ public class SummaryMapping extends MarketEventMapping {
     public SummaryMapping(DataRecord record) {
         super(record);
         iDayId = MappingUtil.findIntField(record, "DayId", true);
-        iDayOpenPrice = MappingUtil.findIntField(record, "DayOpen.Price", true);
-        iDayHighPrice = MappingUtil.findIntField(record, "DayHigh.Price", true);
-        iDayLowPrice = MappingUtil.findIntField(record, "DayLow.Price", true);
-        iDayClosePrice = MappingUtil.findIntField(record, "DayClose.Price", false);
+        iDayOpenPrice = findIntField("DayOpen.Price", true);
+        iDayHighPrice = findIntField("DayHigh.Price", true);
+        iDayLowPrice = findIntField("DayLow.Price", true);
+        iDayClosePrice = findIntField("DayClose.Price", false);
         iPrevDayId = MappingUtil.findIntField(record, "PrevDayId", true);
-        iPrevDayClosePrice = MappingUtil.findIntField(record, "PrevDayClose.Price", true);
-        iPrevDayVolume = MappingUtil.findIntField(record, "PrevDayVolume", false);
+        iPrevDayClosePrice = findIntField("PrevDayClose.Price", true);
+        iPrevDayVolume = findIntField("PrevDayVolume", false);
         iOpenInterest = MappingUtil.findIntField(record, "OpenInterest", false);
         iFlags = MappingUtil.findIntField(record, "Flags", false);
     }
@@ -52,75 +52,111 @@ public class SummaryMapping extends MarketEventMapping {
     }
 
     public double getDayOpenPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iDayOpenPrice));
+        return getAsDouble(cursor, iDayOpenPrice);
     }
 
     public void setDayOpenPrice(RecordCursor cursor, double dayOpenPrice) {
-        setInt(cursor, iDayOpenPrice, Decimal.compose(dayOpenPrice));
+        setAsDouble(cursor, iDayOpenPrice, dayOpenPrice);
     }
 
     public int getDayOpenPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iDayOpenPrice);
+        return getAsTinyDecimal(cursor, iDayOpenPrice);
     }
 
     public void setDayOpenPriceDecimal(RecordCursor cursor, int dayOpenPrice) {
-        setInt(cursor, iDayOpenPrice, dayOpenPrice);
+        setAsTinyDecimal(cursor, iDayOpenPrice, dayOpenPrice);
+    }
+
+    public long getDayOpenPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iDayOpenPrice);
+    }
+
+    public void setDayOpenPriceWideDecimal(RecordCursor cursor, long dayOpenPrice) {
+        setAsWideDecimal(cursor, iDayOpenPrice, dayOpenPrice);
     }
 
     public double getDayHighPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iDayHighPrice));
+        return getAsDouble(cursor, iDayHighPrice);
     }
 
     public void setDayHighPrice(RecordCursor cursor, double dayHighPrice) {
-        setInt(cursor, iDayHighPrice, Decimal.compose(dayHighPrice));
+        setAsDouble(cursor, iDayHighPrice, dayHighPrice);
     }
 
     public int getDayHighPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iDayHighPrice);
+        return getAsTinyDecimal(cursor, iDayHighPrice);
     }
 
     public void setDayHighPriceDecimal(RecordCursor cursor, int dayHighPrice) {
-        setInt(cursor, iDayHighPrice, dayHighPrice);
+        setAsTinyDecimal(cursor, iDayHighPrice, dayHighPrice);
+    }
+
+    public long getDayHighPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iDayHighPrice);
+    }
+
+    public void setDayHighPriceWideDecimal(RecordCursor cursor, long dayHighPrice) {
+        setAsWideDecimal(cursor, iDayHighPrice, dayHighPrice);
     }
 
     public double getDayLowPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iDayLowPrice));
+        return getAsDouble(cursor, iDayLowPrice);
     }
 
     public void setDayLowPrice(RecordCursor cursor, double dayLowPrice) {
-        setInt(cursor, iDayLowPrice, Decimal.compose(dayLowPrice));
+        setAsDouble(cursor, iDayLowPrice, dayLowPrice);
     }
 
     public int getDayLowPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iDayLowPrice);
+        return getAsTinyDecimal(cursor, iDayLowPrice);
     }
 
     public void setDayLowPriceDecimal(RecordCursor cursor, int dayLowPrice) {
-        setInt(cursor, iDayLowPrice, dayLowPrice);
+        setAsTinyDecimal(cursor, iDayLowPrice, dayLowPrice);
+    }
+
+    public long getDayLowPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iDayLowPrice);
+    }
+
+    public void setDayLowPriceWideDecimal(RecordCursor cursor, long dayLowPrice) {
+        setAsWideDecimal(cursor, iDayLowPrice, dayLowPrice);
     }
 
     public double getDayClosePrice(RecordCursor cursor) {
         if (iDayClosePrice < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iDayClosePrice));
+        return getAsDouble(cursor, iDayClosePrice);
     }
 
     public void setDayClosePrice(RecordCursor cursor, double dayClosePrice) {
         if (iDayClosePrice < 0)
             return;
-        setInt(cursor, iDayClosePrice, Decimal.compose(dayClosePrice));
+        setAsDouble(cursor, iDayClosePrice, dayClosePrice);
     }
 
     public int getDayClosePriceDecimal(RecordCursor cursor) {
         if (iDayClosePrice < 0)
             return 0;
-        return getInt(cursor, iDayClosePrice);
+        return getAsTinyDecimal(cursor, iDayClosePrice);
     }
 
     public void setDayClosePriceDecimal(RecordCursor cursor, int dayClosePrice) {
         if (iDayClosePrice < 0)
             return;
-        setInt(cursor, iDayClosePrice, dayClosePrice);
+        setAsTinyDecimal(cursor, iDayClosePrice, dayClosePrice);
+    }
+
+    public long getDayClosePriceWideDecimal(RecordCursor cursor) {
+        if (iDayClosePrice < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iDayClosePrice);
+    }
+
+    public void setDayClosePriceWideDecimal(RecordCursor cursor, long dayClosePrice) {
+        if (iDayClosePrice < 0)
+            return;
+        setAsWideDecimal(cursor, iDayClosePrice, dayClosePrice);
     }
 
     public int getPrevDayId(RecordCursor cursor) {
@@ -132,43 +168,75 @@ public class SummaryMapping extends MarketEventMapping {
     }
 
     public double getPrevDayClosePrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iPrevDayClosePrice));
+        return getAsDouble(cursor, iPrevDayClosePrice);
     }
 
     public void setPrevDayClosePrice(RecordCursor cursor, double prevDayClosePrice) {
-        setInt(cursor, iPrevDayClosePrice, Decimal.compose(prevDayClosePrice));
+        setAsDouble(cursor, iPrevDayClosePrice, prevDayClosePrice);
     }
 
     public int getPrevDayClosePriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iPrevDayClosePrice);
+        return getAsTinyDecimal(cursor, iPrevDayClosePrice);
     }
 
     public void setPrevDayClosePriceDecimal(RecordCursor cursor, int prevDayClosePrice) {
-        setInt(cursor, iPrevDayClosePrice, prevDayClosePrice);
+        setAsTinyDecimal(cursor, iPrevDayClosePrice, prevDayClosePrice);
     }
 
-    public double getPrevDayVolume(RecordCursor cursor) {
+    public long getPrevDayClosePriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iPrevDayClosePrice);
+    }
+
+    public void setPrevDayClosePriceWideDecimal(RecordCursor cursor, long prevDayClosePrice) {
+        setAsWideDecimal(cursor, iPrevDayClosePrice, prevDayClosePrice);
+    }
+
+    public long getPrevDayVolume(RecordCursor cursor) {
         if (iPrevDayVolume < 0)
-            return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iPrevDayVolume));
+            return 0;
+        return getAsLong(cursor, iPrevDayVolume);
     }
 
-    public void setPrevDayVolume(RecordCursor cursor, double prevDayVolume) {
+    public void setPrevDayVolume(RecordCursor cursor, long prevDayVolume) {
         if (iPrevDayVolume < 0)
             return;
-        setInt(cursor, iPrevDayVolume, Decimal.compose(prevDayVolume));
+        setAsLong(cursor, iPrevDayVolume, prevDayVolume);
+    }
+
+    public double getPrevDayVolumeDouble(RecordCursor cursor) {
+        if (iPrevDayVolume < 0)
+            return Double.NaN;
+        return getAsDouble(cursor, iPrevDayVolume);
+    }
+
+    public void setPrevDayVolumeDouble(RecordCursor cursor, double prevDayVolume) {
+        if (iPrevDayVolume < 0)
+            return;
+        setAsDouble(cursor, iPrevDayVolume, prevDayVolume);
     }
 
     public int getPrevDayVolumeDecimal(RecordCursor cursor) {
         if (iPrevDayVolume < 0)
             return 0;
-        return getInt(cursor, iPrevDayVolume);
+        return getAsTinyDecimal(cursor, iPrevDayVolume);
     }
 
     public void setPrevDayVolumeDecimal(RecordCursor cursor, int prevDayVolume) {
         if (iPrevDayVolume < 0)
             return;
-        setInt(cursor, iPrevDayVolume, prevDayVolume);
+        setAsTinyDecimal(cursor, iPrevDayVolume, prevDayVolume);
+    }
+
+    public long getPrevDayVolumeWideDecimal(RecordCursor cursor) {
+        if (iPrevDayVolume < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iPrevDayVolume);
+    }
+
+    public void setPrevDayVolumeWideDecimal(RecordCursor cursor, long prevDayVolume) {
+        if (iPrevDayVolume < 0)
+            return;
+        setAsWideDecimal(cursor, iPrevDayVolume, prevDayVolume);
     }
 
     public int getOpenInterest(RecordCursor cursor) {

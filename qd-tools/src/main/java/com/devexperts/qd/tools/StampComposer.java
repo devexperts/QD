@@ -64,6 +64,6 @@ class StampComposer extends TextQTPComposer {
 
     @Override
     protected boolean acceptField(DataField f) {
-        return rfs == null || rfs[f.getRecord().getId()].contains(f);
+        return super.acceptField(f) && (rfs == null || rfs[f.getRecord().getId()].contains(f));
     }
 }

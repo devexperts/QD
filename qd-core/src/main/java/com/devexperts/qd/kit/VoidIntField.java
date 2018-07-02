@@ -11,16 +11,33 @@
  */
 package com.devexperts.qd.kit;
 
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.*;
 
 import com.devexperts.io.BufferedInput;
 import com.devexperts.io.BufferedOutput;
 import com.devexperts.qd.SerialFieldType;
+import com.devexperts.qd.ng.RecordCursor;
 
 public class VoidIntField extends AbstractDataIntField {
     public VoidIntField(int index, String name) {
         super(index, name, SerialFieldType.VOID);
+    }
+
+    public final String getString(RecordCursor cursor) {
+        // return plain integer string for debugging purposes
+        return super.getString(cursor);
+    }
+
+    public final void setString(RecordCursor cursor, String value) {
+        // does not parse nor set anything
+    }
+
+    public final void write(BufferedOutput out, RecordCursor cursor) throws IOException {
+        // does not write anything
+    }
+
+    public final void read(BufferedInput in, RecordCursor cursor) throws IOException {
+        // does not read nor set anything
     }
 
     public final void writeInt(DataOutput out, int value) {

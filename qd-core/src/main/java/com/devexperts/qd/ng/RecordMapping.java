@@ -17,6 +17,7 @@ import java.util.Map;
 import com.devexperts.qd.*;
 import com.devexperts.qd.kit.AbstractDataField;
 import com.devexperts.qd.util.Decimal;
+import com.devexperts.util.WideDecimal;
 
 /**
  * Base class for record mappings.
@@ -28,7 +29,7 @@ import com.devexperts.qd.util.Decimal;
  */
 public abstract class RecordMapping {
     private final DataRecord record;
-    private final Map<String, String> nonDefaultPropertyName = new HashMap<String, String>();
+    private final Map<String, String> nonDefaultPropertyName = new HashMap<>();
 
     /**
      * Creates record mapping for a specified record.
@@ -97,36 +98,65 @@ public abstract class RecordMapping {
     }
 
     protected final int getAsInt(RecordCursor cursor, int fieldId) {
-        int raw = cursor.getIntMappedImpl(record, fieldId >> 8);
         switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
-        case 0:
-            return raw;
+        case SerialFieldType.Bits.FLAG_INT:
+            return cursor.getIntMappedImpl(record, fieldId >> 8);
         case SerialFieldType.Bits.FLAG_DECIMAL:
-            return (int) Decimal.toDouble(raw);
+            return (int) Decimal.toDouble(cursor.getIntMappedImpl(record, fieldId >> 8));
+        case SerialFieldType.Bits.FLAG_WIDE_DECIMAL:
+            return (int) WideDecimal.toDouble(cursor.getLongMappedImpl(record, fieldId >> 8));
+        default:
+            throw new IllegalArgumentException();
+        }
+    }
+
+    protected final long getAsLong(RecordCursor cursor, int fieldId) {
+        switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
+        case SerialFieldType.Bits.FLAG_INT:
+            return cursor.getIntMappedImpl(record, fieldId >> 8);
+        case SerialFieldType.Bits.FLAG_DECIMAL:
+            return (long) Decimal.toDouble(cursor.getIntMappedImpl(record, fieldId >> 8));
+        case SerialFieldType.Bits.FLAG_WIDE_DECIMAL:
+            return (long) WideDecimal.toDouble(cursor.getLongMappedImpl(record, fieldId >> 8));
         default:
             throw new IllegalArgumentException();
         }
     }
 
     protected final double getAsDouble(RecordCursor cursor, int fieldId) {
-        int raw = cursor.getIntMappedImpl(record, fieldId >> 8);
         switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
-        case 0:
-            return raw;
+        case SerialFieldType.Bits.FLAG_INT:
+            return cursor.getIntMappedImpl(record, fieldId >> 8);
         case SerialFieldType.Bits.FLAG_DECIMAL:
-            return Decimal.toDouble(raw);
+            return Decimal.toDouble(cursor.getIntMappedImpl(record, fieldId >> 8));
+        case SerialFieldType.Bits.FLAG_WIDE_DECIMAL:
+            return WideDecimal.toDouble(cursor.getLongMappedImpl(record, fieldId >> 8));
         default:
             throw new IllegalArgumentException();
         }
     }
 
-    protected final int getAsDecimal(RecordCursor cursor, int fieldId) {
-        int raw = cursor.getIntMappedImpl(record, fieldId >> 8);
+    protected final int getAsTinyDecimal(RecordCursor cursor, int fieldId) {
         switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
-        case 0:
-            return Decimal.composeDecimal(raw, 0);
+        case SerialFieldType.Bits.FLAG_INT:
+            return Decimal.composeDecimal(cursor.getIntMappedImpl(record, fieldId >> 8), 0);
         case SerialFieldType.Bits.FLAG_DECIMAL:
-            return raw;
+            return cursor.getIntMappedImpl(record, fieldId >> 8);
+        case SerialFieldType.Bits.FLAG_WIDE_DECIMAL:
+            return Decimal.wideToTiny(cursor.getLongMappedImpl(record, fieldId >> 8));
+        default:
+            throw new IllegalArgumentException();
+        }
+    }
+
+    protected final long getAsWideDecimal(RecordCursor cursor, int fieldId) {
+        switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
+        case SerialFieldType.Bits.FLAG_INT:
+            return WideDecimal.composeWide(cursor.getIntMappedImpl(record, fieldId >> 8), 0);
+        case SerialFieldType.Bits.FLAG_DECIMAL:
+            return Decimal.tinyToWide(cursor.getIntMappedImpl(record, fieldId >> 8));
+        case SerialFieldType.Bits.FLAG_WIDE_DECIMAL:
+            return cursor.getLongMappedImpl(record, fieldId >> 8);
         default:
             throw new IllegalArgumentException();
         }
@@ -134,11 +164,30 @@ public abstract class RecordMapping {
 
     protected final void setAsInt(RecordCursor cursor, int fieldId, int value) {
         switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
-        case 0:
+        case SerialFieldType.Bits.FLAG_INT:
             cursor.setIntMappedImpl(record, fieldId >> 8, value);
             break;
         case SerialFieldType.Bits.FLAG_DECIMAL:
             cursor.setIntMappedImpl(record, fieldId >> 8, Decimal.composeDecimal(value, 0));
+            break;
+        case SerialFieldType.Bits.FLAG_WIDE_DECIMAL:
+            cursor.setLongMappedImpl(record, fieldId >> 8, WideDecimal.composeWide(value, 0));
+            break;
+        default:
+            throw new IllegalArgumentException();
+        }
+    }
+
+    protected final void setAsLong(RecordCursor cursor, int fieldId, long value) {
+        switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
+        case SerialFieldType.Bits.FLAG_INT:
+            cursor.setIntMappedImpl(record, fieldId >> 8, (int) value);
+            break;
+        case SerialFieldType.Bits.FLAG_DECIMAL:
+            cursor.setIntMappedImpl(record, fieldId >> 8, Decimal.composeDecimal(value, 0));
+            break;
+        case SerialFieldType.Bits.FLAG_WIDE_DECIMAL:
+            cursor.setLongMappedImpl(record, fieldId >> 8, WideDecimal.composeWide(value, 0));
             break;
         default:
             throw new IllegalArgumentException();
@@ -147,24 +196,46 @@ public abstract class RecordMapping {
 
     protected final void setAsDouble(RecordCursor cursor, int fieldId, double value) {
         switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
-        case 0:
+        case SerialFieldType.Bits.FLAG_INT:
             cursor.setIntMappedImpl(record, fieldId >> 8, (int) value);
             break;
         case SerialFieldType.Bits.FLAG_DECIMAL:
             cursor.setIntMappedImpl(record, fieldId >> 8, Decimal.compose(value));
+            break;
+        case SerialFieldType.Bits.FLAG_WIDE_DECIMAL:
+            cursor.setLongMappedImpl(record, fieldId >> 8, WideDecimal.composeWide(value));
             break;
         default:
             throw new IllegalArgumentException();
         }
     }
 
-    protected final void setAsDecimal(RecordCursor cursor, int fieldId, int value) {
+    protected final void setAsTinyDecimal(RecordCursor cursor, int fieldId, int value) {
         switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
-        case 0:
+        case SerialFieldType.Bits.FLAG_INT:
             cursor.setIntMappedImpl(record, fieldId >> 8, (int) Decimal.toDouble(value));
             break;
         case SerialFieldType.Bits.FLAG_DECIMAL:
             cursor.setIntMappedImpl(record, fieldId >> 8, value);
+            break;
+        case SerialFieldType.Bits.FLAG_WIDE_DECIMAL:
+            cursor.setLongMappedImpl(record, fieldId >> 8, Decimal.tinyToWide(value));
+            break;
+        default:
+            throw new IllegalArgumentException();
+        }
+    }
+
+    protected final void setAsWideDecimal(RecordCursor cursor, int fieldId, long value) {
+        switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
+        case SerialFieldType.Bits.FLAG_INT:
+            cursor.setIntMappedImpl(record, fieldId >> 8, (int) WideDecimal.toDouble(value));
+            break;
+        case SerialFieldType.Bits.FLAG_DECIMAL:
+            cursor.setIntMappedImpl(record, fieldId >> 8, Decimal.wideToTiny(value));
+            break;
+        case SerialFieldType.Bits.FLAG_WIDE_DECIMAL:
+            cursor.setLongMappedImpl(record, fieldId >> 8, value);
             break;
         default:
             throw new IllegalArgumentException();

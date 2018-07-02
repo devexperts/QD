@@ -24,10 +24,12 @@ import com.devexperts.qd.ng.RecordCursor;
 public abstract class SampleColumn implements GUIColumn {
     protected final DataRecord record;
     protected final String name;
+    protected final RecordCursor.Owner owner;
 
     protected SampleColumn(DataRecord record, String field_name) {
         this.record = record;
         this.name = field_name.substring(record.getName().length() + 1);
+        this.owner = RecordCursor.allocateOwner(record);
     }
 
     public DataRecord getRecord() {
@@ -38,6 +40,12 @@ public abstract class SampleColumn implements GUIColumn {
         return name;
     }
 
+    public Object getValue(QDTicker ticker, int cipher, String symbol) {
+        if (!ticker.getDataIfAvailable(owner, record, cipher, symbol))
+            return null;
+        return getValue(owner.cursor());
+    }
+
     public static class IntColumn extends SampleColumn {
         protected final DataIntField field;
 
@@ -46,26 +54,15 @@ public abstract class SampleColumn implements GUIColumn {
             this.field = field;
         }
 
-        public Object getValue(QDTicker ticker, int cipher, String symbol) {
-            int value = ticker.getInt(field, cipher, symbol);
-            if (value == 0 && !ticker.isAvailable(record, cipher, symbol))
-                return null;
-            return formatValue(value);
-        }
-
-        public Object getValue(RecordCursor cur) {
-            return formatValue(cur.getInt(field.getIndex()));
-        }
-
         private final Date date = new Date();
         private final DateFormat date_format = new SimpleDateFormat("mm:ss");
 
-        protected Object formatValue(int value) {
+        public Object getValue(RecordCursor cur) {
             if (field.getName().endsWith(".Time")) {
-                date.setTime(value * 1000L);
+                date.setTime(cur.getInt(field.getIndex()) * 1000L);
                 return date_format.format(date);
             }
-            return field.toString(value);
+            return field.getString(cur);
         }
     }
 
@@ -77,15 +74,8 @@ public abstract class SampleColumn implements GUIColumn {
             this.field = field;
         }
 
-        public Object getValue(QDTicker ticker, int cipher, String symbol) {
-            Object value = ticker.getObj(field, cipher, symbol);
-            if (value == null && !ticker.isAvailable(record, cipher, symbol))
-                return null;
-            return field.toString(value);
-        }
-
         public Object getValue(RecordCursor cur) {
-            return field.toString(cur.getObj(field.getIndex()));
+            return field.getString(cur);
         }
     }
 }

@@ -17,6 +17,7 @@ import java.util.function.Consumer;
 
 import com.devexperts.io.BufferedInput;
 import com.devexperts.qd.*;
+import com.devexperts.qd.kit.VoidIntField;
 import com.devexperts.qd.ng.*;
 import com.devexperts.qd.qtp.*;
 import com.devexperts.qd.util.TimeSequenceUtil;
@@ -33,7 +34,7 @@ import com.devexperts.util.TimeFormat;
 public class TextQTPParser extends AbstractQTPParser {
     private static final String LEGACY_QD_COMPLETE = TextDelimiters.LEGACY_QD_PREFIX + "COMPLETE"; // onDemand dataextractor marks the end of data with ==QD_COMPLETE
 
-    private static final int EVENT_TIME_DESC = Integer.MAX_VALUE;
+    private static final DataField EVENT_TIME_DESC = new VoidIntField(Integer.MAX_VALUE, "EventTimePlaceHolder");
 
     private final LineTokenizer tokenizer;
     private MessageType defaultMessageType;
@@ -44,44 +45,24 @@ public class TextQTPParser extends AbstractQTPParser {
 
     /**
      * This field stores information about records that were
-     * redescribed in DataInput. If some record was redescribed
-     * then it maps its name into <tt>int</tt> array.
+     * described in DataInput. If some record was described
+     * then it maps its name into <tt>DataField</tt> array.
      * This array contains information about correspondence
-     * between old and new record fields. It has following semantics:
+     * between incoming fields and scheme record fields.
+     * The i-th element corresponds to i-th incoming field (as described) and contains:
      * <ul>
-     * <li>
-     * If the record didn't present in scheme, but it was described in DataInput,
-     * then the mapped array has 0 length (int[0]). In this case we are not interested
-     * in new record's fields information, we can't process it anyway
-     * and will just skip it, and only need to know that the record
-     * was described earlier and we know about it.
-     * </li>
-     * <li>
-     * If some known record was redescribed with some different fields (or
-     * without some old fields, or with some new fields, or with the same
-     * fields but in different order), then the corresponding array contains
-     * mapping between new and old fields. Its size is equal to the number of
-     * fields in new record, and its i-th element is equal to
-     *     <ol>
      *     <li>
-     *     0, if i-th field didn't present in old record.
+     *         EVENT_TIME_DESC if it is EventTime field
      *     </li>
      *     <li>
-     *     j > 0, if i-th field of new record corresponds to (j - 1) <b>Int</b> field of old record. (1-->0, 2-->1, 3-->2, ...)
+     *         corresponding scheme record field if matching field found
      *     </li>
      *     <li>
-     *     j < 0, if i-th field of new record corresponds to -(j + 1) <b>Obj</b> field of old record. (-1-->0, -2-->1, -3-->2, ...)
+     *         null if scheme record does not contain field with such name
      *     </li>
-     *     </ol>
-     * </li>
-     * <li>
-     * If there was no redescription of this record or if it was redescribed
-     * with exactly the same fields (following in the same order)
-     * then there is no mapping for its name.
-     * </li>
      * </ul>
      */
-    private HashMap<String, int[]> describedRecords;
+    private final HashMap<String, DataField[]> describedRecords;
 
     public TextQTPParser(DataScheme scheme) {
         this(scheme, null);
@@ -225,10 +206,10 @@ public class TextQTPParser extends AbstractQTPParser {
      * @return true, if record was parsed successfully, false otherwise.
      */
     private boolean parseData(RecordBuffer buf, String recordName) {
-        DataRecord originalRecord = scheme.findRecordByName(recordName);
-        int[] fieldsPermutation = describedRecords.get(recordName);
-        if (originalRecord == null) {
-            if (fieldsPermutation == null) {
+        DataRecord record = scheme.findRecordByName(recordName);
+        DataField[] fieldsRearrangement = describedRecords.get(recordName);
+        if (record == null) {
+            if (fieldsRearrangement == null) {
                 QDLog.log.error("Unknown record \"" + recordName + "\"");
                 return false;
             } else {
@@ -245,29 +226,24 @@ public class TextQTPParser extends AbstractQTPParser {
         }
         int cipher = scheme.getCodec().encode(symbol);
 
-        RecordCursor cur = buf.add(originalRecord, cipher, symbol);
+        RecordCursor cur = buf.add(record, cipher, symbol);
 
-        if (fieldsPermutation == null) {
+        if (fieldsRearrangement == null) {
             // Record was not re-described. Just read it.
-            for (int i = 0, n = originalRecord.getIntFieldCount(); tokenizer.hasMoreTokens() && i < n; i++)
-                trySetIntField(cur, i, tokenizer.nextToken());
-            for (int i = 0, n = originalRecord.getObjFieldCount(); tokenizer.hasMoreTokens() && i < n; i++)
-                trySetObjField(cur, i, tokenizer.nextToken());
+            for (int i = 0, n = record.getIntFieldCount(); tokenizer.hasMoreTokens() && i < n; i++)
+                if (!(record.getIntField(i) instanceof VoidIntField))
+                    trySetField(record.getIntField(i), cur, tokenizer.nextToken());
+            for (int i = 0, n = record.getObjFieldCount(); tokenizer.hasMoreTokens() && i < n; i++)
+                trySetField(record.getObjField(i), cur, tokenizer.nextToken());
         } else {
             // Record was re-described.
-            for (int i = 0; tokenizer.hasMoreTokens() && i < fieldsPermutation.length; i++) {
-                int k = fieldsPermutation[i];
+            for (int i = 0; tokenizer.hasMoreTokens() && i < fieldsRearrangement.length; i++) {
+                DataField field = fieldsRearrangement[i];
                 String token = tokenizer.nextToken();
-                if (k == 0) {
-                    // no correspondence with original record field
-                } else if (k == EVENT_TIME_DESC) {
+                if (field == EVENT_TIME_DESC) {
                     trySetEventTime(cur, token);
-                } else if (k > 0) {
-                    // Int field
-                    trySetIntField(cur, k - 1, token);
-                } else {
-                    // Obj field
-                    trySetObjField(cur, -(k + 1), token);
+                } else if (field != null) {
+                    trySetField(field, cur, token);
                 }
             }
         }
@@ -304,19 +280,9 @@ public class TextQTPParser extends AbstractQTPParser {
             }
     }
 
-    private static void trySetIntField(RecordCursor cursor, int fieldIndex, String value) {
-        DataIntField field = cursor.getRecord().getIntField(fieldIndex);
+    private static void trySetField(DataField field, RecordCursor cursor, String value) {
         try {
-            cursor.setInt(fieldIndex, field.parseString(value));
-        } catch (IllegalArgumentException e) {
-            QDLog.log.error("Cannot parse record field \"" + field.getName() + "\": " + e.getMessage());
-        }
-    }
-
-    private static void trySetObjField(RecordCursor cursor, int fieldIndex, String value) {
-        DataObjField field = cursor.getRecord().getObjField(fieldIndex);
-        try {
-            cursor.setObj(fieldIndex, field.parseString(value));
+            field.setString(cursor, value);
         } catch (IllegalArgumentException e) {
             QDLog.log.error("Cannot parse record field \"" + field.getName() + "\": " + e.getMessage());
         }
@@ -331,7 +297,7 @@ public class TextQTPParser extends AbstractQTPParser {
      */
     private boolean parseSubscription(RecordBuffer buf, String recordName) {
         DataRecord record = scheme.findRecordByName(recordName);
-        int[] fieldsRearrangement = describedRecords.get(recordName);
+        DataField[] fieldsRearrangement = describedRecords.get(recordName);
         if (record == null) {
             if (fieldsRearrangement == null) {
                 QDLog.log.error("Subscription to unknown record \"" + recordName + "\"");
@@ -355,11 +321,10 @@ public class TextQTPParser extends AbstractQTPParser {
             String timeStr = tokenizer.nextToken();
             if (timeStr != null) {
                 try {
-                    time = record.getIntField(0).parseString(timeStr);
-                    time <<= 32;
+                    time = ((long) record.getIntField(0).parseString(timeStr) << 32);
                     timeStr = tokenizer.nextToken();
                     if (timeStr != null)
-                        time |= record.getIntField(1).parseString(timeStr);
+                        time |= record.getIntField(1).parseString(timeStr) & 0xFFFFFFFFL;
                 } catch (IllegalArgumentException e) {
                     QDLog.log.error("Cannot parse time for historySubscriptionAdd subscription");
                     return false;
@@ -396,10 +361,8 @@ public class TextQTPParser extends AbstractQTPParser {
                     DataField field = cur.getRecord().findFieldByName(key);
                     if (field == null)
                         QDLog.log.error("Skipping extra token \"" + s + "\". Field is not found");
-                    else if (field instanceof DataIntField)
-                        trySetIntField(cur, field.getIndex(), value);
                     else
-                        trySetObjField(cur, field.getIndex(), value);
+                        trySetField(field, cur, value);
                 } else
                     QDLog.log.error("Skipping extra token \"" + s + "\" in subscription");
             }
@@ -420,47 +383,14 @@ public class TextQTPParser extends AbstractQTPParser {
             return false;
         }
         DataRecord record = scheme.findRecordByName(recordName);
-        if (record == null) {
-            // There was no such record in our scheme. We just put new int[0]
-            // into our describedRecords map in order to register that we
-            // know about this record since now.
-            describedRecords.put(recordName, new int[0]);
-            return true;
+        ArrayList<DataField> fieldsRearrangement = new ArrayList<>();
+        for (String fieldName; (fieldName = tokenizer.nextToken()) != null;) {
+            DataField field = record == null ? null : record.findFieldByName(fieldName);
+            if (field == null && readEventTimeSequence && fieldName.equals(BuiltinFields.EVENT_TIME_FIELD_NAME))
+                field = EVENT_TIME_DESC;
+            fieldsRearrangement.add(field);
         }
-        ArrayList<Integer> fieldsRearrangement = new ArrayList<>();
-        String fieldName;
-        while ((fieldName = tokenizer.nextToken()) != null)
-            fieldsRearrangement.add(getRecordFieldIndex(record, fieldName));
-        int[] rearrangement = new int[fieldsRearrangement.size()];
-        for (int i = 0; i < rearrangement.length; i++)
-            rearrangement[i] = fieldsRearrangement.get(i);
-        if (!equalRearrangement(record, rearrangement))
-            describedRecords.put(recordName, rearrangement);
+        describedRecords.put(recordName, fieldsRearrangement.toArray(new DataField[fieldsRearrangement.size()]));
         return true;
-    }
-
-    private static boolean equalRearrangement(DataRecord record, int[] rearrangement) {
-        if (rearrangement.length != record.getIntFieldCount() + record.getObjFieldCount())
-            return false;
-        int j = 0;
-        for (int i = 0; i < record.getIntFieldCount(); i++)
-            if (rearrangement[j++] != i + 1)
-                return false;
-
-        for (int i = 0; i < record.getObjFieldCount(); i++)
-            if (rearrangement[j++] != -(i + 1))
-                return false;
-        return true;
-    }
-
-    private int getRecordFieldIndex(DataRecord record, String fieldName) {
-        DataField field = record.findFieldByName(fieldName);
-        if (field instanceof DataIntField)
-            return field.getIndex() + 1;
-        if (field instanceof DataObjField)
-            return -(field.getIndex() + 1);
-        if (readEventTimeSequence && fieldName.equals(BuiltinFields.EVENT_TIME_FIELD_NAME))
-            return EVENT_TIME_DESC;
-        return 0;
     }
 }

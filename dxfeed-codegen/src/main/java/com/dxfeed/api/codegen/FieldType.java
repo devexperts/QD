@@ -16,7 +16,6 @@ import java.util.*;
 import com.devexperts.io.Marshalled;
 import com.devexperts.qd.SerialFieldType;
 import com.devexperts.qd.util.*;
-import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimeUtil;
 
 enum FieldType {
@@ -50,12 +49,35 @@ enum FieldType {
         .addAccess(Access.createWithAccessPattern("", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
         .setMapper(new DecimalMapper(int.class))
     ),
-    INT_AS_DOUBLE(new Builder() // TODO this field type is more appropriate to name SIZE as it is tied to size type configuration
-        .addField(new Field(false, "dxscheme.size"))
+    SIZE(new Builder()
+        .addField(new Field(false, SerialFieldType.COMPACT_INT, "dxscheme.size"))
         .addAccess(Access.createWithAccessPattern("", "int", "0", "getAsInt(cursor, %s)", "setAsInt(cursor, %s, %s)"))
         .addAccess(Access.createWithAccessPattern("Double", "double", "Double.NaN", "getAsDouble(cursor, %s)", "setAsDouble(cursor, %s, %s)"))
-        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getAsDecimal(cursor, %s)", "setAsDecimal(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getAsTinyDecimal(cursor, %s)", "setAsTinyDecimal(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("WideDecimal", "long", "0", "getAsWideDecimal(cursor, %s)", "setAsWideDecimal(cursor, %s, %s)"))
         .setMapper(new DefaultMapper("Double", double.class))
+    ),
+    VOLUME(new Builder()
+        .addField(new Field(false, SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"))
+        .addAccess(Access.createWithAccessPattern("", "long", "0", "getAsLong(cursor, %s)", "setAsLong(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Double", "double", "Double.NaN", "getAsDouble(cursor, %s)", "setAsDouble(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getAsTinyDecimal(cursor, %s)", "setAsTinyDecimal(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("WideDecimal", "long", "0", "getAsWideDecimal(cursor, %s)", "setAsWideDecimal(cursor, %s, %s)"))
+        .setMapper(new DefaultMapper("Double", double.class))
+    ),
+    PRICE(new Builder()
+        .addField(new Field(false, SerialFieldType.DECIMAL, "dxscheme.price"))
+        .addAccess(Access.createWithAccessPattern("", "double", "Double.NaN", "getAsDouble(cursor, %s)", "setAsDouble(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getAsTinyDecimal(cursor, %s)", "setAsTinyDecimal(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("WideDecimal", "long", "0", "getAsWideDecimal(cursor, %s)", "setAsWideDecimal(cursor, %s, %s)"))
+        .setMapper(new DefaultMapper(double.class))
+    ),
+    TURNOVER(new Builder()
+        .addField(new Field(false, SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"))
+        .addAccess(Access.createWithAccessPattern("", "double", "Double.NaN", "getAsDouble(cursor, %s)", "setAsDouble(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getAsTinyDecimal(cursor, %s)", "setAsTinyDecimal(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("WideDecimal", "long", "0", "getAsWideDecimal(cursor, %s)", "setAsWideDecimal(cursor, %s, %s)"))
+        .setMapper(new DefaultMapper(double.class))
     ),
     DECIMAL_AS_DOUBLE(new Builder()
         .addField(new Field(false, SerialFieldType.DECIMAL))
@@ -71,14 +93,6 @@ enum FieldType {
         .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
         .addImport(new ClassName(Decimal.class))
         .setMapper(new DecimalMapper(long.class))
-    ),
-    DECIMAL_AS_LONG_AS_DOUBLE(new Builder()
-        .addField(new Field(false, SerialFieldType.DECIMAL))
-        .addAccess(Access.createWithAccessPattern("", "long", "0", "(long)Decimal.toDouble(getInt(cursor, %s))", "setInt(cursor, %s, Decimal.composeDecimal(%s, 0))"))
-        .addAccess(Access.createWithAccessPattern("Double", "double", "Double.NaN", "Decimal.toDouble(getInt(cursor, %s))", "setInt(cursor, %s, Decimal.compose(%s))"))
-        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
-        .addImport(new ClassName(Decimal.class))
-        .setMapper(new DefaultMapper("Double", double.class))
     ),
     DECIMAL_OR_INT_AS_LONG(new Builder()
         .addField(new Field(false, SerialFieldType.DECIMAL))
@@ -271,22 +285,22 @@ enum FieldType {
         final boolean required;
         final boolean isObject;
         final SerialFieldType serialType;
-        final String typeSelector;
+        final String[] typeSelectors;
         final String suffix;
 
         Field(boolean isObject, SerialFieldType serialType) {
-            this(true, isObject, serialType, null, "");
+            this(true, isObject, "", serialType);
         }
 
-        Field(boolean isObject, String typeSelector) {
-            this(true, isObject, null, typeSelector, "");
+        Field(boolean isObject, SerialFieldType serialType, String... typeSelectors) {
+            this(true, isObject, "", serialType, typeSelectors);
         }
 
-        Field(boolean required, boolean isObject, SerialFieldType serialType, String typeSelector, String suffix) {
+        Field(boolean required, boolean isObject, String suffix, SerialFieldType serialType, String... typeSelectors) {
             this.required = required;
             this.isObject = isObject;
             this.serialType = serialType;
-            this.typeSelector = typeSelector;
+            this.typeSelectors = typeSelectors;
             this.suffix = suffix;
         }
 

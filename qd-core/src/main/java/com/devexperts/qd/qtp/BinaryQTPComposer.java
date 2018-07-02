@@ -114,6 +114,11 @@ public class BinaryQTPComposer extends AbstractQTPComposer {
     }
 
     @Override
+    protected void writeField(DataField field, RecordCursor cursor) throws IOException {
+        throw new UnsupportedOperationException("Legacy field-by-field writing is not supported, use 'append'");
+    }
+
+    @Override
     protected void writeOtherMessageBody(byte[] messageBytes, int offset, int length) throws IOException {
         msg.write(messageBytes, offset, length);
     }

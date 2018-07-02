@@ -11,14 +11,40 @@
  */
 package com.devexperts.qd.kit;
 
+import java.io.IOException;
+
+import com.devexperts.io.BufferedInput;
+import com.devexperts.io.BufferedOutput;
 import com.devexperts.qd.DataIntField;
 import com.devexperts.qd.SerialFieldType;
+import com.devexperts.qd.ng.RecordCursor;
 
 public abstract class AbstractDataIntField extends AbstractDataField implements DataIntField {
     private static final String[] INT_STRING_CACHE = new String[1001];
 
     AbstractDataIntField(int index, String name, SerialFieldType serialType) {
         super(index, name, serialType);
+    }
+
+    @Override
+    public String getString(RecordCursor cursor) {
+        return toString(cursor.getInt(getIndex()));
+    }
+
+    @Override
+    public void setString(RecordCursor cursor, String value) {
+        cursor.setInt(getIndex(), parseString(value));
+
+    }
+
+    @Override
+    public void write(BufferedOutput out, RecordCursor cursor) throws IOException {
+        writeInt(out, cursor.getInt(getIndex()));
+    }
+
+    @Override
+    public void read(BufferedInput in, RecordCursor cursor) throws IOException {
+        cursor.setInt(getIndex(), readInt(in));
     }
 
     /**

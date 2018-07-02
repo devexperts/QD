@@ -82,7 +82,7 @@ class MappingGen {
             if (f.isActive()) {
                 for (Map.Entry<FieldType.Field, String> e : f.fieldToFullNameMap.entrySet()) {
                     boolean required = f.required && e.getKey().required;
-                    if (e.getKey().typeSelector != null) {
+                    if (e.getKey().typeSelectors.length != 0) {
                         cg.code(e.getValue() + " = " + (e.getKey().isObject ? "findObjField" : "findIntField")
                             + "(\"" + e.getKey().getFullName(f.fieldName) + "\", " + required + ");");
                     } else {

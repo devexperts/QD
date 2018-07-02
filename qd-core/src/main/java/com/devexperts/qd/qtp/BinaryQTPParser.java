@@ -658,12 +658,12 @@ public class BinaryQTPParser extends AbstractQTPParser {
             sb.append('\t').append(symbol);
             for (int i = 0; i < record.getIntFieldCount(); i++)
                 try {
-                    sb.append('\t').append(record.getIntField(i).toString(cur.getInt(i)));
+                    sb.append('\t').append(record.getIntField(i).getString(cur));
                 } catch (Throwable ignored) {
                 }
             for (int i = 0; i < record.getObjFieldCount(); i++)
                 try {
-                    sb.append('\t').append(record.getObjField(i).toString(cur.getObj(i)));
+                    sb.append('\t').append(record.getObjField(i).getString(cur));
                 } catch (Throwable ignored) {
                 }
         }

@@ -35,7 +35,7 @@ public class SpreadOrderMapping extends OrderBaseMapping {
         iTime = MappingUtil.findIntField(record, "Time", true);
         iTimeNanoPart = MappingUtil.findIntField(record, "TimeNanoPart", false);
         iSequence = MappingUtil.findIntField(record, "Sequence", true);
-        iPrice = MappingUtil.findIntField(record, "Price", true);
+        iPrice = findIntField("Price", true);
         iSize = findIntField("Size", true);
         iCount = MappingUtil.findIntField(record, "Count", false);
         iFlags = MappingUtil.findIntField(record, "Flags", true);
@@ -87,19 +87,27 @@ public class SpreadOrderMapping extends OrderBaseMapping {
     }
 
     public double getPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iPrice));
+        return getAsDouble(cursor, iPrice);
     }
 
     public void setPrice(RecordCursor cursor, double price) {
-        setInt(cursor, iPrice, Decimal.compose(price));
+        setAsDouble(cursor, iPrice, price);
     }
 
     public int getPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iPrice);
+        return getAsTinyDecimal(cursor, iPrice);
     }
 
     public void setPriceDecimal(RecordCursor cursor, int price) {
-        setInt(cursor, iPrice, price);
+        setAsTinyDecimal(cursor, iPrice, price);
+    }
+
+    public long getPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iPrice);
+    }
+
+    public void setPriceWideDecimal(RecordCursor cursor, long price) {
+        setAsWideDecimal(cursor, iPrice, price);
     }
 
     public int getSize(RecordCursor cursor) {
@@ -119,11 +127,19 @@ public class SpreadOrderMapping extends OrderBaseMapping {
     }
 
     public int getSizeDecimal(RecordCursor cursor) {
-        return getAsDecimal(cursor, iSize);
+        return getAsTinyDecimal(cursor, iSize);
     }
 
     public void setSizeDecimal(RecordCursor cursor, int size) {
-        setAsDecimal(cursor, iSize, size);
+        setAsTinyDecimal(cursor, iSize, size);
+    }
+
+    public long getSizeWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iSize);
+    }
+
+    public void setSizeWideDecimal(RecordCursor cursor, long size) {
+        setAsWideDecimal(cursor, iSize, size);
     }
 
     public int getCount(RecordCursor cursor) {

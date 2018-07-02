@@ -389,6 +389,27 @@ public final class RecordCursor {
     }
 
     /**
+     * Returns the value of the specified integer field for the record pointed to by this cursor.
+     * @param intFieldIndex index of the field starting from 0.
+     * @return the value of integer field.
+     * @throws IndexOutOfBoundsException if intFieldIndex is negative or more or equal to the number of
+     * integer fields in the corresponding record.
+     */
+    public long getLong(int intFieldIndex) {
+        if (intFieldIndex < 0 || intFieldIndex >= intCount - 1)
+            Throws.throwIndexOutOfBoundsException(intFieldIndex, intCount - 1);
+        return getLongImpl(intFieldIndex);
+    }
+
+    long getLongMappedImpl(DataRecord record, int intFieldIndex) {
+        if (record != this.record)
+            Throws.throwWrongRecord(this.record, record);
+        if (!mode.hasData())
+            Throws.throwWrongMode(mode);
+        return getLongImpl(intFieldIndex);
+    }
+
+    /**
      * Returns the number of object data fields.
      * @return the number of object data fields.
      */
@@ -738,10 +759,10 @@ public final class RecordCursor {
             formatPosition(sb, intOffset, objOffset);
             if (intFlds != null && intOffset >= 0)
                 for (int i = 0; i < intCount && intOffset + i < intFlds.length; i++)
-                    sb.append(' ').append(record.getIntField(i).toString(intFlds[intOffset + i]));
+                    sb.append(' ').append(record.getIntField(i).getString(this));
             if (objFlds != null && objOffset >= 0)
                 for (int i = 0; i < objCount && objOffset + i < objFlds.length; i++)
-                    sb.append(' ').append(record.getObjField(i).toString(objFlds[objOffset + i]));
+                    sb.append(' ').append(record.getObjField(i).getString(this));
         }
         if (readOnly)
             sb.append(", readOnly");
@@ -764,6 +785,24 @@ public final class RecordCursor {
         if (!mode.hasData())
             Throws.throwWrongMode(mode);
         intFlds[intOffset + intFieldIndex] = value;
+    }
+
+    public void setLong(int intFieldIndex, long value) {
+        if (readOnly)
+            Throws.throwReadOnly();
+        if (intFieldIndex < 0 || intFieldIndex >= intCount - 1)
+            Throws.throwIndexOutOfBoundsException(intFieldIndex, intCount - 1);
+        setLongImpl(intFieldIndex, value);
+    }
+
+    void setLongMappedImpl(DataRecord record, int intFieldIndex, long value) {
+        if (readOnly)
+            Throws.throwReadOnly();
+        if (record != this.record)
+            Throws.throwWrongRecord(this.record, record);
+        if (!mode.hasData())
+            Throws.throwWrongMode(mode);
+        setLongImpl(intFieldIndex, value);
     }
 
     public void setObj(int objFieldIndex, Object value) {
@@ -976,9 +1015,8 @@ public final class RecordCursor {
 
     /**
      * Reads field values from the specified data input.
-     * @deprecated Use {@link #readDataFrom(BufferedInput) readFrom(BufferedInput)} which is faster,
-     * because it works via {@link BufferedInput} class.
      * @throws IllegalStateException if the cursor is {@link #isReadOnly() read-only}.
+     * @deprecated Use {@link com.devexperts.qd.qtp.BinaryQTPParser} class
      */
     public void readFrom(DataInput in) throws IOException {
         if (readOnly)
@@ -992,6 +1030,7 @@ public final class RecordCursor {
     /**
      * Reads data field values from the specified buffered input.
      * @throws IllegalStateException if the cursor is {@link #isReadOnly() read-only}.
+     * @deprecated Use {@link com.devexperts.qd.qtp.BinaryQTPParser} class
      */
     public void readDataFrom(BufferedInput in) throws IOException {
         if (readOnly)

@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 
 import com.devexperts.qd.*;
 import com.devexperts.qd.kit.DefaultRecord;
+import com.devexperts.qd.kit.VoidIntField;
 
 /**
  * This class is used to add fields to QD scheme.
@@ -115,6 +116,8 @@ public class SchemeBuilder {
             if (oldType == null) {
                 if (type.isObject())
                     objFieldsCount++;
+                else if (type.isLong())
+                    intFieldsCount += 2;
                 else
                     intFieldsCount++;
                 fields.put(fieldName, type);
@@ -157,6 +160,12 @@ public class SchemeBuilder {
                     if (field == null)
                         throw new IllegalArgumentException("Cannot construct field " + fieldName + " of type " + type);
                     intFields[index] = field;
+                    if (type.isLong()) {
+                        if (index + 1 != intIndex)
+                            throw new IllegalArgumentException("Cannot add void tail for " + fieldName + " of type " + type + " at index " + index);
+                        intFields[intIndex] = new VoidIntField(intIndex, fieldName + "$VoidTail");
+                        intIndex++;
+                    }
                 }
             }
             if (recordName.equals("Configuration"))

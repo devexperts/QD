@@ -11,12 +11,37 @@
  */
 package com.devexperts.qd.kit;
 
+import java.io.IOException;
+
+import com.devexperts.io.BufferedInput;
+import com.devexperts.io.BufferedOutput;
 import com.devexperts.qd.DataObjField;
 import com.devexperts.qd.SerialFieldType;
+import com.devexperts.qd.ng.RecordCursor;
 
 public abstract class AbstractDataObjField extends AbstractDataField implements DataObjField {
     AbstractDataObjField(int index, String name, SerialFieldType serialType) {
         super(index, name, serialType);
+    }
+
+    @Override
+    public String getString(RecordCursor cursor) {
+        return toString(cursor.getObj(getIndex()));
+    }
+
+    @Override
+    public void setString(RecordCursor cursor, String value) {
+        cursor.setObj(getIndex(), parseString(value));
+    }
+
+    @Override
+    public void write(BufferedOutput out, RecordCursor cursor) throws IOException {
+        writeObj(out, cursor.getObj(getIndex()));
+    }
+
+    @Override
+    public void read(BufferedInput in, RecordCursor cursor) throws IOException {
+        cursor.setObj(getIndex(), readObj(in));
     }
 
     /**
@@ -46,4 +71,3 @@ public abstract class AbstractDataObjField extends AbstractDataField implements 
         return value1 == value2 || (value1 != null && value1.equals(value2));
     }
 }
-

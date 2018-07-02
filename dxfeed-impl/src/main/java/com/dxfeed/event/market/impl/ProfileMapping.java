@@ -43,12 +43,12 @@ public class ProfileMapping extends MarketEventMapping {
         iDivFreq = MappingUtil.findIntField(record, "DivFreq", false);
         iExdDivAmount = MappingUtil.findIntField(record, "ExdDiv.Amount", false);
         iExdDivDate = MappingUtil.findIntField(record, "ExdDiv.Date", false);
-        iHighPrice52 = MappingUtil.findIntField(record, "52High.Price", false);
-        iLowPrice52 = MappingUtil.findIntField(record, "52Low.Price", false);
+        iHighPrice52 = findIntField("52High.Price", false);
+        iLowPrice52 = findIntField("52Low.Price", false);
         iShares = MappingUtil.findIntField(record, "Shares", false);
         iFreeFloat = MappingUtil.findIntField(record, "FreeFloat", false);
-        iHighLimitPrice = MappingUtil.findIntField(record, "HighLimitPrice", false);
-        iLowLimitPrice = MappingUtil.findIntField(record, "LowLimitPrice", false);
+        iHighLimitPrice = findIntField("HighLimitPrice", false);
+        iLowLimitPrice = findIntField("LowLimitPrice", false);
         iHaltStartTime = MappingUtil.findIntField(record, "Halt.StartTime", false);
         iHaltEndTime = MappingUtil.findIntField(record, "Halt.EndTime", false);
         iFlags = MappingUtil.findIntField(record, "Flags", false);
@@ -158,104 +158,156 @@ public class ProfileMapping extends MarketEventMapping {
     public double get52HighPrice(RecordCursor cursor) {
         if (iHighPrice52 < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iHighPrice52));
+        return getAsDouble(cursor, iHighPrice52);
     }
 
     @Deprecated
     public void set52HighPrice(RecordCursor cursor, double _52HighPrice) {
         if (iHighPrice52 < 0)
             return;
-        setInt(cursor, iHighPrice52, Decimal.compose(_52HighPrice));
+        setAsDouble(cursor, iHighPrice52, _52HighPrice);
     }
 
     @Deprecated
     public int get52HighPriceDecimal(RecordCursor cursor) {
         if (iHighPrice52 < 0)
             return 0;
-        return getInt(cursor, iHighPrice52);
+        return getAsTinyDecimal(cursor, iHighPrice52);
     }
 
     @Deprecated
     public void set52HighPriceDecimal(RecordCursor cursor, int _52HighPrice) {
         if (iHighPrice52 < 0)
             return;
-        setInt(cursor, iHighPrice52, _52HighPrice);
+        setAsTinyDecimal(cursor, iHighPrice52, _52HighPrice);
+    }
+
+    @Deprecated
+    public long get52HighPriceWideDecimal(RecordCursor cursor) {
+        if (iHighPrice52 < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iHighPrice52);
+    }
+
+    @Deprecated
+    public void set52HighPriceWideDecimal(RecordCursor cursor, long _52HighPrice) {
+        if (iHighPrice52 < 0)
+            return;
+        setAsWideDecimal(cursor, iHighPrice52, _52HighPrice);
     }
 
     public double getHighPrice52(RecordCursor cursor) {
         if (iHighPrice52 < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iHighPrice52));
+        return getAsDouble(cursor, iHighPrice52);
     }
 
     public void setHighPrice52(RecordCursor cursor, double highPrice52) {
         if (iHighPrice52 < 0)
             return;
-        setInt(cursor, iHighPrice52, Decimal.compose(highPrice52));
+        setAsDouble(cursor, iHighPrice52, highPrice52);
     }
 
     public int getHighPrice52Decimal(RecordCursor cursor) {
         if (iHighPrice52 < 0)
             return 0;
-        return getInt(cursor, iHighPrice52);
+        return getAsTinyDecimal(cursor, iHighPrice52);
     }
 
     public void setHighPrice52Decimal(RecordCursor cursor, int highPrice52) {
         if (iHighPrice52 < 0)
             return;
-        setInt(cursor, iHighPrice52, highPrice52);
+        setAsTinyDecimal(cursor, iHighPrice52, highPrice52);
+    }
+
+    public long getHighPrice52WideDecimal(RecordCursor cursor) {
+        if (iHighPrice52 < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iHighPrice52);
+    }
+
+    public void setHighPrice52WideDecimal(RecordCursor cursor, long highPrice52) {
+        if (iHighPrice52 < 0)
+            return;
+        setAsWideDecimal(cursor, iHighPrice52, highPrice52);
     }
 
     @Deprecated
     public double get52LowPrice(RecordCursor cursor) {
         if (iLowPrice52 < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iLowPrice52));
+        return getAsDouble(cursor, iLowPrice52);
     }
 
     @Deprecated
     public void set52LowPrice(RecordCursor cursor, double _52LowPrice) {
         if (iLowPrice52 < 0)
             return;
-        setInt(cursor, iLowPrice52, Decimal.compose(_52LowPrice));
+        setAsDouble(cursor, iLowPrice52, _52LowPrice);
     }
 
     @Deprecated
     public int get52LowPriceDecimal(RecordCursor cursor) {
         if (iLowPrice52 < 0)
             return 0;
-        return getInt(cursor, iLowPrice52);
+        return getAsTinyDecimal(cursor, iLowPrice52);
     }
 
     @Deprecated
     public void set52LowPriceDecimal(RecordCursor cursor, int _52LowPrice) {
         if (iLowPrice52 < 0)
             return;
-        setInt(cursor, iLowPrice52, _52LowPrice);
+        setAsTinyDecimal(cursor, iLowPrice52, _52LowPrice);
+    }
+
+    @Deprecated
+    public long get52LowPriceWideDecimal(RecordCursor cursor) {
+        if (iLowPrice52 < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iLowPrice52);
+    }
+
+    @Deprecated
+    public void set52LowPriceWideDecimal(RecordCursor cursor, long _52LowPrice) {
+        if (iLowPrice52 < 0)
+            return;
+        setAsWideDecimal(cursor, iLowPrice52, _52LowPrice);
     }
 
     public double getLowPrice52(RecordCursor cursor) {
         if (iLowPrice52 < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iLowPrice52));
+        return getAsDouble(cursor, iLowPrice52);
     }
 
     public void setLowPrice52(RecordCursor cursor, double lowPrice52) {
         if (iLowPrice52 < 0)
             return;
-        setInt(cursor, iLowPrice52, Decimal.compose(lowPrice52));
+        setAsDouble(cursor, iLowPrice52, lowPrice52);
     }
 
     public int getLowPrice52Decimal(RecordCursor cursor) {
         if (iLowPrice52 < 0)
             return 0;
-        return getInt(cursor, iLowPrice52);
+        return getAsTinyDecimal(cursor, iLowPrice52);
     }
 
     public void setLowPrice52Decimal(RecordCursor cursor, int lowPrice52) {
         if (iLowPrice52 < 0)
             return;
-        setInt(cursor, iLowPrice52, lowPrice52);
+        setAsTinyDecimal(cursor, iLowPrice52, lowPrice52);
+    }
+
+    public long getLowPrice52WideDecimal(RecordCursor cursor) {
+        if (iLowPrice52 < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iLowPrice52);
+    }
+
+    public void setLowPrice52WideDecimal(RecordCursor cursor, long lowPrice52) {
+        if (iLowPrice52 < 0)
+            return;
+        setAsWideDecimal(cursor, iLowPrice52, lowPrice52);
     }
 
     public long getShares(RecordCursor cursor) {
@@ -333,49 +385,73 @@ public class ProfileMapping extends MarketEventMapping {
     public double getHighLimitPrice(RecordCursor cursor) {
         if (iHighLimitPrice < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iHighLimitPrice));
+        return getAsDouble(cursor, iHighLimitPrice);
     }
 
     public void setHighLimitPrice(RecordCursor cursor, double highLimitPrice) {
         if (iHighLimitPrice < 0)
             return;
-        setInt(cursor, iHighLimitPrice, Decimal.compose(highLimitPrice));
+        setAsDouble(cursor, iHighLimitPrice, highLimitPrice);
     }
 
     public int getHighLimitPriceDecimal(RecordCursor cursor) {
         if (iHighLimitPrice < 0)
             return 0;
-        return getInt(cursor, iHighLimitPrice);
+        return getAsTinyDecimal(cursor, iHighLimitPrice);
     }
 
     public void setHighLimitPriceDecimal(RecordCursor cursor, int highLimitPrice) {
         if (iHighLimitPrice < 0)
             return;
-        setInt(cursor, iHighLimitPrice, highLimitPrice);
+        setAsTinyDecimal(cursor, iHighLimitPrice, highLimitPrice);
+    }
+
+    public long getHighLimitPriceWideDecimal(RecordCursor cursor) {
+        if (iHighLimitPrice < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iHighLimitPrice);
+    }
+
+    public void setHighLimitPriceWideDecimal(RecordCursor cursor, long highLimitPrice) {
+        if (iHighLimitPrice < 0)
+            return;
+        setAsWideDecimal(cursor, iHighLimitPrice, highLimitPrice);
     }
 
     public double getLowLimitPrice(RecordCursor cursor) {
         if (iLowLimitPrice < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iLowLimitPrice));
+        return getAsDouble(cursor, iLowLimitPrice);
     }
 
     public void setLowLimitPrice(RecordCursor cursor, double lowLimitPrice) {
         if (iLowLimitPrice < 0)
             return;
-        setInt(cursor, iLowLimitPrice, Decimal.compose(lowLimitPrice));
+        setAsDouble(cursor, iLowLimitPrice, lowLimitPrice);
     }
 
     public int getLowLimitPriceDecimal(RecordCursor cursor) {
         if (iLowLimitPrice < 0)
             return 0;
-        return getInt(cursor, iLowLimitPrice);
+        return getAsTinyDecimal(cursor, iLowLimitPrice);
     }
 
     public void setLowLimitPriceDecimal(RecordCursor cursor, int lowLimitPrice) {
         if (iLowLimitPrice < 0)
             return;
-        setInt(cursor, iLowLimitPrice, lowLimitPrice);
+        setAsTinyDecimal(cursor, iLowLimitPrice, lowLimitPrice);
+    }
+
+    public long getLowLimitPriceWideDecimal(RecordCursor cursor) {
+        if (iLowLimitPrice < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iLowLimitPrice);
+    }
+
+    public void setLowLimitPriceWideDecimal(RecordCursor cursor, long lowLimitPrice) {
+        if (iLowLimitPrice < 0)
+            return;
+        setAsWideDecimal(cursor, iLowLimitPrice, lowLimitPrice);
     }
 
     public long getHaltStartTimeMillis(RecordCursor cursor) {

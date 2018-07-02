@@ -40,14 +40,14 @@ public class CandleMapping extends CandleEventMapping {
         iSequence = MappingUtil.findIntField(record, "Sequence", true);
         iCount = MappingUtil.findIntField(record, "Count", false);
         vCountIsDecimal = MappingUtil.isDecimalField(record, iCount);
-        iOpen = MappingUtil.findIntField(record, "Open", true);
-        iHigh = MappingUtil.findIntField(record, "High", true);
-        iLow = MappingUtil.findIntField(record, "Low", true);
-        iClose = MappingUtil.findIntField(record, "Close", true);
-        iVolume = MappingUtil.findIntField(record, "Volume", false);
-        iVWAP = MappingUtil.findIntField(record, "VWAP", false);
-        iBidVolume = MappingUtil.findIntField(record, "Bid.Volume", false);
-        iAskVolume = MappingUtil.findIntField(record, "Ask.Volume", false);
+        iOpen = findIntField("Open", true);
+        iHigh = findIntField("High", true);
+        iLow = findIntField("Low", true);
+        iClose = findIntField("Close", true);
+        iVolume = findIntField("Volume", false);
+        iVWAP = findIntField("VWAP", false);
+        iBidVolume = findIntField("Bid.Volume", false);
+        iAskVolume = findIntField("Ask.Volume", false);
         iOpenInterest = MappingUtil.findIntField(record, "OpenInterest", false);
         iImpVolatility = MappingUtil.findIntField(record, "ImpVolatility", false);
     }
@@ -137,199 +137,279 @@ public class CandleMapping extends CandleEventMapping {
     }
 
     public double getOpen(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iOpen));
+        return getAsDouble(cursor, iOpen);
     }
 
     public void setOpen(RecordCursor cursor, double open) {
-        setInt(cursor, iOpen, Decimal.compose(open));
+        setAsDouble(cursor, iOpen, open);
     }
 
     public int getOpenDecimal(RecordCursor cursor) {
-        return getInt(cursor, iOpen);
+        return getAsTinyDecimal(cursor, iOpen);
     }
 
     public void setOpenDecimal(RecordCursor cursor, int open) {
-        setInt(cursor, iOpen, open);
+        setAsTinyDecimal(cursor, iOpen, open);
+    }
+
+    public long getOpenWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iOpen);
+    }
+
+    public void setOpenWideDecimal(RecordCursor cursor, long open) {
+        setAsWideDecimal(cursor, iOpen, open);
     }
 
     public double getHigh(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iHigh));
+        return getAsDouble(cursor, iHigh);
     }
 
     public void setHigh(RecordCursor cursor, double high) {
-        setInt(cursor, iHigh, Decimal.compose(high));
+        setAsDouble(cursor, iHigh, high);
     }
 
     public int getHighDecimal(RecordCursor cursor) {
-        return getInt(cursor, iHigh);
+        return getAsTinyDecimal(cursor, iHigh);
     }
 
     public void setHighDecimal(RecordCursor cursor, int high) {
-        setInt(cursor, iHigh, high);
+        setAsTinyDecimal(cursor, iHigh, high);
+    }
+
+    public long getHighWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iHigh);
+    }
+
+    public void setHighWideDecimal(RecordCursor cursor, long high) {
+        setAsWideDecimal(cursor, iHigh, high);
     }
 
     public double getLow(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iLow));
+        return getAsDouble(cursor, iLow);
     }
 
     public void setLow(RecordCursor cursor, double low) {
-        setInt(cursor, iLow, Decimal.compose(low));
+        setAsDouble(cursor, iLow, low);
     }
 
     public int getLowDecimal(RecordCursor cursor) {
-        return getInt(cursor, iLow);
+        return getAsTinyDecimal(cursor, iLow);
     }
 
     public void setLowDecimal(RecordCursor cursor, int low) {
-        setInt(cursor, iLow, low);
+        setAsTinyDecimal(cursor, iLow, low);
+    }
+
+    public long getLowWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iLow);
+    }
+
+    public void setLowWideDecimal(RecordCursor cursor, long low) {
+        setAsWideDecimal(cursor, iLow, low);
     }
 
     public double getClose(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iClose));
+        return getAsDouble(cursor, iClose);
     }
 
     public void setClose(RecordCursor cursor, double close) {
-        setInt(cursor, iClose, Decimal.compose(close));
+        setAsDouble(cursor, iClose, close);
     }
 
     public int getCloseDecimal(RecordCursor cursor) {
-        return getInt(cursor, iClose);
+        return getAsTinyDecimal(cursor, iClose);
     }
 
     public void setCloseDecimal(RecordCursor cursor, int close) {
-        setInt(cursor, iClose, close);
+        setAsTinyDecimal(cursor, iClose, close);
+    }
+
+    public long getCloseWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iClose);
+    }
+
+    public void setCloseWideDecimal(RecordCursor cursor, long close) {
+        setAsWideDecimal(cursor, iClose, close);
     }
 
     public long getVolume(RecordCursor cursor) {
         if (iVolume < 0)
             return 0;
-        return (long) Decimal.toDouble(getInt(cursor, iVolume));
+        return getAsLong(cursor, iVolume);
     }
 
     public void setVolume(RecordCursor cursor, long volume) {
         if (iVolume < 0)
             return;
-        setInt(cursor, iVolume, Decimal.composeDecimal(volume, 0));
+        setAsLong(cursor, iVolume, volume);
     }
 
     public double getVolumeDouble(RecordCursor cursor) {
         if (iVolume < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iVolume));
+        return getAsDouble(cursor, iVolume);
     }
 
     public void setVolumeDouble(RecordCursor cursor, double volume) {
         if (iVolume < 0)
             return;
-        setInt(cursor, iVolume, Decimal.compose(volume));
+        setAsDouble(cursor, iVolume, volume);
     }
 
     public int getVolumeDecimal(RecordCursor cursor) {
         if (iVolume < 0)
             return 0;
-        return getInt(cursor, iVolume);
+        return getAsTinyDecimal(cursor, iVolume);
     }
 
     public void setVolumeDecimal(RecordCursor cursor, int volume) {
         if (iVolume < 0)
             return;
-        setInt(cursor, iVolume, volume);
+        setAsTinyDecimal(cursor, iVolume, volume);
+    }
+
+    public long getVolumeWideDecimal(RecordCursor cursor) {
+        if (iVolume < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iVolume);
+    }
+
+    public void setVolumeWideDecimal(RecordCursor cursor, long volume) {
+        if (iVolume < 0)
+            return;
+        setAsWideDecimal(cursor, iVolume, volume);
     }
 
     public double getVWAP(RecordCursor cursor) {
         if (iVWAP < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iVWAP));
+        return getAsDouble(cursor, iVWAP);
     }
 
     public void setVWAP(RecordCursor cursor, double _VWAP) {
         if (iVWAP < 0)
             return;
-        setInt(cursor, iVWAP, Decimal.compose(_VWAP));
+        setAsDouble(cursor, iVWAP, _VWAP);
     }
 
     public int getVWAPDecimal(RecordCursor cursor) {
         if (iVWAP < 0)
             return 0;
-        return getInt(cursor, iVWAP);
+        return getAsTinyDecimal(cursor, iVWAP);
     }
 
     public void setVWAPDecimal(RecordCursor cursor, int _VWAP) {
         if (iVWAP < 0)
             return;
-        setInt(cursor, iVWAP, _VWAP);
+        setAsTinyDecimal(cursor, iVWAP, _VWAP);
+    }
+
+    public long getVWAPWideDecimal(RecordCursor cursor) {
+        if (iVWAP < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iVWAP);
+    }
+
+    public void setVWAPWideDecimal(RecordCursor cursor, long _VWAP) {
+        if (iVWAP < 0)
+            return;
+        setAsWideDecimal(cursor, iVWAP, _VWAP);
     }
 
     public long getBidVolume(RecordCursor cursor) {
         if (iBidVolume < 0)
             return 0;
-        return (long) Decimal.toDouble(getInt(cursor, iBidVolume));
+        return getAsLong(cursor, iBidVolume);
     }
 
     public void setBidVolume(RecordCursor cursor, long bidVolume) {
         if (iBidVolume < 0)
             return;
-        setInt(cursor, iBidVolume, Decimal.composeDecimal(bidVolume, 0));
+        setAsLong(cursor, iBidVolume, bidVolume);
     }
 
     public double getBidVolumeDouble(RecordCursor cursor) {
         if (iBidVolume < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iBidVolume));
+        return getAsDouble(cursor, iBidVolume);
     }
 
     public void setBidVolumeDouble(RecordCursor cursor, double bidVolume) {
         if (iBidVolume < 0)
             return;
-        setInt(cursor, iBidVolume, Decimal.compose(bidVolume));
+        setAsDouble(cursor, iBidVolume, bidVolume);
     }
 
     public int getBidVolumeDecimal(RecordCursor cursor) {
         if (iBidVolume < 0)
             return 0;
-        return getInt(cursor, iBidVolume);
+        return getAsTinyDecimal(cursor, iBidVolume);
     }
 
     public void setBidVolumeDecimal(RecordCursor cursor, int bidVolume) {
         if (iBidVolume < 0)
             return;
-        setInt(cursor, iBidVolume, bidVolume);
+        setAsTinyDecimal(cursor, iBidVolume, bidVolume);
+    }
+
+    public long getBidVolumeWideDecimal(RecordCursor cursor) {
+        if (iBidVolume < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iBidVolume);
+    }
+
+    public void setBidVolumeWideDecimal(RecordCursor cursor, long bidVolume) {
+        if (iBidVolume < 0)
+            return;
+        setAsWideDecimal(cursor, iBidVolume, bidVolume);
     }
 
     public long getAskVolume(RecordCursor cursor) {
         if (iAskVolume < 0)
             return 0;
-        return (long) Decimal.toDouble(getInt(cursor, iAskVolume));
+        return getAsLong(cursor, iAskVolume);
     }
 
     public void setAskVolume(RecordCursor cursor, long askVolume) {
         if (iAskVolume < 0)
             return;
-        setInt(cursor, iAskVolume, Decimal.composeDecimal(askVolume, 0));
+        setAsLong(cursor, iAskVolume, askVolume);
     }
 
     public double getAskVolumeDouble(RecordCursor cursor) {
         if (iAskVolume < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iAskVolume));
+        return getAsDouble(cursor, iAskVolume);
     }
 
     public void setAskVolumeDouble(RecordCursor cursor, double askVolume) {
         if (iAskVolume < 0)
             return;
-        setInt(cursor, iAskVolume, Decimal.compose(askVolume));
+        setAsDouble(cursor, iAskVolume, askVolume);
     }
 
     public int getAskVolumeDecimal(RecordCursor cursor) {
         if (iAskVolume < 0)
             return 0;
-        return getInt(cursor, iAskVolume);
+        return getAsTinyDecimal(cursor, iAskVolume);
     }
 
     public void setAskVolumeDecimal(RecordCursor cursor, int askVolume) {
         if (iAskVolume < 0)
             return;
-        setInt(cursor, iAskVolume, askVolume);
+        setAsTinyDecimal(cursor, iAskVolume, askVolume);
+    }
+
+    public long getAskVolumeWideDecimal(RecordCursor cursor) {
+        if (iAskVolume < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iAskVolume);
+    }
+
+    public void setAskVolumeWideDecimal(RecordCursor cursor, long askVolume) {
+        if (iAskVolume < 0)
+            return;
+        setAsWideDecimal(cursor, iAskVolume, askVolume);
     }
 
     public long getOpenInterest(RecordCursor cursor) {

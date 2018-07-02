@@ -27,7 +27,7 @@ public final class OptionFactoryImpl extends EventDelegateFactory implements Rec
     public void buildScheme(SchemeBuilder builder) {
         builder.addOptionalField("Greeks", "Time", SerialFieldType.TIME, "Greeks", "Time", true, SchemeFieldTime.FIRST_TIME_INT_FIELD);
         builder.addOptionalField("Greeks", "Sequence", SerialFieldType.SEQUENCE, "Greeks", "Sequence", true, SchemeFieldTime.SECOND_TIME_INT_FIELD);
-        builder.addRequiredField("Greeks", "Greeks.Price", SerialFieldType.DECIMAL);
+        builder.addRequiredField("Greeks", "Greeks.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
         builder.addRequiredField("Greeks", "Volatility", SerialFieldType.DECIMAL);
         builder.addRequiredField("Greeks", "Delta", SerialFieldType.DECIMAL);
         builder.addRequiredField("Greeks", "Gamma", SerialFieldType.DECIMAL);
@@ -37,8 +37,8 @@ public final class OptionFactoryImpl extends EventDelegateFactory implements Rec
 
         builder.addRequiredField("TheoPrice", "Theo.Time", SerialFieldType.TIME, SchemeFieldTime.FIRST_TIME_INT_FIELD);
         builder.addOptionalField("TheoPrice", "Theo.Sequence", SerialFieldType.SEQUENCE, "TheoPrice", "Sequence", true, SchemeFieldTime.SECOND_TIME_INT_FIELD);
-        builder.addRequiredField("TheoPrice", "Theo.Price", SerialFieldType.DECIMAL);
-        builder.addRequiredField("TheoPrice", "Theo.UnderlyingPrice", SerialFieldType.DECIMAL);
+        builder.addRequiredField("TheoPrice", "Theo.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("TheoPrice", "Theo.UnderlyingPrice", select(SerialFieldType.DECIMAL, "dxscheme.price"));
         builder.addRequiredField("TheoPrice", "Theo.Delta", SerialFieldType.DECIMAL);
         builder.addRequiredField("TheoPrice", "Theo.Gamma", SerialFieldType.DECIMAL);
         builder.addOptionalField("TheoPrice", "Theo.Dividend", SerialFieldType.DECIMAL, "TheoPrice", "Dividend", true);

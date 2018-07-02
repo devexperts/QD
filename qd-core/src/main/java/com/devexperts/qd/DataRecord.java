@@ -126,7 +126,7 @@ public interface DataRecord {
     /**
      * Writes this record's field values in a binary form into a specified buffered output.
      * The bytes written should be the same as if each field is individually
-     * written using {@link DataIntField#writeInt} and {@link DataObjField#writeObj}.
+     * written using {@link DataIntField#writeInt(BufferedOutput, int)} and {@link DataObjField#writeObj(BufferedOutput, Object)}.
      * @deprecated Use {@link com.devexperts.qd.qtp.BinaryQTPComposer} class
      */
     public void writeFields(BufferedOutput out, RecordCursor cursor) throws IOException;
@@ -134,7 +134,7 @@ public interface DataRecord {
     /**
      * Reads this record's field values in a binary from the specified buffered input.
      * The data read should be the same as if each field is individually
-     * read using {@link DataIntField#readInt} and {@link DataObjField#readObj}.
+     * read using {@link DataIntField#readInt(BufferedInput)} and {@link DataObjField#readObj(BufferedInput)}.
      * @deprecated Use {@link com.devexperts.qd.qtp.BinaryQTPParser} class
      */
     public void readFields(BufferedInput in, RecordCursor cursor) throws IOException;

@@ -49,7 +49,7 @@ public final class SummaryDelegate extends MarketEventDelegateImpl<Summary> {
         event.setDayClosePrice(m.getDayClosePrice(cursor));
         event.setPrevDayId(m.getPrevDayId(cursor));
         event.setPrevDayClosePrice(m.getPrevDayClosePrice(cursor));
-        event.setPrevDayVolume(m.getPrevDayVolume(cursor));
+        event.setPrevDayVolume(m.getPrevDayVolumeDouble(cursor));
         event.setOpenInterest(m.getOpenInterest(cursor));
         event.setFlags(m.getFlags(cursor));
         return event;
@@ -65,7 +65,7 @@ public final class SummaryDelegate extends MarketEventDelegateImpl<Summary> {
         m.setDayClosePrice(cursor, event.getDayClosePrice());
         m.setPrevDayId(cursor, event.getPrevDayId());
         m.setPrevDayClosePrice(cursor, event.getPrevDayClosePrice());
-        m.setPrevDayVolume(cursor, event.getPrevDayVolume());
+        m.setPrevDayVolumeDouble(cursor, event.getPrevDayVolume());
         m.setOpenInterest(cursor, (int) event.getOpenInterest());
         m.setFlags(cursor, event.getFlags());
         return cursor;

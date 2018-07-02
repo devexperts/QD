@@ -529,9 +529,9 @@ public abstract class AbstractQTPComposer extends AbstractMessageVisitor
             if (writeEventTimeSequence)
                 writeEventTimeSequence(getEventTimeSequence(cursor));
             for (int i = 0; i < cursor.getIntCount(); i++)
-                writeIntField(record.getIntField(i), cursor.getInt(i));
+                writeField(record.getIntField(i), cursor);
             for (int i = 0; i < cursor.getObjCount(); i++)
-                writeObjField(record.getObjField(i), cursor.getObj(i));
+                writeField(record.getObjField(i), cursor);
         } else if (currentMessageType.isHistorySubscriptionAdd())
             writeHistorySubscriptionTime(record, cursor.getTime());
     }
@@ -544,6 +544,8 @@ public abstract class AbstractQTPComposer extends AbstractMessageVisitor
     protected abstract void writeIntField(DataIntField field, int value) throws IOException;
 
     protected abstract void writeObjField(DataObjField field, Object value) throws IOException;
+
+    protected abstract void writeField(DataField field, RecordCursor cursor) throws IOException;
 
     // by default, other kinds of messages are not supported
     protected void writeOtherMessageBody(byte[] messageBytes, int offset, int length) throws IOException {}

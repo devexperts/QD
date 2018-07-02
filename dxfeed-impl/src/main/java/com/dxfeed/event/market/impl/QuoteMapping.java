@@ -36,11 +36,11 @@ public class QuoteMapping extends MarketEventMapping {
         iTimeNanoPart = MappingUtil.findIntField(record, "TimeNanoPart", false);
         iBidTime = MappingUtil.findIntField(record, "Bid.Time", false);
         iBidExchangeCode = MappingUtil.findIntField(record, "Bid.Exchange", false);
-        iBidPrice = MappingUtil.findIntField(record, "Bid.Price", true);
+        iBidPrice = findIntField("Bid.Price", true);
         iBidSize = findIntField("Bid.Size", true);
         iAskTime = MappingUtil.findIntField(record, "Ask.Time", false);
         iAskExchangeCode = MappingUtil.findIntField(record, "Ask.Exchange", false);
-        iAskPrice = MappingUtil.findIntField(record, "Ask.Price", true);
+        iAskPrice = findIntField("Ask.Price", true);
         iAskSize = findIntField("Ask.Size", true);
         putNonDefaultPropertyName("Bid.Exchange", "BidExchangeCode");
         putNonDefaultPropertyName("Ask.Exchange", "AskExchangeCode");
@@ -121,19 +121,27 @@ public class QuoteMapping extends MarketEventMapping {
     }
 
     public double getBidPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iBidPrice));
+        return getAsDouble(cursor, iBidPrice);
     }
 
     public void setBidPrice(RecordCursor cursor, double bidPrice) {
-        setInt(cursor, iBidPrice, Decimal.compose(bidPrice));
+        setAsDouble(cursor, iBidPrice, bidPrice);
     }
 
     public int getBidPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iBidPrice);
+        return getAsTinyDecimal(cursor, iBidPrice);
     }
 
     public void setBidPriceDecimal(RecordCursor cursor, int bidPrice) {
-        setInt(cursor, iBidPrice, bidPrice);
+        setAsTinyDecimal(cursor, iBidPrice, bidPrice);
+    }
+
+    public long getBidPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iBidPrice);
+    }
+
+    public void setBidPriceWideDecimal(RecordCursor cursor, long bidPrice) {
+        setAsWideDecimal(cursor, iBidPrice, bidPrice);
     }
 
     public int getBidSize(RecordCursor cursor) {
@@ -153,11 +161,19 @@ public class QuoteMapping extends MarketEventMapping {
     }
 
     public int getBidSizeDecimal(RecordCursor cursor) {
-        return getAsDecimal(cursor, iBidSize);
+        return getAsTinyDecimal(cursor, iBidSize);
     }
 
     public void setBidSizeDecimal(RecordCursor cursor, int bidSize) {
-        setAsDecimal(cursor, iBidSize, bidSize);
+        setAsTinyDecimal(cursor, iBidSize, bidSize);
+    }
+
+    public long getBidSizeWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iBidSize);
+    }
+
+    public void setBidSizeWideDecimal(RecordCursor cursor, long bidSize) {
+        setAsWideDecimal(cursor, iBidSize, bidSize);
     }
 
     public long getAskTimeMillis(RecordCursor cursor) {
@@ -211,19 +227,27 @@ public class QuoteMapping extends MarketEventMapping {
     }
 
     public double getAskPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iAskPrice));
+        return getAsDouble(cursor, iAskPrice);
     }
 
     public void setAskPrice(RecordCursor cursor, double askPrice) {
-        setInt(cursor, iAskPrice, Decimal.compose(askPrice));
+        setAsDouble(cursor, iAskPrice, askPrice);
     }
 
     public int getAskPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iAskPrice);
+        return getAsTinyDecimal(cursor, iAskPrice);
     }
 
     public void setAskPriceDecimal(RecordCursor cursor, int askPrice) {
-        setInt(cursor, iAskPrice, askPrice);
+        setAsTinyDecimal(cursor, iAskPrice, askPrice);
+    }
+
+    public long getAskPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iAskPrice);
+    }
+
+    public void setAskPriceWideDecimal(RecordCursor cursor, long askPrice) {
+        setAsWideDecimal(cursor, iAskPrice, askPrice);
     }
 
     public int getAskSize(RecordCursor cursor) {
@@ -243,11 +267,19 @@ public class QuoteMapping extends MarketEventMapping {
     }
 
     public int getAskSizeDecimal(RecordCursor cursor) {
-        return getAsDecimal(cursor, iAskSize);
+        return getAsTinyDecimal(cursor, iAskSize);
     }
 
     public void setAskSizeDecimal(RecordCursor cursor, int askSize) {
-        setAsDecimal(cursor, iAskSize, askSize);
+        setAsTinyDecimal(cursor, iAskSize, askSize);
+    }
+
+    public long getAskSizeWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iAskSize);
+    }
+
+    public void setAskSizeWideDecimal(RecordCursor cursor, long askSize) {
+        setAsWideDecimal(cursor, iAskSize, askSize);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }

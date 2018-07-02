@@ -20,6 +20,7 @@ import com.devexperts.qd.kit.*;
 import com.devexperts.qd.ng.*;
 import com.devexperts.qd.util.Decimal;
 import com.devexperts.qd.util.TimeSequenceUtil;
+import com.devexperts.util.WideDecimal;
 
 import static com.devexperts.qd.SerialFieldType.Bits.*;
 
@@ -63,11 +64,16 @@ public class BinaryRecordDesc {
 
     protected static final int FLD_SKIP = 0; // just skip the field that was read (never used for Write)
     protected static final int FLD_INT = 1; // regular int field (w/o conversion)
-    protected static final int FLD_OBJ = 2; // regular obj field
-    protected static final int FLD_DECIMAL_TO_INT = 3; // conversion decimal->int
-    protected static final int FLD_INT_TO_DECIMAL = 4; // conversion int->decimal
-    protected static final int FLD_EVENT_TIME = 5;     // RecordCursor.get/setEventTime (does not have index)
-    protected static final int FLD_EVENT_SEQUENCE = 6; // RecordCursor.get/setEventSequence (does not have index)
+    protected static final int FLD_LONG = 2; // regular long field (w/o conversion)
+    protected static final int FLD_OBJ = 3; // regular obj field
+    protected static final int FLD_DECIMAL_TO_INT = 4; // conversion decimal->int
+    protected static final int FLD_INT_TO_DECIMAL = 5; // conversion int->decimal
+    protected static final int FLD_WIDE_DECIMAL_TO_INT = 6; // conversion WideDecimal->int
+    protected static final int FLD_INT_TO_WIDE_DECIMAL = 7; // conversion int->WideDecimal
+    protected static final int FLD_WIDE_DECIMAL_TO_DECIMAL = 8; // conversion WideDecimal->decimal
+    protected static final int FLD_DECIMAL_TO_WIDE_DECIMAL = 9; // conversion decimal->WideDecimal
+    protected static final int FLD_EVENT_TIME = 10; // RecordCursor.get/setEventTime (does not have index)
+    protected static final int FLD_EVENT_SEQUENCE = 11; // RecordCursor.get/setEventSequence (does not have index)
 
     protected static final int INDEX_MASK = (1 << SER_SHIFT) - 1;
 
@@ -265,7 +271,7 @@ public class BinaryRecordDesc {
     protected void readFields(BufferedInput msg, RecordCursor cur, int nDesc) throws IOException {
         for (int i = 0; i < nDesc; i++) {
             beforeField(msg);
-            int iVal = 0;
+            long iVal = 0;
             Object oVal = null;
             int d = desc[i];
             switch ((d >> SER_SHIFT) & SER_MASK) {
@@ -282,7 +288,7 @@ public class BinaryRecordDesc {
                 iVal = msg.readInt();
                 break;
             case SER_COMPACT_INT:
-                iVal = msg.readCompactInt();
+                iVal = msg.readCompactLong();
                 break;
             case SER_UTF_CHAR_ARRAY_STRING: // deprecated, but still supported
                 oVal = IOUtil.readCharArrayString(msg);
@@ -307,22 +313,37 @@ public class BinaryRecordDesc {
             case FLD_SKIP:
                 break; // just skip
             case FLD_INT:
-                setIntValue(cur, d & INDEX_MASK, iVal, msg);
+                setIntValue(cur, d & INDEX_MASK, (int) iVal, msg);
+                break;
+            case FLD_LONG:
+                setLongValue(cur, d & INDEX_MASK, iVal, msg);
                 break;
             case FLD_OBJ: // regular obj field without conversion
                 setObjValue(cur, d & INDEX_MASK, oVal, msg);
                 break;
             case FLD_DECIMAL_TO_INT:
-                setIntValue(cur, d & INDEX_MASK, (int) Decimal.toDouble(iVal), msg);
+                setIntValue(cur, d & INDEX_MASK, (int) Decimal.toDouble((int) iVal), msg);
                 break;
             case FLD_INT_TO_DECIMAL:
-                setIntValue(cur, d & INDEX_MASK, Decimal.compose(iVal), msg);
+                setIntValue(cur, d & INDEX_MASK, Decimal.composeDecimal(iVal, 0), msg);
+                break;
+            case FLD_WIDE_DECIMAL_TO_INT:
+                setIntValue(cur, d & INDEX_MASK, (int) WideDecimal.toDouble(iVal), msg);
+                break;
+            case FLD_INT_TO_WIDE_DECIMAL:
+                setLongValue(cur, d & INDEX_MASK, WideDecimal.composeWide(iVal, 0), msg);
+                break;
+            case FLD_WIDE_DECIMAL_TO_DECIMAL:
+                setIntValue(cur, d & INDEX_MASK, Decimal.wideToTiny(iVal), msg);
+                break;
+            case FLD_DECIMAL_TO_WIDE_DECIMAL:
+                setLongValue(cur, d & INDEX_MASK, Decimal.tinyToWide((int) iVal), msg);
                 break;
             case FLD_EVENT_TIME:
-                cur.setEventTimeSeconds(iVal);
+                cur.setEventTimeSeconds((int) iVal);
                 break;
             case FLD_EVENT_SEQUENCE:
-                cur.setEventSequence(iVal);
+                cur.setEventSequence((int) iVal);
                 break;
             default:
                 throw new AssertionError();
@@ -334,6 +355,10 @@ public class BinaryRecordDesc {
 
     protected void setIntValue(RecordCursor cur, int index, int value, BufferedInput msg) {
         cur.setInt(index, value);
+    }
+
+    protected void setLongValue(RecordCursor cur, int index, long value, BufferedInput msg) {
+        cur.setLong(index, value);
     }
 
     protected void setObjValue(RecordCursor cur, int index, Object value, BufferedInput msg) {
@@ -362,20 +387,35 @@ public class BinaryRecordDesc {
     private void writeFields(BufferedOutput msg, RecordCursor cur, int nDesc, long eventTimeSequence) throws IOException {
         for (int i = 0; i < nDesc; i++) {
             int d = desc[i];
-            int iVal = 0;
+            long iVal = 0;
             Object oVal = null;
             switch (d >>> FLD_SHIFT) {
             case FLD_INT:
                 iVal = cur.getInt(d & INDEX_MASK);
                 break;
+            case FLD_LONG:
+                iVal = cur.getLong(d & INDEX_MASK);
+                break;
             case FLD_OBJ: // regular obj field without conversion
                 oVal = cur.getObj(d & INDEX_MASK);
                 break;
             case FLD_DECIMAL_TO_INT:
-                iVal = (int) Decimal.toDouble(cur.getInt(d & INDEX_MASK));
+                iVal = (long) Decimal.toDouble(cur.getInt(d & INDEX_MASK));
                 break;
             case FLD_INT_TO_DECIMAL:
-                iVal = Decimal.compose(cur.getInt(d & INDEX_MASK));
+                iVal = Decimal.composeDecimal(cur.getInt(d & INDEX_MASK), 0);
+                break;
+            case FLD_WIDE_DECIMAL_TO_INT:
+                iVal = (long) WideDecimal.toDouble(cur.getLong(d & INDEX_MASK));
+                break;
+            case FLD_INT_TO_WIDE_DECIMAL:
+                iVal = WideDecimal.composeWide(cur.getInt(d & INDEX_MASK), 0);
+                break;
+            case FLD_WIDE_DECIMAL_TO_DECIMAL:
+                iVal = Decimal.wideToTiny(cur.getLong(d & INDEX_MASK));
+                break;
+            case FLD_DECIMAL_TO_WIDE_DECIMAL:
+                iVal = Decimal.tinyToWide(cur.getInt(d & INDEX_MASK));
                 break;
             case FLD_EVENT_TIME:
                 iVal = TimeSequenceUtil.getTimeSecondsFromTimeSequence(eventTimeSequence);
@@ -388,19 +428,19 @@ public class BinaryRecordDesc {
             }
             switch ((d >> SER_SHIFT) & SER_MASK) {
             case SER_BYTE:
-                msg.writeByte(iVal);
+                msg.writeByte((int) iVal);
                 break;
             case SER_UTF_CHAR:
-                msg.writeUTFChar(iVal);
+                msg.writeUTFChar((int) iVal);
                 break;
             case SER_SHORT:
-                msg.writeShort(iVal);
+                msg.writeShort((int) iVal);
                 break;
             case SER_INT:
-                msg.writeInt(iVal);
+                msg.writeInt((int) iVal);
                 break;
             case SER_COMPACT_INT:
-                msg.writeCompactInt(iVal);
+                msg.writeCompactLong(iVal);
                 break;
             case SER_UTF_CHAR_ARRAY_STRING: // deprecated, but still supported
                 // See StringField.writeObj
@@ -509,6 +549,8 @@ public class BinaryRecordDesc {
                 assert getIntConverterType(f.getSerialType().getId(), type) == FLD_INT;
                 break;
             }
+            if (fld == FLD_INT && f.getSerialType().isLong())
+                fld = FLD_LONG;
         } else if (f instanceof DataObjField)
             fld = FLD_OBJ;
         else
@@ -517,11 +559,18 @@ public class BinaryRecordDesc {
     }
 
     private static int getIntConverterType(int fromId, int toId) {
-        if ((fromId & REPRESENTATION_MASK) == FLAG_DECIMAL && (toId & REPRESENTATION_MASK) == 0)
+        if ((fromId & REPRESENTATION_MASK) == FLAG_DECIMAL && (toId & REPRESENTATION_MASK) == FLAG_INT)
             return FLD_DECIMAL_TO_INT;
-        if ((fromId & REPRESENTATION_MASK) == 0 && (toId & REPRESENTATION_MASK) == FLAG_DECIMAL)
+        if ((fromId & REPRESENTATION_MASK) == FLAG_INT && (toId & REPRESENTATION_MASK) == FLAG_DECIMAL)
             return FLD_INT_TO_DECIMAL;
+        if ((fromId & REPRESENTATION_MASK) == FLAG_WIDE_DECIMAL && (toId & REPRESENTATION_MASK) == FLAG_INT)
+            return FLD_WIDE_DECIMAL_TO_INT;
+        if ((fromId & REPRESENTATION_MASK) == FLAG_INT && (toId & REPRESENTATION_MASK) == FLAG_WIDE_DECIMAL)
+            return FLD_INT_TO_WIDE_DECIMAL;
+        if ((fromId & REPRESENTATION_MASK) == FLAG_WIDE_DECIMAL && (toId & REPRESENTATION_MASK) == FLAG_DECIMAL)
+            return FLD_WIDE_DECIMAL_TO_DECIMAL;
+        if ((fromId & REPRESENTATION_MASK) == FLAG_DECIMAL && (toId & REPRESENTATION_MASK) == FLAG_WIDE_DECIMAL)
+            return FLD_DECIMAL_TO_WIDE_DECIMAL;
         return FLD_INT;
     }
-
 }

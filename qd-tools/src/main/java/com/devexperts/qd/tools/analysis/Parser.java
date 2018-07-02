@@ -212,6 +212,16 @@ class Parser extends BinaryFileQTPParser {
         }
 
         @Override
+        protected void setLongValue(RecordCursor cur, int index, long value, BufferedInput msg) {
+            super.setLongValue(cur, index, value, msg);
+            DataIntField field = cur.getRecord().getIntField(index);
+            int bytes = countField(field, msg);
+            SerialFieldType type = field.getSerialType();
+            if (dataCompression != null && type != SerialFieldType.VOID)
+                dataCompression.count(getReportKeys(field), type, value, bytes);
+        }
+
+        @Override
         protected void setObjValue(RecordCursor cur, int index, Object value, BufferedInput msg) {
             super.setObjValue(cur, index, value, msg);
             countField(cur.getRecord().getObjField(index), msg);

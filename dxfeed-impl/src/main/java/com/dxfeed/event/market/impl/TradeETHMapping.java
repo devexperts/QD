@@ -35,11 +35,11 @@ public class TradeETHMapping extends MarketEventMapping {
         iSequence = MappingUtil.findIntField(record, "ETHLast.Sequence", false);
         iTimeNanoPart = MappingUtil.findIntField(record, "Last.TimeNanoPart", false);
         iExchangeCode = MappingUtil.findIntField(record, "ETHLast.Exchange", false);
-        iPrice = MappingUtil.findIntField(record, "ETHLast.Price", true);
+        iPrice = findIntField("ETHLast.Price", true);
         iSize = findIntField("ETHLast.Size", true);
         iFlags = MappingUtil.findIntField(record, "ETHLast.Flags", true);
-        iDayVolume = MappingUtil.findIntField(record, "ETHVolume", false);
-        iDayTurnover = MappingUtil.findIntField(record, "ETHDayTurnover", false);
+        iDayVolume = findIntField("ETHVolume", false);
+        iDayTurnover = findIntField("ETHDayTurnover", false);
         putNonDefaultPropertyName("ETHLast.Time", "Time");
         putNonDefaultPropertyName("ETHLast.Sequence", "Sequence");
         putNonDefaultPropertyName("Last.TimeNanoPart", "TimeNanoPart");
@@ -183,38 +183,56 @@ public class TradeETHMapping extends MarketEventMapping {
 
     @Deprecated
     public double getETHLastPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iPrice));
+        return getAsDouble(cursor, iPrice);
     }
 
     @Deprecated
     public void setETHLastPrice(RecordCursor cursor, double _ETHLastPrice) {
-        setInt(cursor, iPrice, Decimal.compose(_ETHLastPrice));
+        setAsDouble(cursor, iPrice, _ETHLastPrice);
     }
 
     @Deprecated
     public int getETHLastPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iPrice);
+        return getAsTinyDecimal(cursor, iPrice);
     }
 
     @Deprecated
     public void setETHLastPriceDecimal(RecordCursor cursor, int _ETHLastPrice) {
-        setInt(cursor, iPrice, _ETHLastPrice);
+        setAsTinyDecimal(cursor, iPrice, _ETHLastPrice);
+    }
+
+    @Deprecated
+    public long getETHLastPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iPrice);
+    }
+
+    @Deprecated
+    public void setETHLastPriceWideDecimal(RecordCursor cursor, long _ETHLastPrice) {
+        setAsWideDecimal(cursor, iPrice, _ETHLastPrice);
     }
 
     public double getPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iPrice));
+        return getAsDouble(cursor, iPrice);
     }
 
     public void setPrice(RecordCursor cursor, double price) {
-        setInt(cursor, iPrice, Decimal.compose(price));
+        setAsDouble(cursor, iPrice, price);
     }
 
     public int getPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iPrice);
+        return getAsTinyDecimal(cursor, iPrice);
     }
 
     public void setPriceDecimal(RecordCursor cursor, int price) {
-        setInt(cursor, iPrice, price);
+        setAsTinyDecimal(cursor, iPrice, price);
+    }
+
+    public long getPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iPrice);
+    }
+
+    public void setPriceWideDecimal(RecordCursor cursor, long price) {
+        setAsWideDecimal(cursor, iPrice, price);
     }
 
     @Deprecated
@@ -239,12 +257,22 @@ public class TradeETHMapping extends MarketEventMapping {
 
     @Deprecated
     public int getETHLastSizeDecimal(RecordCursor cursor) {
-        return getAsDecimal(cursor, iSize);
+        return getAsTinyDecimal(cursor, iSize);
     }
 
     @Deprecated
     public void setETHLastSizeDecimal(RecordCursor cursor, int _ETHLastSize) {
-        setAsDecimal(cursor, iSize, _ETHLastSize);
+        setAsTinyDecimal(cursor, iSize, _ETHLastSize);
+    }
+
+    @Deprecated
+    public long getETHLastSizeWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iSize);
+    }
+
+    @Deprecated
+    public void setETHLastSizeWideDecimal(RecordCursor cursor, long _ETHLastSize) {
+        setAsWideDecimal(cursor, iSize, _ETHLastSize);
     }
 
     public int getSize(RecordCursor cursor) {
@@ -264,11 +292,19 @@ public class TradeETHMapping extends MarketEventMapping {
     }
 
     public int getSizeDecimal(RecordCursor cursor) {
-        return getAsDecimal(cursor, iSize);
+        return getAsTinyDecimal(cursor, iSize);
     }
 
     public void setSizeDecimal(RecordCursor cursor, int size) {
-        setAsDecimal(cursor, iSize, size);
+        setAsTinyDecimal(cursor, iSize, size);
+    }
+
+    public long getSizeWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iSize);
+    }
+
+    public void setSizeWideDecimal(RecordCursor cursor, long size) {
+        setAsWideDecimal(cursor, iSize, size);
     }
 
     @Deprecated
@@ -293,130 +329,182 @@ public class TradeETHMapping extends MarketEventMapping {
     public long getETHVolume(RecordCursor cursor) {
         if (iDayVolume < 0)
             return 0;
-        return (long) Decimal.toDouble(getInt(cursor, iDayVolume));
+        return getAsLong(cursor, iDayVolume);
     }
 
     @Deprecated
     public void setETHVolume(RecordCursor cursor, long _ETHVolume) {
         if (iDayVolume < 0)
             return;
-        setInt(cursor, iDayVolume, Decimal.composeDecimal(_ETHVolume, 0));
+        setAsLong(cursor, iDayVolume, _ETHVolume);
     }
 
     @Deprecated
     public double getETHVolumeDouble(RecordCursor cursor) {
         if (iDayVolume < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iDayVolume));
+        return getAsDouble(cursor, iDayVolume);
     }
 
     @Deprecated
     public void setETHVolumeDouble(RecordCursor cursor, double _ETHVolume) {
         if (iDayVolume < 0)
             return;
-        setInt(cursor, iDayVolume, Decimal.compose(_ETHVolume));
+        setAsDouble(cursor, iDayVolume, _ETHVolume);
     }
 
     @Deprecated
     public int getETHVolumeDecimal(RecordCursor cursor) {
         if (iDayVolume < 0)
             return 0;
-        return getInt(cursor, iDayVolume);
+        return getAsTinyDecimal(cursor, iDayVolume);
     }
 
     @Deprecated
     public void setETHVolumeDecimal(RecordCursor cursor, int _ETHVolume) {
         if (iDayVolume < 0)
             return;
-        setInt(cursor, iDayVolume, _ETHVolume);
+        setAsTinyDecimal(cursor, iDayVolume, _ETHVolume);
+    }
+
+    @Deprecated
+    public long getETHVolumeWideDecimal(RecordCursor cursor) {
+        if (iDayVolume < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iDayVolume);
+    }
+
+    @Deprecated
+    public void setETHVolumeWideDecimal(RecordCursor cursor, long _ETHVolume) {
+        if (iDayVolume < 0)
+            return;
+        setAsWideDecimal(cursor, iDayVolume, _ETHVolume);
     }
 
     public long getDayVolume(RecordCursor cursor) {
         if (iDayVolume < 0)
             return 0;
-        return (long) Decimal.toDouble(getInt(cursor, iDayVolume));
+        return getAsLong(cursor, iDayVolume);
     }
 
     public void setDayVolume(RecordCursor cursor, long dayVolume) {
         if (iDayVolume < 0)
             return;
-        setInt(cursor, iDayVolume, Decimal.composeDecimal(dayVolume, 0));
+        setAsLong(cursor, iDayVolume, dayVolume);
     }
 
     public double getDayVolumeDouble(RecordCursor cursor) {
         if (iDayVolume < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iDayVolume));
+        return getAsDouble(cursor, iDayVolume);
     }
 
     public void setDayVolumeDouble(RecordCursor cursor, double dayVolume) {
         if (iDayVolume < 0)
             return;
-        setInt(cursor, iDayVolume, Decimal.compose(dayVolume));
+        setAsDouble(cursor, iDayVolume, dayVolume);
     }
 
     public int getDayVolumeDecimal(RecordCursor cursor) {
         if (iDayVolume < 0)
             return 0;
-        return getInt(cursor, iDayVolume);
+        return getAsTinyDecimal(cursor, iDayVolume);
     }
 
     public void setDayVolumeDecimal(RecordCursor cursor, int dayVolume) {
         if (iDayVolume < 0)
             return;
-        setInt(cursor, iDayVolume, dayVolume);
+        setAsTinyDecimal(cursor, iDayVolume, dayVolume);
+    }
+
+    public long getDayVolumeWideDecimal(RecordCursor cursor) {
+        if (iDayVolume < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iDayVolume);
+    }
+
+    public void setDayVolumeWideDecimal(RecordCursor cursor, long dayVolume) {
+        if (iDayVolume < 0)
+            return;
+        setAsWideDecimal(cursor, iDayVolume, dayVolume);
     }
 
     @Deprecated
     public double getETHDayTurnover(RecordCursor cursor) {
         if (iDayTurnover < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iDayTurnover));
+        return getAsDouble(cursor, iDayTurnover);
     }
 
     @Deprecated
     public void setETHDayTurnover(RecordCursor cursor, double _ETHDayTurnover) {
         if (iDayTurnover < 0)
             return;
-        setInt(cursor, iDayTurnover, Decimal.compose(_ETHDayTurnover));
+        setAsDouble(cursor, iDayTurnover, _ETHDayTurnover);
     }
 
     @Deprecated
     public int getETHDayTurnoverDecimal(RecordCursor cursor) {
         if (iDayTurnover < 0)
             return 0;
-        return getInt(cursor, iDayTurnover);
+        return getAsTinyDecimal(cursor, iDayTurnover);
     }
 
     @Deprecated
     public void setETHDayTurnoverDecimal(RecordCursor cursor, int _ETHDayTurnover) {
         if (iDayTurnover < 0)
             return;
-        setInt(cursor, iDayTurnover, _ETHDayTurnover);
+        setAsTinyDecimal(cursor, iDayTurnover, _ETHDayTurnover);
+    }
+
+    @Deprecated
+    public long getETHDayTurnoverWideDecimal(RecordCursor cursor) {
+        if (iDayTurnover < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iDayTurnover);
+    }
+
+    @Deprecated
+    public void setETHDayTurnoverWideDecimal(RecordCursor cursor, long _ETHDayTurnover) {
+        if (iDayTurnover < 0)
+            return;
+        setAsWideDecimal(cursor, iDayTurnover, _ETHDayTurnover);
     }
 
     public double getDayTurnover(RecordCursor cursor) {
         if (iDayTurnover < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iDayTurnover));
+        return getAsDouble(cursor, iDayTurnover);
     }
 
     public void setDayTurnover(RecordCursor cursor, double dayTurnover) {
         if (iDayTurnover < 0)
             return;
-        setInt(cursor, iDayTurnover, Decimal.compose(dayTurnover));
+        setAsDouble(cursor, iDayTurnover, dayTurnover);
     }
 
     public int getDayTurnoverDecimal(RecordCursor cursor) {
         if (iDayTurnover < 0)
             return 0;
-        return getInt(cursor, iDayTurnover);
+        return getAsTinyDecimal(cursor, iDayTurnover);
     }
 
     public void setDayTurnoverDecimal(RecordCursor cursor, int dayTurnover) {
         if (iDayTurnover < 0)
             return;
-        setInt(cursor, iDayTurnover, dayTurnover);
+        setAsTinyDecimal(cursor, iDayTurnover, dayTurnover);
+    }
+
+    public long getDayTurnoverWideDecimal(RecordCursor cursor) {
+        if (iDayTurnover < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iDayTurnover);
+    }
+
+    public void setDayTurnoverWideDecimal(RecordCursor cursor, long dayTurnover) {
+        if (iDayTurnover < 0)
+            return;
+        setAsWideDecimal(cursor, iDayTurnover, dayTurnover);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }

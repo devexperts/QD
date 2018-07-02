@@ -32,10 +32,10 @@ public class TradeHistoryMapping extends CandleEventMapping {
         iTime = MappingUtil.findIntField(record, "Time", true);
         iSequence = MappingUtil.findIntField(record, "Sequence", true);
         iExchangeCode = MappingUtil.findIntField(record, "Exchange", false);
-        iClose = MappingUtil.findIntField(record, "Price", true);
+        iClose = findIntField("Price", true);
         iVolume = findIntField("Size", true);
-        iBidPrice = MappingUtil.findIntField(record, "Bid", false);
-        iAskPrice = MappingUtil.findIntField(record, "Ask", false);
+        iBidPrice = findIntField("Bid", false);
+        iAskPrice = findIntField("Ask", false);
         putNonDefaultPropertyName("Exchange", "ExchangeCode");
         putNonDefaultPropertyName("Price", "Close");
         putNonDefaultPropertyName("Size", "Volume");
@@ -95,38 +95,56 @@ public class TradeHistoryMapping extends CandleEventMapping {
 
     @Deprecated
     public double getPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iClose));
+        return getAsDouble(cursor, iClose);
     }
 
     @Deprecated
     public void setPrice(RecordCursor cursor, double price) {
-        setInt(cursor, iClose, Decimal.compose(price));
+        setAsDouble(cursor, iClose, price);
     }
 
     @Deprecated
     public int getPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iClose);
+        return getAsTinyDecimal(cursor, iClose);
     }
 
     @Deprecated
     public void setPriceDecimal(RecordCursor cursor, int price) {
-        setInt(cursor, iClose, price);
+        setAsTinyDecimal(cursor, iClose, price);
+    }
+
+    @Deprecated
+    public long getPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iClose);
+    }
+
+    @Deprecated
+    public void setPriceWideDecimal(RecordCursor cursor, long price) {
+        setAsWideDecimal(cursor, iClose, price);
     }
 
     public double getClose(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iClose));
+        return getAsDouble(cursor, iClose);
     }
 
     public void setClose(RecordCursor cursor, double close) {
-        setInt(cursor, iClose, Decimal.compose(close));
+        setAsDouble(cursor, iClose, close);
     }
 
     public int getCloseDecimal(RecordCursor cursor) {
-        return getInt(cursor, iClose);
+        return getAsTinyDecimal(cursor, iClose);
     }
 
     public void setCloseDecimal(RecordCursor cursor, int close) {
-        setInt(cursor, iClose, close);
+        setAsTinyDecimal(cursor, iClose, close);
+    }
+
+    public long getCloseWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iClose);
+    }
+
+    public void setCloseWideDecimal(RecordCursor cursor, long close) {
+        setAsWideDecimal(cursor, iClose, close);
     }
 
     @Deprecated
@@ -151,12 +169,22 @@ public class TradeHistoryMapping extends CandleEventMapping {
 
     @Deprecated
     public int getSizeDecimal(RecordCursor cursor) {
-        return getAsDecimal(cursor, iVolume);
+        return getAsTinyDecimal(cursor, iVolume);
     }
 
     @Deprecated
     public void setSizeDecimal(RecordCursor cursor, int size) {
-        setAsDecimal(cursor, iVolume, size);
+        setAsTinyDecimal(cursor, iVolume, size);
+    }
+
+    @Deprecated
+    public long getSizeWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iVolume);
+    }
+
+    @Deprecated
+    public void setSizeWideDecimal(RecordCursor cursor, long size) {
+        setAsWideDecimal(cursor, iVolume, size);
     }
 
     public int getVolume(RecordCursor cursor) {
@@ -176,115 +204,175 @@ public class TradeHistoryMapping extends CandleEventMapping {
     }
 
     public int getVolumeDecimal(RecordCursor cursor) {
-        return getAsDecimal(cursor, iVolume);
+        return getAsTinyDecimal(cursor, iVolume);
     }
 
     public void setVolumeDecimal(RecordCursor cursor, int volume) {
-        setAsDecimal(cursor, iVolume, volume);
+        setAsTinyDecimal(cursor, iVolume, volume);
+    }
+
+    public long getVolumeWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iVolume);
+    }
+
+    public void setVolumeWideDecimal(RecordCursor cursor, long volume) {
+        setAsWideDecimal(cursor, iVolume, volume);
     }
 
     @Deprecated
     public double getBid(RecordCursor cursor) {
         if (iBidPrice < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iBidPrice));
+        return getAsDouble(cursor, iBidPrice);
     }
 
     @Deprecated
     public void setBid(RecordCursor cursor, double bid) {
         if (iBidPrice < 0)
             return;
-        setInt(cursor, iBidPrice, Decimal.compose(bid));
+        setAsDouble(cursor, iBidPrice, bid);
     }
 
     @Deprecated
     public int getBidDecimal(RecordCursor cursor) {
         if (iBidPrice < 0)
             return 0;
-        return getInt(cursor, iBidPrice);
+        return getAsTinyDecimal(cursor, iBidPrice);
     }
 
     @Deprecated
     public void setBidDecimal(RecordCursor cursor, int bid) {
         if (iBidPrice < 0)
             return;
-        setInt(cursor, iBidPrice, bid);
+        setAsTinyDecimal(cursor, iBidPrice, bid);
+    }
+
+    @Deprecated
+    public long getBidWideDecimal(RecordCursor cursor) {
+        if (iBidPrice < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iBidPrice);
+    }
+
+    @Deprecated
+    public void setBidWideDecimal(RecordCursor cursor, long bid) {
+        if (iBidPrice < 0)
+            return;
+        setAsWideDecimal(cursor, iBidPrice, bid);
     }
 
     public double getBidPrice(RecordCursor cursor) {
         if (iBidPrice < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iBidPrice));
+        return getAsDouble(cursor, iBidPrice);
     }
 
     public void setBidPrice(RecordCursor cursor, double bidPrice) {
         if (iBidPrice < 0)
             return;
-        setInt(cursor, iBidPrice, Decimal.compose(bidPrice));
+        setAsDouble(cursor, iBidPrice, bidPrice);
     }
 
     public int getBidPriceDecimal(RecordCursor cursor) {
         if (iBidPrice < 0)
             return 0;
-        return getInt(cursor, iBidPrice);
+        return getAsTinyDecimal(cursor, iBidPrice);
     }
 
     public void setBidPriceDecimal(RecordCursor cursor, int bidPrice) {
         if (iBidPrice < 0)
             return;
-        setInt(cursor, iBidPrice, bidPrice);
+        setAsTinyDecimal(cursor, iBidPrice, bidPrice);
+    }
+
+    public long getBidPriceWideDecimal(RecordCursor cursor) {
+        if (iBidPrice < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iBidPrice);
+    }
+
+    public void setBidPriceWideDecimal(RecordCursor cursor, long bidPrice) {
+        if (iBidPrice < 0)
+            return;
+        setAsWideDecimal(cursor, iBidPrice, bidPrice);
     }
 
     @Deprecated
     public double getAsk(RecordCursor cursor) {
         if (iAskPrice < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iAskPrice));
+        return getAsDouble(cursor, iAskPrice);
     }
 
     @Deprecated
     public void setAsk(RecordCursor cursor, double ask) {
         if (iAskPrice < 0)
             return;
-        setInt(cursor, iAskPrice, Decimal.compose(ask));
+        setAsDouble(cursor, iAskPrice, ask);
     }
 
     @Deprecated
     public int getAskDecimal(RecordCursor cursor) {
         if (iAskPrice < 0)
             return 0;
-        return getInt(cursor, iAskPrice);
+        return getAsTinyDecimal(cursor, iAskPrice);
     }
 
     @Deprecated
     public void setAskDecimal(RecordCursor cursor, int ask) {
         if (iAskPrice < 0)
             return;
-        setInt(cursor, iAskPrice, ask);
+        setAsTinyDecimal(cursor, iAskPrice, ask);
+    }
+
+    @Deprecated
+    public long getAskWideDecimal(RecordCursor cursor) {
+        if (iAskPrice < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iAskPrice);
+    }
+
+    @Deprecated
+    public void setAskWideDecimal(RecordCursor cursor, long ask) {
+        if (iAskPrice < 0)
+            return;
+        setAsWideDecimal(cursor, iAskPrice, ask);
     }
 
     public double getAskPrice(RecordCursor cursor) {
         if (iAskPrice < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iAskPrice));
+        return getAsDouble(cursor, iAskPrice);
     }
 
     public void setAskPrice(RecordCursor cursor, double askPrice) {
         if (iAskPrice < 0)
             return;
-        setInt(cursor, iAskPrice, Decimal.compose(askPrice));
+        setAsDouble(cursor, iAskPrice, askPrice);
     }
 
     public int getAskPriceDecimal(RecordCursor cursor) {
         if (iAskPrice < 0)
             return 0;
-        return getInt(cursor, iAskPrice);
+        return getAsTinyDecimal(cursor, iAskPrice);
     }
 
     public void setAskPriceDecimal(RecordCursor cursor, int askPrice) {
         if (iAskPrice < 0)
             return;
-        setInt(cursor, iAskPrice, askPrice);
+        setAsTinyDecimal(cursor, iAskPrice, askPrice);
+    }
+
+    public long getAskPriceWideDecimal(RecordCursor cursor) {
+        if (iAskPrice < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iAskPrice);
+    }
+
+    public void setAskPriceWideDecimal(RecordCursor cursor, long askPrice) {
+        if (iAskPrice < 0)
+            return;
+        setAsWideDecimal(cursor, iAskPrice, askPrice);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }

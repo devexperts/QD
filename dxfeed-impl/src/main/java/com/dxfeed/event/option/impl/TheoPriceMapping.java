@@ -33,8 +33,8 @@ public class TheoPriceMapping extends RecordMapping {
         super(record);
         iTime = MappingUtil.findIntField(record, "Theo.Time", true);
         iSequence = MappingUtil.findIntField(record, "Theo.Sequence", false);
-        iPrice = MappingUtil.findIntField(record, "Theo.Price", true);
-        iUnderlyingPrice = MappingUtil.findIntField(record, "Theo.UnderlyingPrice", true);
+        iPrice = findIntField("Theo.Price", true);
+        iUnderlyingPrice = findIntField("Theo.UnderlyingPrice", true);
         iDelta = MappingUtil.findIntField(record, "Theo.Delta", true);
         iGamma = MappingUtil.findIntField(record, "Theo.Gamma", true);
         iDividend = MappingUtil.findIntField(record, "Theo.Dividend", false);
@@ -113,74 +113,110 @@ public class TheoPriceMapping extends RecordMapping {
 
     @Deprecated
     public double getTheoPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iPrice));
+        return getAsDouble(cursor, iPrice);
     }
 
     @Deprecated
     public void setTheoPrice(RecordCursor cursor, double theoPrice) {
-        setInt(cursor, iPrice, Decimal.compose(theoPrice));
+        setAsDouble(cursor, iPrice, theoPrice);
     }
 
     @Deprecated
     public int getTheoPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iPrice);
+        return getAsTinyDecimal(cursor, iPrice);
     }
 
     @Deprecated
     public void setTheoPriceDecimal(RecordCursor cursor, int theoPrice) {
-        setInt(cursor, iPrice, theoPrice);
+        setAsTinyDecimal(cursor, iPrice, theoPrice);
+    }
+
+    @Deprecated
+    public long getTheoPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iPrice);
+    }
+
+    @Deprecated
+    public void setTheoPriceWideDecimal(RecordCursor cursor, long theoPrice) {
+        setAsWideDecimal(cursor, iPrice, theoPrice);
     }
 
     public double getPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iPrice));
+        return getAsDouble(cursor, iPrice);
     }
 
     public void setPrice(RecordCursor cursor, double price) {
-        setInt(cursor, iPrice, Decimal.compose(price));
+        setAsDouble(cursor, iPrice, price);
     }
 
     public int getPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iPrice);
+        return getAsTinyDecimal(cursor, iPrice);
     }
 
     public void setPriceDecimal(RecordCursor cursor, int price) {
-        setInt(cursor, iPrice, price);
+        setAsTinyDecimal(cursor, iPrice, price);
+    }
+
+    public long getPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iPrice);
+    }
+
+    public void setPriceWideDecimal(RecordCursor cursor, long price) {
+        setAsWideDecimal(cursor, iPrice, price);
     }
 
     @Deprecated
     public double getTheoUnderlyingPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iUnderlyingPrice));
+        return getAsDouble(cursor, iUnderlyingPrice);
     }
 
     @Deprecated
     public void setTheoUnderlyingPrice(RecordCursor cursor, double theoUnderlyingPrice) {
-        setInt(cursor, iUnderlyingPrice, Decimal.compose(theoUnderlyingPrice));
+        setAsDouble(cursor, iUnderlyingPrice, theoUnderlyingPrice);
     }
 
     @Deprecated
     public int getTheoUnderlyingPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iUnderlyingPrice);
+        return getAsTinyDecimal(cursor, iUnderlyingPrice);
     }
 
     @Deprecated
     public void setTheoUnderlyingPriceDecimal(RecordCursor cursor, int theoUnderlyingPrice) {
-        setInt(cursor, iUnderlyingPrice, theoUnderlyingPrice);
+        setAsTinyDecimal(cursor, iUnderlyingPrice, theoUnderlyingPrice);
+    }
+
+    @Deprecated
+    public long getTheoUnderlyingPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iUnderlyingPrice);
+    }
+
+    @Deprecated
+    public void setTheoUnderlyingPriceWideDecimal(RecordCursor cursor, long theoUnderlyingPrice) {
+        setAsWideDecimal(cursor, iUnderlyingPrice, theoUnderlyingPrice);
     }
 
     public double getUnderlyingPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iUnderlyingPrice));
+        return getAsDouble(cursor, iUnderlyingPrice);
     }
 
     public void setUnderlyingPrice(RecordCursor cursor, double underlyingPrice) {
-        setInt(cursor, iUnderlyingPrice, Decimal.compose(underlyingPrice));
+        setAsDouble(cursor, iUnderlyingPrice, underlyingPrice);
     }
 
     public int getUnderlyingPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iUnderlyingPrice);
+        return getAsTinyDecimal(cursor, iUnderlyingPrice);
     }
 
     public void setUnderlyingPriceDecimal(RecordCursor cursor, int underlyingPrice) {
-        setInt(cursor, iUnderlyingPrice, underlyingPrice);
+        setAsTinyDecimal(cursor, iUnderlyingPrice, underlyingPrice);
+    }
+
+    public long getUnderlyingPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iUnderlyingPrice);
+    }
+
+    public void setUnderlyingPriceWideDecimal(RecordCursor cursor, long underlyingPrice) {
+        setAsWideDecimal(cursor, iUnderlyingPrice, underlyingPrice);
     }
 
     @Deprecated

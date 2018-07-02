@@ -13,6 +13,8 @@ package com.devexperts.qd.util;
 
 import java.util.Arrays;
 
+import com.devexperts.util.WideDecimal;
+
 /**
  * The <code>Decimal</code> class contains a set of methods to work with
  * floating-point numbers packed into <code>int</code> primitive type.
@@ -824,6 +826,17 @@ public class Decimal extends Number implements Comparable {
             return NaN;
         // Slow path: for non-standard decimals (specials and extra precision) use floating arithmetics.
         return compose((toDouble(d1) + toDouble(d2)) * 0.5);
+    }
+
+    public static int wideToTiny(long wide) {
+        return Decimal.composeDecimal(WideDecimal.getSignificand(wide), WideDecimal.getScale(wide));
+    }
+
+    public static long tinyToWide(int tiny) {
+        int scale = Decimal.getDecimalPrecision(tiny);
+        if (scale <= -19)
+            scale = -128;
+        return WideDecimal.composeWide(Decimal.getDecimalMantissa(tiny), scale);
     }
 
     // ========== Number Extension ==========

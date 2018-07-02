@@ -36,6 +36,7 @@ public final class SerialFieldType {
     public static final SerialFieldType TIME = new SerialFieldType(ID_COMPACT_INT | FLAG_TIME, "TIME");
     public static final SerialFieldType SEQUENCE = new SerialFieldType(ID_COMPACT_INT | FLAG_SEQUENCE, "SEQUENCE");
     public static final SerialFieldType DATE = new SerialFieldType(ID_COMPACT_INT | FLAG_DATE, "DATE");
+    public static final SerialFieldType WIDE_DECIMAL = new SerialFieldType(ID_COMPACT_INT | FLAG_WIDE_DECIMAL, "WIDE_DECIMAL");
     public static final SerialFieldType STRING = new SerialFieldType(ID_BYTE_ARRAY | FLAG_STRING, "STRING");
     public static final SerialFieldType CUSTOM_OBJECT = new SerialFieldType(ID_BYTE_ARRAY | FLAG_CUSTOM_OBJECT, "CUSTOM_OBJECT");
     public static final SerialFieldType SERIAL_OBJECT = new SerialFieldType(ID_BYTE_ARRAY | FLAG_SERIAL_OBJECT, "SERIAL_OBJECT");
@@ -74,11 +75,15 @@ public final class SerialFieldType {
     private final String name;
     private final int id;
     private final boolean isObject;
+    private final boolean isLong;
 
     private SerialFieldType(int id, String name) {
         this.id = id;
         this.name = name;
         this.isObject = (id & SERIAL_TYPE_MASK) == ID_BYTE_ARRAY || (id & SERIAL_TYPE_MASK) == ID_UTF_CHAR_ARRAY;
+        this.isLong = (id & REPRESENTATION_MASK) == FLAG_WIDE_DECIMAL;
+        if (isLong && isObject)
+            throw new IllegalArgumentException("conflicting type");
     }
 
     public boolean isDecimal() {
@@ -110,6 +115,10 @@ public final class SerialFieldType {
     @Override
     public int hashCode() {
         return name.hashCode() * 31 + id;
+    }
+
+    public boolean isLong() {
+        return isLong;
     }
 
     public boolean isObject() {
@@ -235,6 +244,8 @@ public final class SerialFieldType {
                 return new SequenceField(index, name);
             case FLAG_DATE:
                 return new DateField(index, name);
+            case FLAG_WIDE_DECIMAL:
+                return new WideDecimalField(index, name);
             default:
                 return new CompactIntField(index, name, this);
             }
@@ -304,11 +315,13 @@ public final class SerialFieldType {
         public static final int ID_UTF_CHAR_ARRAY = 10;
         // ids 11-15 are reserved for future use as array of short, array of int, etc
 
+        public static final int FLAG_INT = 0x00; // plain int as int field
         public static final int FLAG_DECIMAL = 0x10; // decimal representation as int field
         public static final int FLAG_SHORT_STRING = 0x20; // short (up to 4-character) string representation as int field
         public static final int FLAG_TIME = 0x30; // time in seconds in this integer field
         public static final int FLAG_SEQUENCE = 0x40; // sequence in this integer fields (with top 10 bits representing millis)
         public static final int FLAG_DATE = 0x50; // day id in this integer field
+        public static final int FLAG_WIDE_DECIMAL = 0x70; // WideDecimal representation as long field
         public static final int FLAG_STRING = 0x80; // String representation as byte array (for ID_BYTE_ARRAY)
         public static final int FLAG_CUSTOM_OBJECT = 0xe0; // custom serialized object as byte array (for ID_BYTE_ARRAY)
         public static final int FLAG_SERIAL_OBJECT = 0xf0; // serialized object as byte array (for ID_BYTE_ARRAY)

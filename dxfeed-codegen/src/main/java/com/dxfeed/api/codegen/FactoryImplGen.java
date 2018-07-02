@@ -136,9 +136,13 @@ class FactoryImplGen {
             }
             cg.addImport(new ClassName(SerialFieldType.class));
             for (FieldType.Field field : f.fieldType.fields) {
-                String typeExpr = field.typeSelector != null ?
-                    "SystemProperties.getProperty(\"" + field.typeSelector + "\", \"\").equalsIgnoreCase(\"decimal\") ? SerialFieldType.DECIMAL : SerialFieldType.COMPACT_INT"
-                    : "SerialFieldType." + field.serialType;
+                String typeExpr = "SerialFieldType." + field.serialType;
+                if (field.typeSelectors.length != 0) {
+                    typeExpr = "select(" + typeExpr;
+                    for (String typeSelector : field.typeSelectors)
+                        typeExpr = typeExpr + ", \"" + typeSelector + "\"";
+                    typeExpr = typeExpr + ")";
+                }
                 if (f.voidSuffixes != null)
                     typeExpr = "suffix.matches(\"" + f.voidSuffixes + "\") ? SerialFieldType.VOID : " + typeExpr;
                 if (f.required) {

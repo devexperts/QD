@@ -18,6 +18,7 @@ import com.devexperts.io.BufferedInput;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.QDLog;
 import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.qtp.*;
 
 /**
@@ -54,7 +55,8 @@ public class BlobQTPParser extends AbstractQTPParser {
             long position = in.totalPosition();
             while (in.hasAvailable()) {
                 try {
-                    buf.add(record, cipher, symbol).readDataFrom(in);
+                    RecordCursor cursor = buf.add(record, cipher, symbol);
+                    record.readFields(in, cursor);
                 } catch (EOFException e) {
                     break; // record is not complete
                 }

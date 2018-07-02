@@ -50,7 +50,7 @@ class DataCompression {
         this.pattern = pattern;
     }
 
-    public void count(Parser.ReportKeys keys, SerialFieldType type, int value, int bytes) {
+    public void count(Parser.ReportKeys keys, SerialFieldType type, long value, int bytes) {
         if (keys.analyzeFieldTypeCompression)
             recordDataByFieldType.get(keys.fieldType, type).count(value, bytes);
         if (keys.analyzeFieldNameCompression)
@@ -116,7 +116,7 @@ class DataCompression {
     private static class Params {
         int plainBitSize;
         int[][] caseBitSize = new int[1 << N_SPECIAL][N_CASES];
-        int[] prevValue = new int[1 << N_SPECIAL];
+        long[] prevValue = new long[1 << N_SPECIAL];
 
         Params() {}
     }
@@ -136,7 +136,7 @@ class DataCompression {
                 algos[i] = new CompressionAlgoState(VALID_ALGOS.get(i));
         }
 
-        void count(int value, int originalBytes) {
+        void count(long value, int originalBytes) {
             // compute plainBitSize
             if (type.hasSameSerialTypeAs(SerialFieldType.COMPACT_INT))
                 params.plainBitSize = 8 * IOUtil.getCompactLength(value);
@@ -153,7 +153,7 @@ class DataCompression {
             for (int ss = 0; ss < (1 << N_SPECIAL); ss++)
                 for (int i = 0; i < N_CASES; i++) {
                     CompressionCase c = CASES[i];
-                    int prevValue = params.prevValue[ss];
+                    long prevValue = params.prevValue[ss];
                     params.caseBitSize[ss][i] = c.matches(value, prevValue) ?
                         c.bitSize(value, prevValue, params) : -1;
                 }
@@ -265,11 +265,11 @@ class DataCompression {
             this.special = special;
         }
 
-        boolean matches(int value, int prevValue) {
+        boolean matches(long value, long prevValue) {
             return true;
         }
 
-        int bitSize(int value, int prevValue, Params params) {
+        int bitSize(long value, long prevValue, Params params) {
             return 0;
         }
 
@@ -280,49 +280,49 @@ class DataCompression {
     }
 
     private static class ExclusionCase extends CompressionCase {
-        final int exclusion;
+        final long exclusion;
 
-        ExclusionCase(String caseName, int exclusion) {
+        ExclusionCase(String caseName, long exclusion) {
             super(caseName, true);
             this.exclusion = exclusion;
         }
 
         @Override
-        boolean matches(int value, int prevValue) {
+        boolean matches(long value, long prevValue) {
             return value == exclusion;
         }
     }
 
     private static class FixedDeltaCase extends CompressionCase {
-        final int delta;
+        final long delta;
 
-        FixedDeltaCase(String caseName, int delta) {
+        FixedDeltaCase(String caseName, long delta) {
             super(caseName, false);
             this.delta = delta;
         }
 
         @Override
-        boolean matches(int value, int prevValue) {
+        boolean matches(long value, long prevValue) {
             return value == prevValue + delta;
         }
     }
 
     private static class DeltaCase extends CompressionCase {
-        final int divider;
+        final long divider;
 
-        DeltaCase(String caseName, int divider) {
+        DeltaCase(String caseName, long divider) {
             super(caseName, false);
             this.divider = divider;
         }
 
         @Override
-        boolean matches(int value, int prevValue) {
+        boolean matches(long value, long prevValue) {
             return (value - prevValue) % divider == 0;
         }
 
 
         @Override
-        int bitSize(int value, int prevValue, Params params) {
+        int bitSize(long value, long prevValue, Params params) {
             return 8 * IOUtil.getCompactLength((value - prevValue) / divider);
         }
     }
@@ -333,7 +333,7 @@ class DataCompression {
         }
 
         @Override
-        int bitSize(int value, int prevValue, Params params) {
+        int bitSize(long value, long prevValue, Params params) {
             return params.plainBitSize;
         }
     }

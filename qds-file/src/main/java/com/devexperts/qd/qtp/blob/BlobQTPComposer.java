@@ -15,6 +15,7 @@ import java.io.IOException;
 
 import com.devexperts.io.BufferedOutput;
 import com.devexperts.qd.*;
+import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.qtp.AbstractQTPComposer;
 import com.devexperts.qd.qtp.MessageType;
 
@@ -73,6 +74,11 @@ public class BlobQTPComposer extends AbstractQTPComposer {
     @Override
     protected void writeObjField(DataObjField field, Object value) throws IOException {
         field.writeObj(msg, value);
+    }
+
+    @Override
+    protected void writeField(DataField field, RecordCursor cursor) throws IOException {
+        field.write(msg, cursor);
     }
 
     @Override

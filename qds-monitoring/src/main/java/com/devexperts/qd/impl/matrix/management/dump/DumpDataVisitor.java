@@ -52,11 +52,11 @@ class DumpDataVisitor implements CollectorVisitor {
                 System.out.print(symbol);
                 for (int i = 0; i < cursor.getIntCount(); i++) {
                     System.out.print('\t');
-                    System.out.print(r.getIntField(i).toString(cursor.getInt(i)));
+                    System.out.print(r.getIntField(i).getString(cursor));
                 }
                 for (int i = 0; i < cursor.getObjCount(); i++) {
                     System.out.print('\t');
-                    System.out.print(r.getObjField(i).toString(cursor.getObj(i)));
+                    System.out.print(r.getObjField(i).getString(cursor));
                 }
                 System.out.println();
             }

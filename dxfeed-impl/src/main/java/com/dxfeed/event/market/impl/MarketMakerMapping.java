@@ -34,11 +34,11 @@ public class MarketMakerMapping extends MarketEventMapping {
         iExchangeCode = MappingUtil.findIntField(record, "MMExchange", true);
         iMarketMaker = MappingUtil.findIntField(record, "MMID", true);
         iBidTime = MappingUtil.findIntField(record, "MMBid.Time", false);
-        iBidPrice = MappingUtil.findIntField(record, "MMBid.Price", true);
+        iBidPrice = findIntField("MMBid.Price", true);
         iBidSize = findIntField("MMBid.Size", true);
         iBidCount = MappingUtil.findIntField(record, "MMBid.Count", false);
         iAskTime = MappingUtil.findIntField(record, "MMAsk.Time", false);
-        iAskPrice = MappingUtil.findIntField(record, "MMAsk.Price", true);
+        iAskPrice = findIntField("MMAsk.Price", true);
         iAskSize = findIntField("MMAsk.Size", true);
         iAskCount = MappingUtil.findIntField(record, "MMAsk.Count", false);
         putNonDefaultPropertyName("MMExchange", "ExchangeCode");
@@ -161,38 +161,56 @@ public class MarketMakerMapping extends MarketEventMapping {
 
     @Deprecated
     public double getMMBidPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iBidPrice));
+        return getAsDouble(cursor, iBidPrice);
     }
 
     @Deprecated
     public void setMMBidPrice(RecordCursor cursor, double _MMBidPrice) {
-        setInt(cursor, iBidPrice, Decimal.compose(_MMBidPrice));
+        setAsDouble(cursor, iBidPrice, _MMBidPrice);
     }
 
     @Deprecated
     public int getMMBidPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iBidPrice);
+        return getAsTinyDecimal(cursor, iBidPrice);
     }
 
     @Deprecated
     public void setMMBidPriceDecimal(RecordCursor cursor, int _MMBidPrice) {
-        setInt(cursor, iBidPrice, _MMBidPrice);
+        setAsTinyDecimal(cursor, iBidPrice, _MMBidPrice);
+    }
+
+    @Deprecated
+    public long getMMBidPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iBidPrice);
+    }
+
+    @Deprecated
+    public void setMMBidPriceWideDecimal(RecordCursor cursor, long _MMBidPrice) {
+        setAsWideDecimal(cursor, iBidPrice, _MMBidPrice);
     }
 
     public double getBidPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iBidPrice));
+        return getAsDouble(cursor, iBidPrice);
     }
 
     public void setBidPrice(RecordCursor cursor, double bidPrice) {
-        setInt(cursor, iBidPrice, Decimal.compose(bidPrice));
+        setAsDouble(cursor, iBidPrice, bidPrice);
     }
 
     public int getBidPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iBidPrice);
+        return getAsTinyDecimal(cursor, iBidPrice);
     }
 
     public void setBidPriceDecimal(RecordCursor cursor, int bidPrice) {
-        setInt(cursor, iBidPrice, bidPrice);
+        setAsTinyDecimal(cursor, iBidPrice, bidPrice);
+    }
+
+    public long getBidPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iBidPrice);
+    }
+
+    public void setBidPriceWideDecimal(RecordCursor cursor, long bidPrice) {
+        setAsWideDecimal(cursor, iBidPrice, bidPrice);
     }
 
     @Deprecated
@@ -217,12 +235,22 @@ public class MarketMakerMapping extends MarketEventMapping {
 
     @Deprecated
     public int getMMBidSizeDecimal(RecordCursor cursor) {
-        return getAsDecimal(cursor, iBidSize);
+        return getAsTinyDecimal(cursor, iBidSize);
     }
 
     @Deprecated
     public void setMMBidSizeDecimal(RecordCursor cursor, int _MMBidSize) {
-        setAsDecimal(cursor, iBidSize, _MMBidSize);
+        setAsTinyDecimal(cursor, iBidSize, _MMBidSize);
+    }
+
+    @Deprecated
+    public long getMMBidSizeWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iBidSize);
+    }
+
+    @Deprecated
+    public void setMMBidSizeWideDecimal(RecordCursor cursor, long _MMBidSize) {
+        setAsWideDecimal(cursor, iBidSize, _MMBidSize);
     }
 
     public int getBidSize(RecordCursor cursor) {
@@ -242,11 +270,19 @@ public class MarketMakerMapping extends MarketEventMapping {
     }
 
     public int getBidSizeDecimal(RecordCursor cursor) {
-        return getAsDecimal(cursor, iBidSize);
+        return getAsTinyDecimal(cursor, iBidSize);
     }
 
     public void setBidSizeDecimal(RecordCursor cursor, int bidSize) {
-        setAsDecimal(cursor, iBidSize, bidSize);
+        setAsTinyDecimal(cursor, iBidSize, bidSize);
+    }
+
+    public long getBidSizeWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iBidSize);
+    }
+
+    public void setBidSizeWideDecimal(RecordCursor cursor, long bidSize) {
+        setAsWideDecimal(cursor, iBidSize, bidSize);
     }
 
     @Deprecated
@@ -329,38 +365,56 @@ public class MarketMakerMapping extends MarketEventMapping {
 
     @Deprecated
     public double getMMAskPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iAskPrice));
+        return getAsDouble(cursor, iAskPrice);
     }
 
     @Deprecated
     public void setMMAskPrice(RecordCursor cursor, double _MMAskPrice) {
-        setInt(cursor, iAskPrice, Decimal.compose(_MMAskPrice));
+        setAsDouble(cursor, iAskPrice, _MMAskPrice);
     }
 
     @Deprecated
     public int getMMAskPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iAskPrice);
+        return getAsTinyDecimal(cursor, iAskPrice);
     }
 
     @Deprecated
     public void setMMAskPriceDecimal(RecordCursor cursor, int _MMAskPrice) {
-        setInt(cursor, iAskPrice, _MMAskPrice);
+        setAsTinyDecimal(cursor, iAskPrice, _MMAskPrice);
+    }
+
+    @Deprecated
+    public long getMMAskPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iAskPrice);
+    }
+
+    @Deprecated
+    public void setMMAskPriceWideDecimal(RecordCursor cursor, long _MMAskPrice) {
+        setAsWideDecimal(cursor, iAskPrice, _MMAskPrice);
     }
 
     public double getAskPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iAskPrice));
+        return getAsDouble(cursor, iAskPrice);
     }
 
     public void setAskPrice(RecordCursor cursor, double askPrice) {
-        setInt(cursor, iAskPrice, Decimal.compose(askPrice));
+        setAsDouble(cursor, iAskPrice, askPrice);
     }
 
     public int getAskPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iAskPrice);
+        return getAsTinyDecimal(cursor, iAskPrice);
     }
 
     public void setAskPriceDecimal(RecordCursor cursor, int askPrice) {
-        setInt(cursor, iAskPrice, askPrice);
+        setAsTinyDecimal(cursor, iAskPrice, askPrice);
+    }
+
+    public long getAskPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iAskPrice);
+    }
+
+    public void setAskPriceWideDecimal(RecordCursor cursor, long askPrice) {
+        setAsWideDecimal(cursor, iAskPrice, askPrice);
     }
 
     @Deprecated
@@ -385,12 +439,22 @@ public class MarketMakerMapping extends MarketEventMapping {
 
     @Deprecated
     public int getMMAskSizeDecimal(RecordCursor cursor) {
-        return getAsDecimal(cursor, iAskSize);
+        return getAsTinyDecimal(cursor, iAskSize);
     }
 
     @Deprecated
     public void setMMAskSizeDecimal(RecordCursor cursor, int _MMAskSize) {
-        setAsDecimal(cursor, iAskSize, _MMAskSize);
+        setAsTinyDecimal(cursor, iAskSize, _MMAskSize);
+    }
+
+    @Deprecated
+    public long getMMAskSizeWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iAskSize);
+    }
+
+    @Deprecated
+    public void setMMAskSizeWideDecimal(RecordCursor cursor, long _MMAskSize) {
+        setAsWideDecimal(cursor, iAskSize, _MMAskSize);
     }
 
     public int getAskSize(RecordCursor cursor) {
@@ -410,11 +474,19 @@ public class MarketMakerMapping extends MarketEventMapping {
     }
 
     public int getAskSizeDecimal(RecordCursor cursor) {
-        return getAsDecimal(cursor, iAskSize);
+        return getAsTinyDecimal(cursor, iAskSize);
     }
 
     public void setAskSizeDecimal(RecordCursor cursor, int askSize) {
-        setAsDecimal(cursor, iAskSize, askSize);
+        setAsTinyDecimal(cursor, iAskSize, askSize);
+    }
+
+    public long getAskSizeWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iAskSize);
+    }
+
+    public void setAskSizeWideDecimal(RecordCursor cursor, long askSize) {
+        setAsWideDecimal(cursor, iAskSize, askSize);
     }
 
     @Deprecated

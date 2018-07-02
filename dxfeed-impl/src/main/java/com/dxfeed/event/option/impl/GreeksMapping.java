@@ -34,7 +34,7 @@ public class GreeksMapping extends RecordMapping {
         super(record);
         iTime = MappingUtil.findIntField(record, "Time", false);
         iSequence = MappingUtil.findIntField(record, "Sequence", false);
-        iPrice = MappingUtil.findIntField(record, "Greeks.Price", true);
+        iPrice = findIntField("Greeks.Price", true);
         iVolatility = MappingUtil.findIntField(record, "Volatility", true);
         iDelta = MappingUtil.findIntField(record, "Delta", true);
         iGamma = MappingUtil.findIntField(record, "Gamma", true);
@@ -82,38 +82,56 @@ public class GreeksMapping extends RecordMapping {
 
     @Deprecated
     public double getGreeksPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iPrice));
+        return getAsDouble(cursor, iPrice);
     }
 
     @Deprecated
     public void setGreeksPrice(RecordCursor cursor, double greeksPrice) {
-        setInt(cursor, iPrice, Decimal.compose(greeksPrice));
+        setAsDouble(cursor, iPrice, greeksPrice);
     }
 
     @Deprecated
     public int getGreeksPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iPrice);
+        return getAsTinyDecimal(cursor, iPrice);
     }
 
     @Deprecated
     public void setGreeksPriceDecimal(RecordCursor cursor, int greeksPrice) {
-        setInt(cursor, iPrice, greeksPrice);
+        setAsTinyDecimal(cursor, iPrice, greeksPrice);
+    }
+
+    @Deprecated
+    public long getGreeksPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iPrice);
+    }
+
+    @Deprecated
+    public void setGreeksPriceWideDecimal(RecordCursor cursor, long greeksPrice) {
+        setAsWideDecimal(cursor, iPrice, greeksPrice);
     }
 
     public double getPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iPrice));
+        return getAsDouble(cursor, iPrice);
     }
 
     public void setPrice(RecordCursor cursor, double price) {
-        setInt(cursor, iPrice, Decimal.compose(price));
+        setAsDouble(cursor, iPrice, price);
     }
 
     public int getPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iPrice);
+        return getAsTinyDecimal(cursor, iPrice);
     }
 
     public void setPriceDecimal(RecordCursor cursor, int price) {
-        setInt(cursor, iPrice, price);
+        setAsTinyDecimal(cursor, iPrice, price);
+    }
+
+    public long getPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iPrice);
+    }
+
+    public void setPriceWideDecimal(RecordCursor cursor, long price) {
+        setAsWideDecimal(cursor, iPrice, price);
     }
 
     public double getVolatility(RecordCursor cursor) {
