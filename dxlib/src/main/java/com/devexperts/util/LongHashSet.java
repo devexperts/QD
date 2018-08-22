@@ -36,9 +36,7 @@ import java.util.*;
  * and cleanly, rather than risking arbitrary, non-deterministic behavior at
  * an undetermined time in the future.
  */
-public final class LongHashSet extends AbstractLongSet
-    implements Cloneable, Serializable
-{
+public final class LongHashSet extends AbstractLongSet implements Cloneable, Serializable {
     private static final long serialVersionUID = -1317101846278749919L;
 
     /**
@@ -77,36 +75,43 @@ public final class LongHashSet extends AbstractLongSet
     }
 
     // Implements LongSet#longIterator()
+    @Override
     public LongIterator longIterator() {
-        return map.newKeySetIterator();
+        return (LongIterator) map.newKeySetIterator();
     }
 
     // Implements Set#size()
+    @Override
     public int size() {
         return map.size();
     }
 
     // Implements Set#isEmpty()
+    @Override
     public boolean isEmpty() {
         return map.isEmpty();
     }
 
     // Impelements LongSet#contains(long)
+    @Override
     public boolean contains(long key) {
         return map.containsKey(key);
     }
 
     // Implements LongSet#add(long)
+    @Override
     public boolean add(long key) {
         return map.putExplicitly(key, null) == LongHashMap.NOT_FOUND;
     }
 
     // Implements LongSet#remove(long)
+    @Override
     public boolean remove(long key) {
-        return map.removeExplicitly(key) != LongHashMap.NOT_FOUND;
+        return map.removeExplicitly(key, null, false) != LongHashMap.NOT_FOUND;
     }
 
     // Implements Set#clear()
+    @Override
     public void clear() {
         map.clear();
     }
@@ -115,6 +120,7 @@ public final class LongHashSet extends AbstractLongSet
      * Returns a shallow copy of this set: the elements themselves are
      * not cloned.
      */
+    @Override
     public Object clone() {
         try {
             LongHashSet new_set = (LongHashSet) super.clone();
@@ -177,7 +183,7 @@ public final class LongHashSet extends AbstractLongSet
         s.writeInt(map.size());
 
         // Write out all elements
-        for (LongIterator it = map.newKeySetIterator(); it.hasNext(); )
+        for (PrimitiveIterator.OfLong it = map.newKeySetIterator(); it.hasNext(); )
             s.writeLong(it.nextLong());
     }
 

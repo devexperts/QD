@@ -123,4 +123,11 @@ class ConnectionQTPComposer extends BinaryQTPComposer {
     protected BinaryRecordDesc getRequestedRecordDesc(DataRecord record) {
         return connection.getRequestedRecordDesc(record);
     }
+
+    boolean wideDecimalSupported = true;
+
+    @Override
+    protected boolean isWideDecimalSupported() {
+        return wideDecimalSupported;
+    }
 }

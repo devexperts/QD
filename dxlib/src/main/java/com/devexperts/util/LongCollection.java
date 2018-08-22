@@ -11,7 +11,9 @@
  */
 package com.devexperts.util;
 
-import java.util.Collection;
+import java.util.*;
+import java.util.stream.LongStream;
+import java.util.stream.StreamSupport;
 
 /**
  * This class extends {@link Collection} with methods that are specific
@@ -48,4 +50,21 @@ public interface LongCollection extends Collection<Long> {
      * @see #iterator()
      */
     public LongIterator longIterator();
+
+    @Override
+    default Spliterator.OfLong spliterator() {
+        return spliterator(0);
+    }
+
+    default Spliterator.OfLong spliterator(int characteristics) {
+        return Spliterators.spliteratorUnknownSize(longIterator(), characteristics);
+    }
+
+    default LongStream longStream() {
+        return StreamSupport.longStream(spliterator(), false);
+    }
+
+    default LongStream parallelLongStream() {
+        return StreamSupport.longStream(spliterator(), true);
+    }
 }

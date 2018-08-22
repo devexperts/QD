@@ -81,6 +81,7 @@ public class BinaryRecordDesc {
     protected static final int DESC_VOID = (-1 & INDEX_MASK) | (SER_OTHER << SER_SHIFT);
     protected static final int DESC_EVENT_TIME = (-2 & INDEX_MASK) | (SER_COMPACT_INT << SER_SHIFT) | (FLD_EVENT_TIME << FLD_SHIFT);
     protected static final int DESC_EVENT_SEQUENCE = (-3 & INDEX_MASK) | (SER_COMPACT_INT << SER_SHIFT) | (FLD_EVENT_SEQUENCE << FLD_SHIFT);
+    protected static final int DESC_CANT_CONVERT = (-4 & INDEX_MASK) | (SER_OTHER << SER_SHIFT);
 
     // Conversion direction for change of representation.
     protected static final int DIR_NONE = 0;
@@ -95,7 +96,7 @@ public class BinaryRecordDesc {
     protected final DataRecord record;
     protected final String[] names;
     protected final int[] types; // original SerialFieldType.getId()
-    protected final int[] desc; // packed DESC bits according to documentation above
+    protected final int[] descs; // packed DESC bits according to documentation above
     protected final int nDesc; // number of fields from desc array in a regular record
     protected final int nDescEventFields; // number of builtin EventXXX fields from desc array (used for events marked with REMOVE_EVENT flag)
 
@@ -106,64 +107,79 @@ public class BinaryRecordDesc {
         this.record = desc.record;
         this.names = desc.names;
         this.types = desc.types;
-        this.desc = desc.desc;
+        this.descs = desc.descs;
         this.nDesc = desc.nDesc;
         this.nDescEventFields = desc.nDescEventFields;
     }
 
     protected BinaryRecordDesc(DataRecord record, boolean eventTimeSequence) throws InvalidDescException {
+        this(record, eventTimeSequence, true);
+    }
+
+    protected BinaryRecordDesc(DataRecord record, boolean eventTimeSequence, boolean wideDecimalSupported) throws InvalidDescException {
         int iFlds = record.getIntFieldCount();
         int oFlds = record.getObjFieldCount();
         int nFlds = (eventTimeSequence ? 2 : 0) + iFlds + oFlds;
         String[] names = new String[nFlds];
         int[] types = new int[nFlds];
-        int[] desc = new int[nFlds];
+        int[] descs = new int[nFlds];
         int nDesc = 0;
         if (eventTimeSequence) {
             names[nDesc] = BuiltinFields.EVENT_TIME_FIELD_NAME;
             types[nDesc] = SerialFieldType.TIME.getId();
-            desc[nDesc++] = DESC_EVENT_TIME;
+            descs[nDesc++] = DESC_EVENT_TIME;
             names[nDesc] = BuiltinFields.EVENT_SEQUENCE_FIELD_NAME;
             types[nDesc] = SerialFieldType.SEQUENCE.getId();
-            desc[nDesc++] = DESC_EVENT_SEQUENCE;
+            descs[nDesc++] = DESC_EVENT_SEQUENCE;
         }
         for (int i = 0; i < iFlds; i++) {
             DataIntField f = record.getIntField(i);
-            int d = field2Desc(names[i], f.getSerialType().getId(), f, DIR_NONE);
+            String name = f.getPropertyName();
+            int type = f.getSerialType().getId();
+            if ((type & REPRESENTATION_MASK) == FLAG_WIDE_DECIMAL && !wideDecimalSupported)
+                type = (type & ~REPRESENTATION_MASK) | FLAG_DECIMAL;
+            int d = field2Desc(name, type, f, DIR_NONE);
+            if (d == DESC_CANT_CONVERT)
+                throw new InvalidDescException(name, type);
             if (d == DESC_VOID)
-                continue; // don't write it do desc array
-            names[nDesc] = f.getPropertyName();
-            types[nDesc] = f.getSerialType().getId();
-            desc[nDesc++] = d;
+                continue; // VOID fields are not written nor read
+            names[nDesc] = name;
+            types[nDesc] = type;
+            descs[nDesc] = d;
+            nDesc++;
         }
         for (int i = 0; i < oFlds; i++) {
             DataObjField f = record.getObjField(i);
-            int d = field2Desc(names[i], f.getSerialType().getId(), f, DIR_NONE);
+            String name = f.getPropertyName();
+            int type = f.getSerialType().getId();
+            int d = field2Desc(name, type, f, DIR_NONE);
+            if (d == DESC_CANT_CONVERT)
+                throw new InvalidDescException(name, type);
             if (d == DESC_VOID)
-                continue; // don't write it do desc array
-            names[nDesc] = f.getPropertyName();
-            types[nDesc] = f.getSerialType().getId();
-            desc[nDesc++] = d;
+                continue; // VOID fields are not written nor read
+            names[nDesc] = name;
+            types[nDesc] = type;
+            descs[nDesc] = d;
+            nDesc++;
         }
         // initialize
         this.empty = false;
         this.record = record;
         this.names = names;
         this.types = types;
-        this.desc = desc;
+        this.descs = descs;
         this.nDesc = nDesc;
         this.nDescEventFields = countEventFields();
     }
 
-    // cnvRead == true  conversion flags are set for reading specified types and converting them from types[i] to record field serial type
-    // cnvRead == false conversion flags are set for writing specified types and converting them from record field serial type to types[i]
+    // dir == DIR_READ  conversion flags are set for reading specified types and converting them from types[i] to record field serial type
+    // dir == DIR_WRITE conversion flags are set for writing specified types and converting them from record field serial type to types[i]
     protected BinaryRecordDesc(DataRecord record, int nFld, String[] namesIn, int[] typesIn,
         boolean eventTimeSequence, int dir) throws InvalidDescException
     {
-        String[] names = namesIn;
-        int[] types = typesIn;
-        boolean clonedNamesAndTypes = false;
-        int[] desc = new int[nFld];
+        String[] names = namesIn.clone();
+        int[] types = typesIn.clone();
+        int[] descs = new int[nFld];
 
         // Support built-in EventTime & EventSequence fields if needed
         int nDesc = 0;
@@ -173,40 +189,45 @@ public class BinaryRecordDesc {
             types[0] == (ID_COMPACT_INT | FLAG_TIME))
         {
             i++;
-            desc[nDesc++] = DESC_EVENT_TIME;
+            descs[nDesc++] = DESC_EVENT_TIME;
             if (nFld >= 2 &&
                 names[1].equals(BuiltinFields.EVENT_SEQUENCE_FIELD_NAME) &&
                 types[1] == (ID_COMPACT_INT | FLAG_SEQUENCE))
             {
                 i++;
-                desc[nDesc++] = DESC_EVENT_SEQUENCE;
+                descs[nDesc++] = DESC_EVENT_SEQUENCE;
             }
         }
 
         // The rest (regular) fields
         for (; i < nFld; i++) {
-            int d = field2Desc(names[i], types[i], record == null ? null : record.findFieldByName(names[i]), dir);
+            String name = names[i];
+            int type = types[i];
+            DataField f = record == null ? null : record.findFieldByName(name);
+            int d = field2Desc(name, type, f, dir);
+            if (d == DESC_CANT_CONVERT) {
+                if (f == null)
+                    throw new InvalidDescException(name, type);
+                type = (type & ~REPRESENTATION_MASK) | (f.getSerialType().getId() & REPRESENTATION_MASK);
+                d = field2Desc(name, type, f, dir);
+                if (d == DESC_CANT_CONVERT)
+                    throw new InvalidDescException(name, type);
+            }
             if (d == DESC_VOID)
                 continue; // VOID fields are not written nor read
             if (dir == DIR_WRITE && (d >> FLD_SHIFT) == FLD_SKIP)
                 continue; // don't write missing fields
-            // Shift names and types arrays to account for skipped / void
-            if (nDesc != i && !clonedNamesAndTypes) {
-                // clone names and types array first time this is needed
-                names = names.clone();
-                types = types.clone();
-                clonedNamesAndTypes = true;
-            }
-            names[nDesc] = names[i];
-            types[nDesc] = types[i];
-            desc[nDesc++] = d;
+            names[nDesc] = name;
+            types[nDesc] = type;
+            descs[nDesc] = d;
+            nDesc++;
         }
         // initialize
         this.empty = nFld == 0;
         this.record = record;
         this.names = names;
         this.types = types;
-        this.desc = desc;
+        this.descs = descs;
         this.nDesc = nDesc;
         this.nDescEventFields = countEventFields();
     }
@@ -273,7 +294,7 @@ public class BinaryRecordDesc {
             beforeField(msg);
             long iVal = 0;
             Object oVal = null;
-            int d = desc[i];
+            int d = descs[i];
             switch ((d >> SER_SHIFT) & SER_MASK) {
             case SER_BYTE: // not actually used, but still supported
                 iVal = msg.readByte();
@@ -386,7 +407,7 @@ public class BinaryRecordDesc {
 
     private void writeFields(BufferedOutput msg, RecordCursor cur, int nDesc, long eventTimeSequence) throws IOException {
         for (int i = 0; i < nDesc; i++) {
-            int d = desc[i];
+            int d = descs[i];
             long iVal = 0;
             Object oVal = null;
             switch (d >>> FLD_SHIFT) {
@@ -549,6 +570,8 @@ public class BinaryRecordDesc {
                 assert getIntConverterType(f.getSerialType().getId(), type) == FLD_INT;
                 break;
             }
+            if (fld == FLD_SKIP)
+                return DESC_CANT_CONVERT;
             if (fld == FLD_INT && f.getSerialType().isLong())
                 fld = FLD_LONG;
         } else if (f instanceof DataObjField)
@@ -559,6 +582,8 @@ public class BinaryRecordDesc {
     }
 
     private static int getIntConverterType(int fromId, int toId) {
+        if ((fromId & REPRESENTATION_MASK) == (toId & REPRESENTATION_MASK))
+            return FLD_INT;
         if ((fromId & REPRESENTATION_MASK) == FLAG_DECIMAL && (toId & REPRESENTATION_MASK) == FLAG_INT)
             return FLD_DECIMAL_TO_INT;
         if ((fromId & REPRESENTATION_MASK) == FLAG_INT && (toId & REPRESENTATION_MASK) == FLAG_DECIMAL)
@@ -571,6 +596,6 @@ public class BinaryRecordDesc {
             return FLD_WIDE_DECIMAL_TO_DECIMAL;
         if ((fromId & REPRESENTATION_MASK) == FLAG_DECIMAL && (toId & REPRESENTATION_MASK) == FLAG_WIDE_DECIMAL)
             return FLD_DECIMAL_TO_WIDE_DECIMAL;
-        return FLD_INT;
+        return FLD_SKIP;
     }
 }

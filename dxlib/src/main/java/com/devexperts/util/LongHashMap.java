@@ -11,8 +11,20 @@
  */
 package com.devexperts.util;
 
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.AbstractCollection;
+import java.util.AbstractSet;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.ConcurrentModificationException;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.PrimitiveIterator;
+import java.util.Set;
 
 /**
  * Hashtable based implementation of the {@link LongMap} interface. This
@@ -42,9 +54,7 @@ import java.util.*;
  * than risking arbitrary, non-deterministic behavior at an undetermined time
  * in the future.
  */
-public final class LongHashMap<V> extends AbstractLongMap<V>
-    implements Cloneable, Serializable
-{
+public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneable, Serializable {
     private static final long serialVersionUID = -6950829448098599560L;
 
     // Constants
@@ -160,16 +170,19 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
     // Map implementation
 
     // Implements Map#size()
+    @Override
     public int size() {
         return count;
     }
 
     // Implements Map#isEmpty
+    @Override
     public boolean isEmpty() {
         return count == 0;
     }
 
     // Implements Map#clear()
+    @Override
     public void clear() {
         if (count > 1) { // Clear table
             for (int h = table.length; --h >= 0; )
@@ -184,6 +197,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
     }
 
     // Implements Map#putAll
+    @Override
     public void putAll(Map<? extends Long, ? extends V> t) {
         if (t instanceof LongHashMap) {
             // special purpose (fast) implementation when two LongHashMaps are involved
@@ -213,6 +227,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
     // Custom methods (work with 'long' type)
 
     // Implements LongMap#containsKey(long)
+    @Override
     public boolean containsKey(long key) {
         if (count == 0) // Quick check for empty set
             return false;
@@ -233,28 +248,54 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
     }
 
     // Implements LongMap#get(long)
+    @Override
     public V get(long key) {
         V result = getExplicitly(key);
         return (result == NOT_FOUND) ? null : result;
     }
 
     // Implements LongMap#put(long, Object)
+    @Override
     public V put(long key, V value) {
         V result = putExplicitly(key, value);
         return (result == NOT_FOUND) ? null : result;
     }
 
     // Implements LongMap#remove(long)
+    @Override
     public V remove(long key) {
-        V result = removeExplicitly(key);
+        V result = removeExplicitly(key, null, false);
         return (result == NOT_FOUND) ? null : result;
+    }
+
+    // Implements LongMap#getOrDefault(long, Object)
+    @Override
+    public V getOrDefault(long key, V defaultValue) {
+        V result = getExplicitly(key);
+        return (result == NOT_FOUND) ? defaultValue : result;
+    }
+
+    // Implements LongMap#putIfAbsent(long, Object)
+    @Override
+    public V putIfAbsent(long key, V value) {
+        V result = getExplicitly(key);
+        if (result == NOT_FOUND) {
+            result = put(key, value);
+        }
+        return result;
+    }
+
+    // Implements LongMap#remove(long, Object)
+    @Override
+    public boolean remove(long key, Object value) {
+        return removeExplicitly(key, value, true) != NOT_FOUND;
     }
 
     // Explicit (internal) operations
 
     /**
      * This values is returned by {@link #getExplicitly(long)} and
-     * {@link #removeExplicitly(long)} as an indication that the mapping
+     * {@link #removeExplicitly(long, Object, boolean)} as an indication that the mapping
      * was not found.
      */
     static final Object NOT_FOUND = new Object();
@@ -372,18 +413,23 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
     }
 
     /**
-     * Removes the mapping for this key from this map if present.
+     * Removes the mapping for this key from this map if present or if it is currently
+     * mapped to the specified value.
      * @return previous value associated with specified key, or
      *         {@link #NOT_FOUND} if there was no mapping for key.
      * @see #remove(long)
      */
-    V removeExplicitly(long key) {
+    V removeExplicitly(long key, Object value, boolean matchValue) {
         if (count == 0) // Quick check for empty set
             return notFound();
         if (key == first_key) { // Removing first_key
             V old_val = first_val;
-            removeFirstKey();
-            return old_val;
+            if (!matchValue || (old_val == value || (old_val != null && old_val.equals(value)))) {
+                removeFirstKey();
+                return old_val;
+            } else {
+                return notFound();
+            }
         }
         if (table == null)
             return notFound(); // Nothing else
@@ -393,8 +439,12 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
         while ((k = table[h]) != 0) { // It is critical to check for 0 first (key may be 0)
             if (k == key) { // we found the key and now we are to safely remote it
                 V old_val = (table_val == null) ? null : table_val[h];
-                removeByIndex(h);
-                return old_val;
+                if (!matchValue || (old_val == value || (old_val != null && old_val.equals(value)))) {
+                    removeByIndex(h);
+                    return old_val;
+                } else {
+                    return notFound();
+                }
             }
             // Outer search loop continues...
             if (h == 0)
@@ -498,6 +548,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
      *
      * @return a set view of the keys contained in this map.
      */
+    @Override
     public LongSet longKeySet() {
         if (key_set == null)
             key_set = new LongHashSet(this);
@@ -515,21 +566,26 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
      *
      * @return a collection view of the values contained in this map.
      */
+    @Override
     public Collection<V> values() {
         if (values == null) {
             values = new AbstractCollection<V>() {
+                @Override
                 public int size() {
                     return count;
                 }
 
+                @Override
                 public boolean isEmpty() {
                     return count == 0;
                 }
 
+                @Override
                 public void clear() {
                     LongHashMap.this.clear();
                 }
 
+                @Override
                 public Iterator<V> iterator() {
                     return new ValuesIterator();
                 }
@@ -553,21 +609,26 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
      * @return a collection view of the mappings contained in this map.
      * @see LongMap.Entry
      */
+    @Override
     public Set<Map.Entry<Long,V>> entrySet() {
         if (entry_set == null) {
             entry_set = new AbstractSet<Map.Entry<Long,V>>() {
+                @Override
                 public int size() {
                     return count;
                 }
 
+                @Override
                 public boolean isEmpty() {
                     return count == 0;
                 }
 
+                @Override
                 public void clear() {
                     LongHashMap.this.clear();
                 }
 
+                @Override
                 public boolean contains(Object o) {
                     if (!(o instanceof Map.Entry))
                         return false;
@@ -580,6 +641,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
                     return (val == e_val) || (val != null && val.equals(e_val));
                 }
 
+                @Override
                 public boolean remove(Object o) {
                     if (!(o instanceof Map.Entry))
                         return false;
@@ -596,6 +658,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
                         return false;
                 }
 
+                @Override
                 public Iterator<Map.Entry<Long,V>> iterator() {
                     return new EntrySetIterator();
                 }
@@ -780,6 +843,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
      * Returns a shallow copy of this {@link LongHashMap} instance:
      * the values themselves are not cloned.
      */
+    @Override
     public Object clone() {
         try {
             LongHashMap m = (LongHashMap) super.clone();
@@ -844,7 +908,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
      * Returns a new instance for the iterator over {@link #keySet()}
      * of this map.
      */
-    LongIterator newKeySetIterator() {
+    PrimitiveIterator.OfLong newKeySetIterator() {
         return new KeySetIterator();
     }
 
@@ -899,6 +963,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
         protected AbstractIterator() {}
 
         // Implemenets Iterator#hasNext()
+        @Override
         public boolean hasNext() {
             if (index == -1) // Yes, we have a lots of elements ahead, if the set is not empty
                 return count > 0;
@@ -944,6 +1009,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
         }
 
         // Implements Iterator#remove()
+        @Override
         public void remove() {
             if (mod_count != expected_mod_count)
                 throw new ConcurrentModificationException();
@@ -960,6 +1026,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
         }
 
         // Abstract method Iterator#next() to be overriden
+        @Override
         @SuppressWarnings({"IteratorNextCanNotThrowNoSuchElementException"})
         public abstract T next();
     }
@@ -971,12 +1038,14 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
         KeySetIterator() {}
 
         // Implements LongIterator#nextLong()
+        @Override
         public long nextLong() throws NoSuchElementException {
             nextIndex();
             return (last_returned >= 0) ? this.table[last_returned] : first_key;
         }
 
         // Implements Iterator#next()
+        @Override
         public Long next() {
             return nextLong();
         }
@@ -989,6 +1058,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
         ValuesIterator() {}
 
         // Implements Iterator#next()
+        @Override
         public V next() {
             nextIndex();
             return (last_returned >= 0) ?
@@ -1004,6 +1074,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
         EntrySetIterator() {}
 
         // Implements Iterator#next()
+        @Override
         public Map.Entry<Long,V> next() {
             nextIndex();
             return (last_returned >= 0) ?
@@ -1024,15 +1095,19 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
             this.key = key;
         }
 
+        @Override
         public long getLongKey() {
             return key;
         }
 
+        @Override
         public Long getKey() {
             return key;
         }
 
+        @Override
         public abstract V getValue();
+        @Override
         public abstract V setValue(V value);
 
         public boolean equals(Object o) {
@@ -1074,12 +1149,14 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
             super(LongHashMap.this.first_key);
         }
 
+        @Override
         public V getValue() {
             if (mod_count != expected_mod_count)
                 throw new ConcurrentModificationException();
             return first_val;
         }
 
+        @Override
         public V setValue(V value) {
             if (mod_count != expected_mod_count)
                 throw new ConcurrentModificationException();
@@ -1100,12 +1177,14 @@ public final class LongHashMap<V> extends AbstractLongMap<V>
             this.index = index;
         }
 
+        @Override
         public V getValue() {
             if (mod_count != expected_mod_count)
                 throw new ConcurrentModificationException();
             return (table_val == null) ? null : table_val[index];
         }
 
+        @Override
         public V setValue(V value) {
             if (mod_count != expected_mod_count)
                 throw new ConcurrentModificationException();

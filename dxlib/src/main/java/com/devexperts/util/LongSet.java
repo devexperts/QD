@@ -12,9 +12,17 @@
 package com.devexperts.util;
 
 import java.util.Set;
+import java.util.Spliterator;
 
 /**
  * This class extends {@link Set} with methods that are specific
  * for <code>long</code> values.
  */
-public interface LongSet extends LongCollection, Set<Long> {}
+public interface LongSet extends LongCollection, Set<Long> {
+
+    @Override
+    default Spliterator.OfLong spliterator() {
+        return spliterator(Spliterator.DISTINCT);
+    }
+
+}

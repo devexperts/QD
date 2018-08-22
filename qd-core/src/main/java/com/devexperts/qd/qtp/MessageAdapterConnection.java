@@ -163,6 +163,19 @@ class MessageAdapterConnection extends ApplicationConnection<MessageAdapterConne
         // MIND THE BUG: [QD-808] Event flags are not sent immediately after connection establishment (random effect)
         // Must not rely on optSet in adapter (it is still not set here)
         composer.setOptSet(ProtocolOption.parseProtocolOptions(desc.getProperty(ProtocolDescriptor.OPT_PROPERTY)));
+        String version = desc.getProperty(ProtocolDescriptor.VERSION_PROPERTY);
+        if (version != null && version.startsWith("QDS-3.")) {
+            int n = "QDS-3.".length();
+            while (n < version.length() && version.charAt(n) >= '0' && version.charAt(n) <= '9')
+                n++;
+            try {
+                composer.wideDecimalSupported = Long.parseLong(version.substring("QDS-3.".length(), n)) >= 263;
+            } catch (NumberFormatException e) {
+                composer.wideDecimalSupported = true;
+            }
+        } else {
+            composer.wideDecimalSupported = true;
+        }
     }
 
     // is called from ConnectionQTPParser

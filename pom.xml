@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.263</version>
+    <version>3.264</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -207,7 +207,7 @@
 
     <build>
         <plugins>
-            <!-- Compile at Java 1.5 level -->
+            <!-- Compile at Java 1.8 level -->
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>

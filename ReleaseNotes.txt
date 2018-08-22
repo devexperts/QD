@@ -1,3 +1,10 @@
+
+QDS 3.264:
+
+* [QD-1036] dxlib: Add primitive type analogs of new Java 8 methods to LongHash collections
+* [QD-1086] IPF: cmeproduct transform statement shall preserve option symbol layout
+* [QD-1087] Improve network compatibility between WideDecimal and TinyDecimal instances
+
 QDS 3.263:
 
 * [QD-976] Introduce WideDecimal format

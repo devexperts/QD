@@ -87,9 +87,22 @@ class CMEProductStatement extends Statement {
             conversion = Compiler.getDouble(ctx, futureConversion);
         } else if (ctx.currentProfile().getType().equals(InstrumentProfileType.OPTION.name())) {
             double strikeConv = Compiler.getDouble(ctx, strikeConversion);
-            if (strikeConv != 0 && strikeConv != 1)
+            if (strikeConv != 0 && strikeConv != 1) {
                 ctx.copyProfile().setStrike(Compiler.round(ctx.currentProfile().getStrike() * strikeConv));
-            ctx.copyProfile().setSymbol("./" + data[1].substring(0, data[1].indexOf(' ')) + ctx.currentProfile().getCFI().charAt(1) + formatDouble(ctx.currentProfile().getStrike()));
+                String oldSymbol = ctx.currentProfile().getSymbol();
+                int ci = oldSymbol.indexOf(':');
+                if (ci < 0)
+                    ci = oldSymbol.length();
+                int ti = ci - 1;
+                while (ti >= 0) {
+                    char c = oldSymbol.charAt(ti);
+                    if (c >= '0' && c <= '9' || c == '.' || c == '-')
+                        ti--;
+                    else
+                        break;
+                }
+                ctx.copyProfile().setSymbol(oldSymbol.substring(0, ti + 1) + formatDouble(ctx.currentProfile().getStrike()) + oldSymbol.substring(ci));
+            }
             conversion = Compiler.getDouble(ctx, optionConversion);
         } else
             return ControlFlow.NORMAL;

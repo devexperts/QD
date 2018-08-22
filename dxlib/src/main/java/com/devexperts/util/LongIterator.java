@@ -12,11 +12,14 @@
 package com.devexperts.util;
 
 import java.util.Iterator;
+import java.util.PrimitiveIterator;
 
 /**
  * This class extends {@link Iterator} with methods that are specific
  * to <code>long</code> values.
+ *
+ * @deprecated Use {@link PrimitiveIterator.OfLong} instead.
  */
-public interface LongIterator extends Iterator<Long> {
-    public long nextLong();
+@Deprecated
+public interface LongIterator extends PrimitiveIterator.OfLong {
 }

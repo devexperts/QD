@@ -160,6 +160,11 @@ public class BinaryQTPComposer extends AbstractQTPComposer {
         return null;
     }
 
+    // ConnectionQTPComposer overrides
+    protected boolean isWideDecimalSupported() {
+        return true;
+    }
+
     private void remapRecord(int id, BinaryRecordDesc rw) {
         if (recordMap == null || id >= recordMap.length) {
             int len = recordMap == null ? 0 : recordMap.length;
@@ -182,7 +187,7 @@ public class BinaryQTPComposer extends AbstractQTPComposer {
             // is a signal to send all fields known in the scheme (when the receiver on the other side is schema-less)
             BinaryRecordDesc rw = desc != null && !desc.isEmpty() ?
                 new BinaryRecordDesc(record, desc.nDesc, desc.names, desc.types, writeEventTimeSequence, BinaryRecordDesc.DIR_WRITE) :
-                new BinaryRecordDesc(record, writeEventTimeSequence);
+                new BinaryRecordDesc(record, writeEventTimeSequence, isWideDecimalSupported());
             remapRecord(id, rw);
             return rw;
         } catch (BinaryRecordDesc.InvalidDescException e) {

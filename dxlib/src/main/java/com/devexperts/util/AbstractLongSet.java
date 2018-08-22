@@ -41,7 +41,7 @@ public abstract class AbstractLongSet extends AbstractSet<Long> implements LongS
     public final boolean containsAll(Collection<?> c) {
         if (c instanceof LongCollection) {
             LongCollection lc = (LongCollection) c;
-            LongIterator e = lc.longIterator();
+            PrimitiveIterator.OfLong e = lc.longIterator();
             while (e.hasNext())
                 if (!contains(e.nextLong()))
                     return false;
@@ -59,7 +59,7 @@ public abstract class AbstractLongSet extends AbstractSet<Long> implements LongS
         if (c instanceof LongCollection) {
             LongCollection lc = (LongCollection) c;
             boolean modified = false;
-            LongIterator e = lc.longIterator();
+            PrimitiveIterator.OfLong e = lc.longIterator();
             while (e.hasNext()) {
                 if (add(e.nextLong()))
                     modified = true;
@@ -80,10 +80,10 @@ public abstract class AbstractLongSet extends AbstractSet<Long> implements LongS
             LongCollection lc = (LongCollection) c;
             boolean modified = false;
             if (size() > lc.size()) {
-                for (LongIterator i = lc.longIterator(); i.hasNext(); )
+                for (PrimitiveIterator.OfLong i = lc.longIterator(); i.hasNext(); )
                     modified |= remove(i.nextLong());
             } else {
-                for (LongIterator i = longIterator(); i.hasNext(); ) {
+                for (PrimitiveIterator.OfLong i = longIterator(); i.hasNext(); ) {
                     if (lc.contains(i.nextLong())) {
                         i.remove();
                         modified = true;
@@ -105,7 +105,7 @@ public abstract class AbstractLongSet extends AbstractSet<Long> implements LongS
         if (c instanceof LongCollection) {
             LongCollection lc = (LongCollection) c;
             boolean modified = false;
-            LongIterator e = longIterator();
+            PrimitiveIterator.OfLong e = longIterator();
             while (e.hasNext()) {
                 if (!lc.contains(e.nextLong())) {
                     e.remove();
@@ -159,7 +159,7 @@ public abstract class AbstractLongSet extends AbstractSet<Long> implements LongS
     @Override
     public long[] toLongArray() {
         long[] result = new long[size()];
-        LongIterator e = longIterator();
+        PrimitiveIterator.OfLong e = longIterator();
         for (int i = 0; e.hasNext(); i++)
             result[i] = e.nextLong();
         return result;
