@@ -294,7 +294,7 @@ class MessageComposer {
         }
     }
 
-    private void composeRoute(ComposedMessage message, RMIRoute route, JVMId.WriteContext ctx) throws IOException {
+    private static void composeRoute(ComposedMessage message, RMIRoute route, JVMId.WriteContext ctx) throws IOException {
         int size = message.kind().isRequest() ? route.size() - 1 : route.size();
         message.output().writeCompactInt(size);
         for (int i = 0; i < size; i++)
@@ -533,7 +533,6 @@ class MessageComposer {
             separateQueues.put(RMIQueueType.REQUEST, new ComposedMessageQueue());
             if (side.hasServer()) {
                 separateQueues.put(RMIQueueType.ADVERTISE, new ComposedMessageQueue());
-                return;
             }
         }
 

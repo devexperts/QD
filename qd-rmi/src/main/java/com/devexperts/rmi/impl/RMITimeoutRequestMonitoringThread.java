@@ -11,13 +11,14 @@
  */
 package com.devexperts.rmi.impl;
 
+import com.devexperts.logging.Logging;
+import com.devexperts.rmi.RMIRequestState;
+
 import java.lang.ref.WeakReference;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
-
-import com.devexperts.logging.Logging;
-import com.devexperts.rmi.RMIRequestState;
 
 /**
  * A class that manages monitoring thread execution.
@@ -75,7 +76,7 @@ class RMITimeoutRequestMonitoringThread implements Runnable {
                 break;
             long requestSendingTimeout = endpoint.getClient().getRequestSendingTimeout();
             long requestRunningTimeout = endpoint.getClient().getRequestRunningTimeout();
-            boolean hasActiveRequests = false;
+            AtomicBoolean hasActiveRequests = new AtomicBoolean();
             long currentTime = System.currentTimeMillis();
 
             for (Iterator<RMIConnection> it = endpoint.concurrentConnectionsIterator(); it.hasNext();) {
@@ -89,7 +90,7 @@ class RMITimeoutRequestMonitoringThread implements Runnable {
                     if (currentTime - request.getRunningStartTime() > requestRunningTimeout)
                         request.abortOnTimeout(RMIRequestState.SENT);
                     else
-                        hasActiveRequests = true;
+                        hasActiveRequests.set(true);
                 }
                 requests = connection.requestsManager.getOutgoingRequests(requests);
                 for (int j = 0; j < requests.length; j++) {
@@ -101,22 +102,20 @@ class RMITimeoutRequestMonitoringThread implements Runnable {
                         request.abortOnTimeout(RMIRequestState.WAITING_TO_SEND);
                         connection.requestsManager.removeOutgoingRequest(request);
                     } else
-                        hasActiveRequests = true;
+                        hasActiveRequests.set(true);
                 }
             }
-            while (true) {
-                RMIRequestImpl<?> request = endpoint.getClient().getEarliestRequest();
-                if (request == null)
-                    break;
-                if (currentTime - request.getSendTime() <= requestSendingTimeout) {
-                    hasActiveRequests = true;
-                    break;
+            endpoint.getClient().forEachPendingRequest(request -> {
+                if (currentTime - request.getSendTime() > requestSendingTimeout) {
+                    if (request.removeFromSendingQueues())
+                        request.abortOnTimeout(RMIRequestState.WAITING_TO_SEND);
+                    // if request.cancelAndWait() is called here, then we'll overwrite its CANCELLING status with failure
+                } else {
+                    hasActiveRequests.set(true);
                 }
-                if (request.removeFromSendingQueues())
-                    request.abortOnTimeout(RMIRequestState.WAITING_TO_SEND);
-                // if request.cancelAndWait() is called here, then we'll overwrite its CANCELLING status with failure
-            }
-            if (thread == null && !hasActiveRequests) // thread was stopped and no more active requests - stop ourselves
+
+            });
+            if (thread == null && !hasActiveRequests.get()) // thread was stopped and no more active requests - stop ourselves
                 break;
             long sleepTime = Math.max(1000, Math.min(requestSendingTimeout, requestRunningTimeout) / 2);
             LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(sleepTime));

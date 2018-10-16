@@ -22,7 +22,6 @@ class RMITaskResponse {
     final RMIRequestMessage<?> requestMessage;
     final long channelId;
     final long requestId;
-    final boolean nested;
     final RMITaskState state;
     final RMIMessageKind kind;
 
@@ -32,19 +31,29 @@ class RMITaskResponse {
         this.channelId = ((RMIChannelImpl) task.getChannel()).getChannelId();
         this.requestId = task.getRequestId();
         this.state = task.getState();
-        this.nested = task.isNestedTask();
+        boolean nested = task.isNestedTask();
         this.kind = RMIMessageKind.getKind(responseMessage, nested ? task.getChannel().getType() : null);
     }
 
     RMITaskResponse(RMIResponseMessage responseMessage, long channelId, long requestId, RMIChannelType type) {
         this.responseMessage = responseMessage;
         this.requestMessage = null;
-        this.nested = channelId != 0;
-        this.channelId = nested ? channelId : requestId;
+        this.channelId = channelId;
         this.requestId = requestId;
         this.state = responseMessage.getType() == RMIResponseType.ERROR ? RMITaskState.FAILED : RMITaskState.SUCCEEDED;
         this.kind = RMIMessageKind.getKind(responseMessage, type);
     }
 
-
+    @Override
+    public String toString() {
+        return "RMITaskResponse{" +
+            "responseMessage=" + responseMessage +
+            ", requestMessage=" + requestMessage +
+            ", channelId=" + channelId +
+            ", requestId=" + requestId +
+            ", state=" + state +
+            ", kind=" + kind +
+            '}';
+    }
 }
+

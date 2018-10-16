@@ -31,7 +31,7 @@ abstract class AbstractServiceDescriptorsProcessor implements RMIServiceDescript
         IndexedSet.create(RMIServiceDescriptor.INDEXER_BY_SERVICE_ID);
     private final AtomicInteger scheduled = new AtomicInteger(0);
 
-    protected AbstractServiceDescriptorsProcessor(Executor executor) {
+    AbstractServiceDescriptorsProcessor(Executor executor) {
         this.executor = executor;
     }
 

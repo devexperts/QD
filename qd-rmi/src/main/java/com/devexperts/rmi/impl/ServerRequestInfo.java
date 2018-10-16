@@ -13,6 +13,7 @@ package com.devexperts.rmi.impl;
 
 import com.devexperts.io.Marshalled;
 import com.devexperts.rmi.message.RMIRequestMessage;
+import com.devexperts.rmi.task.RMIServiceId;
 
 class ServerRequestInfo {
     final long reqId;
@@ -20,12 +21,40 @@ class ServerRequestInfo {
     final RMIRequestMessage<?> message;
     final Marshalled<?> subject;
     final RMIMessageKind kind;
+    // true if server-side (or mux-side) load balancer retargeted the request, false otherwise
+    final boolean retargetedByLoadBalancer;
 
-    ServerRequestInfo(RMIMessageKind kind, long reqId, long channelId, RMIRequestMessage<?> message, Marshalled<?> subject) {
+    ServerRequestInfo(RMIMessageKind kind, long reqId, long channelId, RMIRequestMessage<?> message,
+        Marshalled<?> subject)
+    {
+        this(kind, reqId, channelId, message, subject, false);
+    }
+
+    private ServerRequestInfo(RMIMessageKind kind, long reqId, long channelId, RMIRequestMessage<?> message,
+        Marshalled<?> subject, boolean retargetedByLoadBalancer)
+    {
         this.reqId = reqId;
         this.channelId = channelId;
         this.subject = subject;
         this.message = message;
         this.kind = kind;
+        this.retargetedByLoadBalancer = retargetedByLoadBalancer;
+    }
+
+    ServerRequestInfo changeTargetRoute(RMIServiceId newTarget) {
+        RMIRequestMessage<?> retargetedMessage = message.changeTargetRoute(newTarget, message.getRoute());
+        return new ServerRequestInfo(kind, reqId, channelId, retargetedMessage, subject, true);
+    }
+
+    @Override
+    public String toString() {
+        return "ServerRequestInfo{" +
+            "reqId=" + reqId +
+            ", channelId=" + channelId +
+            ", message=" + message +
+            ", subject=" + subject +
+            ", kind=" + kind +
+            ", retargetedByLoadBalancer=" + retargetedByLoadBalancer +
+            '}';
     }
 }

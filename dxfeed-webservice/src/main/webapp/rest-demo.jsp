@@ -38,6 +38,10 @@
             <label><input type="radio" name="format" value="xml">XML</label>
             <label><input type="radio" name="format" value="default">Default (by Accept Header)</label>
             <p>
+            Symbols
+            <label><input type="radio" name="symbols" value="csv" checked>Comma separated value</label>
+            <label><input type="radio" name="symbols" value="dxScript" >dxScript</label>
+            <p>
             <label><input type="checkbox" id="indent" checked>Indent result for readability</label>
             <p>
             Lists

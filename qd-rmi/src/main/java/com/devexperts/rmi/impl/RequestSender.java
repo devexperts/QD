@@ -30,5 +30,5 @@ abstract class RequestSender {
     abstract void addOutgoingRequest(RMIRequestImpl<?> request);
 
     // returns true if removed from any queue
-    abstract boolean removeOutgoingRequest(RMIRequestImpl<?> request);
+    abstract boolean dropPendingRequest(RMIRequestImpl<?> request);
 }

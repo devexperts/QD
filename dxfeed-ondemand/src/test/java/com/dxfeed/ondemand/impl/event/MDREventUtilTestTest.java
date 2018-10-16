@@ -11,8 +11,9 @@
  */
 package com.dxfeed.ondemand.impl.event;
 
-import com.devexperts.qd.DataScheme;
-import com.devexperts.qd.QDFactory;
+import java.util.Arrays;
+
+import com.devexperts.qd.*;
 import junit.framework.TestCase;
 
 public class MDREventUtilTestTest extends TestCase {
@@ -30,4 +31,12 @@ public class MDREventUtilTestTest extends TestCase {
         assertEquals('T', MDREventUtil.getType(SCHEME.findRecordByName("Trade&X")));
     }
 
+    public void testRegionalTimeAndSale() {
+        DataRecord tns = SCHEME.findRecordByName("TimeAndSale&X");
+        assertEquals('H', MDREventUtil.getType(tns));
+
+        // Map regional TnS to composite exchange (and remap to proper record later)
+        assertEquals('\0', MDREventUtil.getExchange(tns));
+        assertTrue(Arrays.equals(new DataRecord[] { tns }, MDREventUtil.getRecords('H', 'X')));
+    }
 }

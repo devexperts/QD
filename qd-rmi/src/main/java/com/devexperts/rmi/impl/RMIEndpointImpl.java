@@ -11,28 +11,37 @@
  */
 package com.devexperts.rmi.impl;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
-import javax.annotation.concurrent.GuardedBy;
-import javax.net.ssl.TrustManager;
-
 import com.devexperts.connector.proto.EndpointId;
 import com.devexperts.io.SerialClassContext;
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.QDLog;
-import com.devexperts.qd.qtp.*;
-import com.devexperts.rmi.*;
+import com.devexperts.qd.qtp.MessageAdapter;
+import com.devexperts.qd.qtp.MessageConnectors;
+import com.devexperts.qd.qtp.QDEndpoint;
+import com.devexperts.rmi.RMIEndpoint;
+import com.devexperts.rmi.RMIEndpointListener;
+import com.devexperts.rmi.RMIOperation;
+import com.devexperts.rmi.RMIRequest;
 import com.devexperts.rmi.security.SecurityContext;
 import com.devexperts.rmi.security.SecurityController;
 import com.devexperts.rmi.task.RMILoadBalancerFactory;
 import com.devexperts.rmi.task.RMIServiceImplementation;
 import com.devexperts.services.Services;
 import com.devexperts.transport.stats.EndpointStats;
-import com.devexperts.util.*;
+import com.devexperts.util.ExecutorProvider;
+import com.devexperts.util.SynchronizedIndexedSet;
+import com.devexperts.util.SystemProperties;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.impl.ExtensibleDXEndpoint;
+
+import javax.annotation.concurrent.GuardedBy;
+import javax.net.ssl.TrustManager;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
 
 public final class RMIEndpointImpl extends RMIEndpoint {
     static final boolean RMI_TRACE_LOG = RMIEndpointImpl.class.desiredAssertionStatus();
@@ -68,7 +77,7 @@ public final class RMIEndpointImpl extends RMIEndpoint {
     private MessageAdapter.ConfigurableFactory attachedMessageAdapterFactory;
     TrustManager trustManager;
 
-    private volatile DefaultLoadBalancerFactory loadBalancerFactory;
+    private volatile List<RMILoadBalancerFactory> loadBalancerFactories;
 
     @GuardedBy("this")
     private boolean closed;
@@ -396,16 +405,20 @@ public final class RMIEndpointImpl extends RMIEndpoint {
 
     // ==================== private implementation ====================
 
-    RMILoadBalancerFactory getRMILoadBalancerFactory() {
-        RMILoadBalancerFactory loadBalancerFactory = this.loadBalancerFactory;
-        if (loadBalancerFactory != null)
-            return loadBalancerFactory;
+    List<RMILoadBalancerFactory> getRMILoadBalancerFactories() {
+        List<RMILoadBalancerFactory> factories = loadBalancerFactories;
+        if (factories != null)
+            return factories;
         synchronized (lock) {
-            loadBalancerFactory = this.loadBalancerFactory;
-            if (loadBalancerFactory != null)
-                return loadBalancerFactory;
-            this.loadBalancerFactory = new DefaultLoadBalancerFactory();
-            return this.loadBalancerFactory;
+            factories = loadBalancerFactories;
+            if (factories != null)
+                return factories;
+
+            Iterable<RMILoadBalancerFactory> factoryServices = Services.createServices(RMILoadBalancerFactory.class, null);
+            List<RMILoadBalancerFactory> factoryList = new ArrayList<>();
+            factoryServices.forEach(factoryList::add);
+            loadBalancerFactories = Collections.unmodifiableList(factoryList);
+            return loadBalancerFactories;
         }
     }
 

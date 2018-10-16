@@ -11,25 +11,56 @@
  */
 package com.devexperts.qd.qtp.test;
 
-import java.util.*;
-import java.util.concurrent.*;
-
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDContract;
+import com.devexperts.qd.QDDistributor;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.QDFilter;
+import com.devexperts.qd.QDTicker;
 import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.qd.kit.PentaCodec;
-import com.devexperts.qd.ng.*;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.ng.AbstractRecordSink;
+import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordMode;
+import com.devexperts.qd.qtp.AgentAdapter;
+import com.devexperts.qd.qtp.ChannelShaper;
+import com.devexperts.qd.qtp.MessageAdapter;
+import com.devexperts.qd.qtp.MessageConnector;
+import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.test.ThreadCleanCheck;
-import com.dxfeed.api.*;
+import com.dxfeed.api.DXEndpoint;
+import com.dxfeed.api.DXFeed;
+import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.event.market.Trade;
 import com.dxfeed.event.market.impl.TradeMapping;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.Timeout;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests all types of channel shapers.
  */
-public class ChannelShaperTest extends TestCase {
+public class ChannelShaperTest {
+    @Rule
+    public Timeout globalTimeout= new Timeout(60, TimeUnit.SECONDS);
+
     private static final DataScheme SCHEME = QDFactory.getDefaultScheme();
     private static final DataRecord RECORD = SCHEME.findRecordByName("Trade");
 
@@ -104,8 +135,8 @@ public class ChannelShaperTest extends TestCase {
 
     private final ArrayBlockingQueue<Trade> incomingEventsQueue = new ArrayBlockingQueue<>(100);
 
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() {
         ThreadCleanCheck.before();
         connectors = MessageConnectors.createMessageConnectors(
             MessageConnectors.applicationConnectionFactory(new TestFactory()), ":" + port);
@@ -121,17 +152,18 @@ public class ChannelShaperTest extends TestCase {
         subscription.addEventListener(incomingEventsQueue::addAll);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() {
         endpoint.close();
         MessageConnectors.stopMessageConnectors(connectors);
         ThreadCleanCheck.after();
     }
 
+    @Test
     public void testChannels() throws InterruptedException {
         // Subscribe to FAST_0 symbol that does not use executor and ensure it arrives
         subscription.addSymbols(FAST_0);
-        assertEquals(FAST_0, addSubQueue.poll(1, TimeUnit.SECONDS));
+        assertEquals(FAST_0, addSubQueue.take());
         assertEquals(0, addSubQueue.size());
         // there should 1 filtering task for slowThread filter
         executeOne();
@@ -145,7 +177,7 @@ public class ChannelShaperTest extends TestCase {
         // there should be 2 tasks -- process sub with fast filter in separate thread & slow thread filtering
         assertEquals(0, addSubQueue.size()); // nothing before task
         executeOne(); // processed fast thread task
-        assertEquals(FAST_THREAD, addSubQueue.poll(1, TimeUnit.SECONDS));
+        assertEquals(FAST_THREAD, addSubQueue.take());
         executeOne(); // processed slow filter task
         assertNoTasks(); // that does not result in new tasks
 
@@ -158,7 +190,7 @@ public class ChannelShaperTest extends TestCase {
         executeOne(); // that results in one more task
         assertEquals(0, addSubQueue.size());
         executeOne(); // that actually subscribed
-        assertEquals(SLOW_THREAD, addSubQueue.poll(1, TimeUnit.SECONDS));
+        assertEquals(SLOW_THREAD, addSubQueue.take());
         assertNoTasks(); // and that's it
 
         ensureEventGoesThroughOn(SLOW_THREAD);
@@ -221,7 +253,7 @@ public class ChannelShaperTest extends TestCase {
         executeOne(); // and the second task shall filter subscribe to SLOW_THREAD_2
         assertNoSubAddRemove(); // but nothing yet changed
         executeOne(); // ... and create new task to actually subscribe
-        assertEquals(SLOW_THREAD_2, addSubQueue.poll(1, TimeUnit.SECONDS)); // snapshot restored
+        assertEquals(SLOW_THREAD_2, addSubQueue.take()); // snapshot restored
         assertNoTasks(); // which does not result in new tasks
         assertNoSubAddRemove();
 
@@ -235,7 +267,7 @@ public class ChannelShaperTest extends TestCase {
         executeOne(); // that results in one more task
         assertEquals(0, addSubQueue.size());
         executeOne(); // that actually removes subscription
-        assertEquals(SLOW_THREAD_2, remSubQueue.poll(1, TimeUnit.SECONDS));
+        assertEquals(SLOW_THREAD_2, remSubQueue.take());
         assertNoTasks(); // and that's it
         assertNoSubAddRemove();
 
@@ -300,7 +332,7 @@ public class ChannelShaperTest extends TestCase {
     }
 
     private void executeOne() throws InterruptedException {
-        executorQueue.poll(1, TimeUnit.SECONDS).run();
+        executorQueue.take().run();
     }
 
     private void ensureEventGoesThroughOn(String symbol) throws InterruptedException {
@@ -312,23 +344,23 @@ public class ChannelShaperTest extends TestCase {
         distributor.process(buf);
         buf.release();
 
-        Trade trade = incomingEventsQueue.poll(1, TimeUnit.SECONDS);
+        Trade trade = incomingEventsQueue.take();
         assertTrue("has event", trade != null);
         assertEquals("symbol", symbol, trade.getEventSymbol());
-        assertEquals("price", lastPrice, trade.getPrice());
+        assertEquals("price", lastPrice, trade.getPrice(), 0.00001);
         assertEquals("no more event", 0, incomingEventsQueue.size());
     }
 
     private void assertSubAddRemove(String symbol) throws InterruptedException {
-        assertEquals(symbol, addSubQueue.poll(1, TimeUnit.SECONDS));
-        assertEquals(symbol, remSubQueue.poll(1, TimeUnit.SECONDS));
+        assertEquals(symbol, addSubQueue.take());
+        assertEquals(symbol, remSubQueue.take());
         assertNoSubAddRemove();
     }
 
     private void assertSubAddOnly(String... symbols) throws InterruptedException {
         Set<String> added = new HashSet<>();
         for (String symbol : symbols)
-            added.add(addSubQueue.poll(1, TimeUnit.SECONDS));
+            added.add(addSubQueue.take());
         assertEquals(new HashSet<>(Arrays.asList(symbols)), added);
         assertNoSubAddRemove();
     }
@@ -336,7 +368,7 @@ public class ChannelShaperTest extends TestCase {
     private void assertSubRemoveOnly(String... symbols) throws InterruptedException {
         Set<String> removed = new HashSet<>();
         for (String symbol : symbols)
-            removed.add(remSubQueue.poll(1, TimeUnit.SECONDS));
+            removed.add(remSubQueue.take());
         assertEquals(new HashSet<>(Arrays.asList(symbols)), removed);
         assertNoSubAddRemove();
     }

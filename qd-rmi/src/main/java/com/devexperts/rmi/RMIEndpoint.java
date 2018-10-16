@@ -11,16 +11,6 @@
  */
 package com.devexperts.rmi;
 
-import java.io.Closeable;
-import java.lang.reflect.Proxy;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicInteger;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-
 import com.devexperts.io.SerialClassContext;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.qtp.MessageAdapter;
@@ -28,7 +18,9 @@ import com.devexperts.qd.qtp.QDEndpoint;
 import com.devexperts.qd.qtp.socket.ClientSocketConnector;
 import com.devexperts.rmi.impl.RMIClientImpl;
 import com.devexperts.rmi.impl.RMIRequestImpl;
-import com.devexperts.rmi.message.*;
+import com.devexperts.rmi.message.RMIRequestMessage;
+import com.devexperts.rmi.message.RMIRequestType;
+import com.devexperts.rmi.message.RMIResponseMessage;
 import com.devexperts.rmi.security.SecurityController;
 import com.devexperts.rmi.task.RMIService;
 import com.devexperts.rmi.task.RMIServiceImplementation;
@@ -36,6 +28,16 @@ import com.devexperts.services.Service;
 import com.devexperts.services.Services;
 import com.devexperts.transport.stats.EndpointStats;
 import com.dxfeed.api.DXEndpoint;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import java.io.Closeable;
+import java.lang.reflect.Proxy;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The endpoint of RMI framework.

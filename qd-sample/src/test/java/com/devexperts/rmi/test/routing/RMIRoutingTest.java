@@ -11,27 +11,38 @@
  */
 package com.devexperts.rmi.test.routing;
 
-import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
 import com.devexperts.connector.proto.EndpointId;
 import com.devexperts.logging.Logging;
-import com.devexperts.rmi.*;
+import com.devexperts.rmi.RMIEndpoint;
+import com.devexperts.rmi.RMIException;
+import com.devexperts.rmi.RMIExceptionType;
+import com.devexperts.rmi.RMIOperation;
+import com.devexperts.rmi.RMIRequest;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
 import com.devexperts.rmi.samples.DifferentServices;
-import com.devexperts.rmi.task.*;
+import com.devexperts.rmi.task.RMIService;
+import com.devexperts.rmi.task.RMIServiceDescriptor;
+import com.devexperts.rmi.task.RMIServiceImplementation;
+import com.devexperts.rmi.task.RMITask;
 import com.devexperts.rmi.test.NTU;
 import com.devexperts.rmi.test.RMICommonTest;
 import com.devexperts.test.ThreadCleanCheck;
 import com.devexperts.test.TraceRunner;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+
+import static org.junit.Assert.*;
 
 @RunWith(TraceRunner.class)
 public class RMIRoutingTest {
@@ -79,7 +90,7 @@ public class RMIRoutingTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void testRouteInResponseMessage() throws InterruptedException {
+    public void testRouteInResponseMessage() {
         servers = new ServerRoutingSide(1);
         clients = new ClientRoutingSide(1);
         muxs = new MuxRoutingSide(2);
@@ -96,7 +107,6 @@ public class RMIRoutingTest {
         clients.connect(NTU.LOCAL_HOST + ":" + NTU.port(port));
 
 
-//		//ResultMessage
         RMIRequest<Double> sum = clients.clients[0].getClient().createRequest(null, DifferentServices.CalculatorService.PLUS, 1.1, 2.1);
         sum.send();
         try {
@@ -105,8 +115,8 @@ public class RMIRoutingTest {
             log.info("Error result : " + sum.getResponseMessage());
             fail(e.getMessage());
         }
-        assertRoute(-1, sum.getResponseMessage().getRoute(), getListEndpointId(Arrays.asList(servers.servers[0],
-            muxs.servers[1], muxs.servers[0])));
+        assertRoute(-1, getListEndpointId(Arrays.asList(servers.servers[0],
+            muxs.servers[1], muxs.servers[0])), sum.getResponseMessage().getRoute());
 
         //ErrorMessage
         RMIOperation<Double> op = RMIOperation.valueOf("CalculatorService", double.class, "Oops", double.class, double.class);
@@ -119,8 +129,8 @@ public class RMIRoutingTest {
             if (e.getType() != RMIExceptionType.OPERATION_NOT_PROVIDED)
                 fail(e.getMessage());
         }
-        assertRoute(-1, sum.getResponseMessage().getRoute(), getListEndpointId(Arrays.asList(servers.servers[0],
-            muxs.servers[1], muxs.servers[0])));
+        assertRoute(-1, getListEndpointId(Arrays.asList(servers.servers[0],
+            muxs.servers[1], muxs.servers[0])), sum.getResponseMessage().getRoute());
     }
 
     //----------------------------------------------------------------
@@ -243,7 +253,7 @@ public class RMIRoutingTest {
     }
 
     @Test
-    public void testSubjectRouting() throws InterruptedException {
+    public void testSubjectRouting() {
         servers = new ServerRoutingSide(1);
         muxs = new MuxRoutingSide(1);
         client = (RMIEndpointImpl) RMIEndpoint.createEndpoint(RMIEndpoint.Side.CLIENT);
@@ -286,7 +296,7 @@ public class RMIRoutingTest {
     //----------------------------------------------------------------
 
     @Test
-    public void testReconnect() throws InterruptedException {
+    public void testReconnect() {
         servers = new ServerRoutingSide(1);
         clients = new ClientRoutingSide(1);
         muxs = new MuxRoutingSide(1);
@@ -448,7 +458,7 @@ public class RMIRoutingTest {
         int port = 92;
         server.getServer().export(DifferentServices.CALCULATOR_SERVICE);
         server.getServer().export(new EchoRequestService());
-        NTU.connect(server, ":" + NTU.port(port) + "[services=CalculatorService]");
+        NTU.connect(server, ":" + NTU.port(port) + "[services=CalculatorService,advertise=all]");
         NTU.connect(client, NTU.LOCAL_HOST + ":" + NTU.port(port));
         RMIRequest<Double> sum = client.getClient().createRequest(null, DifferentServices.CalculatorService.PLUS, 1.231, 2.123);
         assertRequest(sum, 3.354, Collections.singletonList(server),  -1);
@@ -514,6 +524,51 @@ public class RMIRoutingTest {
 
     //----------------------------------------------------------------
 
+    @Test(timeout = 30000)
+    public void testAdvertisementFilter_AllAdvertisement() throws InterruptedException {
+        server = (RMIEndpointImpl) RMIEndpoint.createEndpoint(RMIEndpoint.Side.SERVER);
+        client = (RMIEndpointImpl) RMIEndpoint.createEndpoint(RMIEndpoint.Side.CLIENT);
+        int port = 112;
+        server.getServer().export(DifferentServices.CALCULATOR_SERVICE);
+        CountDownLatch adReceived = new CountDownLatch(1);
+        client.getClient().getService(DifferentServices.CALCULATOR_SERVICE.getServiceName())
+            .addServiceDescriptorsListener(ds -> {
+                System.out.println("Advertisements received: " + ds);
+                adReceived.countDown();
+            });
+        NTU.connect(server, ":" + NTU.port(port) + "[advertise=all]");
+        NTU.connect(client, NTU.LOCAL_HOST + ":" + NTU.port(port));
+        RMIRequest<Double> sum = client.getClient().createRequest(null, DifferentServices.CalculatorService.PLUS,
+            1.231, 2.123);
+        assertRequest(sum, 3.354, Collections.singletonList(server),  -1);
+        adReceived.await();
+    }
+
+    //----------------------------------------------------------------
+
+    @Test
+    public void testAdvertisementFilter_NoAdvertisement() throws InterruptedException {
+        server = (RMIEndpointImpl) RMIEndpoint.createEndpoint(RMIEndpoint.Side.SERVER);
+        client = (RMIEndpointImpl) RMIEndpoint.createEndpoint(RMIEndpoint.Side.CLIENT);
+        int port = 122;
+        server.getServer().export(DifferentServices.CALCULATOR_SERVICE);
+        AtomicBoolean adReceived = new AtomicBoolean();
+        client.getClient().getService(DifferentServices.CALCULATOR_SERVICE.getServiceName())
+            .addServiceDescriptorsListener(ds -> {
+                System.out.println("Advertisements received: " + ds);
+                adReceived.set(true);
+            });
+        NTU.connect(server, ":" + NTU.port(port) + "[advertise=none]");
+        NTU.connect(client, NTU.LOCAL_HOST + ":" + NTU.port(port));
+        RMIRequest<Double> sum = client.getClient().createRequest(null, DifferentServices.CalculatorService.PLUS,
+            1.231, 2.123);
+        assertRequest(sum, 3.354, Collections.singletonList(server),  -1);
+        Thread.sleep(500);
+        assertFalse(adReceived.get());
+    }
+
+    //----------------------------------------------------------------
+
     private void assertRequest(RMIRequest<?> sum, Object result, List<RMIEndpointImpl> route, int routeElements) {
         sum.send();
         try {
@@ -521,14 +576,13 @@ public class RMIRoutingTest {
         } catch (RMIException e) {
             fail(e.getMessage());
         }
-        assertRoute(routeElements, sum.getResponseMessage().getRoute(), getListEndpointId(route));
+        assertRoute(routeElements, getListEndpointId(route), sum.getResponseMessage().getRoute());
     }
 
     private List<EndpointId> getListEndpointId(List<RMIEndpointImpl> endpoints) {
-        List<EndpointId> result = endpoints.stream()
+        return endpoints.stream()
             .map(RMIEndpointImpl::getEndpointId)
             .collect(Collectors.toList());
-        return result;
     }
 
     private void assertRoute(int routeElements, List<EndpointId> expectedRoute, List<EndpointId> actualRoute) {
@@ -537,7 +591,7 @@ public class RMIRoutingTest {
         log.info("assertRoute: expectedRoute = " + expectedRoute);
         log.info("assertRoute: actualRoute = " + actualRoute);
 
-        assertEquals(actualRoute.size(), actualRoute.size());
+        assertEquals(elements, actualRoute.size());
         for (int i = 0; i < elements; i++)
             assertEquals(expectedRoute.get(i), actualRoute.get(i));
     }

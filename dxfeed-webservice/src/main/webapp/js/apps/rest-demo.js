@@ -85,22 +85,27 @@ $(function() {
             var name = checkBox.attr("name");
             events.push(name);
         });
-        var symbols = getList("symbols");
+        var rawSymbols = $("#symbols").val().trim();
         var sources = getList("sources");
         var fromTime = $("#fromTime").val();
         var toTime = $("#toTime").val();
         var indent = $("#indent").prop('checked');
+        var symbolType = $("input[name=symbols]:checked").val();
+        var csv = symbolType === "csv";
+        var dxScript = symbolType === "dxScript";
         var comma = $("input[name=lists]:checked").val() === "comma";
         var method = $("input[name=method]:checked").val();
         var operation = $("input[" + "name=operation]:checked").val();
 
+        if (dxScript && rawSymbols.length > 0)
+            rawSymbols = encodeURIComponent(rawSymbols);
         var res = operation;
         var reconnect = endsWith(res, "Reconnect");
         if (reconnect)
             res = res.substr(0, res.length - "Reconnect".length);
         var session = endsWith(res, "Session");
         if (session)
-            res = res.substr(0, res.length - "Session".length)
+            res = res.substr(0, res.length - "Session".length);
 
         var url = "rest/" + res + (format === "default" ? "" : "." + format);
         var data = null;
@@ -109,15 +114,15 @@ $(function() {
             if (comma) {
                 if (events.length > 0)
                     data.events = events.join(",");
-                if (symbols.length > 0)
-                    data.symbols = symbols.join(",");
+                if (rawSymbols.length > 0)
+                    data.symbols = rawSymbols;
                 if (sources.length > 0)
                     data.sources = sources.join(",");
             } else {
                 if (events.length > 0)
                     data.events = events;
-                if (symbols.length > 0)
-                    data.symbols = symbols;
+                if (rawSymbols.length > 0)
+                    data.symbols = rawSymbols.split(/,/);
                 if (sources.length > 0)
                     data.sources = sources;
             }
@@ -135,8 +140,8 @@ $(function() {
             var q = "";
             if (events.length > 0)
                 q += "&" + (comma ? "events=" + events.join(",") : "event=" + events.join("&event="));
-            if (symbols.length > 0)
-                q += "&" + (comma ? "symbols=" + symbols.join(",") : "symbol=" + symbols.join("&symbol="));
+            if (rawSymbols.length > 0)
+                q += "&" + ((comma && csv) ? "symbols=" + rawSymbols : "symbol=" + (dxScript ? rawSymbols : rawSymbols.replace(/,/, "&symbol=")));
             if (sources.length > 0)
                 q += "&" + (comma ? "sources=" + sources.join(",") : "source=" + sources.join("&source="));
             if (fromTime !== "")
@@ -164,7 +169,7 @@ $(function() {
         updateModel();
         var $submit = $(":submit");
         var $goComment = $("#goComment");
-        if (startsWith(model.operation, "eventSource") && model.method == "POST") {
+        if (startsWith(model.operation, "eventSource") && model.method === "POST") {
             $goComment.text("POST is not supported with streaming operations by this demo page, but is actually supported by the service.");
             $submit.attr("disabled", true);
         } else {

@@ -11,15 +11,26 @@
  */
 package com.devexperts.rmi.task;
 
-import java.nio.charset.StandardCharsets;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.*;
-
 import com.devexperts.rmi.message.RMIRequestMessage;
 import com.devexperts.rmi.message.RMIRoute;
 import com.devexperts.util.IndexedSet;
 import com.devexperts.util.SystemProperties;
+import com.dxfeed.promise.Promise;
+
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.GuardedBy;
+import java.nio.charset.StandardCharsets;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.Objects;
+import java.util.TreeMap;
 
 /**
  * This strategy implements consistent hashing algorithm.
@@ -36,64 +47,60 @@ public class ConsistentLoadBalancer implements RMILoadBalancer {
     private final IndexedSet<RMIServiceId, RMIServiceDescriptor> descriptors =
         IndexedSet.create(RMIServiceDescriptor.INDEXER_BY_SERVICE_ID);
     private final NavigableMap<Integer, List<RMIServiceDescriptor>> ring = new TreeMap<>();
-    private RMIServiceDescriptor onlyDescriptor;
 
+    @Nonnull
     @Override
-    public synchronized void addService(RMIServiceDescriptor descriptor) {
-        if (!descriptors.add(descriptor))
-            return;
-        if (descriptors.size() == 1) {
-            onlyDescriptor = descriptor;
-            return;
-        }
-        addInRing(descriptor);
-        if (descriptors.size() != 2)
-            return;
-        addInRing(onlyDescriptor);
-        onlyDescriptor = null;
-    }
+    public synchronized Promise<BalanceResult> balance(@Nonnull RMIRequestMessage<?> request) {
+        if (descriptors.size() == 0 || request.getTarget() != null)
+            return Promise.completed(BalanceResult.route(request.getTarget()));
 
-    @Override
-    public synchronized void removeService(RMIServiceDescriptor descriptor) {
-        if (!descriptors.remove(descriptor))
-            return;
-        for (Iterator<Map.Entry<Integer, List<RMIServiceDescriptor>>> it = ring.entrySet().iterator(); it.hasNext();) {
-            Map.Entry<Integer, List<RMIServiceDescriptor>> entry = it.next();
-            List<RMIServiceDescriptor> ids = entry.getValue();
-            if (ids.size() == 1 && !ids.get(0).getServiceId().equals(descriptor.getServiceId()))
-                continue;
-            int index = Collections.binarySearch(ids, descriptor, inShardComparator);
-            if (index < 0)
-                continue;
-            ids.remove(index);
-            if (ids.isEmpty())
-                it.remove();
-        }
-        if (descriptors.size() <= 1) {
-            if (descriptors.size() == 1) {
-                onlyDescriptor = descriptors.iterator().next();
-                ring.clear();
-                return;
-            }
-            onlyDescriptor = null;
-        }
-    }
+        if (descriptors.size() == 1)
+            return Promise.completed(BalanceResult.route(descriptors.iterator().next().getServiceId()));
 
-    @Override
-    public synchronized RMIServiceId pickServiceInstance(RMIRequestMessage<?> request) {
-        if (request.getTarget() != null)
-            return request.getTarget();
         if (ring.isEmpty())
-            return onlyDescriptor == null ? null : onlyDescriptor.getServiceId();
+            descriptors.forEach(this::addInRing);
         int requestKey = getRequestKey(request);
         Map.Entry<Integer, List<RMIServiceDescriptor>> ceiling = ring.ceilingEntry(requestKey);
         Map.Entry<Integer, List<RMIServiceDescriptor>> next = ceiling != null ? ceiling : ring.firstEntry();
-        return next.getValue().get(0).getServiceId();
+        return Promise.completed(BalanceResult.route(next.getValue().get(0).getServiceId()));
     }
 
     @Override
-    public boolean isEmpty() {
-        return descriptors.isEmpty();
+    public synchronized void updateServiceDescriptor(@Nonnull RMIServiceDescriptor descriptor) {
+        if (descriptor.isAvailable())
+            processAvailableDescriptor(descriptor);
+        else
+            processUnavailableDescriptor(descriptor);
+    }
+
+    @Override
+    public void close() {
+        // No resource to release
+    }
+
+    @GuardedBy("this")
+    private void processAvailableDescriptor(@Nonnull RMIServiceDescriptor descriptor) {
+        RMIServiceDescriptor existing = descriptors.put(descriptor);
+        if (existing == null) {
+            if (!ring.isEmpty())
+                addInRing(descriptor);
+            return;
+        }
+
+        // Descriptor already exists, rebuild the ring if properties changed
+        if (getCapacity(descriptor) != getCapacity(existing) ||
+            getPriority(descriptor) != getPriority(existing) ||
+            !Objects.equals(getShardName(descriptor), getShardName(existing)))
+        {
+            ring.clear();
+        }
+    }
+
+    @GuardedBy("this")
+    private void processUnavailableDescriptor(@Nonnull RMIServiceDescriptor descriptor) {
+        if (!descriptors.remove(descriptor))
+            return;
+        ring.clear();
     }
 
     // can be overridden

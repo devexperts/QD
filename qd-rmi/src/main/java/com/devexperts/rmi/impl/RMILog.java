@@ -14,6 +14,10 @@ package com.devexperts.rmi.impl;
 import com.devexperts.logging.Logging;
 import com.devexperts.rmi.RMIExceptionType;
 import com.devexperts.rmi.message.RMIRequestType;
+import com.devexperts.rmi.task.BalanceResult;
+import com.dxfeed.promise.Promise;
+
+import javax.annotation.Nonnull;
 
 class RMILog {
     private RMILog() {} // utility class, do not create
@@ -23,7 +27,7 @@ class RMILog {
     static void logFailedTask(RMIExceptionType type, String info, RMIConnection connection,
         long requestId, long channelId, RMIRequestType requestType)
     {
-        log.error(type.getMessage() + " " + info + ": " + composeExecutionTaskString(connection, requestId, channelId,
+        log.error(type.getMessage() + ". Details: " + info + ", " + composeExecutionTaskString(connection, requestId, channelId,
             "reqType=" + requestType.toString()));
     }
 
@@ -38,5 +42,19 @@ class RMILog {
             "channelId=" + channelId + ", " +
             task + // print task in-place
             "}";
+    }
+
+    static void logBalancingCompletion(@Nonnull Object details, @Nonnull Promise<BalanceResult> balancePromise) {
+        if (RMIEndpointImpl.RMI_TRACE_LOG)
+            log.trace("Balance result for request '" + details + " is " +
+                (balancePromise.hasResult() ? balancePromise.getResult() : balancePromise.getException()));
+
+        if (!balancePromise.isCancelled() && balancePromise.hasException())
+            RMILog.log.error("RMI load balancing for '" + details + "' resulted in an exception",
+                balancePromise.getException());
+
+        if (balancePromise.hasResult() && balancePromise.getResult().isReject())
+            RMILog.log.warn("RMI load balancing rejected the request '" + details + "' with reason '" +
+                balancePromise.getResult().getRejectReason() + "'");
     }
 }

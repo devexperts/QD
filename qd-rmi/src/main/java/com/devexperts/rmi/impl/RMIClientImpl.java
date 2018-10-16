@@ -11,25 +11,39 @@
  */
 package com.devexperts.rmi.impl;
 
-import java.util.*;
-import java.util.concurrent.Executor;
-import javax.annotation.concurrent.GuardedBy;
-
 import com.devexperts.io.Marshalled;
 import com.devexperts.logging.Logging;
-import com.devexperts.rmi.*;
-import com.devexperts.rmi.message.*;
-import com.devexperts.rmi.task.*;
+import com.devexperts.rmi.RMIClient;
+import com.devexperts.rmi.RMIClientPort;
+import com.devexperts.rmi.RMIExceptionType;
+import com.devexperts.rmi.RMIOperation;
+import com.devexperts.rmi.RMIRequest;
+import com.devexperts.rmi.message.RMIRequestMessage;
+import com.devexperts.rmi.message.RMIRequestType;
+import com.devexperts.rmi.message.RMIRoute;
+import com.devexperts.rmi.task.BalanceResult;
+import com.devexperts.rmi.task.RMIService;
+import com.devexperts.rmi.task.RMIServiceDescriptor;
 import com.devexperts.util.ExecutorProvider;
 import com.devexperts.util.SystemProperties;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.impl.ExtensibleDXEndpoint;
+import com.dxfeed.promise.Promise;
+
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.GuardedBy;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.function.Consumer;
+
+import static com.devexperts.rmi.task.RMIServiceDescriptor.createUnavailableDescriptor;
 
 public class RMIClientImpl extends RMIClient {
     private static final Logging log = Logging.getLogging(RMIClientImpl.class);
 
     // ==================== private instance fields ====================
-
     final RMIEndpointImpl endpoint;
 
     private long requestSendingTimeout =
@@ -43,8 +57,7 @@ public class RMIClientImpl extends RMIClient {
     @GuardedBy("services")
     private final ClientSideServices services;
 
-    @GuardedBy("services")
-    private final OutgoingRequests outgoingRequests = new OutgoingRequests();
+    private final PendingRequests pendingRequests = new PendingRequests();
 
     private final RMITimeoutRequestMonitoringThread timeoutRequestMonitoringThread;
 
@@ -60,12 +73,13 @@ public class RMIClientImpl extends RMIClient {
 
     RMIClientImpl(RMIEndpointImpl endpoint) {
         this.endpoint = endpoint;
-        this.services = new ClientSideServices(this);
+        this.services = new ClientSideServices(this, endpoint.getRMILoadBalancerFactories());
         timeoutRequestMonitoringThread = new RMITimeoutRequestMonitoringThread(endpoint);
         requestSender = new ClientRequestSender();
         defaultPort = new PortImpl(null); // don't move to field, needs endpoint to be set first
         ExecutorProvider.Reference sharedExecutorReference = getSharedExecutorReference();
-        defaultExecutorReference = sharedExecutorReference != null ? sharedExecutorReference : endpoint.getDefaultExecutorProvider().newReference();
+        defaultExecutorReference = sharedExecutorReference != null ?
+            sharedExecutorReference : endpoint.getDefaultExecutorProvider().newReference();
     }
 
     // ==================== public methods ====================
@@ -79,7 +93,8 @@ public class RMIClientImpl extends RMIClient {
     public <T> RMIRequest<T> createOneWayRequest(Object subject, RMIOperation<T> operation, Object... parameters) {
         RMIRoute route = RMIRoute.createRMIRoute(endpoint.getEndpointId());
         RMIRequestMessage<T> requestMessage =
-            new RMIRequestMessage<>(RMIRequestType.ONE_WAY, operation, Marshalled.forObject(parameters, operation.getParametersMarshaller()), route, null);
+            new RMIRequestMessage<>(RMIRequestType.ONE_WAY, operation,
+                Marshalled.forObject(parameters, operation.getParametersMarshaller()), route, null);
         return getPort(Marshalled.forObject(subject)).createRequest(requestMessage);
     }
 
@@ -159,9 +174,7 @@ public class RMIClientImpl extends RMIClient {
 
     @Override
     public int getSendingRequestsQueueLength() {
-        synchronized (services) {
-            return outgoingRequests.size();
-        }
+        return pendingRequests.size();
     }
 
     // ==================== private implementation ====================
@@ -173,6 +186,7 @@ public class RMIClientImpl extends RMIClient {
     }
 
     void close() {
+        services.close();
         timeoutRequestMonitoringThread.wakeUp();
         ExecutorProvider.Reference sharedExecutorReference = getSharedExecutorReference();
         if (defaultExecutorReference != sharedExecutorReference)
@@ -183,21 +197,19 @@ public class RMIClientImpl extends RMIClient {
         return services;
     }
 
-    RMIRequestImpl<?> getEarliestRequest() {
-        synchronized (services) {
-            return outgoingRequests.getEarliestRequest();
-        }
+    void forEachPendingRequest(@Nonnull Consumer<RMIRequestImpl<?>> consumer) {
+        pendingRequests.forEachRMIRequest(consumer);
     }
 
     void updateServiceDescriptors(List<RMIServiceDescriptor> descriptors, RMIConnection connection) {
         synchronized (services) {
             if (connection.requestsManager.isAnonymous()) {
                 services.updateAnonymousRouter(connection);
-                outgoingRequests.rebalanced(null);
+                rebalancePendingRequests(null);
             } else {
                 connection.clientDescriptorsManager.updateDescriptors(descriptors); // remember descriptors from this connections
                 services.updateDescriptorAndUpdateServices(descriptors, connection);
-                outgoingRequests.rebalanced(descriptors);
+                rebalancePendingRequests(descriptors);
             }
         }
     }
@@ -207,35 +219,83 @@ public class RMIClientImpl extends RMIClient {
             // now clear descriptors of this connection
             List<RMIServiceDescriptor> result = new ArrayList<>();
             for (RMIServiceDescriptor descriptor : connection.clientDescriptorsManager.clearDescriptors())
-                result.add(RMIServiceDescriptor.createUnavailableDescriptor(descriptor.getServiceId(), descriptor.getProperties()));
+                result.add(createUnavailableDescriptor(descriptor.getServiceId(), descriptor.getProperties()));
             updateServiceDescriptors(result, connection);
         }
     }
 
     @GuardedBy("services")
-    private RMIConnection assignRequestConnection(RMIRequestImpl<?> request) {
-        RMIServiceId target = services.loadBalance(request.getRequestMessage());
-        request.setTentativeTarget(target);
-        RMIConnection connection = services.getConnection(target);
-        if (connection != null)
-            connection.requestsManager.addOutgoingRequest(request);
-        return connection;
+    private void balance(RMIRequestImpl<?> request) {
+        Promise<BalanceResult> balancePromise = services.balance(request.getRequestMessage());
+        if (balancePromise.isDone()) {
+            RMILog.logBalancingCompletion(request, balancePromise);
+            // Fast path for balancers that return completed promises immediately
+            balancingCompleted(request, balancePromise);
+            return;
+        }
+
+        // Async path, balancing is in progress
+        pendingRequests.addBalancePromise(request, balancePromise, this::balancingCompleted);
+    }
+
+    @SuppressWarnings("ThrowableNotThrown")
+    private void balancingCompleted(RMIRequestImpl<?> request, Promise<? extends BalanceResult> result) {
+        // If the set of descriptors changes while balancing is in progress (service implementation appear or
+        // disappear in the network) the promise is NOT cancelled. After promise completes the request may get
+        // into the pending queue if there is no connection for it.
+
+        if (request.isCompleted())
+            return;
+
+        if (result.hasException() || result.getResult().isReject()) {
+            Throwable cause = result.hasException() ?
+                result.getException() : new RMIFailedException(result.getResult().getRejectReason());
+            request.setFailedState(RMIExceptionType.SERVICE_UNAVAILABLE, cause);
+            return;
+        }
+        BalanceResult decision = result.getResult();
+
+        synchronized (services) {
+            request.setTentativeTarget(decision.getTarget());
+            RMIConnection connection = services.getConnection(request.getTentativeTarget());
+            if (connection != null) {
+                connection.requestsManager.addOutgoingRequest(request);
+            } else {
+                pendingRequests.addPendingRequest(request);
+            }
+        }
+    }
+
+    // if descriptors = null, then to client added a new anonymous connection
+    @GuardedBy("services")
+    private void rebalancePendingRequests(List<RMIServiceDescriptor> descriptors) {
+        // 1. Put all requests that are sitting within each connection back to pending queue
+        for (Iterator<RMIConnection> it = endpoint.concurrentConnectionsIterator(); it.hasNext(); ) {
+            RMIConnection connection = it.next();
+            List<RMIRequestImpl<?>> requests = connection.requestsManager.getByDescriptorsAndRemove(descriptors);
+            if (requests != null && !requests.isEmpty())
+                for (RMIRequestImpl<?> request : requests) {
+                    pendingRequests.addPendingRequest(request);
+                }
+        }
+
+        // 2. Rebalance the pending queue to assign new connections (and return requests with unassigned connections
+        // back to the queue)
+        List<RMIRequestImpl<?>> toBeRebalanced = pendingRequests.removeAllBalanced();
+        toBeRebalanced.forEach(rmiRequest -> {
+            rmiRequest.setTentativeTarget(null);
+            rmiRequest.assignConnection(null);
+            balance(rmiRequest);
+        });
     }
 
     private void addOutgoingRequestImpl(RMIRequestImpl<?> request) {
         synchronized (services) {
             if (RMIEndpointImpl.RMI_TRACE_LOG)
                 log.trace("Add outgoing request " + request + " to " + endpoint);
-            if (assignRequestConnection(request) == null)
-                outgoingRequests.add(request);
+            balance(request);
         }
         timeoutRequestMonitoringThread.startIfNotAlive();
-    }
-
-    private boolean removeOutgoingRequestImpl(RMIRequestImpl<?> request) {
-        synchronized (services) {
-            return outgoingRequests.remove(request);
-        }
     }
 
     void stopTimeoutRequestMonitoringThread() {
@@ -264,86 +324,8 @@ public class RMIClientImpl extends RMIClient {
         }
 
         @Override
-        public boolean removeOutgoingRequest(RMIRequestImpl<?> request) {
-            return removeOutgoingRequestImpl(request);
-        }
-    }
-
-    private class OutgoingRequests {
-        /**
-         * Queue is not generally sorted by time, but the request with least time is
-         * maintained to be first for {@link #getEarliestRequest}.
-         */
-        @GuardedBy("services")
-        private final LinkedList<RMIRequestImpl<?>> queue = new LinkedList<>();
-
-        @GuardedBy("services")
-        private boolean firstIsEarliest;
-
-        @GuardedBy("services")
-        void add(RMIRequestImpl<?> request) {
-            if (request.getState() != RMIRequestState.WAITING_TO_SEND)
-                return;
-
-            RMIRequestImpl<?> peek = queue.peek();
-            if (peek == null || RMIRequestImpl.REQUEST_COMPARATOR_BY_SENDING_TIME.compare(request, peek) < 0) {
-                queue.addFirst(request);
-                return;
-            }
-            queue.add(request);
-        }
-
-        //if descriptors = null, then to client added a new anonymous connection
-        @GuardedBy("services")
-        void rebalanced(List<RMIServiceDescriptor> descriptors) {
-            for (Iterator<RMIConnection> it = endpoint.concurrentConnectionsIterator(); it.hasNext(); ) {
-                RMIConnection connection = it.next();
-                List<RMIRequestImpl<?>> requests = connection.requestsManager.getByDescriptorsAndRemove(descriptors);
-                if (requests != null && !requests.isEmpty())
-                    for (RMIRequestImpl<?> request : requests) {
-                        request.setTentativeTarget(null);
-                        request.assignConnection(null);
-                        add(request);
-                    }
-            }
-            for (Iterator<RMIRequestImpl<?>> it = queue.iterator(); it.hasNext(); ) {
-                RMIRequestImpl<?> request = it.next();
-                if (assignRequestConnection(request) != null) {
-                    it.remove();
-                    continue;
-                }
-                request.setTentativeTarget(null);
-            }
-        }
-
-        // Note: it is used by TimeoutMonitoring and must return request with minimal time
-        @GuardedBy("services")
-        RMIRequestImpl<?> getEarliestRequest() {
-            if (queue.isEmpty())
-                return null;
-            if (!firstIsEarliest) {
-                RMIRequestImpl<?> earliest = null;
-                for (RMIRequestImpl<?> request : queue) {
-                    if (earliest == null || RMIRequestImpl.REQUEST_COMPARATOR_BY_SENDING_TIME.compare(request, earliest) < 0)
-                        earliest = request;
-                }
-                queue.remove(earliest);
-                queue.addFirst(earliest);
-                firstIsEarliest = true;
-            }
-            return queue.peek();
-        }
-
-        @GuardedBy("services")
-        boolean remove(RMIRequestImpl<?> request) {
-            if (request == queue.peek())
-                firstIsEarliest = false;
-            return queue.remove(request);
-        }
-
-        @GuardedBy("services")
-        int size() {
-            return queue.size();
+        public boolean dropPendingRequest(RMIRequestImpl<?> request) {
+            return pendingRequests.dropPendingRequest(request.getId());
         }
     }
 

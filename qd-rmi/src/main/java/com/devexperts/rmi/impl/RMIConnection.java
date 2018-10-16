@@ -40,11 +40,15 @@ class RMIConnection {
     final RMIEndpoint.Side side;
     final int weight;
     final ServiceFilter configuredServices;
+    final AdvertisementFilter adFilter;
 
-    RMIConnection(RMIEndpointImpl endpoint, QDStats stats, MessageAdapter attachedAdapter, ServiceFilter services, int weight) {
+    RMIConnection(RMIEndpointImpl endpoint, QDStats stats, MessageAdapter attachedAdapter, ServiceFilter services,
+        AdvertisementFilter adFilter, int weight)
+    {
         this.endpoint = endpoint;
         this.side = endpoint.side;
         this.configuredServices = services;
+        this.adFilter = adFilter;
         this.messageComposer = new MessageComposer(this);
         this.messageProcessor = new MessageProcessor(this);
         this.requestsManager = new RequestsManager(this);
@@ -64,10 +68,12 @@ class RMIConnection {
     void close() {
         // Mark connection as closed first (as client- & server- side will not register anything new after that)
         closed = true;
-        // remove this connection from endpoint structures lists and rebalance outgoing requests)
+        // remove this connection from endpoint structures lists and rebalance outgoing requests
         endpoint.unregisterConnection(this);
         // close client side (drop sent requests)
         requestsManager.close();
+        // cancel requests that are being balanced on the server
+        messageProcessor.close();
         // close server side (cancel running tasks)
         tasksManager.close();
         // abort already composed messages

@@ -11,12 +11,18 @@
  */
 package com.devexperts.rmi.message;
 
-import com.devexperts.io.*;
-import com.devexperts.rmi.*;
+import com.devexperts.io.Marshalled;
+import com.devexperts.io.Marshaller;
+import com.devexperts.io.MarshallingException;
+import com.devexperts.rmi.RMIEndpoint;
+import com.devexperts.rmi.RMIException;
+import com.devexperts.rmi.RMIExceptionType;
 import com.devexperts.rmi.impl.RMIRequestImpl;
 
+import java.util.Objects;
+
 /**
- * This immutable class encapsulated a failed competition response with <b>exceptionType</b>,
+ * This immutable class encapsulated a failed response with <b>exceptionType</b>,
  * <b>exceptionMessage</b>, and <b>exception</b> attributes.
  * Marshalled form for this class using a strategy {@link RMIExceptionMarshaller}
  * @see RMIRequestImpl
@@ -41,10 +47,8 @@ public final class RMIErrorMessage extends RMIResponseMessage {
      * @throws MarshallingException if object cannot be converted to byte representation
      */
     public RMIErrorMessage(RMIExceptionType exceptionType, Throwable cause, RMIRoute route) {
-        super(Marshalled.forObject(new RMIException(exceptionType, cause), getExceptionMarshaller()),
-            RMIResponseType.ERROR, route);
-        if (exceptionType == null)
-            throw new NullPointerException();
+        super(Marshalled.forObject(new RMIException(Objects.requireNonNull(exceptionType, "exceptionType"), cause),
+            getExceptionMarshaller()), RMIResponseType.ERROR, route);
     }
 
     /**

@@ -11,14 +11,17 @@
  */
 package com.devexperts.rmi.task;
 
+import com.devexperts.rmi.RMIExceptionType;
+import com.devexperts.rmi.RMIServer;
+import com.devexperts.rmi.RMIServiceInterface;
+import com.devexperts.util.IndexerFunction;
+
+import javax.annotation.Nonnull;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
-
-import com.devexperts.rmi.*;
-import com.devexperts.util.IndexerFunction;
 
 /**
  * Provides the asynchronous execution of some operations on the {@link RMIServer}.
@@ -140,24 +143,26 @@ public abstract class RMIService<T> implements RMIObservableServiceDescriptors, 
     }
 
     /**
-     * Returns descriptors, with describes implementation of this service in the network.
+     * Returns unmodifiable list of descriptors of all the implementations of this service in the network.
+     * Order of descriptors is not specified.
      * <b>This method must be lock-free.</b>
-     * @return descriptors, with describes implementation of this service in the network
+     * @return descriptors of all the implementations of this service in the network. The list is unmodifiable.
      */
+    @Nonnull
     public List<RMIServiceDescriptor> getDescriptors() {
         return Collections.singletonList(RMIServiceDescriptor.createDescriptor(getOrCreateServiceId(), 0, null, null));
     }
 
     /**
-     * Adds the specified {@link RMIServiceDescriptorsListener listener} to this service.
-     * When adding a listener, it receives notification of the update for all existing description.
-     * <b>Note: notification happens while holding monitor on this {@code RMIService} object.</b>
+     * Adds a {@link RMIServiceDescriptorsListener service descriptor listener} for this service.
+     * When a listener is added it is immediately notified with all the descriptors that are known currently.
      *
-     * <p> This implementation assumes that {@link #getDescriptors() descriptors} do not change
-     * and does not keep a list of listeners. Override this method and call supper when descriptors
-     * are subject to change.
+     * The listener is notified whenever a descriptor of a service implementation appears or disappears in the network.
+     * For server-side services this obviously never happens.
      *
-     * @param listener newly adding {@link RMIServiceDescriptorsListener}.
+     * <b>Impl. note: notification happens while holding monitor on this {@code RMIService} object.</b>
+     * @param listener listener to add
+     * @see #removeServiceDescriptorsListener(RMIServiceDescriptorsListener)
      */
     @Override
     public synchronized void addServiceDescriptorsListener(RMIServiceDescriptorsListener listener) {
@@ -167,14 +172,10 @@ public abstract class RMIService<T> implements RMIObservableServiceDescriptors, 
     }
 
     /**
-     * Removes the specified {@link RMIServiceDescriptorsListener listener} to this service.
+     * Removes the specified {@link RMIServiceDescriptorsListener listener} from this service.
      * When the listener is removed, it receives notification of the update distance to all
      * previously reported services to {@link #UNAVAILABLE_METRIC} distance.
      * <b>Note: notification happens while holding monitor on this {@code RMIService} object.</b>
-     *
-     * <p> This implementation assumes that {@link #getDescriptors() descriptors} do not change
-     * and does not keep a list of listeners. Override this method and call supper when descriptors
-     * are subject to change.
      *
      * @param listener the listener to be removed
      */
@@ -188,10 +189,7 @@ public abstract class RMIService<T> implements RMIObservableServiceDescriptors, 
             listener.descriptorsUpdated(descriptors);
     }
 
-    /**
-     * Returns a string representation of the object.
-     * @return a string representation of the object.
-     */
+    @Override
     public String toString() {
         return getOrCreateServiceId().toString();
     }

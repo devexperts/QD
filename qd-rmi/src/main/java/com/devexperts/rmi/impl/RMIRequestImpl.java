@@ -11,15 +11,28 @@
  */
 package com.devexperts.rmi.impl;
 
+import com.devexperts.io.Marshalled;
+import com.devexperts.rmi.RMIException;
+import com.devexperts.rmi.RMIExceptionType;
+import com.devexperts.rmi.RMIOperation;
+import com.devexperts.rmi.RMIRequest;
+import com.devexperts.rmi.RMIRequestListener;
+import com.devexperts.rmi.RMIRequestState;
+import com.devexperts.rmi.message.RMICancelType;
+import com.devexperts.rmi.message.RMIErrorMessage;
+import com.devexperts.rmi.message.RMIRequestMessage;
+import com.devexperts.rmi.message.RMIRequestType;
+import com.devexperts.rmi.message.RMIResponseMessage;
+import com.devexperts.rmi.message.RMIResultMessage;
+import com.devexperts.rmi.message.RMIRoute;
+import com.devexperts.rmi.task.RMIChannel;
+import com.devexperts.rmi.task.RMIChannelType;
+import com.devexperts.rmi.task.RMIServiceId;
+import com.dxfeed.promise.Promise;
+
+import javax.annotation.concurrent.GuardedBy;
 import java.util.Comparator;
 import java.util.concurrent.Executor;
-import javax.annotation.concurrent.GuardedBy;
-
-import com.devexperts.io.Marshalled;
-import com.devexperts.rmi.*;
-import com.devexperts.rmi.message.*;
-import com.devexperts.rmi.task.*;
-import com.dxfeed.promise.Promise;
 
 @SuppressWarnings({"ThrowableInstanceNeverThrown"})
 public final class RMIRequestImpl<T> extends RMIRequest<T> implements RMIChannelOwner {
@@ -116,7 +129,6 @@ public final class RMIRequestImpl<T> extends RMIRequest<T> implements RMIChannel
         this.requestMessage = requestMessage;
         this.id = requestSender.createRequestId();
         tentativeTarget = requestMessage.getTarget();
-        this.requestSender = requestSender;
         channel = new RMIChannelImpl(requestSender.getEndpoint(), this.subject, id, this);
         nestedRequest = false;
         this.kind = RMIMessageKind.REQUEST;
@@ -237,6 +249,7 @@ public final class RMIRequestImpl<T> extends RMIRequest<T> implements RMIChannel
             case SUCCEEDED:
                 return getResultImpl();
             case FAILED:
+                //noinspection ConstantConditions
                 throw getException();
             default:
                 throw new AssertionError("Final state was expected");
@@ -497,9 +510,11 @@ public final class RMIRequestImpl<T> extends RMIRequest<T> implements RMIChannel
                 return;
             RMIExceptionType type = state == RMIRequestState.WAITING_TO_SEND ?
                 RMIExceptionType.REQUEST_SENDING_TIMEOUT : RMIExceptionType.REQUEST_RUNNING_TIMEOUT;
-            setFailedStateInternal(type, null, null);
             if (type == RMIExceptionType.REQUEST_RUNNING_TIMEOUT)
                 sendCancellationMessageInternal(RMICancelType.ABORT_RUNNING);
+            // Failed state should be set after sending cancellation message because setting failed state
+            // immediately terminates the channel on the client side
+            setFailedStateInternal(type, null, null);
             notifier = new Notifier();
         }
         notifier.notifyCompleted();
@@ -507,8 +522,8 @@ public final class RMIRequestImpl<T> extends RMIRequest<T> implements RMIChannel
 
     // returns true if removed from any queue
     boolean removeFromSendingQueues() {
-        // Note: cannot do removeOutgoingRequest under request lock
-        if (requestSender.removeOutgoingRequest(this))
+        // Note: cannot do dropPendingRequest under request lock
+        if (requestSender.dropPendingRequest(this))
             return true;
         // otherwise -- was assigned to a specific connection
         synchronized (requestLock) {
@@ -625,7 +640,6 @@ public final class RMIRequestImpl<T> extends RMIRequest<T> implements RMIChannel
         if (!isNestedRequest()) {
             channel.cancel(type);
         } else {
-            //for inner request
             channel.createRequest(new RMIRequestMessage<>(RMIRequestType.ONE_WAY,
                 type == RMICancelType.ABORT_RUNNING ? ABORT_CANCEL : CANCEL_WITH_CONFIRMATION, id)).send();
         }

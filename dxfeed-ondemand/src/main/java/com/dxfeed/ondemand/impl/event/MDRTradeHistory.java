@@ -43,6 +43,10 @@ public class MDRTradeHistory extends MDREvent {
         ask = 0;
     }
 
+    public char getExchange() {
+        return (char) exchange;
+    }
+
     @Override
     public boolean canSkip(MDREvent newEvent) {
         MDRTradeHistory event = (MDRTradeHistory) newEvent;

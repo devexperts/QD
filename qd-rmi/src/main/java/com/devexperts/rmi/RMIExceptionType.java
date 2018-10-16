@@ -11,10 +11,10 @@
  */
 package com.devexperts.rmi;
 
-import java.util.concurrent.RejectedExecutionException;
-
 import com.devexperts.rmi.impl.RMIClientImpl;
 import com.devexperts.rmi.security.SecurityController;
+
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * Types of {@link RMIException}.
@@ -139,10 +139,10 @@ public enum RMIExceptionType {
         "Service implementation did handle suspended state properly"),
 
     /**
-     * Request got into routing loop or the server had disconnected.
+     * Request got into routing loop or the server had disconnected
      */
     ROUTE_IS_NOT_FOUND(37, FailureInstant.BEFORE_EXECUTION,
-        "The route to the server could was not found"),
+        "Route to server could not be found"),
 
     /**
      * Server was unable to read request.
@@ -156,6 +156,11 @@ public enum RMIExceptionType {
     CHANNEL_CLOSED(39, FailureInstant.ANYWHERE_DURING_EXECUTION,
         "The channel closed, or closed during the execution of the request"),
 
+    /**
+     * Load balancing algorithm failed to select an implementation of a service to send request to
+     */
+    SERVICE_UNAVAILABLE(40, FailureInstant.BEFORE_EXECUTION,
+        "Load balancing could not select the target service"),
 
 
     // -------------------- Marshalling/unmarshalling --------------------

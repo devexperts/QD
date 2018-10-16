@@ -1,4 +1,18 @@
 
+QDS 3.265:
+
+* [QD-760] RMI: Provide ability to define custom load-balancers
+  - Custom QD RMI load balancer factories (subclasses of RMILoadBalancerFactory) can be configured via service loader.
+    When a load balancer is to be created, the factories are consulted in order.
+  - To support custom load balancing the advertisement filter is now supported on connection. Specify the
+    '[advertise=...]' filter on the address of the agent side. Only the 'all' (all advertisement is distributed),
+    or 'none' (no advertisement is distributed) values are supported.
+  - Note: for custom load balancing to work on intermediate multiplexors one has to disable service advertisements
+    sent to clients via [advertise=none] filter on multiplexor agent address. Otherwise default load balancing will
+    kick in on the clients.
+* [QD-1002] dxFeed webservice should support dxScript
+* [QD-1088] dxFeed-OnDemand: Add support for regional TimeAndSale events
+
 QDS 3.264:
 
 * [QD-1036] dxlib: Add primitive type analogs of new Java 8 methods to LongHash collections

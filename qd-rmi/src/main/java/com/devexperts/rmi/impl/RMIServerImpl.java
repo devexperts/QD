@@ -12,14 +12,21 @@
 package com.devexperts.rmi.impl;
 
 
+import com.devexperts.rmi.RMIServer;
+import com.devexperts.rmi.message.RMIRequestMessage;
+import com.devexperts.rmi.task.BalanceResult;
+import com.devexperts.rmi.task.RMIService;
+import com.devexperts.rmi.task.RMIServiceDescriptor;
+import com.devexperts.rmi.task.RMIServiceId;
+import com.devexperts.rmi.task.RMIServiceImplementation;
+import com.devexperts.util.ExecutorProvider;
+import com.dxfeed.promise.Promise;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Executor;
 
-import com.devexperts.rmi.RMIServer;
-import com.devexperts.rmi.message.RMIRequestMessage;
-import com.devexperts.rmi.task.*;
-import com.devexperts.util.ExecutorProvider;
+import static com.devexperts.rmi.impl.RMILog.log;
 
 public class RMIServerImpl extends RMIServer {
 
@@ -33,7 +40,7 @@ public class RMIServerImpl extends RMIServer {
 
     RMIServerImpl(RMIEndpointImpl endpoint) {
         this.endpoint = endpoint;
-        services = new ServerSideServices(this);
+        services = new ServerSideServices(this, endpoint.getRMILoadBalancerFactories());
         defaultExecutorReference = endpoint.getDefaultExecutorProvider().newReference();
     }
 
@@ -77,6 +84,7 @@ public class RMIServerImpl extends RMIServer {
     // ==================== private implementation ====================
 
     void close() {
+        services.close();
         defaultExecutorReference.close();
     }
 
@@ -97,7 +105,7 @@ public class RMIServerImpl extends RMIServer {
         }
     }
 
-    RMIServiceId loadBalance(RMIRequestMessage<?> message) {
-        return services.loadBalance(message);
+    Promise<BalanceResult> balance(RMIRequestMessage<?> message) {
+        return services.balance(message);
     }
 }

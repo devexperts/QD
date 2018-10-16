@@ -17,8 +17,7 @@ import com.devexperts.io.ByteArrayInput;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.util.IndexerFunction;
-import com.dxfeed.ondemand.impl.event.MDREvent;
-import com.dxfeed.ondemand.impl.event.MDREventUtil;
+import com.dxfeed.ondemand.impl.event.*;
 
 class CurrentSegment {
     static final IndexerFunction<Key, CurrentSegment> KEY_INDEXER = segment -> segment.segment.block;
@@ -59,6 +58,8 @@ class CurrentSegment {
 
     // buffer == null means "skip"
     void read(RecordBuffer buffer, long time, long usage) {
+        boolean isTradeHistory = segment.block.getType() == 'H';
+
         if (event == null) {
             event = MDREventUtil.createEvent(segment.block.getType());
             input = segment.block.getInput();
@@ -72,6 +73,12 @@ class CurrentSegment {
                     int cipher = MDREventUtil.CODEC.encode(segment.block.getSymbol());
                     for (DataRecord record : records)
                         event.getInto(buffer.add(record, cipher, segment.block.getSymbol()));
+
+                    if (isTradeHistory) {
+                        // Get record by exchange from the event to publish to proper regional TnS
+                        for (DataRecord record : MDREventUtil.getRecords('H', ((MDRTradeHistory) event).getExchange()))
+                            event.getInto(buffer.add(record, cipher, segment.block.getSymbol()));
+                    }
                 }
                 readNext();
             }

@@ -11,24 +11,40 @@
  */
 package com.devexperts.rmi.test;
 
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.devexperts.logging.Logging;
-import com.devexperts.rmi.*;
+import com.devexperts.rmi.RMIClientPort;
+import com.devexperts.rmi.RMIEndpoint;
+import com.devexperts.rmi.RMIException;
+import com.devexperts.rmi.RMIExceptionType;
+import com.devexperts.rmi.RMIOperation;
+import com.devexperts.rmi.RMIRequest;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
-import com.devexperts.rmi.task.*;
+import com.devexperts.rmi.task.RMIService;
+import com.devexperts.rmi.task.RMIServiceImplementation;
+import com.devexperts.rmi.task.RMITask;
+import com.devexperts.rmi.task.RMITaskState;
 import com.devexperts.test.ThreadCleanCheck;
 import com.devexperts.test.TraceRunner;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.*;
 
 @RunWith(TraceRunner.class)
 public class RMIAsynchronousTest {
+    @Rule
+    public Timeout globalTimeout= new Timeout(60, TimeUnit.SECONDS);
+
     private static final Logging log = Logging.getLogging(RMIAsynchronousTest.class);
 
     private RMIClientPort clientPort;

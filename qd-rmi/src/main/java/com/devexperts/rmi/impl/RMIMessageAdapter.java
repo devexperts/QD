@@ -11,22 +11,31 @@
  */
 package com.devexperts.rmi.impl;
 
-import java.io.IOException;
-import java.util.EnumSet;
-import javax.annotation.Nonnull;
-
 import com.devexperts.auth.AuthSession;
 import com.devexperts.io.BufferedInput;
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataIterator;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDLog;
+import com.devexperts.qd.SubscriptionIterator;
 import com.devexperts.qd.kit.DefaultScheme;
 import com.devexperts.qd.kit.PentaCodec;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.MasterMessageAdapter;
+import com.devexperts.qd.qtp.MessageAdapter;
+import com.devexperts.qd.qtp.MessageDescriptor;
+import com.devexperts.qd.qtp.MessageProvider;
+import com.devexperts.qd.qtp.MessageType;
+import com.devexperts.qd.qtp.MessageVisitor;
+import com.devexperts.qd.qtp.ProtocolDescriptor;
 import com.devexperts.qd.qtp.auth.QDAuthRealm;
 import com.devexperts.qd.qtp.auth.QDLoginHandler;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.util.LogUtil;
 import com.devexperts.util.TypedMap;
+
+import javax.annotation.Nonnull;
+import java.io.IOException;
+import java.util.EnumSet;
 
 /**
  * <code>RMIMessageAdapter</code> adapts {@link RMIConnection} to message API.
@@ -293,7 +302,7 @@ class RMIMessageAdapter extends MessageAdapter implements MasterMessageAdapter {
         }
         // start looking from a different message type next time
         retrieve = ++retrieve % RETRIEVE_COUNT;
-        // note: addMask was previously enclosed into finally block. This could lead to StockOverflow and
+        // note: addMask was previously enclosed into finally block. This could lead to StackOverflow and
         // offers no real protection, since any exception should terminate ongoing connection anyway.
         addMask(mask);
         return mask != 0;
@@ -305,7 +314,8 @@ class RMIMessageAdapter extends MessageAdapter implements MasterMessageAdapter {
     }
 
     private void processLegacyConnection() {
-        QDLog.log.warn("Legacy connection (pre QDS 3.69) is detected. Assuming RMI is supported at " + LogUtil.hideCredentials(getRemoteHostAddress()));
+        QDLog.log.warn("Legacy connection (pre QDS 3.69) is detected. Assuming RMI is supported at " +
+            LogUtil.hideCredentials(getRemoteHostAddress()));
         setRemoteReceiveSet(EnumSet.of(
             MessageType.RMI_DESCRIBE_SUBJECT, MessageType.RMI_DESCRIBE_OPERATION,
             MessageType.RMI_REQUEST, MessageType.RMI_CANCEL,
@@ -355,7 +365,8 @@ class RMIMessageAdapter extends MessageAdapter implements MasterMessageAdapter {
                     rmiAdsDesc.setProperty(ProtocolDescriptor.SERVICES_PROPERTY, connection.configuredServices.toString());
                     desc.addReceive(rmiAdsDesc);
                 }
-                if (connection.side.hasServer() && connection.configuredServices != ServiceFilter.NOTHING) {
+                if (connection.side.hasServer() && connection.configuredServices != ServiceFilter.NOTHING &&
+                    connection.adFilter.isSendAdvertisement()) {
                     desc.addSend(desc.newMessageDescriptor(message));
                 }
             }

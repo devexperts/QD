@@ -11,27 +11,38 @@
  */
 package com.devexperts.rmi.test;
 
-import java.io.*;
-import java.lang.management.ManagementFactory;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
-import javax.management.ObjectName;
-
 import com.devexperts.logging.Logging;
 import com.devexperts.mars.common.MARSNode;
 import com.devexperts.qd.monitoring.JMXEndpoint;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.test.ThreadCleanCheck;
 import com.devexperts.util.SynchronizedIndexedSet;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.Timeout;
 
-public class RMIMonitoringTest extends TestCase {
+import javax.management.ObjectName;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+import static org.junit.Assert.*;
+
+public class RMIMonitoringTest {
+
+    @Rule public Timeout globalTimeout= new Timeout(60, TimeUnit.SECONDS);
 
     private RMIEndpoint client;
     private RMIEndpoint server;
 
-    @Override
+    @After
     public void tearDown() {
         if (client != null)
             client.close();
@@ -39,6 +50,7 @@ public class RMIMonitoringTest extends TestCase {
             server.close();
     }
 
+    @Test
     public void testRedundantInit() throws IOException, InterruptedException {
         String tmpLogFileName = "RMIMonitoringTest.log";
         new File(tmpLogFileName).delete();
@@ -69,6 +81,7 @@ public class RMIMonitoringTest extends TestCase {
         }
     }
 
+    @Test
     public void testResourcesCleanupConnectorOnly() throws InterruptedException {
         Set<String> initialBeans = getBeans();
         Set<String> initialThreads = getThreadNames();
@@ -129,6 +142,7 @@ public class RMIMonitoringTest extends TestCase {
         assertTrue("Should not leave any threads behind", resultingThreads.isEmpty());
     }
 
+    @Test
     public void testResourcesCleanupWithExport() throws InterruptedException {
         Set<String> initialBeans = getBeans();
         Set<String> initialThreads = getThreadNames();

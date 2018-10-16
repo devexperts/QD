@@ -11,13 +11,15 @@
  */
 package com.devexperts.rmi.task;
 
+import com.devexperts.connector.proto.JVMId;
+import com.devexperts.io.BufferedInput;
+import com.devexperts.io.BufferedOutput;
+import com.devexperts.io.ByteArrayOutput;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-
-import com.devexperts.connector.proto.JVMId;
-import com.devexperts.io.*;
 
 
 /**
@@ -146,7 +148,7 @@ public class RMIServiceId implements Comparable<RMIServiceId> {
         i = name.compareTo(other.name);
         if (i != 0)
             return i;
-        return id < other.id ? -1 : (id > other.id) ? 1 : 0;
+        return Long.compare(id, other.id);
     }
 
     /**

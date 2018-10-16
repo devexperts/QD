@@ -51,7 +51,7 @@ public class MDREventUtil {
             return;
         char exchange = mapping instanceof MarketEventMapping ? ((MarketEventMapping) mapping).getRecordExchange() : '\0';
         RECORD_TYPES[index] = type;
-        RECORD_EXCHANGES[index] = exchange;
+        RECORD_EXCHANGES[index] = (type == 'H') ? '\0' : exchange;
         if (RECORDS_BY_TYPE_EXCHANGE[type] == null)
             RECORDS_BY_TYPE_EXCHANGE[type] = new DataRecord[128][];
         DataRecord[] rs = RECORDS_BY_TYPE_EXCHANGE[type][exchange];

@@ -11,22 +11,33 @@
  */
 package com.devexperts.rmi.impl;
 
-import java.util.*;
-
 import com.devexperts.rmi.message.RMIRequestMessage;
-import com.devexperts.rmi.task.*;
+import com.devexperts.rmi.task.BalanceResult;
+import com.devexperts.rmi.task.RMILoadBalancerFactory;
+import com.devexperts.rmi.task.RMIService;
+import com.devexperts.rmi.task.RMIServiceDescriptor;
+import com.devexperts.rmi.task.RMIServiceId;
+import com.dxfeed.promise.Promise;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 class ServerSideServices {
 
     private final RMIServerImpl server;
     private final Map<RMIServiceId, ServiceRouter<RMIService<?>>> clientServiceMap = new HashMap<>();
     private final Map<RMIServiceId, RMIService<?>> localServices = new HashMap<>();
-    private final Set<RMIService<?>> services = Collections.newSetFromMap(new IdentityHashMap<RMIService<?>, Boolean>());
-    private final LoadBalancerMap loadBalancers;
+    private final Set<RMIService<?>> services = Collections.newSetFromMap(new IdentityHashMap<>());
+    private final LoadBalancers loadBalancers;
 
-    ServerSideServices(RMIServerImpl server) {
+    ServerSideServices(RMIServerImpl server, List<RMILoadBalancerFactory> rmiLoadBalancerFactories) {
         this.server = server;
-        this.loadBalancers = new LoadBalancerMap(server.endpoint);
+        this.loadBalancers = new LoadBalancers(rmiLoadBalancerFactories);
     }
 
     synchronized void put(final RMIService<?> service) {
@@ -65,8 +76,12 @@ class ServerSideServices {
         return !descriptors.isEmpty();
     }
 
-    synchronized RMIServiceId loadBalance(RMIRequestMessage<?> message) {
-        return loadBalancers.loadBalance(message);
+    synchronized Promise<BalanceResult> balance(RMIRequestMessage<?> message) {
+        return loadBalancers.balance(message);
+    }
+
+    synchronized void close() {
+        loadBalancers.close();
     }
 
     private synchronized void descriptorsUpdateImpl(RMIService<?> service, List<RMIServiceDescriptor> descriptors) {
@@ -85,7 +100,6 @@ class ServerSideServices {
         }
         server.sendDescriptorsToAllConnections(localServiceDescriptors);
     }
-
 
     // called from a synchronized section (descriptorsUpdateImpl)
     private void updateInClientServicesMap(RMIService<?> service, RMIServiceDescriptor descriptor) {
@@ -140,7 +154,7 @@ class ServerSideServices {
     // --------------- RMIServiceDescriptorsListener for server ServiceRouter ---------------
 
     private class ServerRouterProcessor extends AbstractServiceDescriptorsProcessor {
-        protected ServerRouterProcessor() {
+        ServerRouterProcessor() {
             super(server.getDefaultExecutor());
         }
 

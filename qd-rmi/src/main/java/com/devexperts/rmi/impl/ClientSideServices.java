@@ -11,12 +11,18 @@
  */
 package com.devexperts.rmi.impl;
 
-import java.util.*;
-import javax.annotation.concurrent.GuardedBy;
-
 import com.devexperts.rmi.message.RMIRequestMessage;
+import com.devexperts.rmi.task.BalanceResult;
+import com.devexperts.rmi.task.RMILoadBalancerFactory;
 import com.devexperts.rmi.task.RMIServiceDescriptor;
 import com.devexperts.rmi.task.RMIServiceId;
+import com.dxfeed.promise.Promise;
+
+import javax.annotation.concurrent.GuardedBy;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 class ClientSideServices {
 
@@ -24,12 +30,12 @@ class ClientSideServices {
     private final Map<RMIServiceId, ServiceRouter<RMIConnection>> routers = new HashMap<>();
     private final Map<String, RMIClientService> services = new HashMap<>();
 
-    private final LoadBalancerMap loadBalancers;
+    private final LoadBalancers loadBalancers;
     private final RMIClientImpl client;
 
-    ClientSideServices(RMIClientImpl client) {
+    ClientSideServices(RMIClientImpl client, List<RMILoadBalancerFactory> rmiLoadBalancerFactories) {
         this.client = client;
-        loadBalancers = new LoadBalancerMap(client.endpoint);
+        loadBalancers = new LoadBalancers(rmiLoadBalancerFactories);
     }
 
     synchronized RMIClientService getService(String serviceName) {
@@ -57,8 +63,8 @@ class ClientSideServices {
             anonymousRouter = null;
     }
 
-    synchronized RMIServiceId loadBalance(RMIRequestMessage<?> message) {
-        return loadBalancers.loadBalance(message);
+    synchronized Promise<BalanceResult> balance(RMIRequestMessage<?> message) {
+        return loadBalancers.balance(message);
     }
 
     synchronized void updateDescriptorAndUpdateServices(List<RMIServiceDescriptor> descriptors, RMIConnection connection) {
@@ -129,6 +135,10 @@ class ClientSideServices {
             services.put(name, service);
         }
         return services.get(name);
+    }
+
+    synchronized void close() {
+        loadBalancers.close();
     }
 
     // --------------- RMIServiceDescriptorsListener for client ServiceRouter ---------------

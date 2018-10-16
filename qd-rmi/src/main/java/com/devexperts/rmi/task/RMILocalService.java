@@ -11,14 +11,20 @@
  */
 package com.devexperts.rmi.task;
 
-import java.util.*;
-
 import com.devexperts.io.MarshallingException;
 import com.devexperts.rmi.RMIExceptionType;
 import com.devexperts.rmi.RMIServer;
 import com.devexperts.rmi.impl.RMITaskImpl;
 import com.devexperts.rmi.security.SecurityController;
 import com.dxfeed.promise.Promise;
+
+import javax.annotation.Nonnull;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Provides the asynchronous execution of some operations on the {@link RMIServer}
@@ -48,6 +54,7 @@ public abstract class RMILocalService<T> extends RMIService<T> {
             getOrCreateServiceId(), 0, null, properties));
     }
 
+    @Nonnull
     @Override
     public List<RMIServiceDescriptor> getDescriptors() {
         return descriptors;

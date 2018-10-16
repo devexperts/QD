@@ -11,23 +11,23 @@
  */
 package com.devexperts.rmi.impl;
 
-import java.util.ArrayList;
-import java.util.List;
-import javax.annotation.concurrent.ThreadSafe;
-
 import com.devexperts.rmi.task.RMIServiceDescriptor;
 import com.devexperts.rmi.task.RMIServiceId;
 import com.devexperts.util.IndexedSet;
 
+import javax.annotation.concurrent.ThreadSafe;
+import java.util.ArrayList;
+import java.util.List;
+
 @ThreadSafe
-public class ServerDescriptorsManager {
+class ServerDescriptorsManager {
 
     private final RMIConnection connection;
     private volatile ServiceFilter services;
     private final IndexedSet<RMIServiceId, RMIServiceDescriptor> descriptors =
         IndexedSet.create(RMIServiceDescriptor.INDEXER_BY_SERVICE_ID);
 
-    public ServerDescriptorsManager(RMIConnection connection) {
+    ServerDescriptorsManager(RMIConnection connection) {
         this.connection = connection;
         services = ServiceFilter.NOTHING;
     }
@@ -41,6 +41,9 @@ public class ServerDescriptorsManager {
     }
 
     synchronized void addServiceDescriptors(List<RMIServiceDescriptor> descriptors) {
+        if (!connection.adFilter.isSendAdvertisement()) {
+            return;
+        }
         boolean changed = false;
         for (RMIServiceDescriptor descriptor : descriptors) {
             if (!services.accept(descriptor.getServiceName()))

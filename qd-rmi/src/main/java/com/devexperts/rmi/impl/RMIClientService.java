@@ -12,17 +12,22 @@
 package com.devexperts.rmi.impl;
 
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-
 import com.devexperts.logging.Logging;
 import com.devexperts.rmi.RMIClient;
 import com.devexperts.rmi.RMIRequest;
 import com.devexperts.rmi.message.RMIRequestType;
-import com.devexperts.rmi.task.*;
+import com.devexperts.rmi.task.RMIServiceDescriptor;
+import com.devexperts.rmi.task.RMIServiceDescriptorsListener;
+import com.devexperts.rmi.task.RMIServiceId;
+import com.devexperts.rmi.task.RMITask;
 import com.devexperts.util.IndexedSet;
 import com.devexperts.util.TypedKey;
+
+import javax.annotation.Nonnull;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 class RMIClientService extends ForwardService {
 
@@ -70,15 +75,22 @@ class RMIClientService extends ForwardService {
 
     // Must only use descriptors accepted by this service filter
     synchronized void updateDescriptors(List<RMIServiceDescriptor> descriptors) {
-        this.descriptors.addAll(descriptors);
+        for (RMIServiceDescriptor descriptor : descriptors) {
+            if (descriptor.isAvailable()) {
+                this.descriptors.add(descriptor); // replace the descriptor
+            } else {
+                this.descriptors.remove(descriptor);
+            }
+        }
         for (RMIServiceDescriptorsListener listener : listeners)
             try {
-                listener.descriptorsUpdated(descriptors);
+                listener.descriptorsUpdated(Collections.unmodifiableList(descriptors));
             } catch (Throwable t) {
                 Logging.getLogging(RMIClientService.class).error("Failed to update service descriptors", t);
             }
     }
 
+    @Nonnull
     @Override
     public List<RMIServiceDescriptor> getDescriptors() {
         // Note: we must use concurrent iterator to get a snapshot of descriptors (that are being modified),

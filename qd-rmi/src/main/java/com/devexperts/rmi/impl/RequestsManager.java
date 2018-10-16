@@ -11,11 +11,11 @@
  */
 package com.devexperts.rmi.impl;
 
-import java.util.List;
-import javax.annotation.Nullable;
-
 import com.devexperts.logging.Logging;
 import com.devexperts.rmi.task.RMIServiceDescriptor;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * The client side of {@link RMIConnection}.
@@ -42,7 +42,7 @@ class RequestsManager {
             connection.endpoint.getClient().updateServiceDescriptors(null, connection);
     }
 
-    public boolean isAnonymous() {
+    boolean isAnonymous() {
         return anonymous;
     }
 
@@ -78,7 +78,7 @@ class RequestsManager {
         connection.messageAdapter.rmiMessageAvailable(RMIQueueType.REQUEST);
     }
 
-    // descriptors are null when need to rebalanced anonymous connections only
+    // descriptors are null when need to rebalance anonymous connections only
     @Nullable List<RMIRequestImpl<?>> getByDescriptorsAndRemove(@Nullable List<RMIServiceDescriptor> descriptors) {
         if (descriptors == null && !anonymous)
             return null;

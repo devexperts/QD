@@ -12,7 +12,9 @@
 package com.devexperts.rmi.impl;
 
 import com.devexperts.rmi.task.*;
+import com.devexperts.services.ServiceProvider;
 
+@ServiceProvider(order = 100)
 public class DefaultLoadBalancerFactory implements RMILoadBalancerFactory {
     @Override
     public RMILoadBalancer createLoadBalancer(String serviceName) {

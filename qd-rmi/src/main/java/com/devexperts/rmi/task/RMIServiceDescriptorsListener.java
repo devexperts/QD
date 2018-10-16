@@ -15,12 +15,18 @@ import java.util.List;
 
 /**
  * The listener for notification of {@link RMIObservableServiceDescriptors},
- * that some implementation of service has changed some properties.
+ * that some implementation of a service has changed some properties.
  */
 public interface RMIServiceDescriptorsListener {
     /**
      * This method provides notification for {@link RMIObservableServiceDescriptors},
      * that implementations of service has changed.
+     * <p>
+     * When a descriptor goes away due to service implementation no longer advertised it is reported
+     * through this listener with the {@link RMIServiceDescriptor#isAvailable() unavailable} status.
+     * <p>
+     * You can use {@link RMIService#getDescriptors()} method to fetch the current set of descriptors for a service.
+     * <p>
      * <b>This method must not block and it shall avoid synchronization</b>.
      * It is being invoked under many layers of internal locks (can deadlock otherwise).
      *

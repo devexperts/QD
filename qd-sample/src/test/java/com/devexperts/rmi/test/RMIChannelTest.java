@@ -11,25 +11,44 @@
  */
 package com.devexperts.rmi.test;
 
-import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.LockSupport;
-
 import com.devexperts.logging.Logging;
-import com.devexperts.rmi.*;
+import com.devexperts.rmi.RMIEndpoint;
+import com.devexperts.rmi.RMIException;
+import com.devexperts.rmi.RMIExceptionType;
+import com.devexperts.rmi.RMIOperation;
+import com.devexperts.rmi.RMIRequest;
+import com.devexperts.rmi.RMIRequestListener;
+import com.devexperts.rmi.RMIRequestState;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
 import com.devexperts.rmi.message.RMIRequestMessage;
 import com.devexperts.rmi.message.RMIRequestType;
-import com.devexperts.rmi.task.*;
+import com.devexperts.rmi.task.RMIChannel;
+import com.devexperts.rmi.task.RMIChannelState;
+import com.devexperts.rmi.task.RMIChannelSupport;
+import com.devexperts.rmi.task.RMIService;
+import com.devexperts.rmi.task.RMITask;
+import com.devexperts.rmi.task.RMITaskCancelListener;
+import com.devexperts.rmi.task.RMITaskState;
 import com.devexperts.test.ThreadCleanCheck;
 import com.devexperts.test.TraceRunner;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.LockSupport;
 
 import static org.junit.Assert.*;
 
@@ -970,9 +989,9 @@ public class RMIChannelTest {
 
     // ---------------------------------------------------------
 
+    @Ignore("this test fails consistently. fix it or drop it")
     @Test
     public void testChannelRequestCancel() throws InterruptedException {
-        if (true) return;//TODO this test fails consistently. fix it or drop it
         connectDefault(22);
         server.getServer().export(new ChannelRequestCancelCheckerImpl(), ChannelRequestCancelChecker.class);
         RMIOperation<Void> requestOperation = RMIOperation.valueOf(

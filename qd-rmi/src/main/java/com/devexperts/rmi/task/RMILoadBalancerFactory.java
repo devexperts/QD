@@ -11,15 +11,24 @@
  */
 package com.devexperts.rmi.task;
 
+import com.devexperts.services.Service;
+import com.devexperts.services.ServiceProvider;
+
 /**
- * A factory that creates {@link RMILoadBalancer load balancer}.
+ * A factory that creates {@link RMILoadBalancer load balancer} instances.
+ * A separate load balancer is created for each distinct service name.
+ * <p>
+ * Multiple factories can be configured via SPI. To create a balancer the factories are consulted in order of
+ * their {@link ServiceProvider#order()}.
  */
+@Service
 public interface RMILoadBalancerFactory {
 
     /**
-     * Creates new {@link RMILoadBalancer} for a given service name.
-     * @param serviceName the service name
-     * @return new {@link RMILoadBalancer}
+     * Creates a new {@link RMILoadBalancer} for a given service name.
+     * @param serviceName service name
+     * @return new {@link RMILoadBalancer}. If a factory returns {@code null} it indicates that it cannot
+     * create a balancer for a given service.
      */
     public RMILoadBalancer createLoadBalancer(String serviceName);
 }

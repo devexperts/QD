@@ -11,13 +11,20 @@
  */
 package com.devexperts.rmi.impl;
 
-import java.util.*;
-
 import com.devexperts.connector.codec.ssl.SSLConnectionFactory;
-import com.devexperts.connector.proto.*;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.connector.proto.Configurable;
+import com.devexperts.connector.proto.ConfigurationException;
+import com.devexperts.connector.proto.ConfigurationKey;
+import com.devexperts.qd.qtp.MessageAdapter;
+import com.devexperts.qd.qtp.MessageConnector;
+import com.devexperts.qd.qtp.MessageConnectors;
+import com.devexperts.qd.qtp.QDEndpoint;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.util.SystemProperties;
+
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 public class RMIConnectorInitializer implements QDEndpoint.ConnectorInitializer {
     public static final int DEFAULT_WEIGHT =
@@ -51,6 +58,7 @@ public class RMIConnectorInitializer implements QDEndpoint.ConnectorInitializer 
     private class AdapterFactory extends MessageAdapter.ConfigurableFactory {
 
         private ServiceFilter services = ServiceFilter.ANYTHING;
+        private AdvertisementFilter advertisementFilter = AdvertisementFilter.ALL;
         private int weight = DEFAULT_WEIGHT;
 
         private MessageAdapter.ConfigurableFactory attachedMessageAdapterFactory =
@@ -60,7 +68,7 @@ public class RMIConnectorInitializer implements QDEndpoint.ConnectorInitializer 
         public MessageAdapter createAdapter(QDStats stats) {
             MessageAdapter attachedAdapter = attachedMessageAdapterFactory == null ?
                 null : attachedMessageAdapterFactory.createAdapter(stats);
-            return new RMIConnection(rmiEndpoint, stats, attachedAdapter, services, weight).messageAdapter;
+            return new RMIConnection(rmiEndpoint, stats, attachedAdapter, services, advertisementFilter, weight).messageAdapter;
         }
 
         @Override
@@ -102,6 +110,17 @@ public class RMIConnectorInitializer implements QDEndpoint.ConnectorInitializer 
 
         public ServiceFilter getServices() {
             return services;
+        }
+
+        @SuppressWarnings("unused") // Used by ConfigurableObject framework
+        @Configurable(description = "services advertisement mode on this connection")
+        public void setAdvertise(AdvertisementFilter filter) {
+            advertisementFilter = filter;
+        }
+
+        @SuppressWarnings("unused") // Used by ConfigurableObject framework
+        public AdvertisementFilter getAdvertise() {
+            return advertisementFilter;
         }
 
         @Configurable(description = "connection weight")

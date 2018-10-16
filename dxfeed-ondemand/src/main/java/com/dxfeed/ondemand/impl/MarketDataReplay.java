@@ -138,7 +138,11 @@ public class MarketDataReplay implements Runnable {
     public synchronized void addSubscription(RecordBuffer sub) {
         if (sub.isEmpty())
             return;
-        current.subscription.addAll(buildSubscription("addSubscription", sub));
+        for (Key key : buildSubscription("addSubscription", sub)) {
+            Key old = current.subscription.put(key);
+            if (old != null)
+                key.subscriptionCount += old.subscriptionCount;
+        }
         if (cache != null)
             cache.rebuildCurrentSegments(current);
         awaken();
@@ -147,7 +151,14 @@ public class MarketDataReplay implements Runnable {
     public synchronized void removeSubscription(RecordBuffer sub) {
         if (sub.isEmpty())
             return;
-        current.subscription.removeAll(buildSubscription("removeSubscription", sub));
+        for (Key key : buildSubscription("removeSubscription", sub)) {
+            Key old = current.subscription.getByKey(key);
+            if (old != null) {
+                old.subscriptionCount -= key.subscriptionCount;
+                if (old.subscriptionCount <= 0)
+                    current.subscription.removeKey(key);
+            }
+        }
         if (cache != null)
             cache.rebuildCurrentSegments(current);
         awaken();
@@ -173,8 +184,10 @@ public class MarketDataReplay implements Runnable {
                 goodSymbols.add(symbol);
             else
                 badSymbols.add(symbol == null ? "<null>" : symbol.length() == 0 ? "<empty>" : symbol);
-            if (type != 0 && goodSymbol)
-                subscription.put(new Key(symbol, MDREventUtil.getExchange(record), type));
+            if (type != 0 && goodSymbol) {
+                Key key = subscription.putIfAbsentAndGet(new Key(symbol, MDREventUtil.getExchange(record), type));
+                key.subscriptionCount++;
+            }
         }
         Log.log.info(method + ": " + goodRecords.size() + " records, " + goodSymbols.size() + " symbols" +
             ", ignored " + badRecords + " " + badSymbols + ", categories:" + MDREventUtil.countCategories(subscription));

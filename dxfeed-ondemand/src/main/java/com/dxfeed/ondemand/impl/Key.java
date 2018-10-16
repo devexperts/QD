@@ -33,6 +33,10 @@ public class Key {
     protected char exchange;
     protected char type;
 
+    // Single key is used for different QD records (e.g. TimeAndSale&[A-Z],TradeHistory)
+    // This counter is used to correctly handle add/remove subscription
+    public transient int subscriptionCount;
+
     public Key() {}
 
     public Key(String symbol, char exchange, char type) {

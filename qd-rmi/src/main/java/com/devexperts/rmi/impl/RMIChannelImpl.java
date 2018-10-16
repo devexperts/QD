@@ -208,7 +208,8 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
         }
         //for top-level request
         RMIRequest<Void> cancelChannel = createRequest(new RMIRequestMessage<>(RMIRequestType.ONE_WAY,
-            cancel == RMICancelType.ABORT_RUNNING ? RMIRequestImpl.ABORT_CANCEL : RMIRequestImpl.CANCEL_WITH_CONFIRMATION, 0L));
+            cancel == RMICancelType.ABORT_RUNNING ? RMIRequestImpl.ABORT_CANCEL : RMIRequestImpl.CANCEL_WITH_CONFIRMATION,
+            0L));
         cancelChannel.setListener(request -> this.close());
         switch (state) {
         case NEW:
@@ -271,7 +272,7 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
         request.setFailedState(RMIExceptionType.CHANNEL_CLOSED, null);
     }
 
-    private synchronized boolean removeOutgoingRequestImpl(RMIRequestImpl<?> request) {
+    private synchronized boolean dropPendingRequestImpl(RMIRequestImpl<?> request) {
         return preOpenOutgoingRequests != null && preOpenOutgoingRequests.remove(request);
     }
 
@@ -325,8 +326,8 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
         }
 
         @Override
-        public boolean removeOutgoingRequest(RMIRequestImpl<?> request) {
-            return removeOutgoingRequestImpl(request);
+        public boolean dropPendingRequest(RMIRequestImpl<?> request) {
+            return dropPendingRequestImpl(request);
         }
     }
 

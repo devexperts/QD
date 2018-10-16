@@ -13,6 +13,12 @@ package com.devexperts.rmi.test.routing;
 
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
+import com.devexperts.rmi.task.RMIService;
+import com.devexperts.rmi.task.RMIServiceDescriptor;
+import com.devexperts.rmi.task.RMIServiceDescriptorsListener;
+
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 class ClientRoutingSide {
 
@@ -50,4 +56,16 @@ class ClientRoutingSide {
         ServerRoutingSide.disconnect(clients);
     }
 
+    void waitForServices(int count, String serviceName) throws InterruptedException {
+        for (RMIEndpointImpl endpoint : clients) {
+            List<RMIServiceDescriptor> descriptors = new CopyOnWriteArrayList<>();
+            RMIService<?> service = endpoint.getClient().getService(serviceName);
+            RMIServiceDescriptorsListener listener = descriptors::addAll;
+            service.addServiceDescriptorsListener(listener);
+            while (descriptors.size() < count) {
+                Thread.sleep(1);
+            }
+            service.removeServiceDescriptorsListener(listener);
+        }
+    }
 }

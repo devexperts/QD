@@ -11,19 +11,38 @@
  */
 package com.devexperts.rmi.impl;
 
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.Executor;
-
 import com.devexperts.connector.proto.EndpointId;
 import com.devexperts.connector.proto.JVMId;
-import com.devexperts.io.*;
+import com.devexperts.io.BufferedInput;
+import com.devexperts.io.Marshalled;
+import com.devexperts.io.Marshaller;
 import com.devexperts.logging.Logging;
-import com.devexperts.rmi.*;
-import com.devexperts.rmi.message.*;
-import com.devexperts.rmi.task.*;
+import com.devexperts.rmi.RMIException;
+import com.devexperts.rmi.RMIExceptionType;
+import com.devexperts.rmi.RMIOperation;
+import com.devexperts.rmi.message.RMICancelType;
+import com.devexperts.rmi.message.RMIErrorMessage;
+import com.devexperts.rmi.message.RMIRequestMessage;
+import com.devexperts.rmi.message.RMIRequestType;
+import com.devexperts.rmi.message.RMIResponseMessage;
+import com.devexperts.rmi.message.RMIRoute;
+import com.devexperts.rmi.task.BalanceResult;
+import com.devexperts.rmi.task.RMIChannelType;
+import com.devexperts.rmi.task.RMIService;
+import com.devexperts.rmi.task.RMIServiceDescriptor;
+import com.devexperts.rmi.task.RMIServiceId;
 import com.devexperts.util.LongHashMap;
 import com.devexperts.util.SystemProperties;
+import com.dxfeed.promise.Promise;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Executor;
 
 /**
  * Auxiliary class that processes incoming RMI messages and keeps processed stream state.
@@ -31,13 +50,17 @@ import com.devexperts.util.SystemProperties;
 class MessageProcessor {
     private static final Logging log = Logging.getLogging(MessageProcessor.class);
 
-    private static final int MAX_LENGTH_RMI_ROUTE = SystemProperties.getIntProperty("com.devexperts.rmi.maxLengthRMIRoute", 10);
+    private static final int MAX_LENGTH_RMI_ROUTE =
+        SystemProperties.getIntProperty("com.devexperts.rmi.maxLengthRMIRoute", 10);
 
     // ==================== private fields ====================
 
     private final RMIConnection connection;
     private final Subjects subjects = new Subjects();
     private final Operations operations = new Operations();
+    private volatile boolean closed = false;
+
+    private final PendingRequests pendingRequests = new PendingRequests();
 
     // ==================== constructor ====================
 
@@ -63,9 +86,10 @@ class MessageProcessor {
             RMIOperation<?> operation = operations.getOperation(operationId);
             if (operation != null)
                 parametersRequest = data.readMarshalled(operation.getParametersMarshaller(), connection.endpoint.getSerialClassContext());
+
             makeTask(channelId, requestId, subjectId, operationId, kind, parametersRequest, requestType, route, target);
         } catch (IOException e) {
-            makeFailedTask(RMIExceptionType.FAILED_TO_READ_REQUEST, "Failed read request", kind, requestType, channelId, requestId);
+            signalFailure(RMIExceptionType.FAILED_TO_READ_REQUEST, "Failed read request", kind, requestType, channelId, requestId);
         }
     }
 
@@ -170,9 +194,11 @@ class MessageProcessor {
             if (operation != null)
                 parametersRequest = data.readMarshalled(operation.getParametersMarshaller(), connection.endpoint.getSerialClassContext());
 
-            makeTask(channelId, requestId, subjectId, operationId, RMIMessageKind.REQUEST, parametersRequest, requestType, route, target);
+            makeTask(channelId, requestId, subjectId, operationId, RMIMessageKind.REQUEST, parametersRequest,
+                requestType, route, target);
         } catch (IOException e) {
-            makeFailedTask(RMIExceptionType.FAILED_TO_READ_REQUEST,"Failed read request", RMIMessageKind.REQUEST, requestType, channelId, requestId);
+            signalFailure(RMIExceptionType.FAILED_TO_READ_REQUEST,"Failed to read a request", RMIMessageKind.REQUEST,
+                requestType, channelId, requestId);
         }
     }
 
@@ -230,14 +256,18 @@ class MessageProcessor {
         }
 
         if (service == null) {
-            makeFailedTask(RMIExceptionType.UNKNOWN_SERVICE, "\"" + requestInfo.message.getOperation().getServiceName() + "\"",
-                requestInfo.kind, requestInfo.message.getRequestType(), requestInfo.channelId, requestInfo.reqId);
+            if (requestInfo.retargetedByLoadBalancer)
+                signalServiceUnavailable(requestInfo,
+                    "Load balancer selected an unreachable service " + requestInfo.message.getTarget());
+            else
+                signalFailure(RMIExceptionType.UNKNOWN_SERVICE, "\"" + requestInfo.message.getOperation().getServiceName() + "\"",
+                    requestInfo.kind, requestInfo.message.getRequestType(), requestInfo.channelId, requestInfo.reqId);
             return;
         }
 
         // ----------------------------------------
-        // NOTE: We need method makeFailedTask only before this point, after it we have a RMITaskImpl instance,
-        // that knows how to propagated all results and failures to the requesting peers
+        // NOTE: We need method signalFailure only before this point, after it we have a RMITaskImpl instance,
+        // that knows how to propagate all results and failures to the requesting peers
 
         RMITaskImpl<?> task = nestedTask ?
             RMITaskImpl.createNestedTask(requestInfo.message, connection, channel, requestInfo.reqId) :
@@ -247,8 +277,7 @@ class MessageProcessor {
             log.trace("Create task " + task + " at " + connection);
 
         connection.tasksManager.registerTask(task);
-        Executor serviceExecutor = service.getExecutor();
-        Executor executor = serviceExecutor;
+        Executor executor = service.getExecutor();
         if (executor == null) {
             executor = nestedTask ? channel.getExecutor() : connection.endpoint.getServer().getDefaultExecutor();
         }
@@ -279,83 +308,136 @@ class MessageProcessor {
     {
         Marshalled<?> marshalledSubject = subjects.getSubject(subjectId);
         if (marshalledSubject == null) {
-            makeFailedTask(RMIExceptionType.UNKNOWN_SUBJECT, "#" + subjectId, kind, requestType, channelId, curReqId);
+            signalFailure(RMIExceptionType.UNKNOWN_SUBJECT, "#" + subjectId, kind, requestType, channelId, curReqId);
             return;
         }
         RMIOperation<?> operation = operations.getOperation(operationId);
         if (operation == null) {
-            makeFailedTask(RMIExceptionType.UNKNOWN_OPERATION, "#" + operationId, kind, requestType, channelId, curReqId);
+            signalFailure(RMIExceptionType.UNKNOWN_OPERATION, "#" + operationId, kind, requestType, channelId, curReqId);
             return;
         }
         boolean nestedTask = channelId != 0;
         if (!nestedTask && !connection.configuredServices.accept(operation.getServiceName())) {
-            makeFailedTask(RMIExceptionType.UNKNOWN_SERVICE,
+            signalFailure(RMIExceptionType.UNKNOWN_SERVICE,
                 "\"" + operation.getServiceName() + "\"", kind, requestType, channelId, curReqId);
             return;
         }
         if (!route.isEmpty()) {
             EndpointId lastNode = route.getLast();
             if (route.indexOf(lastNode) != route.size() - 1 || route.size() >= MAX_LENGTH_RMI_ROUTE) {
-                makeFailedTask(RMIExceptionType.ROUTE_IS_NOT_FOUND,
+                signalFailure(RMIExceptionType.ROUTE_IS_NOT_FOUND,
                     "Request for \"" + operation.getServiceName() + "\" got into routing loop: Route = " + route,
                     kind, requestType, channelId, curReqId);
                 return;
             }
         }
 
-        if (checkCancelRequest(channelId, parametersRequest, operation, kind))
+        if (processCancel(channelId, parametersRequest, operation, kind))
             return;
 
-        RMIRequestMessage<?> requestMessage =
-            new RMIRequestMessage<>(requestType, operation, parametersRequest, route, target);
+        RMIRequestMessage<?> requestMessage = new RMIRequestMessage<>(requestType, operation, parametersRequest, route, target);
+        ServerRequestInfo requestInfo = new ServerRequestInfo(kind, curReqId, channelId, requestMessage, marshalledSubject);
+
         if (target == null && !nestedTask) {
-            target = connection.endpoint.getServer().loadBalance(requestMessage);
-            requestMessage = requestMessage.changeTargetRoute(target, route);
+            Promise<BalanceResult> balanceResult = connection.endpoint.getServer().balance(requestMessage);
+            // Quick path, balancer returns a completed promise
+            if (balanceResult.isDone()) {
+                RMILog.logBalancingCompletion(requestInfo, balanceResult);
+                balancingCompleted(requestInfo, balanceResult);
+                return;
+            }
+            // Async path
+            pendingRequests.addBalancePromise(requestInfo, balanceResult, this::balancingCompleted);
+        } else {
+            createAndSubmitTask(requestInfo);
+        }
+    }
+
+    @SuppressWarnings("ThrowableNotThrown")
+    private void balancingCompleted(ServerRequestInfo requestInfo, Promise<BalanceResult> balanceResult) {
+        // Either a request initiator cancelled the request (maybe due to timeout) or the load balancer
+        // itself cancelled its promise. Both of these scenarios should lead to 'task cancelled' response
+        // sent back
+        if (balanceResult.isCancelled()) {
+            if (!closed) {
+                signalFailure(RMIExceptionType.CANCELLED_BEFORE_EXECUTION, null, requestInfo.kind,
+                    requestInfo.message.getRequestType(), requestInfo.channelId, requestInfo.reqId);
+            }
+            return;
         }
 
-        ServerRequestInfo requestInfo = new ServerRequestInfo(kind, curReqId, channelId, requestMessage, marshalledSubject);
+        if (balanceResult.hasException() || balanceResult.getResult().isReject()) {
+            String rejectReason = balanceResult.hasException() ?
+                balanceResult.getException().getMessage() : balanceResult.getResult().getRejectReason();
+            signalServiceUnavailable(requestInfo, rejectReason);
+            return;
+        }
+
+        // Retarget the message according to the balance decision
+        RMIServiceId target = balanceResult.getResult().getTarget();
+        requestInfo = requestInfo.changeTargetRoute(target);
+
+        createAndSubmitTask(requestInfo);
+    }
+
+    private void signalServiceUnavailable(ServerRequestInfo requestInfo, String rejectReason) {
+        signalFailure(RMIExceptionType.SERVICE_UNAVAILABLE, rejectReason,
+            requestInfo.kind, requestInfo.message.getRequestType(), requestInfo.channelId, requestInfo.reqId);
+    }
+
+    private void createAndSubmitTask(ServerRequestInfo requestInfo) {
+        boolean nestedTask = requestInfo.channelId != 0;
+
         if (nestedTask) {
             RMIChannelImpl channel = connection.channelsManager.getChannel(
-                channelId, kind.hasClient() ? RMIChannelType.CLIENT_CHANNEL : RMIChannelType.SERVER_CHANNEL);
-            boolean ok;
-            if (channel == null) {
-                ok = false;
-            } else {
-                ok = channel.addIncomingRequest(requestInfo);
-            }
+                requestInfo.channelId, requestInfo.kind.hasClient() ? RMIChannelType.CLIENT_CHANNEL : RMIChannelType.SERVER_CHANNEL);
+            boolean ok = channel != null && channel.addIncomingRequest(requestInfo);
             if (!ok) {
                 RMILog.logFailedTask(RMIExceptionType.CHANNEL_CLOSED,
                     ". The channel number " + requestInfo.channelId + " has already been closed or never existed",
                     connection, requestInfo.reqId, requestInfo.channelId, requestInfo.message.getRequestType());
-                return;
             }
         } else {
             createAndSubmitTask(null, requestInfo);
         }
     }
 
-    private boolean checkCancelRequest(long channelId, Marshalled<Object[]> parametersRequest, RMIOperation<?> operation, RMIMessageKind kind) {
+    private boolean processCancel(long channelId, Marshalled<Object[]> parametersRequest, RMIOperation<?> operation,
+        RMIMessageKind kind)
+    {
         if (!RMIRequestImpl.isCancelOperation(operation))
             return false;
         Object[] params = parametersRequest.getObject();
         RMIChannelType channelType = kind.hasClient() ? RMIChannelType.CLIENT_CHANNEL : RMIChannelType.SERVER_CHANNEL;
-        if ((long) params[0] == 0L) {
+        // params[0] is the request id. If it is 0, this is the channel-related cancel
+        long requestId = (long) params[0];
+        if (requestId == 0L) {
+            pendingRequests.dropPendingRequest(channelId); // channelId is the id of the top-level request
             RMIChannelImpl channel = connection.channelsManager.getChannel(channelId, channelType);
             if (channel != null)
                 channel.cancel(RMICancelType.valueOf(operation.getMethodName()));
         } else {
-            connection.tasksManager.cancelTask((long) params[0], channelId, RMICancelType.valueOf(operation.getMethodName()).getId(), channelType);
+            // INVARIANT: any top-level request is either being balanced OR is within the connection's task manager
+            if (!pendingRequests.dropPendingRequest(requestId)) {
+                connection.tasksManager.cancelTask(requestId, channelId,
+                    RMICancelType.valueOf(operation.getMethodName()).getId(), channelType);
+            }
         }
         return true;
     }
 
-    private void makeFailedTask(RMIExceptionType exceptionType, String info, RMIMessageKind kind, RMIRequestType requestType,
+    private void signalFailure(RMIExceptionType exceptionType, String info, RMIMessageKind kind, RMIRequestType requestType,
         long channelId, long requestId)
     {
         RMILog.logFailedTask(exceptionType, info, connection, requestId, channelId, requestType);
         connection.tasksManager.notifyTaskCompleted(requestType,
             new RMITaskResponse(new RMIErrorMessage(exceptionType, new RMIFailedException(info), null),
                 channelId, requestId, kind.hasClient() ? RMIChannelType.CLIENT_CHANNEL : RMIChannelType.SERVER_CHANNEL ));
+    }
+
+    void close() {
+        closed = true;
+        pendingRequests.clear();
     }
 
     // ==================== nested helper class ====================

@@ -11,14 +11,14 @@
  */
 package com.devexperts.rmi;
 
-import java.lang.reflect.Proxy;
-import java.util.concurrent.Executor;
-
 import com.devexperts.rmi.impl.RMIRequestImpl;
 import com.devexperts.rmi.message.RMIRequestMessage;
 import com.devexperts.rmi.message.RMIRequestType;
 import com.devexperts.rmi.security.SecurityController;
 import com.devexperts.rmi.task.RMIService;
+
+import java.lang.reflect.Proxy;
+import java.util.concurrent.Executor;
 
 /**
  * The client side {@link RMIEndpoint endpoint}.

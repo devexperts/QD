@@ -11,24 +11,34 @@
  */
 package com.devexperts.rmi.test.routing;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.devexperts.connector.proto.EndpointId;
 import com.devexperts.io.Marshalled;
 import com.devexperts.rmi.RMIOperation;
-import com.devexperts.rmi.message.*;
+import com.devexperts.rmi.message.RMIRequestMessage;
+import com.devexperts.rmi.message.RMIRequestType;
+import com.devexperts.rmi.message.RMIRoute;
 import com.devexperts.rmi.samples.DifferentServices;
-import com.devexperts.rmi.task.*;
+import com.devexperts.rmi.task.BalanceResult;
+import com.devexperts.rmi.task.ConsistentLoadBalancer;
+import com.devexperts.rmi.task.RMILoadBalancer;
+import com.devexperts.rmi.task.RMIService;
+import com.devexperts.rmi.task.RMIServiceDescriptor;
+import com.devexperts.rmi.task.RMIServiceId;
 import com.devexperts.test.ThreadCleanCheck;
 import com.devexperts.test.TraceRunner;
-import org.junit.*;
+import com.dxfeed.promise.Promise;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.Assert.*;
 
 @RunWith(TraceRunner.class)
-public class RMILoadBalancerTest {
+public class ConsistentLoadBalancerTest {
     private static final String SERVICE_NAME = "test";
     private final RMILoadBalancer loadBalancer = new ConsistentLoadBalancer();
 
@@ -43,23 +53,23 @@ public class RMILoadBalancerTest {
     }
 
     @Test
-    public void testUniformBalancing() throws NoSuchMethodException {
+    public void testUniformBalancing() {
         Map<RMIServiceId, Integer> hits = new HashMap<>();
         int countServices = 10;
         int countClients = 100000;
         for (int i = 0; i < countServices; i++) {
             RMIServiceId serviceId = RMIServiceId.newServiceId(SERVICE_NAME);
             hits.put(serviceId, 0);
-            loadBalancer.addService(RMIServiceDescriptor.createDescriptor(serviceId, i, null, null));
+            loadBalancer.updateServiceDescriptor(RMIServiceDescriptor.createDescriptor(serviceId, i, null, null));
         }
         System.out.println(".");
         RMIRequestMessage<?> message;
-        RMIServiceId id;
         for (int i = 0; i < countClients; i++) {
             message = new RMIRequestMessage<>(RMIRequestType.DEFAULT, (RMIOperation<?>) DifferentServices.CalculatorService.PLUS,
                 Marshalled.forObject(new Object[] {1, 2}, DifferentServices.CalculatorService.PLUS.getParametersMarshaller()), RMIRoute.createRMIRoute(EndpointId.newEndpointId("RMI")), null);
-            id = loadBalancer.pickServiceInstance(message);
-            hits.put(id, hits.get(id) + 1);
+            Promise<BalanceResult> decision = loadBalancer.balance(message);
+            assertNotNull(decision.await().getTarget());
+            hits.put(decision.getResult().getTarget(), hits.get(decision.getResult().getTarget()) + 1);
         }
         System.out.println(hits.values());
 
@@ -68,6 +78,7 @@ public class RMILoadBalancerTest {
         }
     }
 
+    @Test
     public void testEmptyLoadBalancer() {
         RMIRequestMessage<?> message;
         RMIServiceId serviceId1 = RMIServiceId.newServiceId(SERVICE_NAME);
@@ -75,29 +86,25 @@ public class RMILoadBalancerTest {
         message = new RMIRequestMessage<>(RMIRequestType.DEFAULT, (RMIOperation<?>) DifferentServices.CalculatorService.PLUS, Marshalled.forObject(null),
             Marshalled.forObject(new Object[] {1, 2}, DifferentServices.CalculatorService.PLUS.getParametersMarshaller()), RMIRoute.createRMIRoute(EndpointId.newEndpointId("RMI")));
 
-        assertTrue(loadBalancer.isEmpty());
-        assertEquals(loadBalancer.pickServiceInstance(message), null);
+        BalanceResult decision = loadBalancer.balance(message).await();
+        assertNull(decision.getTarget());
+        assertFalse(decision.isReject());
 
-        loadBalancer.addService(RMIServiceDescriptor.createDescriptor(serviceId1, 10, null, null));
-        assertFalse(loadBalancer.isEmpty());
-        assertEquals(loadBalancer.pickServiceInstance(message), serviceId1);
+        loadBalancer.updateServiceDescriptor(RMIServiceDescriptor.createDescriptor(serviceId1, 10, null, null));
+        assertEquals(serviceId1, loadBalancer.balance(message).await().getTarget());
 
-        loadBalancer.addService(RMIServiceDescriptor.createDescriptor(serviceId2, 10, null, null));
-        assertFalse(loadBalancer.isEmpty());
+        loadBalancer.updateServiceDescriptor(RMIServiceDescriptor.createDescriptor(serviceId2, 10, null, null));
 
-        loadBalancer.removeService(RMIServiceDescriptor.createDescriptor(serviceId1, RMIService.UNAVAILABLE_METRIC, null, null));
-        assertFalse(loadBalancer.isEmpty());
-        assertEquals(serviceId2, loadBalancer.pickServiceInstance(message));
+        loadBalancer.updateServiceDescriptor(RMIServiceDescriptor.createDescriptor(serviceId1, RMIService.UNAVAILABLE_METRIC, null, null));
+        assertEquals(serviceId2, loadBalancer.balance(message).await().getTarget());
 
-        loadBalancer.addService(RMIServiceDescriptor.createDescriptor(serviceId1, 10, null, null));
-        assertFalse(loadBalancer.isEmpty());
+        loadBalancer.updateServiceDescriptor(RMIServiceDescriptor.createDescriptor(serviceId1, 10, null, null));
 
-        loadBalancer.removeService(RMIServiceDescriptor.createDescriptor(serviceId2, RMIService.UNAVAILABLE_METRIC, null, null));
-        assertFalse(loadBalancer.isEmpty());
-        assertEquals(loadBalancer.pickServiceInstance(message), serviceId1);
+        loadBalancer.updateServiceDescriptor(RMIServiceDescriptor.createDescriptor(serviceId2, RMIService.UNAVAILABLE_METRIC, null, null));
+        assertEquals(serviceId1, loadBalancer.balance(message).await().getTarget());
 
-        loadBalancer.removeService(RMIServiceDescriptor.createDescriptor(serviceId1, RMIService.UNAVAILABLE_METRIC, null, null));
-        assertTrue(loadBalancer.isEmpty());
-        assertEquals(loadBalancer.pickServiceInstance(message), null);
+        loadBalancer.updateServiceDescriptor(RMIServiceDescriptor.createDescriptor(serviceId1, RMIService.UNAVAILABLE_METRIC, null, null));
+        assertNull(loadBalancer.balance(message).await().getTarget());
+        assertFalse(decision.isReject());
     }
 }

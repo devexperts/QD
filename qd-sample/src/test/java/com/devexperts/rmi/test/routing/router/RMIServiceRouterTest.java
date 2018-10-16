@@ -24,8 +24,8 @@ import static org.junit.Assert.assertEquals;
 @RunWith(TraceRunner.class)
 public class RMIServiceRouterTest {
 
-    RMIServiceId serviceId = RMIServiceId.newServiceId("test");
-    ServiceRouter<RMIService<?>> serviceRouter = ServiceRouter.createRouter(EndpointId.newEndpointId("server"), serviceId);
+    private RMIServiceId serviceId = RMIServiceId.newServiceId("test");
+    private ServiceRouter<RMIService<?>> serviceRouter = ServiceRouter.createRouter(EndpointId.newEndpointId("server"), serviceId);
 
     @Before
     public void setUp() {
