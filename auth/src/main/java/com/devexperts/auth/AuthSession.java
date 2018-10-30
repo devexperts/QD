@@ -19,7 +19,11 @@ import com.devexperts.util.TypedMap;
 /**
  * The unique session, which determines the permissions of the user.
  * The session may be revoked.
- * <b>This class is thread-safe.</b>
+ *
+ * <p><b>Note</b> that AuhSession is closed when the underlying connection is closed,
+ * therefore unique session must be created for each connection.
+ *
+ * <p><b>This class is thread-safe.</b>
  **/
 public class AuthSession {
     private Object subject;
@@ -83,7 +87,7 @@ public class AuthSession {
      * Close this session for this closeReason.
      * @param closeReason the closing reason.
      */
-    protected void close(String closeReason) {
+    public final void close(String closeReason) {
         Objects.requireNonNull(closeReason);
         SessionCloseListener[] listeners;
         synchronized (this) {
@@ -92,6 +96,11 @@ public class AuthSession {
             this.closeReason = closeReason;
             listeners = this.listeners.toArray(new SessionCloseListener[this.listeners.size()]);
         }
+        try {
+            closeImpl(closeReason);
+        } catch (Throwable t) {
+            Logging.getLogging(getClass()).error("Unexpected error in closeImpl()", t);
+        }
         for (SessionCloseListener listener : listeners)
             try {
                 listener.close(this, closeReason);
@@ -99,6 +108,8 @@ public class AuthSession {
                 Logging.getLogging(getClass()).error("Failed to notify session listener", t);
             }
     }
+
+    protected void closeImpl(String closeReason) {}
 
     /**
      * Returns special session variables.

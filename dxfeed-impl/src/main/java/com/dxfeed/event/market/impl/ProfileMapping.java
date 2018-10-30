@@ -38,15 +38,15 @@ public class ProfileMapping extends MarketEventMapping {
 
     public ProfileMapping(DataRecord record) {
         super(record);
-        iBeta = MappingUtil.findIntField(record, "Beta", false);
-        iEps = MappingUtil.findIntField(record, "Eps", false);
-        iDivFreq = MappingUtil.findIntField(record, "DivFreq", false);
-        iExdDivAmount = MappingUtil.findIntField(record, "ExdDiv.Amount", false);
+        iBeta = findIntField("Beta", false);
+        iEps = findIntField("Eps", false);
+        iDivFreq = findIntField("DivFreq", false);
+        iExdDivAmount = findIntField("ExdDiv.Amount", false);
         iExdDivDate = MappingUtil.findIntField(record, "ExdDiv.Date", false);
         iHighPrice52 = findIntField("52High.Price", false);
         iLowPrice52 = findIntField("52Low.Price", false);
-        iShares = MappingUtil.findIntField(record, "Shares", false);
-        iFreeFloat = MappingUtil.findIntField(record, "FreeFloat", false);
+        iShares = findIntField("Shares", false);
+        iFreeFloat = findIntField("FreeFloat", false);
         iHighLimitPrice = findIntField("HighLimitPrice", false);
         iLowLimitPrice = findIntField("LowLimitPrice", false);
         iHaltStartTime = MappingUtil.findIntField(record, "Halt.StartTime", false);
@@ -61,85 +61,169 @@ public class ProfileMapping extends MarketEventMapping {
     public double getBeta(RecordCursor cursor) {
         if (iBeta < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iBeta));
+        return getAsDouble(cursor, iBeta);
     }
 
     public void setBeta(RecordCursor cursor, double beta) {
         if (iBeta < 0)
             return;
-        setInt(cursor, iBeta, Decimal.compose(beta));
+        setAsDouble(cursor, iBeta, beta);
     }
 
     public int getBetaDecimal(RecordCursor cursor) {
         if (iBeta < 0)
             return 0;
-        return getInt(cursor, iBeta);
+        return getAsTinyDecimal(cursor, iBeta);
     }
 
     public void setBetaDecimal(RecordCursor cursor, int beta) {
         if (iBeta < 0)
             return;
-        setInt(cursor, iBeta, beta);
+        setAsTinyDecimal(cursor, iBeta, beta);
+    }
+
+    public long getBetaWideDecimal(RecordCursor cursor) {
+        if (iBeta < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iBeta);
+    }
+
+    public void setBetaWideDecimal(RecordCursor cursor, long beta) {
+        if (iBeta < 0)
+            return;
+        setAsWideDecimal(cursor, iBeta, beta);
     }
 
     public double getEps(RecordCursor cursor) {
         if (iEps < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iEps));
+        return getAsDouble(cursor, iEps);
     }
 
     public void setEps(RecordCursor cursor, double eps) {
         if (iEps < 0)
             return;
-        setInt(cursor, iEps, Decimal.compose(eps));
+        setAsDouble(cursor, iEps, eps);
     }
 
     public int getEpsDecimal(RecordCursor cursor) {
         if (iEps < 0)
             return 0;
-        return getInt(cursor, iEps);
+        return getAsTinyDecimal(cursor, iEps);
     }
 
     public void setEpsDecimal(RecordCursor cursor, int eps) {
         if (iEps < 0)
             return;
-        setInt(cursor, iEps, eps);
+        setAsTinyDecimal(cursor, iEps, eps);
+    }
+
+    public long getEpsWideDecimal(RecordCursor cursor) {
+        if (iEps < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iEps);
+    }
+
+    public void setEpsWideDecimal(RecordCursor cursor, long eps) {
+        if (iEps < 0)
+            return;
+        setAsWideDecimal(cursor, iEps, eps);
     }
 
     public int getDivFreq(RecordCursor cursor) {
         if (iDivFreq < 0)
             return 0;
-        return getInt(cursor, iDivFreq);
+        return getAsInt(cursor, iDivFreq);
     }
 
     public void setDivFreq(RecordCursor cursor, int divFreq) {
         if (iDivFreq < 0)
             return;
-        setInt(cursor, iDivFreq, divFreq);
+        setAsInt(cursor, iDivFreq, divFreq);
+    }
+
+    public long getDivFreqLong(RecordCursor cursor) {
+        if (iDivFreq < 0)
+            return 0;
+        return getAsLong(cursor, iDivFreq);
+    }
+
+    public void setDivFreqLong(RecordCursor cursor, long divFreq) {
+        if (iDivFreq < 0)
+            return;
+        setAsLong(cursor, iDivFreq, divFreq);
+    }
+
+    public double getDivFreqDouble(RecordCursor cursor) {
+        if (iDivFreq < 0)
+            return Double.NaN;
+        return getAsDouble(cursor, iDivFreq);
+    }
+
+    public void setDivFreqDouble(RecordCursor cursor, double divFreq) {
+        if (iDivFreq < 0)
+            return;
+        setAsDouble(cursor, iDivFreq, divFreq);
+    }
+
+    public int getDivFreqDecimal(RecordCursor cursor) {
+        if (iDivFreq < 0)
+            return 0;
+        return getAsTinyDecimal(cursor, iDivFreq);
+    }
+
+    public void setDivFreqDecimal(RecordCursor cursor, int divFreq) {
+        if (iDivFreq < 0)
+            return;
+        setAsTinyDecimal(cursor, iDivFreq, divFreq);
+    }
+
+    public long getDivFreqWideDecimal(RecordCursor cursor) {
+        if (iDivFreq < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iDivFreq);
+    }
+
+    public void setDivFreqWideDecimal(RecordCursor cursor, long divFreq) {
+        if (iDivFreq < 0)
+            return;
+        setAsWideDecimal(cursor, iDivFreq, divFreq);
     }
 
     public double getExdDivAmount(RecordCursor cursor) {
         if (iExdDivAmount < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iExdDivAmount));
+        return getAsDouble(cursor, iExdDivAmount);
     }
 
     public void setExdDivAmount(RecordCursor cursor, double exdDivAmount) {
         if (iExdDivAmount < 0)
             return;
-        setInt(cursor, iExdDivAmount, Decimal.compose(exdDivAmount));
+        setAsDouble(cursor, iExdDivAmount, exdDivAmount);
     }
 
     public int getExdDivAmountDecimal(RecordCursor cursor) {
         if (iExdDivAmount < 0)
             return 0;
-        return getInt(cursor, iExdDivAmount);
+        return getAsTinyDecimal(cursor, iExdDivAmount);
     }
 
     public void setExdDivAmountDecimal(RecordCursor cursor, int exdDivAmount) {
         if (iExdDivAmount < 0)
             return;
-        setInt(cursor, iExdDivAmount, exdDivAmount);
+        setAsTinyDecimal(cursor, iExdDivAmount, exdDivAmount);
+    }
+
+    public long getExdDivAmountWideDecimal(RecordCursor cursor) {
+        if (iExdDivAmount < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iExdDivAmount);
+    }
+
+    public void setExdDivAmountWideDecimal(RecordCursor cursor, long exdDivAmount) {
+        if (iExdDivAmount < 0)
+            return;
+        setAsWideDecimal(cursor, iExdDivAmount, exdDivAmount);
     }
 
     public int getExdDivDate(RecordCursor cursor) {
@@ -313,73 +397,97 @@ public class ProfileMapping extends MarketEventMapping {
     public long getShares(RecordCursor cursor) {
         if (iShares < 0)
             return 0;
-        return (long) (Decimal.toDouble(getInt(cursor, iShares)) * 1000 + 0.5);
+        return getAsLong(cursor, iShares);
     }
 
     public void setShares(RecordCursor cursor, long shares) {
         if (iShares < 0)
             return;
-        setInt(cursor, iShares, Decimal.composeDecimal(shares, 3));
+        setAsLong(cursor, iShares, shares);
     }
 
     public double getSharesDouble(RecordCursor cursor) {
         if (iShares < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iShares)) * 1000;
+        return getAsDouble(cursor, iShares);
     }
 
     public void setSharesDouble(RecordCursor cursor, double shares) {
         if (iShares < 0)
             return;
-        setInt(cursor, iShares, Decimal.compose(shares / 1000));
+        setAsDouble(cursor, iShares, shares);
     }
 
     public int getSharesDecimal(RecordCursor cursor) {
         if (iShares < 0)
             return 0;
-        return getInt(cursor, iShares);
+        return getAsTinyDecimal(cursor, iShares);
     }
 
     public void setSharesDecimal(RecordCursor cursor, int shares) {
         if (iShares < 0)
             return;
-        setInt(cursor, iShares, shares);
+        setAsTinyDecimal(cursor, iShares, shares);
+    }
+
+    public long getSharesWideDecimal(RecordCursor cursor) {
+        if (iShares < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iShares);
+    }
+
+    public void setSharesWideDecimal(RecordCursor cursor, long shares) {
+        if (iShares < 0)
+            return;
+        setAsWideDecimal(cursor, iShares, shares);
     }
 
     public long getFreeFloat(RecordCursor cursor) {
         if (iFreeFloat < 0)
             return 0;
-        return (long) Decimal.toDouble(getInt(cursor, iFreeFloat));
+        return getAsLong(cursor, iFreeFloat);
     }
 
     public void setFreeFloat(RecordCursor cursor, long freeFloat) {
         if (iFreeFloat < 0)
             return;
-        setInt(cursor, iFreeFloat, Decimal.composeDecimal(freeFloat, 0));
+        setAsLong(cursor, iFreeFloat, freeFloat);
     }
 
     public double getFreeFloatDouble(RecordCursor cursor) {
         if (iFreeFloat < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iFreeFloat));
+        return getAsDouble(cursor, iFreeFloat);
     }
 
     public void setFreeFloatDouble(RecordCursor cursor, double freeFloat) {
         if (iFreeFloat < 0)
             return;
-        setInt(cursor, iFreeFloat, Decimal.compose(freeFloat));
+        setAsDouble(cursor, iFreeFloat, freeFloat);
     }
 
     public int getFreeFloatDecimal(RecordCursor cursor) {
         if (iFreeFloat < 0)
             return 0;
-        return getInt(cursor, iFreeFloat);
+        return getAsTinyDecimal(cursor, iFreeFloat);
     }
 
     public void setFreeFloatDecimal(RecordCursor cursor, int freeFloat) {
         if (iFreeFloat < 0)
             return;
-        setInt(cursor, iFreeFloat, freeFloat);
+        setAsTinyDecimal(cursor, iFreeFloat, freeFloat);
+    }
+
+    public long getFreeFloatWideDecimal(RecordCursor cursor) {
+        if (iFreeFloat < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iFreeFloat);
+    }
+
+    public void setFreeFloatWideDecimal(RecordCursor cursor, long freeFloat) {
+        if (iFreeFloat < 0)
+            return;
+        setAsWideDecimal(cursor, iFreeFloat, freeFloat);
     }
 
     public double getHighLimitPrice(RecordCursor cursor) {

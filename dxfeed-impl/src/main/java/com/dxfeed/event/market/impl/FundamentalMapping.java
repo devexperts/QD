@@ -26,11 +26,11 @@ public final class FundamentalMapping extends MarketEventMapping {
 
     public FundamentalMapping(DataRecord record) {
         super(record);
-        iOpen = MappingUtil.findIntField(record, "Open.Price", true);
-        iHigh = MappingUtil.findIntField(record, "High.Price", true);
-        iLow = MappingUtil.findIntField(record, "Low.Price", true);
-        iClose = MappingUtil.findIntField(record, "Close.Price", true);
-        iOpenInterest = MappingUtil.findIntField(record, "OpenInterest", false);
+        iOpen = findIntField("Open.Price", true);
+        iHigh = findIntField("High.Price", true);
+        iLow = findIntField("Low.Price", true);
+        iClose = findIntField("Close.Price", true);
+        iOpenInterest = findIntField("OpenInterest", false);
         putNonDefaultPropertyName("Open.Price", "Open");
         putNonDefaultPropertyName("High.Price", "High");
         putNonDefaultPropertyName("Low.Price", "Low");
@@ -39,158 +39,278 @@ public final class FundamentalMapping extends MarketEventMapping {
 
     @Deprecated
     public double getOpenPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iOpen));
+        return getAsDouble(cursor, iOpen);
     }
 
     @Deprecated
     public void setOpenPrice(RecordCursor cursor, double openPrice) {
-        setInt(cursor, iOpen, Decimal.compose(openPrice));
+        setAsDouble(cursor, iOpen, openPrice);
     }
 
     @Deprecated
     public int getOpenPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iOpen);
+        return getAsTinyDecimal(cursor, iOpen);
     }
 
     @Deprecated
     public void setOpenPriceDecimal(RecordCursor cursor, int openPrice) {
-        setInt(cursor, iOpen, openPrice);
+        setAsTinyDecimal(cursor, iOpen, openPrice);
+    }
+
+    @Deprecated
+    public long getOpenPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iOpen);
+    }
+
+    @Deprecated
+    public void setOpenPriceWideDecimal(RecordCursor cursor, long openPrice) {
+        setAsWideDecimal(cursor, iOpen, openPrice);
     }
 
     public double getOpen(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iOpen));
+        return getAsDouble(cursor, iOpen);
     }
 
     public void setOpen(RecordCursor cursor, double open) {
-        setInt(cursor, iOpen, Decimal.compose(open));
+        setAsDouble(cursor, iOpen, open);
     }
 
     public int getOpenDecimal(RecordCursor cursor) {
-        return getInt(cursor, iOpen);
+        return getAsTinyDecimal(cursor, iOpen);
     }
 
     public void setOpenDecimal(RecordCursor cursor, int open) {
-        setInt(cursor, iOpen, open);
+        setAsTinyDecimal(cursor, iOpen, open);
+    }
+
+    public long getOpenWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iOpen);
+    }
+
+    public void setOpenWideDecimal(RecordCursor cursor, long open) {
+        setAsWideDecimal(cursor, iOpen, open);
     }
 
     @Deprecated
     public double getHighPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iHigh));
+        return getAsDouble(cursor, iHigh);
     }
 
     @Deprecated
     public void setHighPrice(RecordCursor cursor, double highPrice) {
-        setInt(cursor, iHigh, Decimal.compose(highPrice));
+        setAsDouble(cursor, iHigh, highPrice);
     }
 
     @Deprecated
     public int getHighPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iHigh);
+        return getAsTinyDecimal(cursor, iHigh);
     }
 
     @Deprecated
     public void setHighPriceDecimal(RecordCursor cursor, int highPrice) {
-        setInt(cursor, iHigh, highPrice);
+        setAsTinyDecimal(cursor, iHigh, highPrice);
+    }
+
+    @Deprecated
+    public long getHighPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iHigh);
+    }
+
+    @Deprecated
+    public void setHighPriceWideDecimal(RecordCursor cursor, long highPrice) {
+        setAsWideDecimal(cursor, iHigh, highPrice);
     }
 
     public double getHigh(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iHigh));
+        return getAsDouble(cursor, iHigh);
     }
 
     public void setHigh(RecordCursor cursor, double high) {
-        setInt(cursor, iHigh, Decimal.compose(high));
+        setAsDouble(cursor, iHigh, high);
     }
 
     public int getHighDecimal(RecordCursor cursor) {
-        return getInt(cursor, iHigh);
+        return getAsTinyDecimal(cursor, iHigh);
     }
 
     public void setHighDecimal(RecordCursor cursor, int high) {
-        setInt(cursor, iHigh, high);
+        setAsTinyDecimal(cursor, iHigh, high);
+    }
+
+    public long getHighWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iHigh);
+    }
+
+    public void setHighWideDecimal(RecordCursor cursor, long high) {
+        setAsWideDecimal(cursor, iHigh, high);
     }
 
     @Deprecated
     public double getLowPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iLow));
+        return getAsDouble(cursor, iLow);
     }
 
     @Deprecated
     public void setLowPrice(RecordCursor cursor, double lowPrice) {
-        setInt(cursor, iLow, Decimal.compose(lowPrice));
+        setAsDouble(cursor, iLow, lowPrice);
     }
 
     @Deprecated
     public int getLowPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iLow);
+        return getAsTinyDecimal(cursor, iLow);
     }
 
     @Deprecated
     public void setLowPriceDecimal(RecordCursor cursor, int lowPrice) {
-        setInt(cursor, iLow, lowPrice);
+        setAsTinyDecimal(cursor, iLow, lowPrice);
+    }
+
+    @Deprecated
+    public long getLowPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iLow);
+    }
+
+    @Deprecated
+    public void setLowPriceWideDecimal(RecordCursor cursor, long lowPrice) {
+        setAsWideDecimal(cursor, iLow, lowPrice);
     }
 
     public double getLow(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iLow));
+        return getAsDouble(cursor, iLow);
     }
 
     public void setLow(RecordCursor cursor, double low) {
-        setInt(cursor, iLow, Decimal.compose(low));
+        setAsDouble(cursor, iLow, low);
     }
 
     public int getLowDecimal(RecordCursor cursor) {
-        return getInt(cursor, iLow);
+        return getAsTinyDecimal(cursor, iLow);
     }
 
     public void setLowDecimal(RecordCursor cursor, int low) {
-        setInt(cursor, iLow, low);
+        setAsTinyDecimal(cursor, iLow, low);
+    }
+
+    public long getLowWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iLow);
+    }
+
+    public void setLowWideDecimal(RecordCursor cursor, long low) {
+        setAsWideDecimal(cursor, iLow, low);
     }
 
     @Deprecated
     public double getClosePrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iClose));
+        return getAsDouble(cursor, iClose);
     }
 
     @Deprecated
     public void setClosePrice(RecordCursor cursor, double closePrice) {
-        setInt(cursor, iClose, Decimal.compose(closePrice));
+        setAsDouble(cursor, iClose, closePrice);
     }
 
     @Deprecated
     public int getClosePriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iClose);
+        return getAsTinyDecimal(cursor, iClose);
     }
 
     @Deprecated
     public void setClosePriceDecimal(RecordCursor cursor, int closePrice) {
-        setInt(cursor, iClose, closePrice);
+        setAsTinyDecimal(cursor, iClose, closePrice);
+    }
+
+    @Deprecated
+    public long getClosePriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iClose);
+    }
+
+    @Deprecated
+    public void setClosePriceWideDecimal(RecordCursor cursor, long closePrice) {
+        setAsWideDecimal(cursor, iClose, closePrice);
     }
 
     public double getClose(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iClose));
+        return getAsDouble(cursor, iClose);
     }
 
     public void setClose(RecordCursor cursor, double close) {
-        setInt(cursor, iClose, Decimal.compose(close));
+        setAsDouble(cursor, iClose, close);
     }
 
     public int getCloseDecimal(RecordCursor cursor) {
-        return getInt(cursor, iClose);
+        return getAsTinyDecimal(cursor, iClose);
     }
 
     public void setCloseDecimal(RecordCursor cursor, int close) {
-        setInt(cursor, iClose, close);
+        setAsTinyDecimal(cursor, iClose, close);
+    }
+
+    public long getCloseWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iClose);
+    }
+
+    public void setCloseWideDecimal(RecordCursor cursor, long close) {
+        setAsWideDecimal(cursor, iClose, close);
     }
 
     public int getOpenInterest(RecordCursor cursor) {
         if (iOpenInterest < 0)
             return 0;
-        return getInt(cursor, iOpenInterest);
+        return getAsInt(cursor, iOpenInterest);
     }
 
     public void setOpenInterest(RecordCursor cursor, int openInterest) {
         if (iOpenInterest < 0)
             return;
-        setInt(cursor, iOpenInterest, openInterest);
+        setAsInt(cursor, iOpenInterest, openInterest);
+    }
+
+    public long getOpenInterestLong(RecordCursor cursor) {
+        if (iOpenInterest < 0)
+            return 0;
+        return getAsLong(cursor, iOpenInterest);
+    }
+
+    public void setOpenInterestLong(RecordCursor cursor, long openInterest) {
+        if (iOpenInterest < 0)
+            return;
+        setAsLong(cursor, iOpenInterest, openInterest);
+    }
+
+    public double getOpenInterestDouble(RecordCursor cursor) {
+        if (iOpenInterest < 0)
+            return Double.NaN;
+        return getAsDouble(cursor, iOpenInterest);
+    }
+
+    public void setOpenInterestDouble(RecordCursor cursor, double openInterest) {
+        if (iOpenInterest < 0)
+            return;
+        setAsDouble(cursor, iOpenInterest, openInterest);
+    }
+
+    public int getOpenInterestDecimal(RecordCursor cursor) {
+        if (iOpenInterest < 0)
+            return 0;
+        return getAsTinyDecimal(cursor, iOpenInterest);
+    }
+
+    public void setOpenInterestDecimal(RecordCursor cursor, int openInterest) {
+        if (iOpenInterest < 0)
+            return;
+        setAsTinyDecimal(cursor, iOpenInterest, openInterest);
+    }
+
+    public long getOpenInterestWideDecimal(RecordCursor cursor) {
+        if (iOpenInterest < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iOpenInterest);
+    }
+
+    public void setOpenInterestWideDecimal(RecordCursor cursor, long openInterest) {
+        if (iOpenInterest < 0)
+            return;
+        setAsWideDecimal(cursor, iOpenInterest, openInterest);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }

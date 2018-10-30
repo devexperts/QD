@@ -251,6 +251,16 @@ public class TradeMapping extends MarketEventMapping {
     }
 
     @Deprecated
+    public long getLastSizeLong(RecordCursor cursor) {
+        return getAsLong(cursor, iSize);
+    }
+
+    @Deprecated
+    public void setLastSizeLong(RecordCursor cursor, long lastSize) {
+        setAsLong(cursor, iSize, lastSize);
+    }
+
+    @Deprecated
     public double getLastSizeDouble(RecordCursor cursor) {
         return getAsDouble(cursor, iSize);
     }
@@ -286,6 +296,14 @@ public class TradeMapping extends MarketEventMapping {
 
     public void setSize(RecordCursor cursor, int size) {
         setAsInt(cursor, iSize, size);
+    }
+
+    public long getSizeLong(RecordCursor cursor) {
+        return getAsLong(cursor, iSize);
+    }
+
+    public void setSizeLong(RecordCursor cursor, long size) {
+        setAsLong(cursor, iSize, size);
     }
 
     public double getSizeDouble(RecordCursor cursor) {

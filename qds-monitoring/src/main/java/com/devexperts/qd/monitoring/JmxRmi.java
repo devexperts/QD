@@ -37,8 +37,8 @@ class JmxRmi {
         RMIConnectorServer rmiServer = new RMIConnectorServer(
             new JMXServiceURL("service:jmx:rmi:///jndi/rmi://localhost:" + port +  "/jmxrmi"),
             null, srvImpl, ManagementFactory.getPlatformMBeanServer());
-        ConnectorImpl connector = new ConnectorImpl(name, rmiServer);
-        if (!JmxConnectors.addConnector(port, connector))
+        ConnectorImpl connector = new ConnectorImpl(port, name, rmiServer);
+        if (!JmxConnectors.addConnector(connector))
             return null; // port is already taken
 
         LocateRegistry.createRegistry(port);
@@ -51,8 +51,8 @@ class JmxRmi {
     private static class ConnectorImpl extends JmxConnector {
         private final RMIConnectorServer rmiServer;
 
-        ConnectorImpl(String name, RMIConnectorServer rmiServer) {
-            super(name);
+        ConnectorImpl(int port, String name, RMIConnectorServer rmiServer) {
+            super(port, name);
             this.rmiServer = rmiServer;
         }
 

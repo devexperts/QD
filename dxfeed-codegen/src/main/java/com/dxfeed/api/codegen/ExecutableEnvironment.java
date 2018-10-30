@@ -47,10 +47,10 @@ class ExecutableEnvironment implements CodeGenEnvironment {
         if (currentSourceLines == null || !currentSourceLines.equals(sourceLines)) {
             if (config.isVerifyOnly())
                 throw new IOException("Generated file " + outputFile + " is not up-to-date");
-            System.out.println("Writing " + outputFile);
+            System.out.println("Writing    " + outputFile);
             Files.write(outputFile, sourceLines);
         } else {
-            System.out.println("Checked " + outputFile + " -- up-to-date.");
+            System.out.println("Checked ok " + outputFile);
         }
     }
 

@@ -37,9 +37,5 @@ public class MappingUtil {
         return object instanceof Marshalled ? (Marshalled<?>) object : Marshalled.forObject(object);
     }
 
-    public static boolean isDecimalField(DataRecord record, int index) {
-        return index >= 0 && record.getIntField(index).getSerialType().isDecimal();
-    }
-
     private MappingUtil() {}
 }

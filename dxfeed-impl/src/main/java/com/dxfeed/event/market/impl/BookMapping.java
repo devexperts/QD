@@ -32,8 +32,8 @@ public final class BookMapping extends MarketEventMapping {
         iId = MappingUtil.findIntField(record, "ID", true);
         iTime = MappingUtil.findIntField(record, "Time", true);
         iType = MappingUtil.findIntField(record, "Type", true);
-        iPrice = MappingUtil.findIntField(record, "Price", true);
-        iSize = MappingUtil.findIntField(record, "Size", true);
+        iPrice = findIntField("Price", true);
+        iSize = findIntField("Size", true);
         iTimeInForce = MappingUtil.findIntField(record, "TimeInForce", true);
         oSymbol = MappingUtil.findObjField(record, "Symbol", true);
         putNonDefaultPropertyName("ID", "Id");
@@ -82,27 +82,67 @@ public final class BookMapping extends MarketEventMapping {
     }
 
     public double getPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iPrice));
+        return getAsDouble(cursor, iPrice);
     }
 
     public void setPrice(RecordCursor cursor, double price) {
-        setInt(cursor, iPrice, Decimal.compose(price));
+        setAsDouble(cursor, iPrice, price);
     }
 
     public int getPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iPrice);
+        return getAsTinyDecimal(cursor, iPrice);
     }
 
     public void setPriceDecimal(RecordCursor cursor, int price) {
-        setInt(cursor, iPrice, price);
+        setAsTinyDecimal(cursor, iPrice, price);
+    }
+
+    public long getPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iPrice);
+    }
+
+    public void setPriceWideDecimal(RecordCursor cursor, long price) {
+        setAsWideDecimal(cursor, iPrice, price);
     }
 
     public int getSize(RecordCursor cursor) {
-        return getInt(cursor, iSize);
+        return getAsInt(cursor, iSize);
     }
 
     public void setSize(RecordCursor cursor, int size) {
-        setInt(cursor, iSize, size);
+        setAsInt(cursor, iSize, size);
+    }
+
+    public long getSizeLong(RecordCursor cursor) {
+        return getAsLong(cursor, iSize);
+    }
+
+    public void setSizeLong(RecordCursor cursor, long size) {
+        setAsLong(cursor, iSize, size);
+    }
+
+    public double getSizeDouble(RecordCursor cursor) {
+        return getAsDouble(cursor, iSize);
+    }
+
+    public void setSizeDouble(RecordCursor cursor, double size) {
+        setAsDouble(cursor, iSize, size);
+    }
+
+    public int getSizeDecimal(RecordCursor cursor) {
+        return getAsTinyDecimal(cursor, iSize);
+    }
+
+    public void setSizeDecimal(RecordCursor cursor, int size) {
+        setAsTinyDecimal(cursor, iSize, size);
+    }
+
+    public long getSizeWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iSize);
+    }
+
+    public void setSizeWideDecimal(RecordCursor cursor, long size) {
+        setAsWideDecimal(cursor, iSize, size);
     }
 
     public char getTimeInForce(RecordCursor cursor) {

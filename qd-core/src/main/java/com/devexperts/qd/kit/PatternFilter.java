@@ -16,7 +16,12 @@ import javax.annotation.Nonnull;
 
 import com.devexperts.qd.*;
 import com.devexperts.qd.util.SymbolSet;
+import com.devexperts.util.LongHashSet;
 import com.devexperts.util.SystemProperties;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * {@code SubscriptionFilter} that understands a simple GLOB-like grammar
@@ -28,6 +33,9 @@ import com.devexperts.util.SystemProperties;
 public final class PatternFilter extends QDFilter {
     private static final int MAX_SYMBOL_SET_SIZE =
         SystemProperties.getIntProperty(PatternFilter.class, "maxSymbolSetSize", 10000);
+
+    private static final int MAX_MID_PATTERNS =
+        SystemProperties.getIntProperty(PatternFilter.class, "maxMidPatterns", 1000);
 
     private static final int[] EMPTY_BITS = new int[0];
 
@@ -44,6 +52,15 @@ public final class PatternFilter extends QDFilter {
     private final boolean fixedLength; // when true, implies that no '*' in pattern and acceptsSuffix.length == 0
     private final int[] prefixBits;
     private final int prefixLength;
+
+    private final int[] midBits;
+    private final int midLength;
+    private final int rollingHashOutMultiplier;
+    private final LongHashSet midPatternHashes;
+    //Boyer-Moore part for single mid pattern
+    private final char[] bmMidPattern;
+    private final int[] bmSkipArray;
+
     private final int[] suffixBits;
     private final int suffixLength;
     private final int symbolSetSize;
@@ -152,7 +169,7 @@ public final class PatternFilter extends QDFilter {
 
     private PatternFilter(String pattern, String name, DataScheme scheme) throws FilterSyntaxException {
         super(scheme);
-        if (pattern.length() > 0 && pattern.charAt(0) >= 'a' && pattern.charAt(0) <= 'z')
+        if (!pattern.isEmpty() && pattern.charAt(0) >= 'a' && pattern.charAt(0) <= 'z')
             throw new FilterSyntaxException(
                 "Patterns with the first lower-case letter are reserved for application-specific extensions. " +
                     "Check spelling of the pattern or " +
@@ -160,29 +177,57 @@ public final class PatternFilter extends QDFilter {
         this.pattern = pattern;
         setName(name);
         negated = !pattern.isEmpty() && pattern.startsWith("!");
-        int[] pos = { negated ? 1 : 0 };
+        int[] pos = {negated ? 1 : 0};
         prefixBits = parse(pattern, pos);
         prefixLength = prefixBits.length >> BITS_LENGTH_SHIFT;
         fixedLength = pos[0] == pattern.length();
         if (!fixedLength)
             pos[0]++; // skip '*' to the next char
-        suffixBits = parse(pattern, pos);
+        int[] nextBits = parse(pattern, pos);
+        if (pos[0] < pattern.length()) {
+            if (pattern.charAt(pos[0] - 1) == '*')
+                throw new FilterSyntaxException("Double '**' wild-card is not supported in pattern");
+            pos[0]++; // second asterisk was found, skip '*' to the next char
+            suffixBits = parse(pattern, pos);
+            midBits = nextBits;
+        } else {
+            midBits = new int[0];
+            suffixBits = nextBits;
+        }
+        midLength = midBits.length >> BITS_LENGTH_SHIFT;
+        int outMultiplier = 1;
+        for (int i = 0; i < midLength; i++)
+            outMultiplier *= 31;
+        rollingHashOutMultiplier = outMultiplier;
         suffixLength = suffixBits.length >> BITS_LENGTH_SHIFT;
         if (pos[0] < pattern.length())
-            throw new FilterSyntaxException("Second '*' wild-card is not supported in pattern");
+            throw new FilterSyntaxException("Third '*' wild-card is not supported in pattern");
+        List<char[]> midPatterns = generateMidPatterns();
+        midPatternHashes = computeMidHashes(midPatterns);
+        bmMidPattern = computeBoyerMoorePattern(midPatterns);
+        bmSkipArray = computeBoyerMooreSkipArray();
         this.symbolSetSize = computeSymbolSetSize();
     }
 
-    private PatternFilter(DataScheme scheme, String pattern, boolean negated, boolean fixedLength, int[] prefixBits, int[] suffixBits)
-    {
-        super(scheme);
-        this.pattern = pattern;
-        this.negated = negated;
-        this.fixedLength = fixedLength;
-        this.prefixBits = prefixBits;
-        this.prefixLength = prefixBits.length >> BITS_LENGTH_SHIFT;
-        this.suffixBits = suffixBits;
-        this.suffixLength = suffixBits.length >> BITS_LENGTH_SHIFT;
+    private PatternFilter(PatternFilter source, boolean forNegation) {
+        super(source.getScheme());
+        if (!forNegation)
+            throw new FilterSyntaxException("Allowed only for negate pattern construction");
+
+        this.pattern = negateName(source.pattern);
+        this.negated = !source.negated;
+
+        this.fixedLength = source.fixedLength;
+        this.prefixBits = source.prefixBits;
+        this.prefixLength = source.prefixLength;
+        this.midBits = source.midBits;
+        this.midLength = source.midLength;
+        this.rollingHashOutMultiplier = source.rollingHashOutMultiplier;
+        this.midPatternHashes = source.midPatternHashes;
+        this.bmMidPattern = source.bmMidPattern;
+        this.bmSkipArray = source.bmSkipArray;
+        this.suffixBits = source.suffixBits;
+        this.suffixLength = source.suffixLength;
         this.symbolSetSize = computeSymbolSetSize();
     }
 
@@ -206,11 +251,11 @@ public final class PatternFilter extends QDFilter {
     }
 
     private boolean isEverythingPattern() {
-        return !fixedLength && !negated && prefixLength == 0 && suffixLength == 0;
+        return !fixedLength && !negated && prefixLength == 0 && midLength == 0 && suffixLength == 0;
     }
 
     private boolean isNothingPattern() {
-        return !fixedLength && negated && prefixLength == 0 && suffixLength == 0;
+        return !fixedLength && negated && prefixLength == 0 && midLength == 0 && suffixLength == 0;
     }
 
     @Override
@@ -267,7 +312,7 @@ public final class PatternFilter extends QDFilter {
 
     @Override
     public QDFilter negate() {
-        PatternFilter filter = new PatternFilter(getScheme(), negateName(pattern), !negated, fixedLength, prefixBits, suffixBits);
+        PatternFilter filter = new PatternFilter(this, true);
         filter.setName(negateName(toString()));
         return filter;
     }
@@ -461,31 +506,29 @@ public final class PatternFilter extends QDFilter {
         }
         if (fixedLength && charAtCode(code, prefixLength) != 0)
             return false;
-        if (suffixLength > 0) {
+        if (suffixLength + midLength > 0) {
             int sl = prefixLength; // compute symbol length
             while (sl < 8 && charAtCode(code, sl) != 0)
                 sl++;
-            if (sl < prefixLength + suffixLength)
+            if (sl < prefixLength + midLength + suffixLength)
                 return false;
             for (int i = 0; i < suffixLength; i++) {
                 int c = charAtCode(code, sl - 1 - i);
                 if (!hasChar(suffixBits, suffixLength - 1 - i, c))
                     return false;
             }
+            //2 asterisks part
+            if (midLength > 0)
+                return matchMid(code, sl);
         }
         return true;
-    }
-
-    // result will be 0 when i >= decode(cipher).length()
-    private int charAtCode(long code, int i) {
-        return (int) ((code >>> ((7 - i) << 3)) & 0xff);
     }
 
     boolean acceptString(String symbol) {
         int sl = symbol.length();
         if (fixedLength && sl != prefixLength)
             return false;
-        if (sl < prefixLength + suffixLength)
+        if (sl < prefixLength + midLength + suffixLength)
             return false;
         for (int i = 0; i < prefixLength; i++) {
             int c = Math.min(MAX_CHAR, symbol.charAt(i));
@@ -497,7 +540,184 @@ public final class PatternFilter extends QDFilter {
             if (!hasChar(suffixBits, suffixLength - 1 - i, c))
                 return false;
         }
+
+        //2 asterisks part
+        if (midLength > 0)
+            return matchMid(symbol, sl);
+
         return true;
+    }
+
+    private boolean matchMid(long code, int sl) {
+        if (midLength == 1)
+            return matchSingleChar(code, sl);
+
+        if (bmMidPattern != null)
+            return matchBoyerMoore(code, sl);
+
+        return matchRabinCarp(code, sl);
+    }
+
+    private boolean matchMid(String symbol, int sl) {
+        if (midLength == 1)
+            return matchSingleChar(symbol, sl);
+
+        if (bmMidPattern != null)
+            return matchBoyerMoore(symbol, sl);
+
+        return matchRabinKarp(symbol, sl);
+    }
+
+    private boolean matchSingleChar(long code, int sl) {
+        for (int i = prefixLength; i < sl - suffixLength; i++) {
+            int c = charAtCode(code, i);
+            if (hasChar(midBits, 0, c))
+                return true;
+        }
+        return false;
+    }
+
+    private boolean matchSingleChar(String symbol, int sl) {
+        for (int i = prefixLength; i < sl - suffixLength; i++) {
+            int c = Math.min(MAX_CHAR, symbol.charAt(i));
+            if (hasChar(midBits, 0, c))
+                return true;
+        }
+        return false;
+    }
+
+    private boolean matchBoyerMoore(long code, int sl) {
+        outer_search_loop:
+        for (int i = prefixLength; i <= sl - suffixLength - midLength; ) {
+            for (int j = midLength- 1; j >= 0; j--) {
+                if (bmMidPattern[j] != charAtCode(code, i + j)) {
+                    i += Math.max(1, j - bmSkipArray[charAtCode(code, i + j)]);
+                    continue outer_search_loop;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private boolean matchBoyerMoore(String symbol, int sl) {
+        outer_search_loop:
+        for (int i = prefixLength; i <= sl - suffixLength - midLength; ) {
+            for (int j = midLength - 1; j >= 0; j--) {
+                int c = Math.min(MAX_CHAR, symbol.charAt(i + j));
+                if (bmMidPattern[j] != c) {
+                    i += Math.max(1, j - bmSkipArray[c]);
+                    continue outer_search_loop;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private boolean matchRabinCarp(long code, int sl) {
+        int hs = hashCode(code, prefixLength, prefixLength + midLength);
+        outer_search_loop:
+        for (int i = prefixLength; i <= sl - suffixLength - midLength; i++) {
+            if (i != prefixLength)
+                hs = rollingHash(hs, code, i + midLength - 1, i - 1, rollingHashOutMultiplier);
+            if (midPatternHashes.contains(hs)) {
+                for (int j = 0; j < midLength; j++) {
+                    if (!hasChar(midBits, j, charAtCode(code, i + j)))
+                        continue outer_search_loop;
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean matchRabinKarp(String symbol, int sl) {
+        int hs = hashCode(symbol, prefixLength, prefixLength + midLength);
+        outer_search_loop:
+        for (int i = prefixLength; i <= sl - suffixLength - midLength; i++) {
+            if (i != prefixLength)
+                hs = rollingHash(hs, symbol, i + midLength - 1, i - 1, rollingHashOutMultiplier);
+            if (midPatternHashes.contains(hs)) {
+                for (int j = 0; j < midLength; j++) {
+                    int c = Math.min(MAX_CHAR, symbol.charAt(i + j));
+                    if (!hasChar(midBits, j, c))
+                        continue outer_search_loop;
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private List<char[]> generateMidPatterns() {
+        if (midLength <= 1)
+            return Collections.emptyList();
+
+        List<char[]> patterns = new ArrayList<>();
+        for (char c = 0; c < MAX_CHAR; c++)
+            if (hasChar(midBits, 0, c)) {
+                char[] p = new char[midLength];
+                p[0] = c;
+                patterns.add(p);
+            }
+
+        for (int i = 1; i < midLength; i++) {
+            int sbLength = patterns.size();
+            int updates = 0;
+            for (char c = 0; c < MAX_CHAR; c++) {
+                if (hasChar(midBits, i, c)) {
+                    if (updates == 0) {
+                        for (char[] p : patterns)
+                            p[i] = c;
+                        updates++;
+                    } else {
+                        for (int j = 0; j < sbLength; j++) {
+                            char[] p = Arrays.copyOf(patterns.get(j), midLength);
+                            p[i] = c;
+                            patterns.add(p);
+                            if (patterns.size() > MAX_MID_PATTERNS)
+                                throw new FilterSyntaxException("Too many middle patterns, max=" + MAX_MID_PATTERNS);
+                        }
+                    }
+                }
+            }
+        }
+        return patterns;
+    }
+
+    private LongHashSet computeMidHashes(List<char[]> patterns) {
+        if (patterns.isEmpty())
+            return null;
+
+        LongHashSet hashes = new LongHashSet(patterns.size());
+        for (char[] p : patterns)
+            hashes.add(hashCode(p));
+        return hashes;
+    }
+
+    private char[] computeBoyerMoorePattern(List<char[]> patterns) {
+        if (patterns.size() != 1)
+            return null;
+
+        return Arrays.copyOf(patterns.get(0), midLength);
+    }
+
+    private int[] computeBoyerMooreSkipArray() {
+        if (bmMidPattern == null)
+            return null;
+
+        int skipArray[] = new int[MAX_CHAR];
+        for (int i = 0; i < skipArray.length; i++)
+            skipArray[i] = -1;
+        for (int j = 0; j < bmMidPattern.length; j++)
+            skipArray[bmMidPattern[j]] = j;
+        return skipArray;
+    }
+
+    // result will be 0 when i >= decode(cipher).length()
+    private static int charAtCode(long code, int i) {
+        return (int) ((code >>> ((7 - i) << 3)) & 0xff);
     }
 
     private static boolean hasChar(int[] bits, int i, int c) {
@@ -511,6 +731,39 @@ public final class PatternFilter extends QDFilter {
     private static void invertChar(int[] bits, int i, int c) {
         bits[(i << BITS_LENGTH_SHIFT) + (c >> BITS_CHAR_SHIFT)] ^= 1 << (c & BITS_CHAR_MASK);
     }
+
+    private static int hashCode(char[] arr) {
+        int result = 0;
+        for (char c : arr )
+            result = 31 * result + c;
+
+        return result;
+    }
+
+    private static int hashCode(String s, int beginIndex, int endIndex) {
+        int result = 0;
+        for (int i = beginIndex; i < endIndex; i++)
+            result = 31 * result + s.charAt(i);
+
+        return result;
+    }
+
+    private static int hashCode(long code, int beginIndex, int endIndex) {
+        int result = 0;
+        for (int i = beginIndex; i < endIndex; i++)
+            result = 31 * result + charAtCode(code, i);
+
+        return result;
+    }
+
+    private static int rollingHash(int hs, String s, int inIndex, int outIndex, int outMultiplier) {
+        return 31 * hs + s.charAt(inIndex) - outMultiplier * s.charAt(outIndex);
+    }
+
+    private static int rollingHash(int hs, long code, int inIndex, int outIndex, int outMultiplier) {
+        return 31 * hs + charAtCode(code, inIndex) - outMultiplier * charAtCode(code, outIndex);
+    }
+
 
     public static final class RecordPatternFilter extends RecordOnlyFilter {
         private final String name;

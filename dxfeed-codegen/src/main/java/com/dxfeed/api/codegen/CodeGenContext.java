@@ -83,9 +83,15 @@ class CodeGenContext {
     }
 
     void generateSources() throws IOException {
+        System.out.println("Generating mappings");
+        for (MappingGen gen : mappingGens.values()) {
+            gen.generate();
+        }
+        System.out.println("Generating delegates");
         for (DelegateGen gen : delegateGens.values()) {
             gen.generate();
         }
+        System.out.println("Generating factories");
         for (FactoryImplGen gen : factoryGens.values()) {
             gen.generate();
         }

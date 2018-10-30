@@ -35,12 +35,12 @@ public class GreeksMapping extends RecordMapping {
         iTime = MappingUtil.findIntField(record, "Time", false);
         iSequence = MappingUtil.findIntField(record, "Sequence", false);
         iPrice = findIntField("Greeks.Price", true);
-        iVolatility = MappingUtil.findIntField(record, "Volatility", true);
-        iDelta = MappingUtil.findIntField(record, "Delta", true);
-        iGamma = MappingUtil.findIntField(record, "Gamma", true);
-        iTheta = MappingUtil.findIntField(record, "Theta", true);
-        iRho = MappingUtil.findIntField(record, "Rho", true);
-        iVega = MappingUtil.findIntField(record, "Vega", true);
+        iVolatility = findIntField("Volatility", true);
+        iDelta = findIntField("Delta", true);
+        iGamma = findIntField("Gamma", true);
+        iTheta = findIntField("Theta", true);
+        iRho = findIntField("Rho", true);
+        iVega = findIntField("Vega", true);
         putNonDefaultPropertyName("Greeks.Price", "Price");
     }
 
@@ -135,99 +135,147 @@ public class GreeksMapping extends RecordMapping {
     }
 
     public double getVolatility(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iVolatility));
+        return getAsDouble(cursor, iVolatility);
     }
 
     public void setVolatility(RecordCursor cursor, double volatility) {
-        setInt(cursor, iVolatility, Decimal.compose(volatility));
+        setAsDouble(cursor, iVolatility, volatility);
     }
 
     public int getVolatilityDecimal(RecordCursor cursor) {
-        return getInt(cursor, iVolatility);
+        return getAsTinyDecimal(cursor, iVolatility);
     }
 
     public void setVolatilityDecimal(RecordCursor cursor, int volatility) {
-        setInt(cursor, iVolatility, volatility);
+        setAsTinyDecimal(cursor, iVolatility, volatility);
+    }
+
+    public long getVolatilityWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iVolatility);
+    }
+
+    public void setVolatilityWideDecimal(RecordCursor cursor, long volatility) {
+        setAsWideDecimal(cursor, iVolatility, volatility);
     }
 
     public double getDelta(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iDelta));
+        return getAsDouble(cursor, iDelta);
     }
 
     public void setDelta(RecordCursor cursor, double delta) {
-        setInt(cursor, iDelta, Decimal.compose(delta));
+        setAsDouble(cursor, iDelta, delta);
     }
 
     public int getDeltaDecimal(RecordCursor cursor) {
-        return getInt(cursor, iDelta);
+        return getAsTinyDecimal(cursor, iDelta);
     }
 
     public void setDeltaDecimal(RecordCursor cursor, int delta) {
-        setInt(cursor, iDelta, delta);
+        setAsTinyDecimal(cursor, iDelta, delta);
+    }
+
+    public long getDeltaWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iDelta);
+    }
+
+    public void setDeltaWideDecimal(RecordCursor cursor, long delta) {
+        setAsWideDecimal(cursor, iDelta, delta);
     }
 
     public double getGamma(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iGamma));
+        return getAsDouble(cursor, iGamma);
     }
 
     public void setGamma(RecordCursor cursor, double gamma) {
-        setInt(cursor, iGamma, Decimal.compose(gamma));
+        setAsDouble(cursor, iGamma, gamma);
     }
 
     public int getGammaDecimal(RecordCursor cursor) {
-        return getInt(cursor, iGamma);
+        return getAsTinyDecimal(cursor, iGamma);
     }
 
     public void setGammaDecimal(RecordCursor cursor, int gamma) {
-        setInt(cursor, iGamma, gamma);
+        setAsTinyDecimal(cursor, iGamma, gamma);
+    }
+
+    public long getGammaWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iGamma);
+    }
+
+    public void setGammaWideDecimal(RecordCursor cursor, long gamma) {
+        setAsWideDecimal(cursor, iGamma, gamma);
     }
 
     public double getTheta(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iTheta));
+        return getAsDouble(cursor, iTheta);
     }
 
     public void setTheta(RecordCursor cursor, double theta) {
-        setInt(cursor, iTheta, Decimal.compose(theta));
+        setAsDouble(cursor, iTheta, theta);
     }
 
     public int getThetaDecimal(RecordCursor cursor) {
-        return getInt(cursor, iTheta);
+        return getAsTinyDecimal(cursor, iTheta);
     }
 
     public void setThetaDecimal(RecordCursor cursor, int theta) {
-        setInt(cursor, iTheta, theta);
+        setAsTinyDecimal(cursor, iTheta, theta);
+    }
+
+    public long getThetaWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iTheta);
+    }
+
+    public void setThetaWideDecimal(RecordCursor cursor, long theta) {
+        setAsWideDecimal(cursor, iTheta, theta);
     }
 
     public double getRho(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iRho));
+        return getAsDouble(cursor, iRho);
     }
 
     public void setRho(RecordCursor cursor, double rho) {
-        setInt(cursor, iRho, Decimal.compose(rho));
+        setAsDouble(cursor, iRho, rho);
     }
 
     public int getRhoDecimal(RecordCursor cursor) {
-        return getInt(cursor, iRho);
+        return getAsTinyDecimal(cursor, iRho);
     }
 
     public void setRhoDecimal(RecordCursor cursor, int rho) {
-        setInt(cursor, iRho, rho);
+        setAsTinyDecimal(cursor, iRho, rho);
+    }
+
+    public long getRhoWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iRho);
+    }
+
+    public void setRhoWideDecimal(RecordCursor cursor, long rho) {
+        setAsWideDecimal(cursor, iRho, rho);
     }
 
     public double getVega(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iVega));
+        return getAsDouble(cursor, iVega);
     }
 
     public void setVega(RecordCursor cursor, double vega) {
-        setInt(cursor, iVega, Decimal.compose(vega));
+        setAsDouble(cursor, iVega, vega);
     }
 
     public int getVegaDecimal(RecordCursor cursor) {
-        return getInt(cursor, iVega);
+        return getAsTinyDecimal(cursor, iVega);
     }
 
     public void setVegaDecimal(RecordCursor cursor, int vega) {
-        setInt(cursor, iVega, vega);
+        setAsTinyDecimal(cursor, iVega, vega);
+    }
+
+    public long getVegaWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iVega);
+    }
+
+    public void setVegaWideDecimal(RecordCursor cursor, long vega) {
+        setAsWideDecimal(cursor, iVega, vega);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }

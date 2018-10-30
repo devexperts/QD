@@ -40,7 +40,7 @@ public final class CandleFactoryImpl extends EventDelegateFactory implements Rec
             String recordName = "Candle" + suffix;
             builder.addRequiredField(recordName, "Time", SerialFieldType.TIME, SchemeFieldTime.FIRST_TIME_INT_FIELD);
             builder.addRequiredField(recordName, "Sequence", suffix.matches(".+") ? SerialFieldType.VOID : SerialFieldType.SEQUENCE, SchemeFieldTime.SECOND_TIME_INT_FIELD);
-            builder.addOptionalField(recordName, "Count", SerialFieldType.DECIMAL, "Candle", "Count", true);
+            builder.addOptionalField(recordName, "Count", select(SerialFieldType.DECIMAL), "Candle", "Count", true);
             builder.addRequiredField(recordName, "Open", select(SerialFieldType.DECIMAL, "dxscheme.price"));
             builder.addRequiredField(recordName, "High", select(SerialFieldType.DECIMAL, "dxscheme.price"));
             builder.addRequiredField(recordName, "Low", select(SerialFieldType.DECIMAL, "dxscheme.price"));
@@ -57,7 +57,7 @@ public final class CandleFactoryImpl extends EventDelegateFactory implements Rec
             String recordName = "Trade." + suffix;
             builder.addRequiredField(recordName, "Time", SerialFieldType.TIME, SchemeFieldTime.FIRST_TIME_INT_FIELD);
             builder.addRequiredField(recordName, "Sequence", suffix.matches(".*min|.*hour|.*Day|Week|Month|OptExp") ? SerialFieldType.VOID : SerialFieldType.SEQUENCE, SchemeFieldTime.SECOND_TIME_INT_FIELD);
-            builder.addOptionalField(recordName, "Count", SerialFieldType.DECIMAL, "null", "Count", true);
+            builder.addOptionalField(recordName, "Count", select(SerialFieldType.DECIMAL), "null", "Count", true);
             builder.addRequiredField(recordName, "Open", select(SerialFieldType.DECIMAL, "dxscheme.price"));
             builder.addRequiredField(recordName, "High", select(SerialFieldType.DECIMAL, "dxscheme.price"));
             builder.addRequiredField(recordName, "Low", select(SerialFieldType.DECIMAL, "dxscheme.price"));
@@ -69,9 +69,9 @@ public final class CandleFactoryImpl extends EventDelegateFactory implements Rec
             if (!suffix.matches(".*[{,]price=(bid|ask|mark|s)[,}].*"))
                 builder.addOptionalField(recordName, "Ask.Volume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "null", "AskVolume", true);
             if (suffix.matches(".*Day|Week|Month|OptExp"))
-                builder.addOptionalField(recordName, "OpenInterest", SerialFieldType.DECIMAL, "DailyCandle", "OpenInterest", true);
+                builder.addOptionalField(recordName, "OpenInterest", select(SerialFieldType.DECIMAL), "DailyCandle", "OpenInterest", true);
             if (suffix.matches(".*Day|Week|Month|OptExp"))
-                builder.addOptionalField(recordName, "ImpVolatility", SerialFieldType.DECIMAL, "DailyCandle", "ImpVolatility", true);
+                builder.addOptionalField(recordName, "ImpVolatility", select(SerialFieldType.DECIMAL), "DailyCandle", "ImpVolatility", true);
         }
     }
 

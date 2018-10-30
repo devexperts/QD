@@ -36,11 +36,11 @@ public class SeriesMapping extends RecordMapping {
         iTime = MappingUtil.findIntField(record, "Time", false);
         iSequence = MappingUtil.findIntField(record, "Sequence", false);
         iExpiration = MappingUtil.findIntField(record, "Expiration", true);
-        iVolatility = MappingUtil.findIntField(record, "Volatility", true);
-        iPutCallRatio = MappingUtil.findIntField(record, "PutCallRatio", true);
-        iForwardPrice = MappingUtil.findIntField(record, "ForwardPrice", true);
-        iDividend = MappingUtil.findIntField(record, "Dividend", false);
-        iInterest = MappingUtil.findIntField(record, "Interest", false);
+        iVolatility = findIntField("Volatility", true);
+        iPutCallRatio = findIntField("PutCallRatio", true);
+        iForwardPrice = findIntField("ForwardPrice", true);
+        iDividend = findIntField("Dividend", false);
+        iInterest = findIntField("Interest", false);
     }
 
     public int getIndex(RecordCursor cursor) {
@@ -100,99 +100,147 @@ public class SeriesMapping extends RecordMapping {
     }
 
     public double getVolatility(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iVolatility));
+        return getAsDouble(cursor, iVolatility);
     }
 
     public void setVolatility(RecordCursor cursor, double volatility) {
-        setInt(cursor, iVolatility, Decimal.compose(volatility));
+        setAsDouble(cursor, iVolatility, volatility);
     }
 
     public int getVolatilityDecimal(RecordCursor cursor) {
-        return getInt(cursor, iVolatility);
+        return getAsTinyDecimal(cursor, iVolatility);
     }
 
     public void setVolatilityDecimal(RecordCursor cursor, int volatility) {
-        setInt(cursor, iVolatility, volatility);
+        setAsTinyDecimal(cursor, iVolatility, volatility);
+    }
+
+    public long getVolatilityWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iVolatility);
+    }
+
+    public void setVolatilityWideDecimal(RecordCursor cursor, long volatility) {
+        setAsWideDecimal(cursor, iVolatility, volatility);
     }
 
     public double getPutCallRatio(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iPutCallRatio));
+        return getAsDouble(cursor, iPutCallRatio);
     }
 
     public void setPutCallRatio(RecordCursor cursor, double putCallRatio) {
-        setInt(cursor, iPutCallRatio, Decimal.compose(putCallRatio));
+        setAsDouble(cursor, iPutCallRatio, putCallRatio);
     }
 
     public int getPutCallRatioDecimal(RecordCursor cursor) {
-        return getInt(cursor, iPutCallRatio);
+        return getAsTinyDecimal(cursor, iPutCallRatio);
     }
 
     public void setPutCallRatioDecimal(RecordCursor cursor, int putCallRatio) {
-        setInt(cursor, iPutCallRatio, putCallRatio);
+        setAsTinyDecimal(cursor, iPutCallRatio, putCallRatio);
+    }
+
+    public long getPutCallRatioWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iPutCallRatio);
+    }
+
+    public void setPutCallRatioWideDecimal(RecordCursor cursor, long putCallRatio) {
+        setAsWideDecimal(cursor, iPutCallRatio, putCallRatio);
     }
 
     public double getForwardPrice(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iForwardPrice));
+        return getAsDouble(cursor, iForwardPrice);
     }
 
     public void setForwardPrice(RecordCursor cursor, double forwardPrice) {
-        setInt(cursor, iForwardPrice, Decimal.compose(forwardPrice));
+        setAsDouble(cursor, iForwardPrice, forwardPrice);
     }
 
     public int getForwardPriceDecimal(RecordCursor cursor) {
-        return getInt(cursor, iForwardPrice);
+        return getAsTinyDecimal(cursor, iForwardPrice);
     }
 
     public void setForwardPriceDecimal(RecordCursor cursor, int forwardPrice) {
-        setInt(cursor, iForwardPrice, forwardPrice);
+        setAsTinyDecimal(cursor, iForwardPrice, forwardPrice);
+    }
+
+    public long getForwardPriceWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iForwardPrice);
+    }
+
+    public void setForwardPriceWideDecimal(RecordCursor cursor, long forwardPrice) {
+        setAsWideDecimal(cursor, iForwardPrice, forwardPrice);
     }
 
     public double getDividend(RecordCursor cursor) {
         if (iDividend < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iDividend));
+        return getAsDouble(cursor, iDividend);
     }
 
     public void setDividend(RecordCursor cursor, double dividend) {
         if (iDividend < 0)
             return;
-        setInt(cursor, iDividend, Decimal.compose(dividend));
+        setAsDouble(cursor, iDividend, dividend);
     }
 
     public int getDividendDecimal(RecordCursor cursor) {
         if (iDividend < 0)
             return 0;
-        return getInt(cursor, iDividend);
+        return getAsTinyDecimal(cursor, iDividend);
     }
 
     public void setDividendDecimal(RecordCursor cursor, int dividend) {
         if (iDividend < 0)
             return;
-        setInt(cursor, iDividend, dividend);
+        setAsTinyDecimal(cursor, iDividend, dividend);
+    }
+
+    public long getDividendWideDecimal(RecordCursor cursor) {
+        if (iDividend < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iDividend);
+    }
+
+    public void setDividendWideDecimal(RecordCursor cursor, long dividend) {
+        if (iDividend < 0)
+            return;
+        setAsWideDecimal(cursor, iDividend, dividend);
     }
 
     public double getInterest(RecordCursor cursor) {
         if (iInterest < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iInterest));
+        return getAsDouble(cursor, iInterest);
     }
 
     public void setInterest(RecordCursor cursor, double interest) {
         if (iInterest < 0)
             return;
-        setInt(cursor, iInterest, Decimal.compose(interest));
+        setAsDouble(cursor, iInterest, interest);
     }
 
     public int getInterestDecimal(RecordCursor cursor) {
         if (iInterest < 0)
             return 0;
-        return getInt(cursor, iInterest);
+        return getAsTinyDecimal(cursor, iInterest);
     }
 
     public void setInterestDecimal(RecordCursor cursor, int interest) {
         if (iInterest < 0)
             return;
-        setInt(cursor, iInterest, interest);
+        setAsTinyDecimal(cursor, iInterest, interest);
+    }
+
+    public long getInterestWideDecimal(RecordCursor cursor) {
+        if (iInterest < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iInterest);
+    }
+
+    public void setInterestWideDecimal(RecordCursor cursor, long interest) {
+        if (iInterest < 0)
+            return;
+        setAsWideDecimal(cursor, iInterest, interest);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }

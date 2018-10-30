@@ -31,10 +31,10 @@ public class UnderlyingMapping extends RecordMapping {
         super(record);
         iTime = MappingUtil.findIntField(record, "Time", false);
         iSequence = MappingUtil.findIntField(record, "Sequence", false);
-        iVolatility = MappingUtil.findIntField(record, "Volatility", false);
-        iFrontVolatility = MappingUtil.findIntField(record, "FrontVolatility", false);
-        iBackVolatility = MappingUtil.findIntField(record, "BackVolatility", false);
-        iPutCallRatio = MappingUtil.findIntField(record, "PutCallRatio", false);
+        iVolatility = findIntField("Volatility", false);
+        iFrontVolatility = findIntField("FrontVolatility", false);
+        iBackVolatility = findIntField("BackVolatility", false);
+        iPutCallRatio = findIntField("PutCallRatio", false);
     }
 
     public long getTimeMillis(RecordCursor cursor) {
@@ -76,97 +76,145 @@ public class UnderlyingMapping extends RecordMapping {
     public double getVolatility(RecordCursor cursor) {
         if (iVolatility < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iVolatility));
+        return getAsDouble(cursor, iVolatility);
     }
 
     public void setVolatility(RecordCursor cursor, double volatility) {
         if (iVolatility < 0)
             return;
-        setInt(cursor, iVolatility, Decimal.compose(volatility));
+        setAsDouble(cursor, iVolatility, volatility);
     }
 
     public int getVolatilityDecimal(RecordCursor cursor) {
         if (iVolatility < 0)
             return 0;
-        return getInt(cursor, iVolatility);
+        return getAsTinyDecimal(cursor, iVolatility);
     }
 
     public void setVolatilityDecimal(RecordCursor cursor, int volatility) {
         if (iVolatility < 0)
             return;
-        setInt(cursor, iVolatility, volatility);
+        setAsTinyDecimal(cursor, iVolatility, volatility);
+    }
+
+    public long getVolatilityWideDecimal(RecordCursor cursor) {
+        if (iVolatility < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iVolatility);
+    }
+
+    public void setVolatilityWideDecimal(RecordCursor cursor, long volatility) {
+        if (iVolatility < 0)
+            return;
+        setAsWideDecimal(cursor, iVolatility, volatility);
     }
 
     public double getFrontVolatility(RecordCursor cursor) {
         if (iFrontVolatility < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iFrontVolatility));
+        return getAsDouble(cursor, iFrontVolatility);
     }
 
     public void setFrontVolatility(RecordCursor cursor, double frontVolatility) {
         if (iFrontVolatility < 0)
             return;
-        setInt(cursor, iFrontVolatility, Decimal.compose(frontVolatility));
+        setAsDouble(cursor, iFrontVolatility, frontVolatility);
     }
 
     public int getFrontVolatilityDecimal(RecordCursor cursor) {
         if (iFrontVolatility < 0)
             return 0;
-        return getInt(cursor, iFrontVolatility);
+        return getAsTinyDecimal(cursor, iFrontVolatility);
     }
 
     public void setFrontVolatilityDecimal(RecordCursor cursor, int frontVolatility) {
         if (iFrontVolatility < 0)
             return;
-        setInt(cursor, iFrontVolatility, frontVolatility);
+        setAsTinyDecimal(cursor, iFrontVolatility, frontVolatility);
+    }
+
+    public long getFrontVolatilityWideDecimal(RecordCursor cursor) {
+        if (iFrontVolatility < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iFrontVolatility);
+    }
+
+    public void setFrontVolatilityWideDecimal(RecordCursor cursor, long frontVolatility) {
+        if (iFrontVolatility < 0)
+            return;
+        setAsWideDecimal(cursor, iFrontVolatility, frontVolatility);
     }
 
     public double getBackVolatility(RecordCursor cursor) {
         if (iBackVolatility < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iBackVolatility));
+        return getAsDouble(cursor, iBackVolatility);
     }
 
     public void setBackVolatility(RecordCursor cursor, double backVolatility) {
         if (iBackVolatility < 0)
             return;
-        setInt(cursor, iBackVolatility, Decimal.compose(backVolatility));
+        setAsDouble(cursor, iBackVolatility, backVolatility);
     }
 
     public int getBackVolatilityDecimal(RecordCursor cursor) {
         if (iBackVolatility < 0)
             return 0;
-        return getInt(cursor, iBackVolatility);
+        return getAsTinyDecimal(cursor, iBackVolatility);
     }
 
     public void setBackVolatilityDecimal(RecordCursor cursor, int backVolatility) {
         if (iBackVolatility < 0)
             return;
-        setInt(cursor, iBackVolatility, backVolatility);
+        setAsTinyDecimal(cursor, iBackVolatility, backVolatility);
+    }
+
+    public long getBackVolatilityWideDecimal(RecordCursor cursor) {
+        if (iBackVolatility < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iBackVolatility);
+    }
+
+    public void setBackVolatilityWideDecimal(RecordCursor cursor, long backVolatility) {
+        if (iBackVolatility < 0)
+            return;
+        setAsWideDecimal(cursor, iBackVolatility, backVolatility);
     }
 
     public double getPutCallRatio(RecordCursor cursor) {
         if (iPutCallRatio < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iPutCallRatio));
+        return getAsDouble(cursor, iPutCallRatio);
     }
 
     public void setPutCallRatio(RecordCursor cursor, double putCallRatio) {
         if (iPutCallRatio < 0)
             return;
-        setInt(cursor, iPutCallRatio, Decimal.compose(putCallRatio));
+        setAsDouble(cursor, iPutCallRatio, putCallRatio);
     }
 
     public int getPutCallRatioDecimal(RecordCursor cursor) {
         if (iPutCallRatio < 0)
             return 0;
-        return getInt(cursor, iPutCallRatio);
+        return getAsTinyDecimal(cursor, iPutCallRatio);
     }
 
     public void setPutCallRatioDecimal(RecordCursor cursor, int putCallRatio) {
         if (iPutCallRatio < 0)
             return;
-        setInt(cursor, iPutCallRatio, putCallRatio);
+        setAsTinyDecimal(cursor, iPutCallRatio, putCallRatio);
+    }
+
+    public long getPutCallRatioWideDecimal(RecordCursor cursor) {
+        if (iPutCallRatio < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iPutCallRatio);
+    }
+
+    public void setPutCallRatioWideDecimal(RecordCursor cursor, long putCallRatio) {
+        if (iPutCallRatio < 0)
+            return;
+        setAsWideDecimal(cursor, iPutCallRatio, putCallRatio);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }

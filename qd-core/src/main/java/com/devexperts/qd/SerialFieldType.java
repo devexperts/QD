@@ -235,7 +235,7 @@ public final class SerialFieldType {
         case ID_COMPACT_INT:
             switch (id & REPRESENTATION_MASK) {
             case FLAG_DECIMAL:
-                return new DecimalField(index, name, this, name.endsWith("Profile.Shares") ? 1000 : 1);
+                return new DecimalField(index, name, this);
             case FLAG_SHORT_STRING:
                 return new ShortStringField(index, name, this);
             case FLAG_TIME:

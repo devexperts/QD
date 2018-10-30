@@ -246,6 +246,16 @@ public class TradeETHMapping extends MarketEventMapping {
     }
 
     @Deprecated
+    public long getETHLastSizeLong(RecordCursor cursor) {
+        return getAsLong(cursor, iSize);
+    }
+
+    @Deprecated
+    public void setETHLastSizeLong(RecordCursor cursor, long _ETHLastSize) {
+        setAsLong(cursor, iSize, _ETHLastSize);
+    }
+
+    @Deprecated
     public double getETHLastSizeDouble(RecordCursor cursor) {
         return getAsDouble(cursor, iSize);
     }
@@ -281,6 +291,14 @@ public class TradeETHMapping extends MarketEventMapping {
 
     public void setSize(RecordCursor cursor, int size) {
         setAsInt(cursor, iSize, size);
+    }
+
+    public long getSizeLong(RecordCursor cursor) {
+        return getAsLong(cursor, iSize);
+    }
+
+    public void setSizeLong(RecordCursor cursor, long size) {
+        setAsLong(cursor, iSize, size);
     }
 
     public double getSizeDouble(RecordCursor cursor) {

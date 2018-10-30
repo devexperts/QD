@@ -101,8 +101,7 @@ public class ImplCodeGen {
             // assign of TimeMillisSequence must go after bid/ask time
             assign("TimeMillisSequence", "#Sequence#").
             injectPutEventCode("#Sequence=event.getTimeMillisSequence()#;").
-            publishable().
-            generate();
+            publishable();
 
         ctx.record("com.dxfeed.event.market", "Quote2"). // scheme record only -- no delegate
             phantom("reuters.phantom"). // phantom record -- see QD-503
@@ -129,9 +128,9 @@ public class ImplCodeGen {
             map("ExchangeCode", "Last.Exchange", FieldType.CHAR).alt("recordExchange").compositeOnly().optional().
             map("Price", "Last.Price", FieldType.PRICE).
             map("Size", "Last.Size", FieldType.SIZE).
-            field("Tick", "Last.Tick", FieldType.INT).optional().
+            field("Tick", "Last.Tick", FieldType.FLAGS).optional().
             field("Change", "Last.Change", FieldType.PRICE).optional().
-            map("Flags", "Last.Flags", FieldType.INT).optional().
+            map("Flags", "Last.Flags", FieldType.FLAGS).optional().
             injectGetEventCode(
                 "if (event.getTickDirection() == Direction.UNDEFINED) {",
                 "\t// if direction is not provided via flags field - compute it from tick field if provided",
@@ -166,7 +165,7 @@ public class ImplCodeGen {
             map("ExchangeCode", "ETHLast.Exchange", FieldType.CHAR).alt("recordExchange").compositeOnly().optional().
             map("Price", "ETHLast.Price", FieldType.PRICE).
             map("Size", "ETHLast.Size", FieldType.SIZE).
-            map("Flags", "ETHLast.Flags", FieldType.INT).
+            map("Flags", "ETHLast.Flags", FieldType.FLAGS).
             map("DayVolume", "ETHVolume", FieldType.VOLUME).optional().
             map("DayTurnover", "ETHDayTurnover", FieldType.TURNOVER).optional().
             publishable();
@@ -182,8 +181,8 @@ public class ImplCodeGen {
             map("PrevDayId", "PrevDayId", FieldType.DATE).
             map("PrevDayClosePrice", "PrevDayClose.Price", FieldType.PRICE).
             map("PrevDayVolume", "PrevDayVolume", FieldType.VOLUME).optional().
-            map("OpenInterest", "OpenInterest", FieldType.INT).compositeOnly().optional().
-            map("Flags", "Flags", FieldType.INT).optional().
+            map("OpenInterest", "OpenInterest", FieldType.INT_DECIMAL).compositeOnly().optional().
+            map("Flags", "Flags", FieldType.FLAGS).optional().
             publishable();
 
         ctx.record("com.dxfeed.event.market", "Fundamental&"). // scheme record only -- no delegate
@@ -192,13 +191,13 @@ public class ImplCodeGen {
             field("High", "High.Price", FieldType.PRICE).
             field("Low", "Low.Price", FieldType.PRICE).
             field("Close", "Close.Price", FieldType.PRICE).
-            field("OpenInterest", FieldType.INT).compositeOnly().optional();
+            field("OpenInterest", FieldType.INT_DECIMAL).compositeOnly().optional();
 
         // NOTE: It will be replaced by SpreadOrder record that mimics Order records, but adds SpreadSymbol and may drop MMID
         ctx.record("com.dxfeed.event.market", "Book&"). // scheme record only -- no delegate
             inheritMappingFrom(MARKET_EVENT_MAPPING).
             exchanges("I", true). // generate only Book&I by default
-            field("Id", "ID", FieldType.INT).time(0).
+            field("Id", "ID", FieldType.INDEX).time(0).
             field("Sequence", FieldType.VOID).time(1).
             field("Time", FieldType.TIME).
             field("Type", FieldType.CHAR).
@@ -212,18 +211,18 @@ public class ImplCodeGen {
             inheritMappingFrom(MARKET_EVENT_MAPPING).
             field("Beta", FieldType.DECIMAL_AS_DOUBLE).optional().
             field("Eps", FieldType.DECIMAL_AS_DOUBLE).optional().
-            field("DivFreq", FieldType.INT).optional().
+            field("DivFreq", FieldType.INT_DECIMAL).optional().
             field("ExdDivAmount", "ExdDiv.Amount", FieldType.DECIMAL_AS_DOUBLE).optional().
             field("ExdDivDate", "ExdDiv.Date", FieldType.DATE).optional().
             field("HighPrice52", "52High.Price", FieldType.PRICE).optional().
             field("LowPrice52", "52Low.Price", FieldType.PRICE).optional().
-            field("Shares", FieldType.DECIMAL_AS_SHARES).optional().
+            field("Shares", FieldType.DECIMAL_AS_LONG).optional().
             field("FreeFloat", FieldType.DECIMAL_AS_LONG).optional().
             map("HighLimitPrice", "HighLimitPrice", FieldType.PRICE).optional().
             map("LowLimitPrice", "LowLimitPrice", FieldType.PRICE).optional().
             map("HaltStartTime", "Halt.StartTime", FieldType.TIME).optional().
             map("HaltEndTime", "Halt.EndTime", FieldType.TIME).optional().
-            map("Flags", "Flags", FieldType.INT).optional().
+            map("Flags", "Flags", FieldType.FLAGS).optional().
             map("Description", "Description", FieldType.STRING).
             map("StatusReason", "StatusReason", FieldType.STRING).optional().
             publishable();
@@ -235,7 +234,7 @@ public class ImplCodeGen {
             source("m.getRecordSource()").
             withPlainEventFlags().
             map("Void", "Void", FieldType.VOID).time(0).internal().
-            map("Index", "Index", FieldType.INT).time(1).internal().
+            map("Index", "Index", FieldType.INDEX).time(1).internal().
             map("Time", "Time", FieldType.TIME).internal().
             map("TimeNanoPart", "TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
             map("Sequence", "Sequence", FieldType.SEQUENCE).internal().
@@ -249,8 +248,8 @@ public class ImplCodeGen {
             ).
             map("Price", "Price", FieldType.PRICE).
             map("Size", "Size", FieldType.SIZE).
-            map("Count", "Count", FieldType.INT).onlySuffixes("com.dxfeed.event.order.impl.Order.suffixes.count", "").
-            map("Flags", "Flags", FieldType.INT).
+            map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes("com.dxfeed.event.order.impl.Order.suffixes.count", "").
+            map("Flags", "Flags", FieldType.FLAGS).
             map("MarketMaker", "MMID", FieldType.SHORT_STRING).onlySuffixes(
                 "com.dxfeed.event.order.impl.Order.suffixes.mmid", "|#NTV|#BATE|#CHIX|#BXTR").
             injectPutEventCode(
@@ -270,7 +269,7 @@ public class ImplCodeGen {
             source("m.getRecordSource()").
             withPlainEventFlags().
             map("Void", "Void", FieldType.VOID).time(0).internal().
-            map("Index", "Index", FieldType.INT).time(1).internal().
+            map("Index", "Index", FieldType.INDEX).time(1).internal().
             map("Time", "Time", FieldType.TIME).internal().
             map("TimeNanoPart", "TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
             map("Sequence", "Sequence", FieldType.SEQUENCE).internal().
@@ -284,8 +283,8 @@ public class ImplCodeGen {
             ).
             map("Price", "Price", FieldType.PRICE).
             map("Size", "Size", FieldType.SIZE).
-            map("Count", "Count", FieldType.INT).onlySuffixes("com.dxfeed.event.order.impl.SpreadOrder.suffixes.count", "").
-            map("Flags", "Flags", FieldType.INT).
+            map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes("com.dxfeed.event.order.impl.SpreadOrder.suffixes.count", "").
+            map("Flags", "Flags", FieldType.FLAGS).
             map("SpreadSymbol", "SpreadSymbol", FieldType.STRING).
             injectPutEventCode(
                 "if (index < 0)",
@@ -339,7 +338,7 @@ public class ImplCodeGen {
             assign("Sequence", "0").
             map("Price", "BidPrice", "MMBid.Price", FieldType.PRICE).
             map("Size", "BidSize", "MMBid.Size", FieldType.SIZE).
-            map("Count", "BidCount", "MMBid.Count", FieldType.INT).optional().
+            map("Count", "BidCount", "MMBid.Count", FieldType.INT_DECIMAL).optional().
             assign("OrderSide", "Side.BUY").
             assign("Scope", "Scope.AGGREGATE");
 
@@ -354,7 +353,7 @@ public class ImplCodeGen {
             assign("Sequence", "0").
             map("Price", "AskPrice", "MMAsk.Price", FieldType.PRICE).
             map("Size", "AskSize", "MMAsk.Size", FieldType.SIZE).
-            map("Count", "AskCount", "MMAsk.Count", FieldType.INT).optional().
+            map("Count", "AskCount", "MMAsk.Count", FieldType.INT_DECIMAL).optional().
             assign("OrderSide", "Side.SELL").
             assign("Scope", "Scope.AGGREGATE");
 
@@ -371,7 +370,7 @@ public class ImplCodeGen {
             map("BidPrice", "Bid.Price", FieldType.PRICE).
             map("AskPrice", "Ask.Price", FieldType.PRICE).
             map("ExchangeSaleConditions", "SaleConditions", "ExchangeSaleConditions", FieldType.SHORT_STRING).
-            map("Flags", "Flags", FieldType.INT).
+            map("Flags", "Flags", FieldType.FLAGS).
             map("Buyer", "Buyer", FieldType.STRING).optional().disabledByDefault().
             map("Seller", "Seller", FieldType.STRING).optional().disabledByDefault().
             publishable();
@@ -399,7 +398,7 @@ public class ImplCodeGen {
             inheritMappingFrom(CANDLE_EVENT_MAPPING).
             withPlainEventFlags().
             mapTimeAndSequenceToIndex().voidForSuffixes(".+").
-            map("Count", "Count", FieldType.DECIMAL_OR_INT_AS_LONG).optional().
+            map("Count", "Count", FieldType.DECIMAL_AS_LONG).optional().
             map("Open", "Open", FieldType.PRICE).
             map("High", "High", FieldType.PRICE).
             map("Low", "Low", FieldType.PRICE).
@@ -448,7 +447,7 @@ public class ImplCodeGen {
             publishable();
 
         ctx.delegate("Configuration", Configuration.class, "Configuration").
-            map("Version", "Version", FieldType.INT).optional().
+            map("Version", "Version", FieldType.INDEX).optional().
             map("MarshalledAttachment", "Configuration", "Configuration", FieldType.MARSHALLED).
             publishable();
 
@@ -493,7 +492,7 @@ public class ImplCodeGen {
         ctx.delegate("Series", Series.class, "Series").
             withPlainEventFlags().
             map("Void", "Void", FieldType.VOID).time(0).optional().internal().
-            map("Index", "Index", FieldType.INT).time(1).optional().internal().
+            map("Index", "Index", FieldType.INDEX).time(1).optional().internal().
             map("Time", "Time", FieldType.TIME).optional().internal().
             map("Sequence", "Sequence", FieldType.SEQUENCE).optional().internal().
             assign("Index", "((long)#Index#)").

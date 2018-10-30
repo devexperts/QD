@@ -32,6 +32,8 @@ public abstract class EventDelegateFactory {
     }
 
     protected SerialFieldType select(SerialFieldType type, String... typeSelectors) {
+        if ("true".equalsIgnoreCase(System.getProperty("dxscheme.wide")))
+            type = SerialFieldType.WIDE_DECIMAL;
         for (int i = typeSelectors.length; --i >= 0;) {
             String selector = System.getProperty(typeSelectors[i]);
             if ("wide".equalsIgnoreCase(selector))

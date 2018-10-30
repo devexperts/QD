@@ -11,8 +11,7 @@
  */
 package com.devexperts.qd.qtp;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import javax.annotation.concurrent.GuardedBy;
 
 import com.devexperts.auth.*;
@@ -153,7 +152,7 @@ class AuthManager implements PromiseHandler<AuthSession> {
     private synchronized boolean successSync(AuthSession session) {
         if (this.session != null)
             return false;
-        this.session = session;
+        this.session = Objects.requireNonNull(session, "null auth session");
         connectionVariables.set(TransportConnection.SUBJECT_KEY, session.getSubject());
         boolean addMask = (state == AuthState.AUTHENTICATE_AND_AUTH_PREPARING ||
             (state == AuthState.AUTHENTICATE && firstAuthProtocolWasSent));
@@ -178,8 +177,9 @@ class AuthManager implements PromiseHandler<AuthSession> {
     }
 
     private synchronized List<Promise<AuthSession>> syncClose() {
-        if (session != null && listener != null) {
+        if (session != null) {
             session.removeCloseListener(listener);
+            session.close("Connection close");
         }
         List<Promise<AuthSession>> promises = this.promises;
         this.promises = null;

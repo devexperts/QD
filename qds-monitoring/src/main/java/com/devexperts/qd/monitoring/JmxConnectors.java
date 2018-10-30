@@ -11,30 +11,28 @@
  */
 package com.devexperts.qd.monitoring;
 
-import java.util.Collection;
-import java.util.concurrent.ConcurrentHashMap;
-
 import com.devexperts.qd.QDLog;
+import com.devexperts.util.SynchronizedIndexedSet;
 
 class JmxConnectors {
-    private static final ConcurrentHashMap<Integer, JmxConnector> JMX_CONNECTORS = new ConcurrentHashMap<Integer, JmxConnector>();
+    private static final SynchronizedIndexedSet<Integer, JmxConnector> JMX_CONNECTORS = SynchronizedIndexedSet.createInt(JmxConnector::getPort);
 
     static boolean isPortAvailable(Integer port) {
-        return !JMX_CONNECTORS.contains(port);
+        return port != null && !JMX_CONNECTORS.containsKey(port);
     }
 
-    static boolean addConnector(int port, JmxConnector connector) {
-        return JMX_CONNECTORS.putIfAbsent(port, connector) == null;
+    static boolean addConnector(JmxConnector connector) {
+        return JMX_CONNECTORS.putIfAbsentAndGet(connector) == connector;
     }
 
     static void removeConnector(JmxConnector connector) {
-        JMX_CONNECTORS.remove(connector.getName());
+        JMX_CONNECTORS.remove(connector);
     }
 
     static void stopConnectors() {
-        Collection<JmxConnector> values = JMX_CONNECTORS.values();
+        JmxConnector[] values = JMX_CONNECTORS.toArray(new JmxConnector[JMX_CONNECTORS.size()]);
         // take snapshot to stop them all
-        for (JmxConnector connector : values.toArray(new JmxConnector[values.size()])) {
+        for (JmxConnector connector : values) {
             try {
                 connector.stop();
             } catch (Exception e) {

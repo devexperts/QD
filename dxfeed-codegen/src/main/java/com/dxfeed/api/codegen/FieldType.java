@@ -44,21 +44,41 @@ enum FieldType {
         .addAccess(Access.createWithAccessPattern("", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
         .setMapper(new DefaultMapper(int.class))
     ),
+    FLAGS(new Builder()
+        .addField(new Field(false, SerialFieldType.COMPACT_INT))
+        .addAccess(Access.createWithAccessPattern("", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
+        .setMapper(new DefaultMapper(int.class))
+    ),
+    INDEX(new Builder()
+        .addField(new Field(false, SerialFieldType.COMPACT_INT))
+        .addAccess(Access.createWithAccessPattern("", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
+        .setMapper(new DefaultMapper(int.class))
+    ),
     INT(new Builder()
         .addField(new Field(false, SerialFieldType.COMPACT_INT))
         .addAccess(Access.createWithAccessPattern("", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
         .setMapper(new DecimalMapper(int.class))
     ),
-    SIZE(new Builder()
-        .addField(new Field(false, SerialFieldType.COMPACT_INT, "dxscheme.size"))
+    INT_DECIMAL(new Builder()
+        .addField(new Field(false, SerialFieldType.COMPACT_INT, true))
         .addAccess(Access.createWithAccessPattern("", "int", "0", "getAsInt(cursor, %s)", "setAsInt(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Long", "long", "0", "getAsLong(cursor, %s)", "setAsLong(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Double", "double", "Double.NaN", "getAsDouble(cursor, %s)", "setAsDouble(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getAsTinyDecimal(cursor, %s)", "setAsTinyDecimal(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("WideDecimal", "long", "0", "getAsWideDecimal(cursor, %s)", "setAsWideDecimal(cursor, %s, %s)"))
+        .setMapper(new DecimalMapper(int.class))
+    ),
+    SIZE(new Builder()
+        .addField(new Field(false, SerialFieldType.COMPACT_INT, true, "dxscheme.size"))
+        .addAccess(Access.createWithAccessPattern("", "int", "0", "getAsInt(cursor, %s)", "setAsInt(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Long", "long", "0", "getAsLong(cursor, %s)", "setAsLong(cursor, %s, %s)"))
         .addAccess(Access.createWithAccessPattern("Double", "double", "Double.NaN", "getAsDouble(cursor, %s)", "setAsDouble(cursor, %s, %s)"))
         .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getAsTinyDecimal(cursor, %s)", "setAsTinyDecimal(cursor, %s, %s)"))
         .addAccess(Access.createWithAccessPattern("WideDecimal", "long", "0", "getAsWideDecimal(cursor, %s)", "setAsWideDecimal(cursor, %s, %s)"))
         .setMapper(new DefaultMapper("Double", double.class))
     ),
     VOLUME(new Builder()
-        .addField(new Field(false, SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"))
+        .addField(new Field(false, SerialFieldType.DECIMAL, true, "dxscheme.volume", "dxscheme.size"))
         .addAccess(Access.createWithAccessPattern("", "long", "0", "getAsLong(cursor, %s)", "setAsLong(cursor, %s, %s)"))
         .addAccess(Access.createWithAccessPattern("Double", "double", "Double.NaN", "getAsDouble(cursor, %s)", "setAsDouble(cursor, %s, %s)"))
         .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getAsTinyDecimal(cursor, %s)", "setAsTinyDecimal(cursor, %s, %s)"))
@@ -66,147 +86,32 @@ enum FieldType {
         .setMapper(new DefaultMapper("Double", double.class))
     ),
     PRICE(new Builder()
-        .addField(new Field(false, SerialFieldType.DECIMAL, "dxscheme.price"))
+        .addField(new Field(false, SerialFieldType.DECIMAL, true, "dxscheme.price"))
         .addAccess(Access.createWithAccessPattern("", "double", "Double.NaN", "getAsDouble(cursor, %s)", "setAsDouble(cursor, %s, %s)"))
         .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getAsTinyDecimal(cursor, %s)", "setAsTinyDecimal(cursor, %s, %s)"))
         .addAccess(Access.createWithAccessPattern("WideDecimal", "long", "0", "getAsWideDecimal(cursor, %s)", "setAsWideDecimal(cursor, %s, %s)"))
         .setMapper(new DefaultMapper(double.class))
     ),
     TURNOVER(new Builder()
-        .addField(new Field(false, SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"))
+        .addField(new Field(false, SerialFieldType.DECIMAL, true, "dxscheme.turnover", "dxscheme.price"))
         .addAccess(Access.createWithAccessPattern("", "double", "Double.NaN", "getAsDouble(cursor, %s)", "setAsDouble(cursor, %s, %s)"))
         .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getAsTinyDecimal(cursor, %s)", "setAsTinyDecimal(cursor, %s, %s)"))
         .addAccess(Access.createWithAccessPattern("WideDecimal", "long", "0", "getAsWideDecimal(cursor, %s)", "setAsWideDecimal(cursor, %s, %s)"))
         .setMapper(new DefaultMapper(double.class))
     ),
     DECIMAL_AS_DOUBLE(new Builder()
-        .addField(new Field(false, SerialFieldType.DECIMAL))
-        .addAccess(Access.createWithAccessPattern("", "double", "Double.NaN", "Decimal.toDouble(getInt(cursor, %s))", "setInt(cursor, %s, Decimal.compose(%s))"))
-        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
-        .addImport(new ClassName(Decimal.class))
+        .addField(new Field(false, SerialFieldType.DECIMAL, true))
+        .addAccess(Access.createWithAccessPattern("", "double", "Double.NaN", "getAsDouble(cursor, %s)", "setAsDouble(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getAsTinyDecimal(cursor, %s)", "setAsTinyDecimal(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("WideDecimal", "long", "0", "getAsWideDecimal(cursor, %s)", "setAsWideDecimal(cursor, %s, %s)"))
         .setMapper(new DecimalMapper(double.class))
     ),
     DECIMAL_AS_LONG(new Builder()
-        .addField(new Field(false, SerialFieldType.DECIMAL))
-        .addAccess(Access.createWithAccessPattern("", "long", "0", "(long)Decimal.toDouble(getInt(cursor, %s))", "setInt(cursor, %s, Decimal.composeDecimal(%s, 0))"))
-        .addAccess(Access.createWithAccessPattern("Double", "double", "Double.NaN", "Decimal.toDouble(getInt(cursor, %s))", "setInt(cursor, %s, Decimal.compose(%s))"))
-        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
-        .addImport(new ClassName(Decimal.class))
-        .setMapper(new DecimalMapper(long.class))
-    ),
-    DECIMAL_OR_INT_AS_LONG(new Builder()
-        .addField(new Field(false, SerialFieldType.DECIMAL))
-        .addVariable(new Variable(true, "boolean", "IsDecimal") {
-            @Override
-            void generateInitialization(ClassGen cg, Map<String, String> suffixToFullNameMap) {
-                String fieldName = suffixToFullNameMap.get("");
-                String varName = suffixToFullNameMap.get(this.suffix);
-                cg.code(varName + " = MappingUtil.isDecimalField(record, " + fieldName + ");");
-            }
-        })
-        .addAccess(new Access("", "long", "0") {
-            @Override
-            void generateGetterBody(ClassGen cg, Map<String, String> suffixToFullNameMap) {
-                String index = suffixToFullNameMap.get("");
-                String isDecimalVar = suffixToFullNameMap.get("IsDecimal");
-                cg.code("if (" + isDecimalVar + ") {");
-                cg.indent();
-                cg.code("return (long)Decimal.toDouble(getInt(cursor, " + index + "));");
-                cg.unindent();
-                cg.code("} else {");
-                cg.indent();
-                cg.code("return getInt(cursor, " + index + ");");
-                cg.unindent();
-                cg.code("}");
-            }
-
-            @Override
-            void generateSetterBody(ClassGen cg, Map<String, String> suffixToFullNameMap, String value) {
-                String index = suffixToFullNameMap.get("");
-                String isDecimalVar = suffixToFullNameMap.get("IsDecimal");
-                cg.code("if (" + isDecimalVar + ") {");
-                cg.indent();
-                cg.code("setInt(cursor, " + index + ", Decimal.composeDecimal(" + value + ", 0));");
-                cg.unindent();
-                cg.code("} else {");
-                cg.indent();
-                cg.code("setInt(cursor, " + index + ", (int)" + value + ");");
-                cg.unindent();
-                cg.code("}");
-            }
-        })
-        .addAccess(new Access("Double", "double", "Double.NaN") {
-            @Override
-            void generateGetterBody(ClassGen cg, Map<String, String> suffixToFullNameMap) {
-                String index = suffixToFullNameMap.get("");
-                String isDecimalVar = suffixToFullNameMap.get("IsDecimal");
-                cg.code("if (" + isDecimalVar + ") {");
-                cg.indent();
-                cg.code("return Decimal.toDouble(getInt(cursor, " + index + "));");
-                cg.unindent();
-                cg.code("} else {");
-                cg.indent();
-                cg.code("return getInt(cursor, " + index + ");");
-                cg.unindent();
-                cg.code("}");
-            }
-
-            @Override
-            void generateSetterBody(ClassGen cg, Map<String, String> suffixToFullNameMap, String value) {
-                String index = suffixToFullNameMap.get("");
-                String isDecimalVar = suffixToFullNameMap.get("IsDecimal");
-                cg.code("if (" + isDecimalVar + ") {");
-                cg.indent();
-                cg.code("setInt(cursor, " + index + ", Decimal.compose(" + value + "));");
-                cg.unindent();
-                cg.code("} else {");
-                cg.indent();
-                cg.code("setInt(cursor, " + index + ", (int)" + value + ");");
-                cg.unindent();
-                cg.code("}");
-            }
-        })
-        .addAccess(new Access("Decimal", "int", "0") {
-            @Override
-            void generateGetterBody(ClassGen cg, Map<String, String> suffixToFullNameMap) {
-                String index = suffixToFullNameMap.get("");
-                String isDecimalVar = suffixToFullNameMap.get("IsDecimal");
-                cg.code("if (" + isDecimalVar + ") {");
-                cg.indent();
-                cg.code("return getInt(cursor, " + index + ");");
-                cg.unindent();
-                cg.code("} else {");
-                cg.indent();
-                cg.code("return Decimal.composeDecimal(getInt(cursor, " + index + "), 0);");
-                cg.unindent();
-                cg.code("}");
-            }
-
-            @Override
-            void generateSetterBody(ClassGen cg, Map<String, String> suffixToFullNameMap, String value) {
-                String index = suffixToFullNameMap.get("");
-                String isDecimalVar = suffixToFullNameMap.get("IsDecimal");
-                cg.code("if (" + isDecimalVar + ") {");
-                cg.indent();
-                cg.code("setInt(cursor, " + index + ", " + value + ");");
-                cg.unindent();
-                cg.code("} else {");
-                cg.indent();
-                cg.code("setInt(cursor, " + index + ", (int)Decimal.toDouble(" + value + "));");
-                cg.unindent();
-                cg.code("}");
-            }
-        })
-        .addImport(new ClassName(Decimal.class))
-        .addImport(new ClassName(MappingUtil.class))
-        .setMapper(new DecimalMapper(long.class))
-    ),
-    DECIMAL_AS_SHARES(new Builder()
-        .addField(new Field(false, SerialFieldType.DECIMAL))
-        .addAccess(Access.createWithAccessPattern("", "long", "0", "(long)(Decimal.toDouble(getInt(cursor, %s)) * 1000 + 0.5)", "setInt(cursor, %s, Decimal.composeDecimal(%s, 3))"))
-        .addAccess(Access.createWithAccessPattern("Double", "double", "Double.NaN", "Decimal.toDouble(getInt(cursor, %s)) * 1000", "setInt(cursor, %s, Decimal.compose(%s / 1000))"))
-        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
-        .addImport(new ClassName(Decimal.class))
+        .addField(new Field(false, SerialFieldType.DECIMAL, true))
+        .addAccess(Access.createWithAccessPattern("", "long", "0", "getAsLong(cursor, %s)", "setAsLong(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Double", "double", "Double.NaN", "getAsDouble(cursor, %s)", "setAsDouble(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getAsTinyDecimal(cursor, %s)", "setAsTinyDecimal(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("WideDecimal", "long", "0", "getAsWideDecimal(cursor, %s)", "setAsWideDecimal(cursor, %s, %s)"))
         .setMapper(new DecimalMapper(long.class))
     ),
     CHAR(new Builder()
@@ -285,21 +190,23 @@ enum FieldType {
         final boolean required;
         final boolean isObject;
         final SerialFieldType serialType;
+        final boolean adaptiveDecimal;
         final String[] typeSelectors;
         final String suffix;
 
         Field(boolean isObject, SerialFieldType serialType) {
-            this(true, isObject, "", serialType);
+            this(true, isObject, "", serialType, false);
         }
 
-        Field(boolean isObject, SerialFieldType serialType, String... typeSelectors) {
-            this(true, isObject, "", serialType, typeSelectors);
+        Field(boolean isObject, SerialFieldType serialType, boolean adaptiveDecimal, String... typeSelectors) {
+            this(true, isObject, "", serialType, adaptiveDecimal, typeSelectors);
         }
 
-        Field(boolean required, boolean isObject, String suffix, SerialFieldType serialType, String... typeSelectors) {
+        Field(boolean required, boolean isObject, String suffix, SerialFieldType serialType, boolean adaptiveDecimal, String... typeSelectors) {
             this.required = required;
             this.isObject = isObject;
             this.serialType = serialType;
+            this.adaptiveDecimal = adaptiveDecimal;
             this.typeSelectors = typeSelectors;
             this.suffix = suffix;
         }

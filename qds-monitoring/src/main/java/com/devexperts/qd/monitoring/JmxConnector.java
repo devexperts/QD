@@ -11,16 +11,22 @@
  */
 package com.devexperts.qd.monitoring;
 
-import java.io.IOException;
-
 import com.devexperts.management.Management;
 
+import java.io.IOException;
+
 abstract class JmxConnector {
+    private final int port;
     private final String name;
     private Management.Registration registration;
 
-    JmxConnector(String name) {
+    JmxConnector(int port, String name) {
+        this.port = port;
         this.name = name;
+    }
+
+    public int getPort() {
+        return port;
     }
 
     public String getName() {
@@ -39,6 +45,6 @@ abstract class JmxConnector {
 
     @Override
     public String toString() {
-        return name;
+        return "port=" + port + ", name=" + name;
     }
 }

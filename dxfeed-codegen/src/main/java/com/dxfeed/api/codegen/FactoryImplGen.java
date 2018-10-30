@@ -137,7 +137,7 @@ class FactoryImplGen {
             cg.addImport(new ClassName(SerialFieldType.class));
             for (FieldType.Field field : f.fieldType.fields) {
                 String typeExpr = "SerialFieldType." + field.serialType;
-                if (field.typeSelectors.length != 0) {
+                if (field.adaptiveDecimal || field.typeSelectors.length != 0) {
                     typeExpr = "select(" + typeExpr;
                     for (String typeSelector : field.typeSelectors)
                         typeExpr = typeExpr + ", \"" + typeSelector + "\"";

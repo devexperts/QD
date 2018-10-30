@@ -152,6 +152,14 @@ public class QuoteMapping extends MarketEventMapping {
         setAsInt(cursor, iBidSize, bidSize);
     }
 
+    public long getBidSizeLong(RecordCursor cursor) {
+        return getAsLong(cursor, iBidSize);
+    }
+
+    public void setBidSizeLong(RecordCursor cursor, long bidSize) {
+        setAsLong(cursor, iBidSize, bidSize);
+    }
+
     public double getBidSizeDouble(RecordCursor cursor) {
         return getAsDouble(cursor, iBidSize);
     }
@@ -256,6 +264,14 @@ public class QuoteMapping extends MarketEventMapping {
 
     public void setAskSize(RecordCursor cursor, int askSize) {
         setAsInt(cursor, iAskSize, askSize);
+    }
+
+    public long getAskSizeLong(RecordCursor cursor) {
+        return getAsLong(cursor, iAskSize);
+    }
+
+    public void setAskSizeLong(RecordCursor cursor, long askSize) {
+        setAsLong(cursor, iAskSize, askSize);
     }
 
     public double getAskSizeDouble(RecordCursor cursor) {

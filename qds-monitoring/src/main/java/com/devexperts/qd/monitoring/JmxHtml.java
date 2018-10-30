@@ -39,8 +39,8 @@ class JmxHtml {
 
         String name = "com.devexperts.qd.monitoring:type=HtmlAdaptor,port=" + port;
         HtmlAdaptorServer server = createHtmlAdaptor(bindAddress, ssl);
-        Connector connector = new Connector(name, server);
-        if (!JmxConnectors.addConnector(port, connector))
+        Connector connector = new Connector(port, name, server);
+        if (!JmxConnectors.addConnector(connector))
             return null; // port is already taken
 
         server.setPort(port);
@@ -110,8 +110,8 @@ class JmxHtml {
     private static class Connector extends JmxConnector {
         private final HtmlAdaptorServer server;
 
-        Connector(String name, HtmlAdaptorServer server) {
-            super(name);
+        Connector(int port, String name, HtmlAdaptorServer server) {
+            super(port, name);
             this.server = server;
         }
 

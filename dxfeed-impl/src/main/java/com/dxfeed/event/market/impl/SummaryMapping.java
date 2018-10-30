@@ -39,7 +39,7 @@ public class SummaryMapping extends MarketEventMapping {
         iPrevDayId = MappingUtil.findIntField(record, "PrevDayId", true);
         iPrevDayClosePrice = findIntField("PrevDayClose.Price", true);
         iPrevDayVolume = findIntField("PrevDayVolume", false);
-        iOpenInterest = MappingUtil.findIntField(record, "OpenInterest", false);
+        iOpenInterest = findIntField("OpenInterest", false);
         iFlags = MappingUtil.findIntField(record, "Flags", false);
     }
 
@@ -242,13 +242,61 @@ public class SummaryMapping extends MarketEventMapping {
     public int getOpenInterest(RecordCursor cursor) {
         if (iOpenInterest < 0)
             return 0;
-        return getInt(cursor, iOpenInterest);
+        return getAsInt(cursor, iOpenInterest);
     }
 
     public void setOpenInterest(RecordCursor cursor, int openInterest) {
         if (iOpenInterest < 0)
             return;
-        setInt(cursor, iOpenInterest, openInterest);
+        setAsInt(cursor, iOpenInterest, openInterest);
+    }
+
+    public long getOpenInterestLong(RecordCursor cursor) {
+        if (iOpenInterest < 0)
+            return 0;
+        return getAsLong(cursor, iOpenInterest);
+    }
+
+    public void setOpenInterestLong(RecordCursor cursor, long openInterest) {
+        if (iOpenInterest < 0)
+            return;
+        setAsLong(cursor, iOpenInterest, openInterest);
+    }
+
+    public double getOpenInterestDouble(RecordCursor cursor) {
+        if (iOpenInterest < 0)
+            return Double.NaN;
+        return getAsDouble(cursor, iOpenInterest);
+    }
+
+    public void setOpenInterestDouble(RecordCursor cursor, double openInterest) {
+        if (iOpenInterest < 0)
+            return;
+        setAsDouble(cursor, iOpenInterest, openInterest);
+    }
+
+    public int getOpenInterestDecimal(RecordCursor cursor) {
+        if (iOpenInterest < 0)
+            return 0;
+        return getAsTinyDecimal(cursor, iOpenInterest);
+    }
+
+    public void setOpenInterestDecimal(RecordCursor cursor, int openInterest) {
+        if (iOpenInterest < 0)
+            return;
+        setAsTinyDecimal(cursor, iOpenInterest, openInterest);
+    }
+
+    public long getOpenInterestWideDecimal(RecordCursor cursor) {
+        if (iOpenInterest < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iOpenInterest);
+    }
+
+    public void setOpenInterestWideDecimal(RecordCursor cursor, long openInterest) {
+        if (iOpenInterest < 0)
+            return;
+        setAsWideDecimal(cursor, iOpenInterest, openInterest);
     }
 
     public int getFlags(RecordCursor cursor) {

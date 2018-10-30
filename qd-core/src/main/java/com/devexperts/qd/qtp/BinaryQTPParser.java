@@ -463,19 +463,23 @@ public class BinaryQTPParser extends AbstractQTPParser {
 
     // overridden in file analysis tool
     protected BinaryRecordDesc wrapRecordDesc(BinaryRecordDesc desc) {
-        if (fieldReplacers == null)
+        if (fieldReplacers == null || fieldReplacers.isEmpty())
             return desc;
-        List<Consumer<RecordCursor>> fieldReplacers = new ArrayList<>();
-        for (FieldReplacer fieldReplacer : this.fieldReplacers) {
+        List<Consumer<RecordCursor>> consumers = new ArrayList<>();
+        for (FieldReplacer fieldReplacer : fieldReplacers) {
             Consumer<RecordCursor> replacer = fieldReplacer.createFieldReplacer(desc.getRecord());
             if (replacer != null)
-                fieldReplacers.add(replacer);
+                consumers.add(replacer);
         }
+        if (consumers.isEmpty())
+            return desc;
+        //noinspection unchecked,SuspiciousToArrayCall
+        Consumer<RecordCursor>[] consumersArray = (Consumer<RecordCursor>[]) consumers.toArray(new Consumer[consumers.size()]);
         return new BinaryRecordDesc(desc) {
             @Override
             protected void readFields(BufferedInput msg, RecordCursor cur, int nDesc) throws IOException {
                 super.readFields(msg, cur, nDesc);
-                for (Consumer<RecordCursor> replacer : fieldReplacers)
+                for (Consumer<RecordCursor> replacer : consumersArray)
                     replacer.accept(cur);
             }
         };
@@ -517,7 +521,7 @@ public class BinaryQTPParser extends AbstractQTPParser {
         if (id >= 0 && id < scheme.getRecordCount()) {
             DataRecord record = scheme.getRecord(id);
             try {
-                rr = wrapRecordDesc(new BinaryRecordDesc(record, false));
+                rr = wrapRecordDesc(new BinaryRecordDesc(record, false, BinaryRecordDesc.DIR_READ, true));
                 remapRecord(id, rr);
                 return rr;
             } catch (BinaryRecordDesc.InvalidDescException e) {

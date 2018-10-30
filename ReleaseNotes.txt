@@ -1,4 +1,18 @@
 
+QDS 3.266:
+
+* [QD-1076] Support second asterisk in glob patterns in QD filters
+* [QD-1090] Monitoring: JmxConnector couldn't be removed
+* [QD-1093] QD Core: Auth session must be closed on connection close
+* [QD-1095] dxFeed API: Improve support of WideDecimal
+  - Run JVM with "-Ddxscheme.wide=true" to make all appropriate fields WideDecimal in DXFeedScheme
+    + properties "-Ddxscheme.price=wide -Ddxscheme.size=wide" also work to fine-tune specific fields
+  - DecimalField no longer supports multiplier parameter
+  - Profile.Shares field is represented in direct shares in all APIs, including RecordCursor
+    + it is no longer necessary to multiply or divide Profile.Shares by 1000 when working with APIs
+    + on a wire (QTP binary format) Profile.Shares still use thousands notation in TinyDecimal form
+      although it uses direct shares notation in WideDecimal form
+
 QDS 3.265:
 
 * [QD-760] RMI: Provide ability to define custom load-balancers

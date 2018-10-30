@@ -35,10 +35,10 @@ public class TheoPriceMapping extends RecordMapping {
         iSequence = MappingUtil.findIntField(record, "Theo.Sequence", false);
         iPrice = findIntField("Theo.Price", true);
         iUnderlyingPrice = findIntField("Theo.UnderlyingPrice", true);
-        iDelta = MappingUtil.findIntField(record, "Theo.Delta", true);
-        iGamma = MappingUtil.findIntField(record, "Theo.Gamma", true);
-        iDividend = MappingUtil.findIntField(record, "Theo.Dividend", false);
-        iInterest = MappingUtil.findIntField(record, "Theo.Interest", false);
+        iDelta = findIntField("Theo.Delta", true);
+        iGamma = findIntField("Theo.Gamma", true);
+        iDividend = findIntField("Theo.Dividend", false);
+        iInterest = findIntField("Theo.Interest", false);
         putNonDefaultPropertyName("Theo.Time", "Time");
         putNonDefaultPropertyName("Theo.Sequence", "Sequence");
         putNonDefaultPropertyName("Theo.Price", "Price");
@@ -221,178 +221,266 @@ public class TheoPriceMapping extends RecordMapping {
 
     @Deprecated
     public double getTheoDelta(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iDelta));
+        return getAsDouble(cursor, iDelta);
     }
 
     @Deprecated
     public void setTheoDelta(RecordCursor cursor, double theoDelta) {
-        setInt(cursor, iDelta, Decimal.compose(theoDelta));
+        setAsDouble(cursor, iDelta, theoDelta);
     }
 
     @Deprecated
     public int getTheoDeltaDecimal(RecordCursor cursor) {
-        return getInt(cursor, iDelta);
+        return getAsTinyDecimal(cursor, iDelta);
     }
 
     @Deprecated
     public void setTheoDeltaDecimal(RecordCursor cursor, int theoDelta) {
-        setInt(cursor, iDelta, theoDelta);
+        setAsTinyDecimal(cursor, iDelta, theoDelta);
+    }
+
+    @Deprecated
+    public long getTheoDeltaWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iDelta);
+    }
+
+    @Deprecated
+    public void setTheoDeltaWideDecimal(RecordCursor cursor, long theoDelta) {
+        setAsWideDecimal(cursor, iDelta, theoDelta);
     }
 
     public double getDelta(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iDelta));
+        return getAsDouble(cursor, iDelta);
     }
 
     public void setDelta(RecordCursor cursor, double delta) {
-        setInt(cursor, iDelta, Decimal.compose(delta));
+        setAsDouble(cursor, iDelta, delta);
     }
 
     public int getDeltaDecimal(RecordCursor cursor) {
-        return getInt(cursor, iDelta);
+        return getAsTinyDecimal(cursor, iDelta);
     }
 
     public void setDeltaDecimal(RecordCursor cursor, int delta) {
-        setInt(cursor, iDelta, delta);
+        setAsTinyDecimal(cursor, iDelta, delta);
+    }
+
+    public long getDeltaWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iDelta);
+    }
+
+    public void setDeltaWideDecimal(RecordCursor cursor, long delta) {
+        setAsWideDecimal(cursor, iDelta, delta);
     }
 
     @Deprecated
     public double getTheoGamma(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iGamma));
+        return getAsDouble(cursor, iGamma);
     }
 
     @Deprecated
     public void setTheoGamma(RecordCursor cursor, double theoGamma) {
-        setInt(cursor, iGamma, Decimal.compose(theoGamma));
+        setAsDouble(cursor, iGamma, theoGamma);
     }
 
     @Deprecated
     public int getTheoGammaDecimal(RecordCursor cursor) {
-        return getInt(cursor, iGamma);
+        return getAsTinyDecimal(cursor, iGamma);
     }
 
     @Deprecated
     public void setTheoGammaDecimal(RecordCursor cursor, int theoGamma) {
-        setInt(cursor, iGamma, theoGamma);
+        setAsTinyDecimal(cursor, iGamma, theoGamma);
+    }
+
+    @Deprecated
+    public long getTheoGammaWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iGamma);
+    }
+
+    @Deprecated
+    public void setTheoGammaWideDecimal(RecordCursor cursor, long theoGamma) {
+        setAsWideDecimal(cursor, iGamma, theoGamma);
     }
 
     public double getGamma(RecordCursor cursor) {
-        return Decimal.toDouble(getInt(cursor, iGamma));
+        return getAsDouble(cursor, iGamma);
     }
 
     public void setGamma(RecordCursor cursor, double gamma) {
-        setInt(cursor, iGamma, Decimal.compose(gamma));
+        setAsDouble(cursor, iGamma, gamma);
     }
 
     public int getGammaDecimal(RecordCursor cursor) {
-        return getInt(cursor, iGamma);
+        return getAsTinyDecimal(cursor, iGamma);
     }
 
     public void setGammaDecimal(RecordCursor cursor, int gamma) {
-        setInt(cursor, iGamma, gamma);
+        setAsTinyDecimal(cursor, iGamma, gamma);
+    }
+
+    public long getGammaWideDecimal(RecordCursor cursor) {
+        return getAsWideDecimal(cursor, iGamma);
+    }
+
+    public void setGammaWideDecimal(RecordCursor cursor, long gamma) {
+        setAsWideDecimal(cursor, iGamma, gamma);
     }
 
     @Deprecated
     public double getTheoDividend(RecordCursor cursor) {
         if (iDividend < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iDividend));
+        return getAsDouble(cursor, iDividend);
     }
 
     @Deprecated
     public void setTheoDividend(RecordCursor cursor, double theoDividend) {
         if (iDividend < 0)
             return;
-        setInt(cursor, iDividend, Decimal.compose(theoDividend));
+        setAsDouble(cursor, iDividend, theoDividend);
     }
 
     @Deprecated
     public int getTheoDividendDecimal(RecordCursor cursor) {
         if (iDividend < 0)
             return 0;
-        return getInt(cursor, iDividend);
+        return getAsTinyDecimal(cursor, iDividend);
     }
 
     @Deprecated
     public void setTheoDividendDecimal(RecordCursor cursor, int theoDividend) {
         if (iDividend < 0)
             return;
-        setInt(cursor, iDividend, theoDividend);
+        setAsTinyDecimal(cursor, iDividend, theoDividend);
+    }
+
+    @Deprecated
+    public long getTheoDividendWideDecimal(RecordCursor cursor) {
+        if (iDividend < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iDividend);
+    }
+
+    @Deprecated
+    public void setTheoDividendWideDecimal(RecordCursor cursor, long theoDividend) {
+        if (iDividend < 0)
+            return;
+        setAsWideDecimal(cursor, iDividend, theoDividend);
     }
 
     public double getDividend(RecordCursor cursor) {
         if (iDividend < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iDividend));
+        return getAsDouble(cursor, iDividend);
     }
 
     public void setDividend(RecordCursor cursor, double dividend) {
         if (iDividend < 0)
             return;
-        setInt(cursor, iDividend, Decimal.compose(dividend));
+        setAsDouble(cursor, iDividend, dividend);
     }
 
     public int getDividendDecimal(RecordCursor cursor) {
         if (iDividend < 0)
             return 0;
-        return getInt(cursor, iDividend);
+        return getAsTinyDecimal(cursor, iDividend);
     }
 
     public void setDividendDecimal(RecordCursor cursor, int dividend) {
         if (iDividend < 0)
             return;
-        setInt(cursor, iDividend, dividend);
+        setAsTinyDecimal(cursor, iDividend, dividend);
+    }
+
+    public long getDividendWideDecimal(RecordCursor cursor) {
+        if (iDividend < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iDividend);
+    }
+
+    public void setDividendWideDecimal(RecordCursor cursor, long dividend) {
+        if (iDividend < 0)
+            return;
+        setAsWideDecimal(cursor, iDividend, dividend);
     }
 
     @Deprecated
     public double getTheoInterest(RecordCursor cursor) {
         if (iInterest < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iInterest));
+        return getAsDouble(cursor, iInterest);
     }
 
     @Deprecated
     public void setTheoInterest(RecordCursor cursor, double theoInterest) {
         if (iInterest < 0)
             return;
-        setInt(cursor, iInterest, Decimal.compose(theoInterest));
+        setAsDouble(cursor, iInterest, theoInterest);
     }
 
     @Deprecated
     public int getTheoInterestDecimal(RecordCursor cursor) {
         if (iInterest < 0)
             return 0;
-        return getInt(cursor, iInterest);
+        return getAsTinyDecimal(cursor, iInterest);
     }
 
     @Deprecated
     public void setTheoInterestDecimal(RecordCursor cursor, int theoInterest) {
         if (iInterest < 0)
             return;
-        setInt(cursor, iInterest, theoInterest);
+        setAsTinyDecimal(cursor, iInterest, theoInterest);
+    }
+
+    @Deprecated
+    public long getTheoInterestWideDecimal(RecordCursor cursor) {
+        if (iInterest < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iInterest);
+    }
+
+    @Deprecated
+    public void setTheoInterestWideDecimal(RecordCursor cursor, long theoInterest) {
+        if (iInterest < 0)
+            return;
+        setAsWideDecimal(cursor, iInterest, theoInterest);
     }
 
     public double getInterest(RecordCursor cursor) {
         if (iInterest < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iInterest));
+        return getAsDouble(cursor, iInterest);
     }
 
     public void setInterest(RecordCursor cursor, double interest) {
         if (iInterest < 0)
             return;
-        setInt(cursor, iInterest, Decimal.compose(interest));
+        setAsDouble(cursor, iInterest, interest);
     }
 
     public int getInterestDecimal(RecordCursor cursor) {
         if (iInterest < 0)
             return 0;
-        return getInt(cursor, iInterest);
+        return getAsTinyDecimal(cursor, iInterest);
     }
 
     public void setInterestDecimal(RecordCursor cursor, int interest) {
         if (iInterest < 0)
             return;
-        setInt(cursor, iInterest, interest);
+        setAsTinyDecimal(cursor, iInterest, interest);
+    }
+
+    public long getInterestWideDecimal(RecordCursor cursor) {
+        if (iInterest < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iInterest);
+    }
+
+    public void setInterestWideDecimal(RecordCursor cursor, long interest) {
+        if (iInterest < 0)
+            return;
+        setAsWideDecimal(cursor, iInterest, interest);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }

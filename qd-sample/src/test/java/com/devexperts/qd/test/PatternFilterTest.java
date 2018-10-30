@@ -149,15 +149,108 @@ public class PatternFilterTest extends TestCase {
         assertTrue(accepts("A*b", "Ab"));
     }
 
+    public void testDoubleAsteriskWildcard() {
+        assertTrue(accepts("AB*D*", "ABD"));
+        assertTrue(accepts("AB*D*", "ABCD"));
+        assertTrue(accepts("AB*D*", "ABCED"));
+        assertTrue(accepts("AB*D*", "ABCEDE"));
+        assertTrue(accepts("AB*D*", "ABCEDEF"));
+        assertFalse(accepts("AB*D*", "CABD"));
+        assertFalse(accepts("AB*D*", "ABC"));
+        assertFalse(accepts("AB*D*", "AB"));
+
+        assertTrue(accepts("*AB*D", "ABD"));
+        assertTrue(accepts("*AB*D", "ABCD"));
+        assertTrue(accepts("*AB*D", "ABCED"));
+        assertTrue(accepts("*AB*D", "CABD"));
+        assertFalse(accepts("*AB*D", "ABCEDEFPPPPP"));
+        assertFalse(accepts("*AB*D", "ABCEDEF"));
+        assertFalse(accepts("*AB*D", "ABCEDE"));
+        assertFalse(accepts("*AB*D", "ABC"));
+        assertFalse(accepts("*AB*D", "AB"));
+
+        assertTrue(accepts("*ABD*", "ABD"));
+        assertTrue(accepts("*ABD*", "CABD"));
+        assertTrue(accepts("*ABD*", "CABDC"));
+        assertTrue(accepts("*ABD*", "AAAACABDC"));
+        assertTrue(accepts("*ABD*", "ABDCCVCV"));
+        assertFalse(accepts("*ABD*", "ABXBD"));
+        assertFalse(accepts("*ABD*", "xABxBDx"));
+        assertFalse(accepts("*ABD*", "ABCED"));
+        assertFalse(accepts("*ABD*", "ABCD"));
+        assertFalse(accepts("*ABD*", "ABCEDEFPPPPP"));
+        assertFalse(accepts("*ABD*", "ABCEDEF"));
+        assertFalse(accepts("*ABD*", "ABCEDE"));
+        assertFalse(accepts("*ABD*", "ABC"));
+        assertFalse(accepts("*ABD*", "AB"));
+
+        assertTrue(accepts("X*ABD*Y", "XABDY"));
+        assertTrue(accepts("X*ABD*Y", "XPABDTY"));
+        assertTrue(accepts("X*ABD*Y", "XWWABDTTY"));
+        assertTrue(accepts("X*ABD*Y", "XABDYY"));
+        assertTrue(accepts("X*ABD*Y", "XXABDYY"));
+        assertFalse(accepts("X*ABD*Y", "ABD"));
+        assertFalse(accepts("X*ABD*Y", "CABD"));
+        assertFalse(accepts("X*ABD*Y", "CABDC"));
+        assertFalse(accepts("X*ABD*Y", "AAAACABDC"));
+        assertFalse(accepts("X*ABD*Y", "ABDCCVCV"));
+        assertFalse(accepts("X*ABD*Y", "ABCED"));
+        assertFalse(accepts("X*ABD*Y", "ABCD"));
+        assertFalse(accepts("X*ABD*Y", "ABCEDEFPPPPP"));
+        assertFalse(accepts("X*ABD*Y", "ABCEDEF"));
+        assertFalse(accepts("X*ABD*Y", "ABCEDE"));
+        assertFalse(accepts("X*ABD*Y", "ABC"));
+        assertFalse(accepts("X*ABD*Y", "AB"));
+
+        assertTrue(accepts("*ABAC*", "ABABAC"));
+        assertTrue(accepts("*AAAB*", "AAAAABxyz"));
+
+        assertTrue(accepts(".*[A-K]*", ".ABBA"));
+        assertTrue(accepts(".*[A-K]*", ".ABBA"));
+        assertTrue(accepts(".*[A-K]*", ".K"));
+        assertTrue(accepts(".*[A-K]*", ".BK"));
+        assertTrue(accepts(".*[A-K]*", ".MK"));
+        assertTrue(accepts(".*[A-K]*", ".MKP"));
+        assertFalse(accepts(".*[A-K]*", ".Z"));
+        assertFalse(accepts(".*[A-K]*", ".L"));
+        assertFalse(accepts(".*[A-K]*", "."));
+        assertFalse(accepts(".*[A-K]*", ""));
+
+        assertTrue(accepts(".*[A-K][B-Y]*", ".ABBA"));
+        assertTrue(accepts(".*[A-K][B-Y]*", ".ABBA"));
+        assertTrue(accepts(".*[A-K][B-Y]*", ".KRRRRxxxxK"));
+        assertTrue(accepts(".*[A-K][B-Y]*", ".BK"));
+        assertTrue(accepts(".*[A-K][B-Y]*", ".MKP"));
+        assertFalse(accepts(".*[A-K][B-Y]*", ".K"));
+        assertFalse(accepts(".*[A-K][B-Y]*", ".KZ"));
+        assertFalse(accepts(".*[A-K][B-Y]*", ".Z"));
+        assertFalse(accepts(".*[A-K][B-Y]*", ".L"));
+        assertFalse(accepts(".*[A-K][B-Y]*", "."));
+        assertFalse(accepts(".*[A-K][B-Y]*", ""));
+
+
+        assertTrue(accepts2("[/A-Z][DFT]*[HG]*", "/FH"));
+        assertTrue(accepts2("[/A-Z][DFT]*[HG]*", "ZTG"));
+        assertTrue(accepts2("[/A-Z][DFT]*[HG]*", "ZTAAG"));
+        assertTrue(accepts2("[/A-Z][DFT]*[HG]*", "ZTAAAAAAG"));
+        assertFalse(accepts2("[/A-Z][DFT]*[HG]*", "ZTI"));
+        assertFalse(accepts2("[/A-Z][DFT]*[HG]*", ".TG"));
+        assertFalse(accepts2("[/A-Z][DFT]*[HG]*", "/EH"));
+
+        assertTrue(accepts("*[&]Q*", "AAPL&Q"));
+        assertTrue(accepts("*[&]Q*", "AAPL&Q{price=bid}"));
+        assertTrue(accepts("*[&]Q*", "AAPL&Q{=m,price=bid}"));
+
+        assertFalse(accepts("*[&]Q*", "AAPL&F"));
+        assertFalse(accepts("*[&]Q*", "AAPL&F{price=bid}"));
+        assertFalse(accepts("*[&]Q*", "AAPL&F{=m,price=bid}"));
+    }
+
     public void testErrors() {
-        checkError("AB*D*");
-        checkError("*AB*D");
-        checkError("AB**D");
         checkError("[*");
         checkError("[HABA*");
         checkError("HABA]*");
         checkError("[A--Z]*");
-        checkError("*ABC*");
         checkError("+ABC*");
         checkError("+ABC*");
         checkError("[A[B]]*");
@@ -165,6 +258,20 @@ public class PatternFilterTest extends TestCase {
         checkError("[-AB]*");
         checkError("[^-AB]*");
         checkError("\u1234*");
+
+        //'*' in a row are not allowed
+        checkError("AB**D");
+        checkError("**:TR");
+        checkError("HABA**");
+        checkError("**");
+
+        //more than 2 '*' not allowed
+        checkError("*AB*A*");
+        checkError("A*AB*A*");
+        checkError("*AB*A*A");
+        checkError("A*AB*A*A");
+        checkError("**A*");
+        checkError("***");
 
         // lowercase starts are reserved
         checkError("a*");
@@ -205,8 +312,9 @@ public class PatternFilterTest extends TestCase {
     }
 
     private boolean accepts2(String pattern, String symbol) {
-        assertTrue(pattern.startsWith("["));
-        return accepts(pattern, symbol) && !accepts("[^" + pattern.substring(1), symbol);
+        assertTrue(pattern.contains("["));
+        String negatedPattern = pattern.replaceFirst("\\[", "\\[^");
+        return accepts(pattern, symbol) && !accepts(negatedPattern, symbol);
     }
 
     private void checkError(String pattern) {

@@ -37,7 +37,7 @@ public class SpreadOrderMapping extends OrderBaseMapping {
         iSequence = MappingUtil.findIntField(record, "Sequence", true);
         iPrice = findIntField("Price", true);
         iSize = findIntField("Size", true);
-        iCount = MappingUtil.findIntField(record, "Count", false);
+        iCount = findIntField("Count", false);
         iFlags = MappingUtil.findIntField(record, "Flags", true);
         oSpreadSymbol = MappingUtil.findObjField(record, "SpreadSymbol", true);
     }
@@ -118,6 +118,14 @@ public class SpreadOrderMapping extends OrderBaseMapping {
         setAsInt(cursor, iSize, size);
     }
 
+    public long getSizeLong(RecordCursor cursor) {
+        return getAsLong(cursor, iSize);
+    }
+
+    public void setSizeLong(RecordCursor cursor, long size) {
+        setAsLong(cursor, iSize, size);
+    }
+
     public double getSizeDouble(RecordCursor cursor) {
         return getAsDouble(cursor, iSize);
     }
@@ -145,13 +153,61 @@ public class SpreadOrderMapping extends OrderBaseMapping {
     public int getCount(RecordCursor cursor) {
         if (iCount < 0)
             return 0;
-        return getInt(cursor, iCount);
+        return getAsInt(cursor, iCount);
     }
 
     public void setCount(RecordCursor cursor, int count) {
         if (iCount < 0)
             return;
-        setInt(cursor, iCount, count);
+        setAsInt(cursor, iCount, count);
+    }
+
+    public long getCountLong(RecordCursor cursor) {
+        if (iCount < 0)
+            return 0;
+        return getAsLong(cursor, iCount);
+    }
+
+    public void setCountLong(RecordCursor cursor, long count) {
+        if (iCount < 0)
+            return;
+        setAsLong(cursor, iCount, count);
+    }
+
+    public double getCountDouble(RecordCursor cursor) {
+        if (iCount < 0)
+            return Double.NaN;
+        return getAsDouble(cursor, iCount);
+    }
+
+    public void setCountDouble(RecordCursor cursor, double count) {
+        if (iCount < 0)
+            return;
+        setAsDouble(cursor, iCount, count);
+    }
+
+    public int getCountDecimal(RecordCursor cursor) {
+        if (iCount < 0)
+            return 0;
+        return getAsTinyDecimal(cursor, iCount);
+    }
+
+    public void setCountDecimal(RecordCursor cursor, int count) {
+        if (iCount < 0)
+            return;
+        setAsTinyDecimal(cursor, iCount, count);
+    }
+
+    public long getCountWideDecimal(RecordCursor cursor) {
+        if (iCount < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iCount);
+    }
+
+    public void setCountWideDecimal(RecordCursor cursor, long count) {
+        if (iCount < 0)
+            return;
+        setAsWideDecimal(cursor, iCount, count);
     }
 
     public int getFlags(RecordCursor cursor) {

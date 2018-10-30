@@ -72,8 +72,15 @@ public class BinaryRecordDesc {
     protected static final int FLD_INT_TO_WIDE_DECIMAL = 7; // conversion int->WideDecimal
     protected static final int FLD_WIDE_DECIMAL_TO_DECIMAL = 8; // conversion WideDecimal->decimal
     protected static final int FLD_DECIMAL_TO_WIDE_DECIMAL = 9; // conversion decimal->WideDecimal
-    protected static final int FLD_EVENT_TIME = 10; // RecordCursor.get/setEventTime (does not have index)
-    protected static final int FLD_EVENT_SEQUENCE = 11; // RecordCursor.get/setEventSequence (does not have index)
+    protected static final int FLD_DECIMAL_TO_SHARES = 10; // conversion decimal->decimal shares (/1000)
+    protected static final int FLD_SHARES_TO_DECIMAL = 11; // conversion decimal shares->decimal (*1000)
+    protected static final int FLD_WIDE_DECIMAL_TO_SHARES = 12; // conversion WideDecimal->decimal shares (/1000)
+    protected static final int FLD_SHARES_TO_WIDE_DECIMAL = 13; // conversion decimal shares->WideDecimal (*1000)
+    protected static final int FLD_EVENT_TIME = 14; // RecordCursor.get/setEventTime (does not have index)
+    protected static final int FLD_EVENT_SEQUENCE = 15; // RecordCursor.get/setEventSequence (does not have index)
+    // Note: FLD_VALUE of 16 can't be used unless FLD_SHIFT is changed
+
+    protected static final int FLAG_SHARES = -1; // denotes decimal shares which are expressed in thousands
 
     protected static final int INDEX_MASK = (1 << SER_SHIFT) - 1;
 
@@ -84,7 +91,6 @@ public class BinaryRecordDesc {
     protected static final int DESC_CANT_CONVERT = (-4 & INDEX_MASK) | (SER_OTHER << SER_SHIFT);
 
     // Conversion direction for change of representation.
-    protected static final int DIR_NONE = 0;
     protected static final int DIR_READ = 1;
     protected static final int DIR_WRITE = 2;
 
@@ -112,11 +118,9 @@ public class BinaryRecordDesc {
         this.nDescEventFields = desc.nDescEventFields;
     }
 
-    protected BinaryRecordDesc(DataRecord record, boolean eventTimeSequence) throws InvalidDescException {
-        this(record, eventTimeSequence, true);
-    }
-
-    protected BinaryRecordDesc(DataRecord record, boolean eventTimeSequence, boolean wideDecimalSupported) throws InvalidDescException {
+    protected BinaryRecordDesc(DataRecord record, boolean eventTimeSequence, int dir, boolean wideDecimalSupported) throws InvalidDescException {
+        if (dir != DIR_READ && dir != DIR_WRITE)
+            throw new IllegalArgumentException("illegal direction");
         int iFlds = record.getIntFieldCount();
         int oFlds = record.getObjFieldCount();
         int nFlds = (eventTimeSequence ? 2 : 0) + iFlds + oFlds;
@@ -138,7 +142,7 @@ public class BinaryRecordDesc {
             int type = f.getSerialType().getId();
             if ((type & REPRESENTATION_MASK) == FLAG_WIDE_DECIMAL && !wideDecimalSupported)
                 type = (type & ~REPRESENTATION_MASK) | FLAG_DECIMAL;
-            int d = field2Desc(name, type, f, DIR_NONE);
+            int d = field2Desc(name, type, f, dir, record.getName().equals("Profile") && name.equals("Shares"));
             if (d == DESC_CANT_CONVERT)
                 throw new InvalidDescException(name, type);
             if (d == DESC_VOID)
@@ -152,7 +156,7 @@ public class BinaryRecordDesc {
             DataObjField f = record.getObjField(i);
             String name = f.getPropertyName();
             int type = f.getSerialType().getId();
-            int d = field2Desc(name, type, f, DIR_NONE);
+            int d = field2Desc(name, type, f, dir, record.getName().equals("Profile") && name.equals("Shares"));
             if (d == DESC_CANT_CONVERT)
                 throw new InvalidDescException(name, type);
             if (d == DESC_VOID)
@@ -204,12 +208,13 @@ public class BinaryRecordDesc {
             String name = names[i];
             int type = types[i];
             DataField f = record == null ? null : record.findFieldByName(name);
-            int d = field2Desc(name, type, f, dir);
+            boolean isShares = record != null && record.getName().equals("Profile") && name.equals("Shares");
+            int d = field2Desc(name, type, f, dir, isShares);
             if (d == DESC_CANT_CONVERT) {
                 if (f == null)
                     throw new InvalidDescException(name, type);
                 type = (type & ~REPRESENTATION_MASK) | (f.getSerialType().getId() & REPRESENTATION_MASK);
-                d = field2Desc(name, type, f, dir);
+                d = field2Desc(name, type, f, dir, isShares);
                 if (d == DESC_CANT_CONVERT)
                     throw new InvalidDescException(name, type);
             }
@@ -349,7 +354,7 @@ public class BinaryRecordDesc {
                 setIntValue(cur, d & INDEX_MASK, Decimal.composeDecimal(iVal, 0), msg);
                 break;
             case FLD_WIDE_DECIMAL_TO_INT:
-                setIntValue(cur, d & INDEX_MASK, (int) WideDecimal.toDouble(iVal), msg);
+                setIntValue(cur, d & INDEX_MASK, (int) WideDecimal.toLong(iVal), msg);
                 break;
             case FLD_INT_TO_WIDE_DECIMAL:
                 setLongValue(cur, d & INDEX_MASK, WideDecimal.composeWide(iVal, 0), msg);
@@ -359,6 +364,13 @@ public class BinaryRecordDesc {
                 break;
             case FLD_DECIMAL_TO_WIDE_DECIMAL:
                 setLongValue(cur, d & INDEX_MASK, Decimal.tinyToWide((int) iVal), msg);
+                break;
+            case FLD_SHARES_TO_DECIMAL:
+                setIntValue(cur, d & INDEX_MASK, Decimal.compose(Decimal.toDouble((int) iVal) * 1000.0), msg);
+                iVal = Decimal.compose(Decimal.toDouble(cur.getInt(d & INDEX_MASK)) / 1000.0);
+                break;
+            case FLD_SHARES_TO_WIDE_DECIMAL:
+                setLongValue(cur, d & INDEX_MASK, WideDecimal.composeWide(Decimal.toDouble((int) iVal) * 1000.0), msg);
                 break;
             case FLD_EVENT_TIME:
                 cur.setEventTimeSeconds((int) iVal);
@@ -427,7 +439,7 @@ public class BinaryRecordDesc {
                 iVal = Decimal.composeDecimal(cur.getInt(d & INDEX_MASK), 0);
                 break;
             case FLD_WIDE_DECIMAL_TO_INT:
-                iVal = (long) WideDecimal.toDouble(cur.getLong(d & INDEX_MASK));
+                iVal = WideDecimal.toLong(cur.getLong(d & INDEX_MASK));
                 break;
             case FLD_INT_TO_WIDE_DECIMAL:
                 iVal = WideDecimal.composeWide(cur.getInt(d & INDEX_MASK), 0);
@@ -437,6 +449,12 @@ public class BinaryRecordDesc {
                 break;
             case FLD_DECIMAL_TO_WIDE_DECIMAL:
                 iVal = Decimal.tinyToWide(cur.getInt(d & INDEX_MASK));
+                break;
+            case FLD_DECIMAL_TO_SHARES:
+                iVal = Decimal.compose(Decimal.toDouble(cur.getInt(d & INDEX_MASK)) / 1000.0);
+                break;
+            case FLD_WIDE_DECIMAL_TO_SHARES:
+                iVal = Decimal.compose(WideDecimal.toDouble(cur.getLong(d & INDEX_MASK)) / 1000.0);
                 break;
             case FLD_EVENT_TIME:
                 iVal = TimeSequenceUtil.getTimeSecondsFromTimeSequence(eventTimeSequence);
@@ -514,7 +532,7 @@ public class BinaryRecordDesc {
         }
     }
 
-    private static int field2Desc(String name, int type, DataField f, int dir) throws InvalidDescException {
+    private static int field2Desc(String name, int type, DataField f, int dir, boolean isShares) throws InvalidDescException {
         int ser;
         switch (type & SERIAL_TYPE_MASK) {
         case ID_VOID:
@@ -558,18 +576,13 @@ public class BinaryRecordDesc {
         int fld;
         if (f instanceof DataIntField) {
             // integer fields might need conversion after read or before write
-            switch (dir) {
-            case DIR_READ:
-                fld = getIntConverterType(type, f.getSerialType().getId());
-                break;
-            case DIR_WRITE:
-                fld = getIntConverterType(f.getSerialType().getId(), type);
-                break;
-            default:
-                fld = FLD_INT;
-                assert getIntConverterType(f.getSerialType().getId(), type) == FLD_INT;
-                break;
-            }
+            int wire = type & REPRESENTATION_MASK;
+            if (wire == FLAG_DECIMAL && isShares)
+                wire = FLAG_SHARES;
+            if (dir == DIR_READ)
+                fld = getIntConverterType(wire, f.getSerialType().getId() & REPRESENTATION_MASK);
+            else
+                fld = getIntConverterType(f.getSerialType().getId() & REPRESENTATION_MASK, wire);
             if (fld == FLD_SKIP)
                 return DESC_CANT_CONVERT;
             if (fld == FLD_INT && f.getSerialType().isLong())
@@ -581,21 +594,29 @@ public class BinaryRecordDesc {
         return (ser << SER_SHIFT) | (fld << FLD_SHIFT) | f.getIndex();
     }
 
-    private static int getIntConverterType(int fromId, int toId) {
-        if ((fromId & REPRESENTATION_MASK) == (toId & REPRESENTATION_MASK))
+    private static int getIntConverterType(int from, int to) {
+        if (from == to)
             return FLD_INT;
-        if ((fromId & REPRESENTATION_MASK) == FLAG_DECIMAL && (toId & REPRESENTATION_MASK) == FLAG_INT)
+        if (from == FLAG_DECIMAL && to == FLAG_INT)
             return FLD_DECIMAL_TO_INT;
-        if ((fromId & REPRESENTATION_MASK) == FLAG_INT && (toId & REPRESENTATION_MASK) == FLAG_DECIMAL)
+        if (from == FLAG_INT && to == FLAG_DECIMAL)
             return FLD_INT_TO_DECIMAL;
-        if ((fromId & REPRESENTATION_MASK) == FLAG_WIDE_DECIMAL && (toId & REPRESENTATION_MASK) == FLAG_INT)
+        if (from == FLAG_WIDE_DECIMAL && to == FLAG_INT)
             return FLD_WIDE_DECIMAL_TO_INT;
-        if ((fromId & REPRESENTATION_MASK) == FLAG_INT && (toId & REPRESENTATION_MASK) == FLAG_WIDE_DECIMAL)
+        if (from == FLAG_INT && to == FLAG_WIDE_DECIMAL)
             return FLD_INT_TO_WIDE_DECIMAL;
-        if ((fromId & REPRESENTATION_MASK) == FLAG_WIDE_DECIMAL && (toId & REPRESENTATION_MASK) == FLAG_DECIMAL)
+        if (from == FLAG_WIDE_DECIMAL && to == FLAG_DECIMAL)
             return FLD_WIDE_DECIMAL_TO_DECIMAL;
-        if ((fromId & REPRESENTATION_MASK) == FLAG_DECIMAL && (toId & REPRESENTATION_MASK) == FLAG_WIDE_DECIMAL)
+        if (from == FLAG_DECIMAL && to == FLAG_WIDE_DECIMAL)
             return FLD_DECIMAL_TO_WIDE_DECIMAL;
+        if (from == FLAG_DECIMAL && to == FLAG_SHARES)
+            return FLD_DECIMAL_TO_SHARES;
+        if (from == FLAG_SHARES && to == FLAG_DECIMAL)
+            return FLD_SHARES_TO_DECIMAL;
+        if (from == FLAG_WIDE_DECIMAL && to == FLAG_SHARES)
+            return FLD_WIDE_DECIMAL_TO_SHARES;
+        if (from == FLAG_SHARES && to == FLAG_WIDE_DECIMAL)
+            return FLD_SHARES_TO_WIDE_DECIMAL;
         return FLD_SKIP;
     }
 }

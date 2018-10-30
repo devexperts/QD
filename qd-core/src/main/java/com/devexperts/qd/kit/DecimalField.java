@@ -21,59 +21,29 @@ import com.devexperts.qd.util.Decimal;
  * floating point values, such as prices, amounts, etc.
  */
 public class DecimalField extends CompactIntField {
-    private final double multiplier;
-    private final boolean asIs;
-
     public DecimalField(int index, String name) {
         this(index, name, SerialFieldType.DECIMAL.forNamedField(name));
     }
 
     public DecimalField(int index, String name, SerialFieldType serialType) {
-        this(index, name, serialType, 1);
-    }
-
-    public DecimalField(int index, String name, SerialFieldType serialType, double multiplier) {
         super(index, name, serialType);
         if (!serialType.hasSameRepresentationAs(SerialFieldType.DECIMAL))
             throw new IllegalArgumentException("Invalid serialType: " + serialType);
-        this.multiplier = multiplier;
-        asIs = multiplier == 1;
     }
 
-    @Override
     public String toString(int value) {
-        if (asIs)
-            return Decimal.toString(value);
-        double v = toDouble(value);
-        if (Double.isNaN(v))
-            return Decimal.NAN_STRING;
-        return v == (long) v ? Long.toString((long) v) : Double.toString(v);
+        return Decimal.toString(value);
     }
 
-    @Override
     public int parseString(String value) {
-        if (asIs)
-            return Decimal.parseDecimal(value);
-        if (value.equals(Decimal.NAN_STRING))
-            return toInt(Double.NaN);
-        for (int i = 0; i < value.length(); i++) {
-            char c = value.charAt(i);
-            if (c != '-' && (c < '0' || c > '9'))
-                return toInt(Double.parseDouble(value));
-        }
-        return toInt(value.length() <= 18 ? Long.parseLong(value) : Double.parseDouble(value));
+        return Decimal.parseDecimal(value);
     }
 
-    @Override
     public double toDouble(int value) {
-        double v = Decimal.toDouble(value);
-        return asIs ? v : v * multiplier;
+        return Decimal.toDouble(value);
     }
 
-    @Override
     public int toInt(double value) {
-        if (!asIs)
-            value /= multiplier;
         return Decimal.compose(value);
     }
 }

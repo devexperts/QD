@@ -310,7 +310,6 @@ class DelegateGen {
         if (source != null)
             generateGetSource(cg);
         env.writeSourceFile(className, cg.buildSource());
-        mappingGen.generate();
     }
 
     private void generateDelegateConstructorCode(ClassGen cg) {

@@ -158,6 +158,16 @@ public class TradeHistoryMapping extends CandleEventMapping {
     }
 
     @Deprecated
+    public long getSizeLong(RecordCursor cursor) {
+        return getAsLong(cursor, iVolume);
+    }
+
+    @Deprecated
+    public void setSizeLong(RecordCursor cursor, long size) {
+        setAsLong(cursor, iVolume, size);
+    }
+
+    @Deprecated
     public double getSizeDouble(RecordCursor cursor) {
         return getAsDouble(cursor, iVolume);
     }
@@ -193,6 +203,14 @@ public class TradeHistoryMapping extends CandleEventMapping {
 
     public void setVolume(RecordCursor cursor, int volume) {
         setAsInt(cursor, iVolume, volume);
+    }
+
+    public long getVolumeLong(RecordCursor cursor) {
+        return getAsLong(cursor, iVolume);
+    }
+
+    public void setVolumeLong(RecordCursor cursor, long volume) {
+        setAsLong(cursor, iVolume, volume);
     }
 
     public double getVolumeDouble(RecordCursor cursor) {

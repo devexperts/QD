@@ -135,6 +135,14 @@ public class TimeAndSaleMapping extends MarketEventMapping {
         setAsInt(cursor, iSize, size);
     }
 
+    public long getSizeLong(RecordCursor cursor) {
+        return getAsLong(cursor, iSize);
+    }
+
+    public void setSizeLong(RecordCursor cursor, long size) {
+        setAsLong(cursor, iSize, size);
+    }
+
     public double getSizeDouble(RecordCursor cursor) {
         return getAsDouble(cursor, iSize);
     }

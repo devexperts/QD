@@ -36,11 +36,11 @@ public class MarketMakerMapping extends MarketEventMapping {
         iBidTime = MappingUtil.findIntField(record, "MMBid.Time", false);
         iBidPrice = findIntField("MMBid.Price", true);
         iBidSize = findIntField("MMBid.Size", true);
-        iBidCount = MappingUtil.findIntField(record, "MMBid.Count", false);
+        iBidCount = findIntField("MMBid.Count", false);
         iAskTime = MappingUtil.findIntField(record, "MMAsk.Time", false);
         iAskPrice = findIntField("MMAsk.Price", true);
         iAskSize = findIntField("MMAsk.Size", true);
-        iAskCount = MappingUtil.findIntField(record, "MMAsk.Count", false);
+        iAskCount = findIntField("MMAsk.Count", false);
         putNonDefaultPropertyName("MMExchange", "ExchangeCode");
         putNonDefaultPropertyName("MMID", "MarketMaker");
         putNonDefaultPropertyName("MMBid.Time", "BidTime");
@@ -224,6 +224,16 @@ public class MarketMakerMapping extends MarketEventMapping {
     }
 
     @Deprecated
+    public long getMMBidSizeLong(RecordCursor cursor) {
+        return getAsLong(cursor, iBidSize);
+    }
+
+    @Deprecated
+    public void setMMBidSizeLong(RecordCursor cursor, long _MMBidSize) {
+        setAsLong(cursor, iBidSize, _MMBidSize);
+    }
+
+    @Deprecated
     public double getMMBidSizeDouble(RecordCursor cursor) {
         return getAsDouble(cursor, iBidSize);
     }
@@ -261,6 +271,14 @@ public class MarketMakerMapping extends MarketEventMapping {
         setAsInt(cursor, iBidSize, bidSize);
     }
 
+    public long getBidSizeLong(RecordCursor cursor) {
+        return getAsLong(cursor, iBidSize);
+    }
+
+    public void setBidSizeLong(RecordCursor cursor, long bidSize) {
+        setAsLong(cursor, iBidSize, bidSize);
+    }
+
     public double getBidSizeDouble(RecordCursor cursor) {
         return getAsDouble(cursor, iBidSize);
     }
@@ -289,26 +307,130 @@ public class MarketMakerMapping extends MarketEventMapping {
     public int getMMBidCount(RecordCursor cursor) {
         if (iBidCount < 0)
             return 0;
-        return getInt(cursor, iBidCount);
+        return getAsInt(cursor, iBidCount);
     }
 
     @Deprecated
     public void setMMBidCount(RecordCursor cursor, int _MMBidCount) {
         if (iBidCount < 0)
             return;
-        setInt(cursor, iBidCount, _MMBidCount);
+        setAsInt(cursor, iBidCount, _MMBidCount);
+    }
+
+    @Deprecated
+    public long getMMBidCountLong(RecordCursor cursor) {
+        if (iBidCount < 0)
+            return 0;
+        return getAsLong(cursor, iBidCount);
+    }
+
+    @Deprecated
+    public void setMMBidCountLong(RecordCursor cursor, long _MMBidCount) {
+        if (iBidCount < 0)
+            return;
+        setAsLong(cursor, iBidCount, _MMBidCount);
+    }
+
+    @Deprecated
+    public double getMMBidCountDouble(RecordCursor cursor) {
+        if (iBidCount < 0)
+            return Double.NaN;
+        return getAsDouble(cursor, iBidCount);
+    }
+
+    @Deprecated
+    public void setMMBidCountDouble(RecordCursor cursor, double _MMBidCount) {
+        if (iBidCount < 0)
+            return;
+        setAsDouble(cursor, iBidCount, _MMBidCount);
+    }
+
+    @Deprecated
+    public int getMMBidCountDecimal(RecordCursor cursor) {
+        if (iBidCount < 0)
+            return 0;
+        return getAsTinyDecimal(cursor, iBidCount);
+    }
+
+    @Deprecated
+    public void setMMBidCountDecimal(RecordCursor cursor, int _MMBidCount) {
+        if (iBidCount < 0)
+            return;
+        setAsTinyDecimal(cursor, iBidCount, _MMBidCount);
+    }
+
+    @Deprecated
+    public long getMMBidCountWideDecimal(RecordCursor cursor) {
+        if (iBidCount < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iBidCount);
+    }
+
+    @Deprecated
+    public void setMMBidCountWideDecimal(RecordCursor cursor, long _MMBidCount) {
+        if (iBidCount < 0)
+            return;
+        setAsWideDecimal(cursor, iBidCount, _MMBidCount);
     }
 
     public int getBidCount(RecordCursor cursor) {
         if (iBidCount < 0)
             return 0;
-        return getInt(cursor, iBidCount);
+        return getAsInt(cursor, iBidCount);
     }
 
     public void setBidCount(RecordCursor cursor, int bidCount) {
         if (iBidCount < 0)
             return;
-        setInt(cursor, iBidCount, bidCount);
+        setAsInt(cursor, iBidCount, bidCount);
+    }
+
+    public long getBidCountLong(RecordCursor cursor) {
+        if (iBidCount < 0)
+            return 0;
+        return getAsLong(cursor, iBidCount);
+    }
+
+    public void setBidCountLong(RecordCursor cursor, long bidCount) {
+        if (iBidCount < 0)
+            return;
+        setAsLong(cursor, iBidCount, bidCount);
+    }
+
+    public double getBidCountDouble(RecordCursor cursor) {
+        if (iBidCount < 0)
+            return Double.NaN;
+        return getAsDouble(cursor, iBidCount);
+    }
+
+    public void setBidCountDouble(RecordCursor cursor, double bidCount) {
+        if (iBidCount < 0)
+            return;
+        setAsDouble(cursor, iBidCount, bidCount);
+    }
+
+    public int getBidCountDecimal(RecordCursor cursor) {
+        if (iBidCount < 0)
+            return 0;
+        return getAsTinyDecimal(cursor, iBidCount);
+    }
+
+    public void setBidCountDecimal(RecordCursor cursor, int bidCount) {
+        if (iBidCount < 0)
+            return;
+        setAsTinyDecimal(cursor, iBidCount, bidCount);
+    }
+
+    public long getBidCountWideDecimal(RecordCursor cursor) {
+        if (iBidCount < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iBidCount);
+    }
+
+    public void setBidCountWideDecimal(RecordCursor cursor, long bidCount) {
+        if (iBidCount < 0)
+            return;
+        setAsWideDecimal(cursor, iBidCount, bidCount);
     }
 
     @Deprecated
@@ -428,6 +550,16 @@ public class MarketMakerMapping extends MarketEventMapping {
     }
 
     @Deprecated
+    public long getMMAskSizeLong(RecordCursor cursor) {
+        return getAsLong(cursor, iAskSize);
+    }
+
+    @Deprecated
+    public void setMMAskSizeLong(RecordCursor cursor, long _MMAskSize) {
+        setAsLong(cursor, iAskSize, _MMAskSize);
+    }
+
+    @Deprecated
     public double getMMAskSizeDouble(RecordCursor cursor) {
         return getAsDouble(cursor, iAskSize);
     }
@@ -465,6 +597,14 @@ public class MarketMakerMapping extends MarketEventMapping {
         setAsInt(cursor, iAskSize, askSize);
     }
 
+    public long getAskSizeLong(RecordCursor cursor) {
+        return getAsLong(cursor, iAskSize);
+    }
+
+    public void setAskSizeLong(RecordCursor cursor, long askSize) {
+        setAsLong(cursor, iAskSize, askSize);
+    }
+
     public double getAskSizeDouble(RecordCursor cursor) {
         return getAsDouble(cursor, iAskSize);
     }
@@ -493,26 +633,130 @@ public class MarketMakerMapping extends MarketEventMapping {
     public int getMMAskCount(RecordCursor cursor) {
         if (iAskCount < 0)
             return 0;
-        return getInt(cursor, iAskCount);
+        return getAsInt(cursor, iAskCount);
     }
 
     @Deprecated
     public void setMMAskCount(RecordCursor cursor, int _MMAskCount) {
         if (iAskCount < 0)
             return;
-        setInt(cursor, iAskCount, _MMAskCount);
+        setAsInt(cursor, iAskCount, _MMAskCount);
+    }
+
+    @Deprecated
+    public long getMMAskCountLong(RecordCursor cursor) {
+        if (iAskCount < 0)
+            return 0;
+        return getAsLong(cursor, iAskCount);
+    }
+
+    @Deprecated
+    public void setMMAskCountLong(RecordCursor cursor, long _MMAskCount) {
+        if (iAskCount < 0)
+            return;
+        setAsLong(cursor, iAskCount, _MMAskCount);
+    }
+
+    @Deprecated
+    public double getMMAskCountDouble(RecordCursor cursor) {
+        if (iAskCount < 0)
+            return Double.NaN;
+        return getAsDouble(cursor, iAskCount);
+    }
+
+    @Deprecated
+    public void setMMAskCountDouble(RecordCursor cursor, double _MMAskCount) {
+        if (iAskCount < 0)
+            return;
+        setAsDouble(cursor, iAskCount, _MMAskCount);
+    }
+
+    @Deprecated
+    public int getMMAskCountDecimal(RecordCursor cursor) {
+        if (iAskCount < 0)
+            return 0;
+        return getAsTinyDecimal(cursor, iAskCount);
+    }
+
+    @Deprecated
+    public void setMMAskCountDecimal(RecordCursor cursor, int _MMAskCount) {
+        if (iAskCount < 0)
+            return;
+        setAsTinyDecimal(cursor, iAskCount, _MMAskCount);
+    }
+
+    @Deprecated
+    public long getMMAskCountWideDecimal(RecordCursor cursor) {
+        if (iAskCount < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iAskCount);
+    }
+
+    @Deprecated
+    public void setMMAskCountWideDecimal(RecordCursor cursor, long _MMAskCount) {
+        if (iAskCount < 0)
+            return;
+        setAsWideDecimal(cursor, iAskCount, _MMAskCount);
     }
 
     public int getAskCount(RecordCursor cursor) {
         if (iAskCount < 0)
             return 0;
-        return getInt(cursor, iAskCount);
+        return getAsInt(cursor, iAskCount);
     }
 
     public void setAskCount(RecordCursor cursor, int askCount) {
         if (iAskCount < 0)
             return;
-        setInt(cursor, iAskCount, askCount);
+        setAsInt(cursor, iAskCount, askCount);
+    }
+
+    public long getAskCountLong(RecordCursor cursor) {
+        if (iAskCount < 0)
+            return 0;
+        return getAsLong(cursor, iAskCount);
+    }
+
+    public void setAskCountLong(RecordCursor cursor, long askCount) {
+        if (iAskCount < 0)
+            return;
+        setAsLong(cursor, iAskCount, askCount);
+    }
+
+    public double getAskCountDouble(RecordCursor cursor) {
+        if (iAskCount < 0)
+            return Double.NaN;
+        return getAsDouble(cursor, iAskCount);
+    }
+
+    public void setAskCountDouble(RecordCursor cursor, double askCount) {
+        if (iAskCount < 0)
+            return;
+        setAsDouble(cursor, iAskCount, askCount);
+    }
+
+    public int getAskCountDecimal(RecordCursor cursor) {
+        if (iAskCount < 0)
+            return 0;
+        return getAsTinyDecimal(cursor, iAskCount);
+    }
+
+    public void setAskCountDecimal(RecordCursor cursor, int askCount) {
+        if (iAskCount < 0)
+            return;
+        setAsTinyDecimal(cursor, iAskCount, askCount);
+    }
+
+    public long getAskCountWideDecimal(RecordCursor cursor) {
+        if (iAskCount < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iAskCount);
+    }
+
+    public void setAskCountWideDecimal(RecordCursor cursor, long askCount) {
+        if (iAskCount < 0)
+            return;
+        setAsWideDecimal(cursor, iAskCount, askCount);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }

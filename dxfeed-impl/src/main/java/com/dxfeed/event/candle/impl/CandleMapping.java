@@ -22,7 +22,6 @@ public class CandleMapping extends CandleEventMapping {
     private final int iTime;
     private final int iSequence;
     private final int iCount;
-    private final boolean vCountIsDecimal;
     private final int iOpen;
     private final int iHigh;
     private final int iLow;
@@ -38,8 +37,7 @@ public class CandleMapping extends CandleEventMapping {
         super(record);
         iTime = MappingUtil.findIntField(record, "Time", true);
         iSequence = MappingUtil.findIntField(record, "Sequence", true);
-        iCount = MappingUtil.findIntField(record, "Count", false);
-        vCountIsDecimal = MappingUtil.isDecimalField(record, iCount);
+        iCount = findIntField("Count", false);
         iOpen = findIntField("Open", true);
         iHigh = findIntField("High", true);
         iLow = findIntField("Low", true);
@@ -48,8 +46,8 @@ public class CandleMapping extends CandleEventMapping {
         iVWAP = findIntField("VWAP", false);
         iBidVolume = findIntField("Bid.Volume", false);
         iAskVolume = findIntField("Ask.Volume", false);
-        iOpenInterest = MappingUtil.findIntField(record, "OpenInterest", false);
-        iImpVolatility = MappingUtil.findIntField(record, "ImpVolatility", false);
+        iOpenInterest = findIntField("OpenInterest", false);
+        iImpVolatility = findIntField("ImpVolatility", false);
     }
 
     public long getTimeMillis(RecordCursor cursor) {
@@ -79,61 +77,49 @@ public class CandleMapping extends CandleEventMapping {
     public long getCount(RecordCursor cursor) {
         if (iCount < 0)
             return 0;
-        if (vCountIsDecimal) {
-            return (long) Decimal.toDouble(getInt(cursor, iCount));
-        } else {
-            return getInt(cursor, iCount);
-        }
+        return getAsLong(cursor, iCount);
     }
 
     public void setCount(RecordCursor cursor, long count) {
         if (iCount < 0)
             return;
-        if (vCountIsDecimal) {
-            setInt(cursor, iCount, Decimal.composeDecimal(count, 0));
-        } else {
-            setInt(cursor, iCount, (int) count);
-        }
+        setAsLong(cursor, iCount, count);
     }
 
     public double getCountDouble(RecordCursor cursor) {
         if (iCount < 0)
             return Double.NaN;
-        if (vCountIsDecimal) {
-            return Decimal.toDouble(getInt(cursor, iCount));
-        } else {
-            return getInt(cursor, iCount);
-        }
+        return getAsDouble(cursor, iCount);
     }
 
     public void setCountDouble(RecordCursor cursor, double count) {
         if (iCount < 0)
             return;
-        if (vCountIsDecimal) {
-            setInt(cursor, iCount, Decimal.compose(count));
-        } else {
-            setInt(cursor, iCount, (int) count);
-        }
+        setAsDouble(cursor, iCount, count);
     }
 
     public int getCountDecimal(RecordCursor cursor) {
         if (iCount < 0)
             return 0;
-        if (vCountIsDecimal) {
-            return getInt(cursor, iCount);
-        } else {
-            return Decimal.composeDecimal(getInt(cursor, iCount), 0);
-        }
+        return getAsTinyDecimal(cursor, iCount);
     }
 
     public void setCountDecimal(RecordCursor cursor, int count) {
         if (iCount < 0)
             return;
-        if (vCountIsDecimal) {
-            setInt(cursor, iCount, count);
-        } else {
-            setInt(cursor, iCount, (int) Decimal.toDouble(count));
-        }
+        setAsTinyDecimal(cursor, iCount, count);
+    }
+
+    public long getCountWideDecimal(RecordCursor cursor) {
+        if (iCount < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iCount);
+    }
+
+    public void setCountWideDecimal(RecordCursor cursor, long count) {
+        if (iCount < 0)
+            return;
+        setAsWideDecimal(cursor, iCount, count);
     }
 
     public double getOpen(RecordCursor cursor) {
@@ -415,61 +401,85 @@ public class CandleMapping extends CandleEventMapping {
     public long getOpenInterest(RecordCursor cursor) {
         if (iOpenInterest < 0)
             return 0;
-        return (long) Decimal.toDouble(getInt(cursor, iOpenInterest));
+        return getAsLong(cursor, iOpenInterest);
     }
 
     public void setOpenInterest(RecordCursor cursor, long openInterest) {
         if (iOpenInterest < 0)
             return;
-        setInt(cursor, iOpenInterest, Decimal.composeDecimal(openInterest, 0));
+        setAsLong(cursor, iOpenInterest, openInterest);
     }
 
     public double getOpenInterestDouble(RecordCursor cursor) {
         if (iOpenInterest < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iOpenInterest));
+        return getAsDouble(cursor, iOpenInterest);
     }
 
     public void setOpenInterestDouble(RecordCursor cursor, double openInterest) {
         if (iOpenInterest < 0)
             return;
-        setInt(cursor, iOpenInterest, Decimal.compose(openInterest));
+        setAsDouble(cursor, iOpenInterest, openInterest);
     }
 
     public int getOpenInterestDecimal(RecordCursor cursor) {
         if (iOpenInterest < 0)
             return 0;
-        return getInt(cursor, iOpenInterest);
+        return getAsTinyDecimal(cursor, iOpenInterest);
     }
 
     public void setOpenInterestDecimal(RecordCursor cursor, int openInterest) {
         if (iOpenInterest < 0)
             return;
-        setInt(cursor, iOpenInterest, openInterest);
+        setAsTinyDecimal(cursor, iOpenInterest, openInterest);
+    }
+
+    public long getOpenInterestWideDecimal(RecordCursor cursor) {
+        if (iOpenInterest < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iOpenInterest);
+    }
+
+    public void setOpenInterestWideDecimal(RecordCursor cursor, long openInterest) {
+        if (iOpenInterest < 0)
+            return;
+        setAsWideDecimal(cursor, iOpenInterest, openInterest);
     }
 
     public double getImpVolatility(RecordCursor cursor) {
         if (iImpVolatility < 0)
             return Double.NaN;
-        return Decimal.toDouble(getInt(cursor, iImpVolatility));
+        return getAsDouble(cursor, iImpVolatility);
     }
 
     public void setImpVolatility(RecordCursor cursor, double impVolatility) {
         if (iImpVolatility < 0)
             return;
-        setInt(cursor, iImpVolatility, Decimal.compose(impVolatility));
+        setAsDouble(cursor, iImpVolatility, impVolatility);
     }
 
     public int getImpVolatilityDecimal(RecordCursor cursor) {
         if (iImpVolatility < 0)
             return 0;
-        return getInt(cursor, iImpVolatility);
+        return getAsTinyDecimal(cursor, iImpVolatility);
     }
 
     public void setImpVolatilityDecimal(RecordCursor cursor, int impVolatility) {
         if (iImpVolatility < 0)
             return;
-        setInt(cursor, iImpVolatility, impVolatility);
+        setAsTinyDecimal(cursor, iImpVolatility, impVolatility);
+    }
+
+    public long getImpVolatilityWideDecimal(RecordCursor cursor) {
+        if (iImpVolatility < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iImpVolatility);
+    }
+
+    public void setImpVolatilityWideDecimal(RecordCursor cursor, long impVolatility) {
+        if (iImpVolatility < 0)
+            return;
+        setAsWideDecimal(cursor, iImpVolatility, impVolatility);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }
