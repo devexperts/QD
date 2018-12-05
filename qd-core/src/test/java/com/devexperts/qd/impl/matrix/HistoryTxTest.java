@@ -9,7 +9,7 @@
  * http://mozilla.org/MPL/2.0/.
  * !__
  */
-package com.devexperts.qd.test;
+package com.devexperts.qd.impl.matrix;
 
 import com.devexperts.qd.*;
 import com.devexperts.qd.impl.matrix.History;
@@ -2624,6 +2624,34 @@ public class HistoryTxTest {
         expectJust(5, 12, SNAPSHOT_BEGIN | SNAPSHOT_END);
     }
 
+    // See QD-1098
+    @Test
+    public void testRemoveEventWithVirtualTimeOnSnipForSecondAgentTxDirty() {
+        // create our main test agent
+        createAgent(2, true);
+        // distribute snapshot
+        distribute(4, 10, SNAPSHOT_BEGIN);
+        distribute(3, 11, 0);
+        distribute(2, 12, SNAPSHOT_END);
+        // check snapshot
+        expectMore(4, 10, SNAPSHOT_BEGIN);
+        expectMore(3, 11, 0);
+        expectJust(2, 12, SNAPSHOT_END);
+
+        // second agent for SNAPSHOT_SNIP in last event
+        createAgent2(-2, true);
+        // continue snapshot for the second agent, tx dirty. Event shall not be received by the first agent
+        distribute(1, 13, TX_PENDING);
+        // send "snapshot snip" to signal snapshot complete for agent2
+        distribute(0, 14, SNAPSHOT_SNIP);
+
+        // empty event with virtual time and REMOVE_EVENT flag
+        expectJust(History.VIRTUAL_TIME, 0, REMOVE_EVENT);
+        //close all agents
+        closeAgent2();
+        closeAgent();
+    }
+
     // =================== utility methods ===================
 
     private void createAgent(long timeSub, boolean useHistorySnapshot) {
@@ -2763,6 +2791,11 @@ public class HistoryTxTest {
         assertEquals("time", time, cursor.getTime());
         assertEquals("value", value, cursor.getInt(VALUE_INDEX));
         assertEquals("flags", flags, cursor.getEventFlags());
+        //see QD-1098
+        if (time == History.VIRTUAL_TIME) {
+            int cursorFlags = cursor.getEventFlags();
+            assertEquals(cursorFlags, cursorFlags & ~SNAPSHOT_BEGIN & ~SNAPSHOT_END & ~SNAPSHOT_SNIP & ~SNAPSHOT_MODE);
+        }
         retrieveBuf.cleanup(cursor);
     }
 

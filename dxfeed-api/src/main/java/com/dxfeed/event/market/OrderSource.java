@@ -141,6 +141,13 @@ public final class OrderSource extends IndexedEventSource {
     public static final OrderSource ESPD = new OrderSource("ESPD", PUB_ORDER);
 
     /**
+     * NASDAQ Fixed Income.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource XNFI = new OrderSource("XNFI", PUB_ORDER);
+
+    /**
      * Intercontinental Exchange.
      * {@link Order} events are {@link #isPublishable(Class) publishable} on this
      * source and the corresponding subscription can be observed via {@link DXPublisher}.

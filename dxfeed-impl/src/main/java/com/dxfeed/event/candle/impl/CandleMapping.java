@@ -30,8 +30,8 @@ public class CandleMapping extends CandleEventMapping {
     private final int iVWAP;
     private final int iBidVolume;
     private final int iAskVolume;
-    private final int iOpenInterest;
     private final int iImpVolatility;
+    private final int iOpenInterest;
 
     public CandleMapping(DataRecord record) {
         super(record);
@@ -46,8 +46,8 @@ public class CandleMapping extends CandleEventMapping {
         iVWAP = findIntField("VWAP", false);
         iBidVolume = findIntField("Bid.Volume", false);
         iAskVolume = findIntField("Ask.Volume", false);
-        iOpenInterest = findIntField("OpenInterest", false);
         iImpVolatility = findIntField("ImpVolatility", false);
+        iOpenInterest = findIntField("OpenInterest", false);
     }
 
     public long getTimeMillis(RecordCursor cursor) {
@@ -398,6 +398,42 @@ public class CandleMapping extends CandleEventMapping {
         setAsWideDecimal(cursor, iAskVolume, askVolume);
     }
 
+    public double getImpVolatility(RecordCursor cursor) {
+        if (iImpVolatility < 0)
+            return Double.NaN;
+        return getAsDouble(cursor, iImpVolatility);
+    }
+
+    public void setImpVolatility(RecordCursor cursor, double impVolatility) {
+        if (iImpVolatility < 0)
+            return;
+        setAsDouble(cursor, iImpVolatility, impVolatility);
+    }
+
+    public int getImpVolatilityDecimal(RecordCursor cursor) {
+        if (iImpVolatility < 0)
+            return 0;
+        return getAsTinyDecimal(cursor, iImpVolatility);
+    }
+
+    public void setImpVolatilityDecimal(RecordCursor cursor, int impVolatility) {
+        if (iImpVolatility < 0)
+            return;
+        setAsTinyDecimal(cursor, iImpVolatility, impVolatility);
+    }
+
+    public long getImpVolatilityWideDecimal(RecordCursor cursor) {
+        if (iImpVolatility < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iImpVolatility);
+    }
+
+    public void setImpVolatilityWideDecimal(RecordCursor cursor, long impVolatility) {
+        if (iImpVolatility < 0)
+            return;
+        setAsWideDecimal(cursor, iImpVolatility, impVolatility);
+    }
+
     public long getOpenInterest(RecordCursor cursor) {
         if (iOpenInterest < 0)
             return 0;
@@ -444,42 +480,6 @@ public class CandleMapping extends CandleEventMapping {
         if (iOpenInterest < 0)
             return;
         setAsWideDecimal(cursor, iOpenInterest, openInterest);
-    }
-
-    public double getImpVolatility(RecordCursor cursor) {
-        if (iImpVolatility < 0)
-            return Double.NaN;
-        return getAsDouble(cursor, iImpVolatility);
-    }
-
-    public void setImpVolatility(RecordCursor cursor, double impVolatility) {
-        if (iImpVolatility < 0)
-            return;
-        setAsDouble(cursor, iImpVolatility, impVolatility);
-    }
-
-    public int getImpVolatilityDecimal(RecordCursor cursor) {
-        if (iImpVolatility < 0)
-            return 0;
-        return getAsTinyDecimal(cursor, iImpVolatility);
-    }
-
-    public void setImpVolatilityDecimal(RecordCursor cursor, int impVolatility) {
-        if (iImpVolatility < 0)
-            return;
-        setAsTinyDecimal(cursor, iImpVolatility, impVolatility);
-    }
-
-    public long getImpVolatilityWideDecimal(RecordCursor cursor) {
-        if (iImpVolatility < 0)
-            return 0;
-        return getAsWideDecimal(cursor, iImpVolatility);
-    }
-
-    public void setImpVolatilityWideDecimal(RecordCursor cursor, long impVolatility) {
-        if (iImpVolatility < 0)
-            return;
-        setAsWideDecimal(cursor, iImpVolatility, impVolatility);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }

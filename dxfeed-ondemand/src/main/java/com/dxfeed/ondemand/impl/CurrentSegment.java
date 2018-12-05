@@ -76,8 +76,11 @@ class CurrentSegment {
 
                     if (isTradeHistory) {
                         // Get record by exchange from the event to publish to proper regional TnS
-                        for (DataRecord record : MDREventUtil.getRecords('H', ((MDRTradeHistory) event).getExchange()))
-                            event.getInto(buffer.add(record, cipher, segment.block.getSymbol()));
+                        DataRecord[] regRecords = MDREventUtil.getRecords('H', ((MDRTradeHistory) event).getExchange());
+                        if (regRecords != null) {
+                            for (DataRecord record : regRecords)
+                                event.getInto(buffer.add(record, cipher, segment.block.getSymbol()));
+                        }
                     }
                 }
                 readNext();

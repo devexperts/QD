@@ -44,9 +44,9 @@ public final class SpreadOrderDelegate extends OrderBaseDelegateImpl<SpreadOrder
     public SpreadOrder getEvent(SpreadOrder event, RecordCursor cursor) {
         super.getEvent(event, cursor);
         event.setEventFlags(cursor.getEventFlags());
-        event.setTimeNanoPart(m.getTimeNanoPart(cursor));
         event.setIndex(((long) getSource().id() << 32) | (m.getIndex(cursor) & 0xFFFFFFFFL));
         event.setTimeSequence((((long) m.getTimeSeconds(cursor)) << 32) | (m.getSequence(cursor) & 0xFFFFFFFFL));
+        event.setTimeNanoPart(m.getTimeNanoPart(cursor));
         event.setPrice(m.getPrice(cursor));
         event.setSizeAsDouble(m.getSizeDouble(cursor));
         event.setCount(m.getCount(cursor));
@@ -59,11 +59,11 @@ public final class SpreadOrderDelegate extends OrderBaseDelegateImpl<SpreadOrder
     public RecordCursor putEvent(SpreadOrder event, RecordBuffer buf) {
         RecordCursor cursor = super.putEvent(event, buf);
         cursor.setEventFlags(event.getEventFlags());
-        m.setTimeNanoPart(cursor, event.getTimeNanoPart());
         int index = (int) event.getIndex();
         m.setIndex(cursor, index);
         m.setTimeSeconds(cursor, (int) (event.getTimeSequence() >>> 32));
         m.setSequence(cursor, (int) event.getTimeSequence());
+        m.setTimeNanoPart(cursor, event.getTimeNanoPart());
         m.setPrice(cursor, event.getPrice());
         m.setSizeDouble(cursor, event.getSizeAsDouble());
         m.setCount(cursor, (int) event.getCount());

@@ -13,8 +13,7 @@ package com.devexperts.io.test;
 
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.Executor;
 
 import com.devexperts.io.IOUtil;
@@ -25,91 +24,77 @@ public class SerialClassContextTest extends TestCase {
 
     public void testEmptySerialContext() {
         SerialClassContext context1 = SerialClassContext.createSerialClassContext(null, null, null);
-        SerialClassContext context2 = SerialClassContext.createSerialClassContext(null, null, Collections.singleton(""));
+        SerialClassContext context2 = SerialClassContext.createSerialClassContext(null, Collections.singleton("*"), null);
+        SerialClassContext context3 = SerialClassContext.createSerialClassContext(null, null, Collections.singleton(""));
+        SerialClassContext context4 = SerialClassContext.createSerialClassContext(null, Collections.singleton("*"), Collections.singleton(""));
         assertEquals(context1, context2);
+        assertEquals(context1, context3);
+        assertEquals(context1, context4);
 
-        assertTrue(context1.accept(Class.class.getName()));
-        assertTrue(context1.accept(IOUtil.class.getName()));
-        assertTrue(context1.accept(ClassLoader.class.getName()));
+        checkEmpty(context1);
+        checkEmpty(context2);
+        checkEmpty(context3);
+        checkEmpty(context4);
+    }
+
+    private void checkEmpty(SerialClassContext context) {
+        assertEquals(Collections.singletonList("*"), context.getWhitelist());
+        assertTrue(context.getBlacklist().isEmpty());
+
+        checkAccept(context, Class.class.getName());
+        checkAccept(context, IOUtil.class.getName());
+        checkAccept(context, ClassLoader.class.getName());
     }
 
     public void testAddWhiteAndBlackClasses() {
-        SerialClassContext context = SerialClassContext.createSerialClassContext(null, null, null);
-        assertTrue(context.accept(List.class.getName()));
-        assertTrue(context.accept(Executor.class.getName()));
-        try {
-            context.check(List.class.getName());
-            context.check(Executor.class.getName());
-        } catch (Throwable t) {
-            fail();
-        }
+        SerialClassContext context;
+        String c1 = List.class.getName();
+        String c2 = Executor.class.getName();
 
-        List<String> whitelist = context.getWhitelist();
-        whitelist.add(List.class.getName());
-        context = SerialClassContext.createSerialClassContext(null, whitelist, context.getBlacklist());
-        assertTrue(context.accept(List.class.getName()));
-        assertFalse(context.accept(Executor.class.getName()));
+        context = get(null, null);
+        checkAccept(context, c1);
+        checkAccept(context, c2);
+
+        context = get(c1, "");
+        checkAccept(context, c1);
+        checkReject(context, c2, "whitelist");
+
+        context = get(c1 + ",java.*", "");
+        checkAccept(context, c1);
+        checkAccept(context, c2);
+
+        context = get(c1 + ",java.*", c1);
+        checkReject(context, c1, "blacklist");
+        checkAccept(context, c2);
+
+        context = get(c1 + ",java.*", c1 + ",java.*");
+        checkReject(context, c1, "blacklist");
+        checkReject(context, c2, "blacklist");
+    }
+
+    private SerialClassContext get(String whitelist, String blacklist) {
+        List<String> whiteClasses = whitelist == null ? null : Arrays.asList(whitelist.split(","));
+        List<String> blackClasses = blacklist == null ? null : Arrays.asList(blacklist.split(","));
+        return SerialClassContext.createSerialClassContext(null, whiteClasses, blackClasses);
+    }
+
+    private void checkAccept(SerialClassContext context, String className) {
+        assertTrue(context.accept(className));
         try {
-            context.check(List.class.getName());
+            context.check(className);
         } catch (Throwable t) {
             fail();
         }
+    }
+
+    private void checkReject(SerialClassContext context, String className, String listName) {
+        assertFalse(context.accept(className));
         try {
-            context.check(Executor.class.getName());
+            context.check(className);
             fail();
         } catch (Throwable t) {
             assertTrue(t instanceof ClassNotFoundException);
-            assertTrue(t.getMessage().contains("whitelist"));
-        }
-
-        whitelist = context.getWhitelist();
-        whitelist.add("java.*");
-        context = SerialClassContext.createSerialClassContext(null, whitelist, context.getBlacklist());
-        assertTrue(context.accept(List.class.getName()));
-        assertTrue(context.accept(Executor.class.getName()));
-        try {
-            context.check(List.class.getName());
-            context.check(Executor.class.getName());
-        } catch (Throwable t) {
-            fail();
-        }
-
-        List<String> blacklist = context.getBlacklist();
-        blacklist.add(List.class.getName());
-        context = SerialClassContext.createSerialClassContext(null, context.getWhitelist(), blacklist);
-        assertFalse(context.accept(List.class.getName()));
-        assertTrue(context.accept(Executor.class.getName()));
-        try {
-            context.check(List.class.getName());
-            fail();
-        } catch (Throwable t) {
-            assertTrue(t instanceof ClassNotFoundException);
-            assertTrue(t.getMessage().contains("blacklist"));
-        }
-        try {
-            context.check(Executor.class.getName());
-        } catch (Throwable t) {
-            fail();
-        }
-
-        blacklist = context.getBlacklist();
-        blacklist.add("java.*");
-        context = SerialClassContext.createSerialClassContext(null, context.getWhitelist(), blacklist);
-        assertFalse(context.accept(List.class.getName()));
-        assertFalse(context.accept(Executor.class.getName()));
-        try {
-            context.check(List.class.getName());
-            fail();
-        } catch (Throwable t) {
-            assertTrue(t instanceof ClassNotFoundException);
-            assertTrue(t.getMessage().contains("blacklist"));
-        }
-        try {
-            context.check(Executor.class.getName());
-            fail();
-        } catch (Throwable t) {
-            assertTrue(t instanceof ClassNotFoundException);
-            assertTrue(t.getMessage().contains("blacklist"));
+            assertTrue(t.getMessage().contains(listName));
         }
     }
 

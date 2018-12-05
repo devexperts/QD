@@ -1,4 +1,18 @@
 
+QDS 3.267:
+
+* [QD-1105] dxFeed API: Move ImpVolatility field from DailyCandle to Candle
+* [QD-1104] Schedule: US exchange closed 5th Dec 2018
+* [QD-1103] Add Order Record for NFI exchange
+* [QD-1102] RecordCursor.toString should print event flags
+* [QD-1101] Fix delegation for IPFFilter
+* [QD-1100] RecordBuffer shall compact arrays synchronously
+* [QD-1098] BUG FIX: QD Core: History Snapshot protocol sends SNAPSHOT_SNIP flag with virtual time
+    when second subscription breaks HistorySubscriptionFilter
+* [QD-1097] dxFeed-OnDemand: NullPointerException on quering TnS with custom QD scheme
+* [QD-1096] dxFeed webservice: Exception in JMX registration with multiple instances
+* [QD-1092] dxlib: secure Java deserialization shall throw different exception and shall pass all arrays
+
 QDS 3.266:
 
 * [QD-1076] Support second asterisk in glob patterns in QD filters

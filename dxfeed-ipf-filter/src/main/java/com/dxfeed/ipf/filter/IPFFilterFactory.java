@@ -50,7 +50,7 @@ public class IPFFilterFactory extends QDFilterFactory {
             }
         if (context == QDFilterContext.SYMBOL_SET && filter != null)
             // Convert symbol sets with attributes into plain symbol set in this context
-            return new SymbolSetFilter(getScheme(), filter.getSymbolSet());
+            return new SymbolSetFilter(filter);
         return filter;
     }
 }

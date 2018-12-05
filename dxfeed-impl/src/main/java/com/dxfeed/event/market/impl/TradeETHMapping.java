@@ -25,9 +25,9 @@ public class TradeETHMapping extends MarketEventMapping {
     private final int iExchangeCode;
     private final int iPrice;
     private final int iSize;
-    private final int iFlags;
     private final int iDayVolume;
     private final int iDayTurnover;
+    private final int iFlags;
 
     public TradeETHMapping(DataRecord record) {
         super(record);
@@ -37,18 +37,18 @@ public class TradeETHMapping extends MarketEventMapping {
         iExchangeCode = MappingUtil.findIntField(record, "ETHLast.Exchange", false);
         iPrice = findIntField("ETHLast.Price", true);
         iSize = findIntField("ETHLast.Size", true);
-        iFlags = MappingUtil.findIntField(record, "ETHLast.Flags", true);
         iDayVolume = findIntField("ETHVolume", false);
         iDayTurnover = findIntField("ETHDayTurnover", false);
+        iFlags = MappingUtil.findIntField(record, "ETHLast.Flags", true);
         putNonDefaultPropertyName("ETHLast.Time", "Time");
         putNonDefaultPropertyName("ETHLast.Sequence", "Sequence");
         putNonDefaultPropertyName("Last.TimeNanoPart", "TimeNanoPart");
         putNonDefaultPropertyName("ETHLast.Exchange", "ExchangeCode");
         putNonDefaultPropertyName("ETHLast.Price", "Price");
         putNonDefaultPropertyName("ETHLast.Size", "Size");
-        putNonDefaultPropertyName("ETHLast.Flags", "Flags");
         putNonDefaultPropertyName("ETHVolume", "DayVolume");
         putNonDefaultPropertyName("ETHDayTurnover", "DayTurnover");
+        putNonDefaultPropertyName("ETHLast.Flags", "Flags");
     }
 
     @Deprecated
@@ -326,24 +326,6 @@ public class TradeETHMapping extends MarketEventMapping {
     }
 
     @Deprecated
-    public int getETHLastFlags(RecordCursor cursor) {
-        return getInt(cursor, iFlags);
-    }
-
-    @Deprecated
-    public void setETHLastFlags(RecordCursor cursor, int _ETHLastFlags) {
-        setInt(cursor, iFlags, _ETHLastFlags);
-    }
-
-    public int getFlags(RecordCursor cursor) {
-        return getInt(cursor, iFlags);
-    }
-
-    public void setFlags(RecordCursor cursor, int flags) {
-        setInt(cursor, iFlags, flags);
-    }
-
-    @Deprecated
     public long getETHVolume(RecordCursor cursor) {
         if (iDayVolume < 0)
             return 0;
@@ -523,6 +505,24 @@ public class TradeETHMapping extends MarketEventMapping {
         if (iDayTurnover < 0)
             return;
         setAsWideDecimal(cursor, iDayTurnover, dayTurnover);
+    }
+
+    @Deprecated
+    public int getETHLastFlags(RecordCursor cursor) {
+        return getInt(cursor, iFlags);
+    }
+
+    @Deprecated
+    public void setETHLastFlags(RecordCursor cursor, int _ETHLastFlags) {
+        setInt(cursor, iFlags, _ETHLastFlags);
+    }
+
+    public int getFlags(RecordCursor cursor) {
+        return getInt(cursor, iFlags);
+    }
+
+    public void setFlags(RecordCursor cursor, int flags) {
+        setInt(cursor, iFlags, flags);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }

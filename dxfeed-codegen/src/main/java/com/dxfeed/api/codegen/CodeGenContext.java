@@ -66,16 +66,17 @@ class CodeGenContext {
         return delegate(baseDelegateName, new JavaClassType(eventClass), mappingName, recordName);
     }
 
-    DelegateGen record(String basePackageName, String mappingName, String recordName) {
+    DelegateGen record(String basePackageName, Class<?> eventClass, String mappingName, String recordName) {
         FactoryImplGen factoryGen = getFactoryImplGen(basePackageName);
         RecordDesc record = getRecordDesc(basePackageName, recordName);
         MappingGen mapping = getMappingGen(basePackageName, mappingName);
         factoryGen.addRecordMapping(record, mapping);
-        return new DelegateGen(null, null, record, factoryGen, mapping, env);
+        JavaClassType eventClassType = eventClass == null ? null : new JavaClassType(eventClass);
+        return new DelegateGen(null, eventClassType, record, factoryGen, mapping, env);
     }
 
-    DelegateGen record(String basePackageName, String recordName) {
-        return record(basePackageName, NamingConventions.getMappingNameFromRecord(recordName), recordName);
+    DelegateGen record(String basePackageName, Class<?> eventClass, String recordName) {
+        return record(basePackageName, eventClass, NamingConventions.getMappingNameFromRecord(recordName), recordName);
     }
 
     FactoryImplGen factory(String basePackageName) {

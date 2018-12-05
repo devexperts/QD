@@ -47,9 +47,9 @@ public final class TradeETHDelegate extends MarketEventDelegateImpl<TradeETH> {
         event.setExchangeCode(m.getExchangeCode(cursor));
         event.setPrice(m.getPrice(cursor));
         event.setSizeAsDouble(m.getSizeDouble(cursor));
-        event.setFlags(m.getFlags(cursor));
         event.setDayVolumeAsDouble(m.getDayVolumeDouble(cursor));
         event.setDayTurnover(m.getDayTurnover(cursor));
+        event.setFlags(m.getFlags(cursor));
         return event;
     }
 
@@ -62,9 +62,9 @@ public final class TradeETHDelegate extends MarketEventDelegateImpl<TradeETH> {
         m.setExchangeCode(cursor, event.getExchangeCode());
         m.setPrice(cursor, event.getPrice());
         m.setSizeDouble(cursor, event.getSizeAsDouble());
-        m.setFlags(cursor, event.getFlags());
         m.setDayVolumeDouble(cursor, event.getDayVolumeAsDouble());
         m.setDayTurnover(cursor, event.getDayTurnover());
+        m.setFlags(cursor, event.getFlags());
         return cursor;
     }
 // END: CODE AUTOMATICALLY GENERATED

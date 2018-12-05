@@ -110,13 +110,13 @@ public final class RecordBuffer extends RecordSource implements
     private boolean capacityLimited;
     private boolean released;
 
-    private int size;
     private int[] intFlds;
     private Object[] objFlds;
-    private int intLimit;
     private int intPosition;
-    private int objLimit;
     private int objPosition;
+    private int intLimit;
+    private int objLimit;
+    private int size;
 
     // this is for legacy DataVisitor and DataIterator implementations only
     private int intFieldIndex;
@@ -260,13 +260,16 @@ public final class RecordBuffer extends RecordSource implements
      * @throws IllegalStateException if object was already {@link #release() released} into pool.
      */
     public void clear() {
-        rewind(); // will throw IllegalStateException
+        if (released)
+            Throws.throwReleased();
         Arrays.fill(intFlds, 0, intLimit, 0);
         Arrays.fill(objFlds, 0, objLimit, null);
-        size = 0;
         resetCursorsAccess();
+        intPosition = 0;
+        objPosition = 0;
         intLimit = 0;
         objLimit = 0;
+        size = 0;
     }
 
     /**
@@ -359,7 +362,8 @@ public final class RecordBuffer extends RecordSource implements
         int ilim = (int) limit;
         int olim = (int) (limit >>> 32);
         setLimitInternal(ilim, olim);
-        writeCursor.resetAccessInternal();
+        readCursor.resetAccessInternal(intLimit, objLimit);
+        writeCursor.resetAccessInternal(intLimit, objLimit);
     }
 
     /**
@@ -526,7 +530,8 @@ public final class RecordBuffer extends RecordSource implements
         initWriteCursorInternal(record, cipher, symbol);
         int iInc = mode.intBufOffset + writeCursor.intCount;
         int oInc = mode.objBufOffset + writeCursor.objCount;
-        appendAndGrowIfNeededInternal(writeCursor, iInc, oInc);
+        growIfNeeded(iInc, oInc);
+        appendInternal(writeCursor, iInc, oInc);
         return writeCursor;
     }
 
@@ -585,7 +590,8 @@ public final class RecordBuffer extends RecordSource implements
         int objFieldCount = mode.objFieldCount(record);
         int iInc = mode.intBufOffset + intFieldCount;
         int oInc = mode.objBufOffset + objFieldCount;
-        appendAndGrowIfNeededInternal(from, iInc, oInc);
+        growIfNeeded(iInc, oInc);
+        appendInternal(from, iInc, oInc);
         int iCount = Math.min(intFieldCount, from.intCount);
         int oCount = Math.min(objFieldCount, from.objCount);
         from.copyDataInternalTo(iCount, oCount,
@@ -619,12 +625,13 @@ public final class RecordBuffer extends RecordSource implements
         int objFieldCount = mode.objFieldCount(record);
         int iInc = mode.intBufOffset + intFieldCount;
         int oInc = mode.objBufOffset + objFieldCount;
-        growOrCompactIntsIfNeeded(iInc);
-        growOrCompactObjsIfNeeded(oInc);
+        growOrCompactIfNeeded(iInc, oInc);
         readCursor.resetAccessInternal();
         initWriteCursorInternal(record, from.getCipher(), from.getSymbol());
         appendInternal(from, iInc, oInc);
-        from.copyDataInternalTo(from.intCount, from.objCount,
+        int iCount = Math.min(intFieldCount, from.intCount);
+        int oCount = Math.min(objFieldCount, from.objCount);
+        from.copyDataInternalTo(iCount, oCount,
             intFlds, intLimit - intFieldCount, objFlds, objLimit - objFieldCount);
         return writeCursor;
     }
@@ -644,7 +651,7 @@ public final class RecordBuffer extends RecordSource implements
         DataRecord oldRecord = (DataRecord) objFlds[opos + OBJ_RECORD];
         if (mode.differentIntFieldCount(oldRecord, newRecord) || mode.differentObjFieldCount(oldRecord, newRecord))
             Throws.throwDifferentNumberOfFields(newRecord, oldRecord);
-        objFlds[opos] = newRecord;
+        objFlds[opos + OBJ_RECORD] = newRecord;
     }
 
     /**
@@ -681,7 +688,6 @@ public final class RecordBuffer extends RecordSource implements
         int oremove = mode.objBufOffset + mode.objFieldCount(record);
         if (intPosition > intLimit - iremove || objPosition > objLimit - oremove)
             throw new IndexOutOfBoundsException();
-        size--;
         System.arraycopy(intFlds, ipos + iremove, intFlds, ipos, intLimit - iremove - ipos);
         System.arraycopy(objFlds, opos + oremove, objFlds, opos, objLimit - oremove - opos);
         Arrays.fill(intFlds, intLimit - iremove, intLimit, 0);
@@ -689,6 +695,7 @@ public final class RecordBuffer extends RecordSource implements
         resetCursorsAccess();
         intLimit -= iremove;
         objLimit -= oremove;
+        size--;
     }
 
     /**
@@ -810,10 +817,9 @@ public final class RecordBuffer extends RecordSource implements
     public void compact() {
         if (released)
             Throws.throwReleased();
-        if (intPosition == 0)
+        if (intPosition == 0 && objPosition == 0)
             return; // nothing to do
-        compactInts();
-        compactObjs();
+        compactArrays();
         resetCursorsAccess();
         // recompute size
         size = computeIteratorSize();
@@ -833,19 +839,18 @@ public final class RecordBuffer extends RecordSource implements
      *         this buffer's {@link #getMode() mode} {@link RecordMode#hasLink() hasLink}.
      */
     public boolean compact(RecordFilter filter) {
+        if (released)
+            Throws.throwReleased();
         if (filter == null) {
-            compact(); // will throw IllegalStateException
+            compact();
             return false;
         }
         if (mode.linkOfs != 0) {
             throw new IllegalArgumentException("Filtered compaction is not supported with link mode");
         }
-        int intPosition = this.intPosition;
-        int objPosition = this.objPosition;
-        rewind();
-        int size = 0;
         int intPtr = 0;
         int objPtr = 0;
+        int filtered = 0;
         while (intPosition < intLimit && objPosition < objLimit) {
             RecordCursor cursor = setCursorInternal(readCursor, intPosition, objPosition);
             int intLength = mode.intBufOffset + cursor.intCount;
@@ -855,7 +860,7 @@ public final class RecordBuffer extends RecordSource implements
                 System.arraycopy(objFlds, objPosition, objFlds, objPtr, objLength);
                 intPtr += intLength;
                 objPtr += objLength;
-                ++size;
+                filtered++;
             }
             intPosition += intLength;
             objPosition += objLength;
@@ -863,11 +868,13 @@ public final class RecordBuffer extends RecordSource implements
         Arrays.fill(intFlds, intPtr, intLimit, 0);
         Arrays.fill(objFlds, objPtr, objLimit, null);
         resetCursorsAccess();
-        final boolean filtered = this.size != size;
-        this.size = size;
-        this.intLimit = intPtr;
-        this.objLimit = objPtr;
-        return filtered;
+        intPosition = 0;
+        objPosition = 0;
+        intLimit = intPtr;
+        objLimit = objPtr;
+        boolean result = size != filtered;
+        size = filtered;
+        return result;
     }
 
     /**
@@ -1206,26 +1213,19 @@ public final class RecordBuffer extends RecordSource implements
             writeCursor.setArraysInternal(intFlds, objFlds);
     }
 
-    RecordCursor setCursorInternal(RecordCursor cursor, int int_position, int obj_position) {
-        cursor.setRecordInternal((DataRecord) objFlds[obj_position + OBJ_RECORD], mode);
-        cursor.setSymbolInternal(intFlds[int_position + INT_CIPHER], (String) objFlds[obj_position + OBJ_SYMBOL]);
-        cursor.setOffsetsInternal(int_position + mode.intBufOffset, obj_position + mode.objBufOffset);
+    RecordCursor setCursorInternal(RecordCursor cursor, int ipos, int opos) {
+        cursor.setRecordInternal((DataRecord) objFlds[opos + OBJ_RECORD], mode);
+        cursor.setSymbolInternal(intFlds[ipos + INT_CIPHER], (String) objFlds[opos + OBJ_SYMBOL]);
+        cursor.setOffsetsInternal(ipos + mode.intBufOffset, opos + mode.objBufOffset);
         return cursor;
     }
 
     void setLimitInternal(int ilim, int olim) {
         if (ilim < 0 || ilim > intLimit || olim < 0 || olim > objLimit)
             throw new IndexOutOfBoundsException();
-        for (int i = ilim; i < intLimit; i++)
-            intFlds[i] = 0;
-        int recpos = olim;
-        for (int i = olim; i < objLimit; i++) {
-            if (i == recpos) {
-                size--;
-                recpos += mode.objBufOffset + mode.objFieldCount((DataRecord) objFlds[i]);
-            }
-            objFlds[i] = null;
-        }
+        size -= computeIteratorSize(olim, objLimit); // compute removed size before clearing data
+        Arrays.fill(intFlds, ilim, intLimit, 0);
+        Arrays.fill(objFlds, olim, objLimit, null);
         intLimit = ilim;
         objLimit = olim;
     }
@@ -1239,8 +1239,7 @@ public final class RecordBuffer extends RecordSource implements
             return false;
         int iInc = source.intLimit - source.intPosition;
         int oInc = source.objLimit - source.objPosition;
-        growIntsIfNeeded(iInc);
-        growObjsIfNeeded(oInc);
+        growIfNeeded(iInc, oInc);
         System.arraycopy(source.intFlds, source.intPosition, intFlds, intLimit, iInc);
         System.arraycopy(source.objFlds, source.objPosition, objFlds, objLimit, oInc);
         intLimit += iInc;
@@ -1252,13 +1251,13 @@ public final class RecordBuffer extends RecordSource implements
     }
 
     private int computeIteratorSize() {
+        return computeIteratorSize(objPosition, objLimit);
+    }
+
+    private int computeIteratorSize(int opos, int olim) {
         int s = 0;
-        int iPos = intPosition;
-        int oPos = objPosition;
-        while (iPos < intLimit) {
-            DataRecord record = (DataRecord) objFlds[oPos + OBJ_RECORD];
-            iPos += mode.intBufOffset + mode.intFieldCount(record);
-            oPos += mode.objBufOffset + mode.objFieldCount(record);
+        while (opos < olim) {
+            opos += mode.objBufOffset + mode.objFieldCount((DataRecord) objFlds[opos + OBJ_RECORD]);
             s++;
         }
         return s;
@@ -1269,20 +1268,12 @@ public final class RecordBuffer extends RecordSource implements
         objPosition += mode.objBufOffset + cursor.objCount;
     }
 
-    private void appendAndGrowIfNeededInternal(RecordCursor cursor, int iInc, int oInc) {
-        growIntsIfNeeded(iInc);
-        growObjsIfNeeded(oInc);
-        appendInternal(cursor, iInc, oInc);
-    }
-
     private void appendInternal(RecordCursor cursor, int iInc, int oInc) {
-        final int intLimit = this.intLimit;
-        final int objLimit = this.objLimit;
-        this.intLimit += iInc;
-        this.objLimit += oInc;
         objFlds[objLimit + OBJ_RECORD] = cursor.getRecord();
         intFlds[intLimit + INT_CIPHER] = cursor.getCipher();
         objFlds[objLimit + OBJ_SYMBOL] = cursor.getSymbol();
+        intLimit += iInc;
+        objLimit += oInc;
         size++;
     }
 
@@ -1292,14 +1283,17 @@ public final class RecordBuffer extends RecordSource implements
         writeCursor.setOffsetsInternal(intLimit + mode.intBufOffset, objLimit + mode.objBufOffset);
     }
 
-    private void growIntsIfNeeded(int iInc) {
-        if (intLimit + iInc < 0)
-            throw new ArrayIndexOutOfBoundsException(intLimit + iInc);
-        if (intFlds.length < intLimit + iInc)
+    private void growIfNeeded(int iInc, int oInc) {
+        if (intLimit > intFlds.length - iInc)
             growInts(iInc);
+        if (objLimit > objFlds.length - oInc)
+            growObjs(oInc);
     }
 
     private void growInts(int iInc) {
+        // Move rarely used large code into separate method for better code inlining.
+        if (intLimit + iInc < 0)
+            throw new ArrayIndexOutOfBoundsException(intLimit + iInc);
         intFlds = ArrayUtil.grow(intFlds, intLimit + iInc);
         if (capacityLimited && intFlds.length > MAX_POOLED_INTS)
             // oops.. capacity limited buffer grew over its pooled size... maybe record has too many fields?
@@ -1307,14 +1301,10 @@ public final class RecordBuffer extends RecordSource implements
         reinitCursorArraysInternal();
     }
 
-    private void growObjsIfNeeded(int oInc) {
+    private void growObjs(int oInc) {
+        // Move rarely used large code into separate method for better code inlining.
         if (objLimit + oInc < 0)
             throw new ArrayIndexOutOfBoundsException(objLimit + oInc);
-        if (objFlds.length < objLimit + oInc)
-            growObjs(oInc);
-    }
-
-    private void growObjs(int oInc) {
         objFlds = ArrayUtil.grow(objFlds, objLimit + oInc);
         if (capacityLimited && objFlds.length > MAX_POOLED_OBJS)
             // oops.. capacity limited buffer grew over its pooled size... maybe record has too many fields?
@@ -1322,44 +1312,25 @@ public final class RecordBuffer extends RecordSource implements
         reinitCursorArraysInternal();
     }
 
-    private void growOrCompactIntsIfNeeded(int iInc) {
-        if (intLimit + iInc < 0)
-            throw new ArrayIndexOutOfBoundsException(intLimit + iInc);
-        if (intFlds.length < intLimit + iInc)
-            growOrCompactInts(iInc);
+    private void growOrCompactIfNeeded(int iInc, int oInc) {
+        if (intLimit > intFlds.length - iInc || objLimit > objFlds.length - oInc) {
+            if (intPosition > intFlds.length / 2 || objPosition > objFlds.length / 2)
+                compactArrays();
+            growIfNeeded(iInc, oInc);
+        }
     }
 
-    private void growOrCompactInts(int iInc) {
-        if (intPosition > intFlds.length / 2)
-            compactInts();
-        growIntsIfNeeded(iInc);
-    }
-
-    private void growOrCompactObjsIfNeeded(int oInc) {
-        if (objLimit + oInc < 0)
-            throw new ArrayIndexOutOfBoundsException(objLimit + oInc);
-        if (objFlds.length < objLimit + oInc)
-            growOrCompactObjs(oInc);
-    }
-
-    private void growOrCompactObjs(int oInc) {
-        if (objPosition > objFlds.length / 2)
-            compactObjs();
-        growObjsIfNeeded(oInc);
-    }
-
-    private void compactInts() {
-        System.arraycopy(intFlds, intPosition, intFlds, 0, intLimit - intPosition);
-        Arrays.fill(intFlds, intLimit - intPosition, intLimit, 0);
-        intLimit -= intPosition;
+    private void compactArrays() {
+        int intLength = intLimit - intPosition;
+        int objLength = objLimit - objPosition;
+        System.arraycopy(intFlds, intPosition, intFlds, 0, intLength);
+        System.arraycopy(objFlds, objPosition, objFlds, 0, objLength);
+        Arrays.fill(intFlds, intLength, intLimit, 0);
+        Arrays.fill(objFlds, objLength, objLimit, null);
         intPosition = 0;
-    }
-
-    private void compactObjs() {
-        System.arraycopy(objFlds, objPosition, objFlds, 0, objLimit - objPosition);
-        Arrays.fill(objFlds, objLimit - objPosition, objLimit, null);
-        objLimit -= objPosition;
         objPosition = 0;
+        intLimit = intLength;
+        objLimit = objLength;
     }
 
     private void resetCursorsAccess() {

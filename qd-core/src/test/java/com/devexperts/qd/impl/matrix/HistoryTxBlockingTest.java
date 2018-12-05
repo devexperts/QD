@@ -9,7 +9,7 @@
  * http://mozilla.org/MPL/2.0/.
  * !__
  */
-package com.devexperts.qd.test;
+package com.devexperts.qd.impl.matrix;
 
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.ng.*;

@@ -28,7 +28,7 @@ import static org.junit.Assert.assertNotSame;
 
 class SchemeCompatibilityChecker {
     private static final int PUBLISHED_EVENTS_COUNT = 100;
-    private static final int WAIT_TIMEOUT = 5000; // ms
+    private static final int WAIT_TIMEOUT = 60_000; // ms
 
     private final DXPublisher publisher;
     private final DXFeed feed;

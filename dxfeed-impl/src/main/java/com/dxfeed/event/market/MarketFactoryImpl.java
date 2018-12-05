@@ -86,9 +86,9 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         builder.addRequiredField("Trade", "Last.Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
         builder.addOptionalField("Trade", "Last.Tick", SerialFieldType.COMPACT_INT, "Trade", "Tick", true);
         builder.addOptionalField("Trade", "Last.Change", select(SerialFieldType.DECIMAL, "dxscheme.price"), "Trade", "Change", true);
-        builder.addOptionalField("Trade", "Last.Flags", SerialFieldType.COMPACT_INT, "Trade", "Flags", true);
         builder.addOptionalField("Trade", "Volume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Trade", "DayVolume", true);
         builder.addOptionalField("Trade", "DayTurnover", select(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "Trade", "DayTurnover", true);
+        builder.addOptionalField("Trade", "Last.Flags", SerialFieldType.COMPACT_INT, "Trade", "Flags", true);
         if (SystemProperties.getBooleanProperty("reuters.phantom", false)) {
             builder.addRequiredField("Trade", "Date", SerialFieldType.COMPACT_INT);
             builder.addRequiredField("Trade", "Operation", SerialFieldType.COMPACT_INT);
@@ -102,9 +102,9 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             builder.addRequiredField(recordName, "Last.Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
             builder.addOptionalField(recordName, "Last.Tick", SerialFieldType.COMPACT_INT, "Trade", "Tick", true);
             builder.addOptionalField(recordName, "Last.Change", select(SerialFieldType.DECIMAL, "dxscheme.price"), "Trade", "Change", true);
-            builder.addOptionalField(recordName, "Last.Flags", SerialFieldType.COMPACT_INT, "Trade", "Flags", true);
             builder.addOptionalField(recordName, "Volume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Trade", "DayVolume", true);
             builder.addOptionalField(recordName, "DayTurnover", select(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "Trade", "DayTurnover", true);
+            builder.addOptionalField(recordName, "Last.Flags", SerialFieldType.COMPACT_INT, "Trade", "Flags", true);
         }
 
         builder.addOptionalField("TradeETH", "ETHLast.Time", SerialFieldType.TIME, "TradeETH", "Time", true);
@@ -113,9 +113,9 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         builder.addOptionalField("TradeETH", "ETHLast.Exchange", SerialFieldType.UTF_CHAR, "TradeETH", "ExchangeCode", true);
         builder.addRequiredField("TradeETH", "ETHLast.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
         builder.addRequiredField("TradeETH", "ETHLast.Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-        builder.addRequiredField("TradeETH", "ETHLast.Flags", SerialFieldType.COMPACT_INT);
         builder.addOptionalField("TradeETH", "ETHVolume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "TradeETH", "DayVolume", true);
         builder.addOptionalField("TradeETH", "ETHDayTurnover", select(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "TradeETH", "DayTurnover", true);
+        builder.addRequiredField("TradeETH", "ETHLast.Flags", SerialFieldType.COMPACT_INT);
         for (char exchange : SystemProperties.getProperty("com.dxfeed.event.market.impl.TradeETH.exchanges", "ABCDEFGHIJKLMNOPQRSTUVWXYZ").toCharArray()) {
             String recordName = "TradeETH&" + exchange;
             builder.addOptionalField(recordName, "ETHLast.Time", SerialFieldType.TIME, "TradeETH", "Time", true);
@@ -123,9 +123,9 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             builder.addOptionalField(recordName, "Last.TimeNanoPart", SerialFieldType.COMPACT_INT, "TradeETH", "TimeNanoPart", false);
             builder.addRequiredField(recordName, "ETHLast.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
             builder.addRequiredField(recordName, "ETHLast.Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-            builder.addRequiredField(recordName, "ETHLast.Flags", SerialFieldType.COMPACT_INT);
             builder.addOptionalField(recordName, "ETHVolume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "TradeETH", "DayVolume", true);
             builder.addOptionalField(recordName, "ETHDayTurnover", select(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "TradeETH", "DayTurnover", true);
+            builder.addRequiredField(recordName, "ETHLast.Flags", SerialFieldType.COMPACT_INT);
         }
 
         builder.addRequiredField("Summary", "DayId", SerialFieldType.DATE);
@@ -155,7 +155,7 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         builder.addRequiredField("Fundamental", "High.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
         builder.addRequiredField("Fundamental", "Low.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
         builder.addRequiredField("Fundamental", "Close.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addOptionalField("Fundamental", "OpenInterest", select(SerialFieldType.COMPACT_INT), "null", "OpenInterest", true);
+        builder.addOptionalField("Fundamental", "OpenInterest", select(SerialFieldType.COMPACT_INT), "Summary", "OpenInterest", true);
         for (char exchange : SystemProperties.getProperty("com.dxfeed.event.market.impl.Fundamental.exchanges", "ABCDEFGHIJKLMNOPQRSTUVWXYZ").toCharArray()) {
             String recordName = "Fundamental&" + exchange;
             builder.addRequiredField(recordName, "Open.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
@@ -193,13 +193,13 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         builder.addRequiredField("Profile", "Description", SerialFieldType.UTF_CHAR_ARRAY);
         builder.addOptionalField("Profile", "StatusReason", SerialFieldType.UTF_CHAR_ARRAY, "Profile", "StatusReason", true);
 
-        for (String suffix : SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.suffixes", "|#NTV|#NFX|#ESPD|#DEA|#DEX|#BYX|#BZX|#IST|#ISE|#BATE|#CHIX|#BXTR|#GLBX|#XEUR|#ICE|#CFE").split("\\|")) {
+        for (String suffix : SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.suffixes", "|#NTV|#NFX|#ESPD|#XNFI|#DEA|#DEX|#BYX|#BZX|#IST|#ISE|#BATE|#CHIX|#BXTR|#GLBX|#XEUR|#ICE|#CFE").split("\\|")) {
             String recordName = "Order" + suffix;
             builder.addRequiredField(recordName, "Void", SerialFieldType.VOID, SchemeFieldTime.FIRST_TIME_INT_FIELD);
             builder.addRequiredField(recordName, "Index", SerialFieldType.COMPACT_INT, SchemeFieldTime.SECOND_TIME_INT_FIELD);
             builder.addRequiredField(recordName, "Time", SerialFieldType.TIME);
-            builder.addOptionalField(recordName, "TimeNanoPart", SerialFieldType.COMPACT_INT, "Order", "TimeNanoPart", false);
             builder.addRequiredField(recordName, "Sequence", SerialFieldType.SEQUENCE);
+            builder.addOptionalField(recordName, "TimeNanoPart", SerialFieldType.COMPACT_INT, "Order", "TimeNanoPart", false);
             builder.addRequiredField(recordName, "Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
             builder.addRequiredField(recordName, "Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
             if (suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.Order.suffixes.count", "")))
@@ -214,8 +214,8 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             builder.addRequiredField(recordName, "Void", SerialFieldType.VOID, SchemeFieldTime.FIRST_TIME_INT_FIELD);
             builder.addRequiredField(recordName, "Index", SerialFieldType.COMPACT_INT, SchemeFieldTime.SECOND_TIME_INT_FIELD);
             builder.addRequiredField(recordName, "Time", SerialFieldType.TIME);
-            builder.addOptionalField(recordName, "TimeNanoPart", SerialFieldType.COMPACT_INT, "SpreadOrder", "TimeNanoPart", false);
             builder.addRequiredField(recordName, "Sequence", SerialFieldType.SEQUENCE);
+            builder.addOptionalField(recordName, "TimeNanoPart", SerialFieldType.COMPACT_INT, "SpreadOrder", "TimeNanoPart", false);
             builder.addRequiredField(recordName, "Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
             builder.addRequiredField(recordName, "Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
             if (suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.SpreadOrder.suffixes.count", "")))

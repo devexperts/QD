@@ -11,9 +11,17 @@
  */
 package com.devexperts.qd.test;
 
-import com.devexperts.qd.*;
-import com.devexperts.qd.kit.*;
+import com.devexperts.qd.DataIntField;
+import com.devexperts.qd.DataObjField;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.kit.CompactIntField;
+import com.devexperts.qd.kit.DefaultRecord;
+import com.devexperts.qd.kit.DefaultScheme;
+import com.devexperts.qd.kit.PentaCodec;
+import com.devexperts.qd.kit.StringField;
+import com.devexperts.qd.ng.EventFlag;
 import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordMode;
 import junit.framework.TestCase;
 
 public class RecordCursorTest extends TestCase {
@@ -59,5 +67,14 @@ public class RecordCursorTest extends TestCase {
         assertEquals(cur4.getCipher(), CODEC.encode("B"));
         assertEquals(cur4.getSymbol(), "B");
         assertEquals(cur4.getObj(0), "1234");
+    }
+
+    public void testToStringPrintsEventFlags() {
+        RecordCursor cur1 = RecordCursor.allocate(RECORDI, "X", RecordMode.FLAGGED_DATA);
+        cur1.setInt(0, 1234);
+        for (EventFlag flag : EventFlag.values()) {
+            cur1.setEventFlags(flag.flag());
+            assertTrue(cur1.toString().endsWith("eventFlags=0x" + Integer.toHexString(flag.flag())));
+        }
     }
 }

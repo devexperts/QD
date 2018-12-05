@@ -264,9 +264,28 @@ class DelegateGen {
         return this;
     }
 
+    DelegateGen mapTimeAndSequence() {
+        return mapTimeAndSequence("Time", "Sequence");
+    }
+
+    DelegateGen mapTimeAndSequence(String timeFieldName, String sequenceFieldName) {
+        map("Time", timeFieldName, FieldType.TIME).internal();
+        map("Sequence", sequenceFieldName, FieldType.SEQUENCE).internal();
+        assign("TimeSequence", "(((long)#Time.Seconds#) << 32) | (#Sequence# & 0xFFFFFFFFL)");
+        injectPutEventCode(
+            "#Time.Seconds=(int)(event.getTimeSequence() >>> 32)#;",
+            "#Sequence=(int)event.getTimeSequence()#;"
+        );
+        return this;
+    }
+
     DelegateGen mapTimeAndSequenceToIndex() {
-        map("Time", "Time", FieldType.TIME).time(0).internal();
-        map("Sequence", "Sequence", FieldType.SEQUENCE).time(1).internal();
+        return mapTimeAndSequenceToIndex("Time", "Sequence");
+    }
+
+    DelegateGen mapTimeAndSequenceToIndex(String timeFieldName, String sequenceFieldName) {
+        map("Time", timeFieldName, FieldType.TIME).time(0).internal();
+        map("Sequence", sequenceFieldName, FieldType.SEQUENCE).time(1).internal();
         assign("Index", "(((long)#Time.Seconds#) << 32) | (#Sequence# & 0xFFFFFFFFL)");
         injectPutEventCode(
             "#Time.Seconds=(int)(event.getIndex() >>> 32)#;",

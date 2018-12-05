@@ -23,7 +23,6 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * <ul>
  * <li>{@link #getOpenInterest() openInterest} - open interest;
- * <li>{@link #getImpVolatility() impVolatility} - implied volatility.
  * </ul>
  */
 @XmlRootElement(name = "DailyCandle")
@@ -31,7 +30,6 @@ public class DailyCandle extends Candle {
     private static final long serialVersionUID = 0;
 
     private long openInterest;
-    private double impVolatility = Double.NaN;
 
     /**
      * Creates new daily candle with default values.
@@ -63,22 +61,6 @@ public class DailyCandle extends Candle {
     }
 
     /**
-     * Returns implied volatility.
-     * @return implied volatility.
-     */
-    public double getImpVolatility() {
-        return impVolatility;
-    }
-
-    /**
-     * Changes implied volatility.
-     * @param impVolatility implied volatility.
-     */
-    public void setImpVolatility(double impVolatility) {
-        this.impVolatility = impVolatility;
-    }
-
-    /**
      * Returns string representation of this daily candle.
      * @return string representation of this daily candle.
      */
@@ -86,7 +68,6 @@ public class DailyCandle extends Candle {
     public String toString() {
         return "DailyCandle{" + baseFieldsToString() +
             ", openInterest=" + openInterest +
-            ", impVolatility=" + impVolatility +
             "}";
     }
 }

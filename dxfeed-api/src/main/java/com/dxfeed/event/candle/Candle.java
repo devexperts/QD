@@ -56,8 +56,9 @@ import com.dxfeed.model.TimeSeriesEventModel;
  * <li>{@link #getVWAP() vwap} - volume-weighted average price (VWAP) in this candle;
  * <li>{@link #getBidVolume() bidVolume} - bid volume in this candle;
  * <li>{@link #getBidVolumeAsDouble() bidVolumeAsDouble} - bid volume in this candle as floating number with fractions;
- * <li>{@link #getAskVolume() askVolume} - bid volume in this candle.
- * <li>{@link #getAskVolumeAsDouble() askVolumeAsDouble} - bid volume in this candle as floating number with fractions.
+ * <li>{@link #getAskVolume() askVolume} - bid volume in this candle;
+ * <li>{@link #getAskVolumeAsDouble() askVolumeAsDouble} - bid volume in this candle as floating number with fractions;
+ * <li>{@link #getImpVolatility() impVolatility} - implied volatility;
  * </ul>
  *
  * <h3><a name="eventFlagsSection">Event flags, transactions and snapshots</a></h3>
@@ -89,7 +90,8 @@ import com.dxfeed.model.TimeSeriesEventModel;
 @XmlRootElement(name = "Candle")
 @XmlType(propOrder = {
     "eventSymbol", "eventTime", "eventFlags", "index", "time", "sequence",
-    "count", "open", "high", "low", "close", "volumeAsDouble", "VWAP", "bidVolumeAsDouble", "askVolumeAsDouble"
+    "count", "open", "high", "low", "close", "volumeAsDouble", "VWAP",
+    "bidVolumeAsDouble", "askVolumeAsDouble", "impVolatility"
 })
 public class Candle implements TimeSeriesEvent<CandleSymbol>, LastingEvent<CandleSymbol> {
     private static final long serialVersionUID = 3;
@@ -126,6 +128,7 @@ public class Candle implements TimeSeriesEvent<CandleSymbol>, LastingEvent<Candl
     private double vwap = Double.NaN;
     private double bidVolume = Double.NaN;
     private double askVolume = Double.NaN;
+    private double impVolatility = Double.NaN;
 
     /**
      * Creates new candle with default values.
@@ -478,6 +481,22 @@ public class Candle implements TimeSeriesEvent<CandleSymbol>, LastingEvent<Candl
     }
 
     /**
+     * Returns implied volatility.
+     * @return implied volatility.
+     */
+    public double getImpVolatility() {
+        return impVolatility;
+    }
+
+    /**
+     * Changes implied volatility.
+     * @param impVolatility implied volatility.
+     */
+    public void setImpVolatility(double impVolatility) {
+        this.impVolatility = impVolatility;
+    }
+
+    /**
      * Returns string representation of this candle.
      * @return string representation of this candle.
      */
@@ -500,6 +519,8 @@ public class Candle implements TimeSeriesEvent<CandleSymbol>, LastingEvent<Candl
             ", volume=" + volume +
             ", vwap=" + vwap +
             ", bidVolume=" + bidVolume +
-            ", askVolume=" + askVolume;
+            ", askVolume=" + askVolume +
+            ", impVolatility=" + impVolatility +
+            "";
     }
 }

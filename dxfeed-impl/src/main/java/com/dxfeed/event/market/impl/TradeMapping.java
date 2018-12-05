@@ -27,9 +27,9 @@ public class TradeMapping extends MarketEventMapping {
     private final int iSize;
     private final int iTick;
     private final int iChange;
-    private final int iFlags;
     private final int iDayVolume;
     private final int iDayTurnover;
+    private final int iFlags;
 
     public TradeMapping(DataRecord record) {
         super(record);
@@ -41,9 +41,9 @@ public class TradeMapping extends MarketEventMapping {
         iSize = findIntField("Last.Size", true);
         iTick = MappingUtil.findIntField(record, "Last.Tick", false);
         iChange = findIntField("Last.Change", false);
-        iFlags = MappingUtil.findIntField(record, "Last.Flags", false);
         iDayVolume = findIntField("Volume", false);
         iDayTurnover = findIntField("DayTurnover", false);
+        iFlags = MappingUtil.findIntField(record, "Last.Flags", false);
         putNonDefaultPropertyName("Last.Time", "Time");
         putNonDefaultPropertyName("Last.Sequence", "Sequence");
         putNonDefaultPropertyName("Last.TimeNanoPart", "TimeNanoPart");
@@ -52,8 +52,8 @@ public class TradeMapping extends MarketEventMapping {
         putNonDefaultPropertyName("Last.Size", "Size");
         putNonDefaultPropertyName("Last.Tick", "Tick");
         putNonDefaultPropertyName("Last.Change", "Change");
-        putNonDefaultPropertyName("Last.Flags", "Flags");
         putNonDefaultPropertyName("Volume", "DayVolume");
+        putNonDefaultPropertyName("Last.Flags", "Flags");
     }
 
     @Deprecated
@@ -435,32 +435,6 @@ public class TradeMapping extends MarketEventMapping {
     }
 
     @Deprecated
-    public int getLastFlags(RecordCursor cursor) {
-        if (iFlags < 0)
-            return 0;
-        return getInt(cursor, iFlags);
-    }
-
-    @Deprecated
-    public void setLastFlags(RecordCursor cursor, int lastFlags) {
-        if (iFlags < 0)
-            return;
-        setInt(cursor, iFlags, lastFlags);
-    }
-
-    public int getFlags(RecordCursor cursor) {
-        if (iFlags < 0)
-            return 0;
-        return getInt(cursor, iFlags);
-    }
-
-    public void setFlags(RecordCursor cursor, int flags) {
-        if (iFlags < 0)
-            return;
-        setInt(cursor, iFlags, flags);
-    }
-
-    @Deprecated
     public long getVolume(RecordCursor cursor) {
         if (iDayVolume < 0)
             return 0;
@@ -598,6 +572,32 @@ public class TradeMapping extends MarketEventMapping {
         if (iDayTurnover < 0)
             return;
         setAsWideDecimal(cursor, iDayTurnover, dayTurnover);
+    }
+
+    @Deprecated
+    public int getLastFlags(RecordCursor cursor) {
+        if (iFlags < 0)
+            return 0;
+        return getInt(cursor, iFlags);
+    }
+
+    @Deprecated
+    public void setLastFlags(RecordCursor cursor, int lastFlags) {
+        if (iFlags < 0)
+            return;
+        setInt(cursor, iFlags, lastFlags);
+    }
+
+    public int getFlags(RecordCursor cursor) {
+        if (iFlags < 0)
+            return 0;
+        return getInt(cursor, iFlags);
+    }
+
+    public void setFlags(RecordCursor cursor, int flags) {
+        if (iFlags < 0)
+            return;
+        setInt(cursor, iFlags, flags);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }

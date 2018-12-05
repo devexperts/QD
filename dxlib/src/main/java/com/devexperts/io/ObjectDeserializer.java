@@ -279,7 +279,11 @@ class ObjectDeserializer extends ObjectInputStream {
         assert serializationContext != null;
         if (ClassUtil.isPrimitiveType(desc.getName()))
             return ClassUtil.getTypeClass(desc.getName(), null);
-        serializationContext.check(desc.getName());
+        try {
+            serializationContext.check(desc.getName());
+        } catch (ClassNotFoundException e) {
+            throw new InvalidClassException(e.getMessage());
+        }
         try {
             return ClassUtil.getTypeClass(desc.getName(), serializationContext.getClassLoader());
         } catch (ClassNotFoundException ignored) {

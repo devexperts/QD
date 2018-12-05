@@ -53,6 +53,7 @@ public final class CandleDelegate extends CandleEventDelegateImpl<Candle> {
         event.setVWAP(m.getVWAP(cursor));
         event.setBidVolumeAsDouble(m.getBidVolumeDouble(cursor));
         event.setAskVolumeAsDouble(m.getAskVolumeDouble(cursor));
+        event.setImpVolatility(m.getImpVolatility(cursor));
         return event;
     }
 
@@ -71,6 +72,7 @@ public final class CandleDelegate extends CandleEventDelegateImpl<Candle> {
         m.setVWAP(cursor, event.getVWAP());
         m.setBidVolumeDouble(cursor, event.getBidVolumeAsDouble());
         m.setAskVolumeDouble(cursor, event.getAskVolumeAsDouble());
+        m.setImpVolatility(cursor, event.getImpVolatility());
         return cursor;
     }
 // END: CODE AUTOMATICALLY GENERATED

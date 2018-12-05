@@ -54,6 +54,7 @@ public class DecimalTest extends TestCase {
             double d = randomStdRangedDouble(r);
 
             int decimal = Decimal.compose(d);
+            assertEquals(decimal, Decimal.wideToTiny(Decimal.tinyToWide(decimal)));
             String s = Decimal.toString(decimal);
             assertEquals("toString != appendTo", s, Decimal.appendTo(new StringBuilder(), decimal).toString());
             assertTrue(d == Decimal.toDouble(decimal));
@@ -75,6 +76,7 @@ public class DecimalTest extends TestCase {
             int d2 = Decimal.composeDecimal(mantissa, precision);
             if (d1 != d2)
                 fail("compose(" + d + ") = " + str(d1) + ", composeDecimal(" + mantissa + ", " + precision + ") = " + str(d2));
+            assertEquals(d1, Decimal.wideToTiny(Decimal.tinyToWide(d1)));
         }
     }
 
@@ -155,6 +157,7 @@ public class DecimalTest extends TestCase {
         double v2 = Decimal.toDouble(d2);
         if (d1 != d2 || !equals(v1, v2) || !equals(v1, value))
             fail("checkCompose(" + mantissa + ", " + precision + ", " + value + ") composed " + str(d1) + " vs " + str(d2));
+        assertEquals(d1, Decimal.wideToTiny(Decimal.tinyToWide(d1)));
     }
 
     public void testRoundingOnes() {
@@ -408,6 +411,7 @@ public class DecimalTest extends TestCase {
 
     private void checkRounding(double expect, double src) {
         int decimal = Decimal.compose(src);
+        assertEquals(decimal, Decimal.wideToTiny(Decimal.tinyToWide(decimal)));
         checkToDoubleAndCanonical(expect, decimal);
         // check strings
         NumberFormat fmt = NumberFormat.getIntegerInstance(Locale.US);
@@ -470,6 +474,7 @@ public class DecimalTest extends TestCase {
 
     private void checkPrecise(double v, boolean std) {
         int decimal = Decimal.compose(v);
+        assertEquals(decimal, Decimal.wideToTiny(Decimal.tinyToWide(decimal)));
         checkToDoubleAndCanonical(v, decimal);
         assertEquals(std, (decimal & 0x0F) != 0);
         NumberFormat fmt = NumberFormat.getIntegerInstance(Locale.US);
@@ -507,6 +512,7 @@ public class DecimalTest extends TestCase {
     private void testStringAndDouble(String str, double dbl) {
         // Should be internally consistent
         int decimal = Decimal.compose(dbl);
+        assertEquals(decimal, Decimal.wideToTiny(Decimal.tinyToWide(decimal)));
         assertEquals(str, Decimal.toString(decimal));
         assertEquals("toString != appendTo", str, Decimal.appendTo(new StringBuilder(), decimal).toString());
         if (Double.isNaN(dbl))

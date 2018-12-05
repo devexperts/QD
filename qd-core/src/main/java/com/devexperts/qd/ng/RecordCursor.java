@@ -13,6 +13,7 @@ package com.devexperts.qd.ng;
 
 import java.io.DataInput;
 import java.io.IOException;
+import java.util.Objects;
 
 import com.devexperts.io.BufferedInput;
 import com.devexperts.qd.*;
@@ -766,6 +767,8 @@ public final class RecordCursor {
         }
         if (readOnly)
             sb.append(", readOnly");
+        if (hasEventFlags())
+            sb.append(", eventFlags=0x").append(Integer.toHexString(getEventFlags()));
         return sb.toString();
     }
 
@@ -1164,12 +1167,8 @@ public final class RecordCursor {
 
     void setRecordInternal(DataRecord record, RecordMode mode) {
         if (this.record != record || this.mode != mode) {
-            if (record == null)
-                Throws.throwNullPointerException();
-            if (mode == null)
-                Throws.throwNullPointerException();
-            this.record = record;
-            this.mode = mode;
+            this.record = Objects.requireNonNull(record);
+            this.mode = Objects.requireNonNull(mode);
             this.intCount = mode.intFieldCount(record);
             this.objCount = mode.objFieldCount(record);
         }
@@ -1269,6 +1268,12 @@ public final class RecordCursor {
     // prevents further access to this cursor, while leaving all other values intact.
     void resetAccessInternal() {
         intOffset = objOffset = -2000000000;
+    }
+
+    // prevents further access to this cursor, while leaving all other values intact.
+    void resetAccessInternal(int intLimit, int objLimit) {
+        if (intOffset >= intLimit || objOffset >= objLimit)
+            resetAccessInternal();
     }
 
     void resetInternal() {

@@ -936,11 +936,12 @@ public class History extends Collector implements QDHistory {
                 /*
                  * Pretend that event's time is at timeSub for the logic below, but mark the event with
                  * REMOVED_EVENT flag. This way the agent user does not have to validate events against their
-                 * subscription time to get a consistent view.
+                 * subscription time to get a consistent view. Previous event flags dropped in order to prevent
+                 * snapshot removal
                  */
                 processTime = timeSub;
                 virtualTime = true;
-                eventFlags |= REMOVE_EVENT;
+                eventFlags = REMOVE_EVENT; // QD-1098
             }
             /*
              * Classification of incoming event according to its role in the snapshot sync algorithm:

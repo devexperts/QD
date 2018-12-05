@@ -23,7 +23,7 @@ import org.junit.Assert;
  */
 public class ThreadCleanCheck {
     private static final Logging log = Logging.getLogging(ThreadCleanCheck.class);
-    private static final long WAIT_TIME = 3000;
+    private static final long WAIT_TIME = 60_000;
     private static final ThreadLocal<Data> BEFORE = new ThreadLocal<>();
 
     private static class Data {

@@ -11,10 +11,9 @@
  */
 package com.dxfeed.webservice.comet;
 
-import java.lang.management.ManagementFactory;
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
-import javax.management.MBeanServer;
 
 import com.devexperts.annotation.Description;
 import com.devexperts.logging.Logging;
@@ -22,8 +21,8 @@ import com.devexperts.management.Management;
 import com.devexperts.mars.common.MARSNode;
 import com.devexperts.qd.QDLog;
 import com.devexperts.qd.monitoring.MonitoringEndpoint;
-import org.cometd.bayeux.server.*;
-import org.eclipse.jetty.jmx.MBeanContainer;
+import org.cometd.bayeux.server.BayeuxServer;
+import org.cometd.bayeux.server.ServerSession;
 
 public class CometDMonitoring implements CometDMonitoringMXBean {
 
@@ -35,7 +34,6 @@ public class CometDMonitoring implements CometDMonitoringMXBean {
     private String name;
     private BayeuxServer server;
     private volatile boolean detailed;
-    private volatile MBeanContainer mbeanContainer;
 
     private MonitoringEndpoint monitoring;
     private MARSNode sessionsNode;
@@ -60,10 +58,9 @@ public class CometDMonitoring implements CometDMonitoringMXBean {
         readNode = rootNode.subNode("read", "Number of received packets");
         writeNode = rootNode.subNode("write", "Number of sent packets");
 
-        // Initialize Jetty CometD JMX
-        MBeanServer mbeanServer = ManagementFactory.getPlatformMBeanServer();
-        mbeanContainer = new MBeanContainer(mbeanServer);
-        mbeanContainer.beanAdded(null, server);
+        //FIXME Initialize Jetty CometD JMX
+        // Due to different classloaders javax.management.InstanceAlreadyExistsException is thrown
+        // when several cometd servers are registered from different WARs.
 
         // Initialize JMX
         Management.registerMBean(this, CometDMonitoringMXBean.class,
@@ -99,7 +96,6 @@ public class CometDMonitoring implements CometDMonitoringMXBean {
     }
 
     public void destroy() {
-        mbeanContainer.destroy();
         monitoring.release();
     }
 
