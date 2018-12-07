@@ -1,4 +1,9 @@
 
+QDS 3.268:
+
+* [QD-1107] dxlib: Add util methods to find day ranges for certain number of weeks, months or years with proper alignment
+* [QD-1106] BUG FIX: Runtime exception in glob pattern with 2 asterisks on symbol with non-ascii character
+
 QDS 3.267:
 
 * [QD-1105] dxFeed API: Move ImpVolatility field from DailyCandle to Candle

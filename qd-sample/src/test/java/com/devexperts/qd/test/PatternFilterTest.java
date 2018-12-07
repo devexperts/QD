@@ -11,12 +11,18 @@
  */
 package com.devexperts.qd.test;
 
-import java.util.Random;
-
-import com.devexperts.qd.*;
-import com.devexperts.qd.kit.*;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.QDFilter;
+import com.devexperts.qd.SubscriptionFilter;
+import com.devexperts.qd.SymbolCodec;
+import com.devexperts.qd.kit.CompositeFilters;
+import com.devexperts.qd.kit.FilterSyntaxException;
+import com.devexperts.qd.kit.PatternFilter;
 import com.devexperts.qd.sample.SampleScheme;
 import junit.framework.TestCase;
+
+import java.util.Random;
 
 public class PatternFilterTest extends TestCase {
     private static final DataScheme SCHEME = SampleScheme.getInstance();
@@ -150,6 +156,12 @@ public class PatternFilterTest extends TestCase {
     }
 
     public void testDoubleAsteriskWildcard() {
+        //non-ascii chars in symbol
+        assertFalse(accepts("*IBM*", "привет"));
+        assertFalse(accepts("*IBM*", new String(new char[]{(char) 127, 128, 127, 128, 128, 128})));
+        assertFalse(accepts("*[I-K]BM*", "привет"));
+        assertFalse(accepts("*[I-K]BM*", new String(new char[]{(char) 127, 128, 127, 128, 128, 128})));
+
         assertTrue(accepts("AB*D*", "ABD"));
         assertTrue(accepts("AB*D*", "ABCD"));
         assertTrue(accepts("AB*D*", "ABCED"));

@@ -707,7 +707,7 @@ public final class PatternFilter extends QDFilter {
         if (bmMidPattern == null)
             return null;
 
-        int skipArray[] = new int[MAX_CHAR];
+        int skipArray[] = new int[MAX_CHAR + 1];
         for (int i = 0; i < skipArray.length; i++)
             skipArray[i] = -1;
         for (int j = 0; j < bmMidPattern.length; j++)
