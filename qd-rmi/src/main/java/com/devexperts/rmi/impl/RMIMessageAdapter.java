@@ -305,7 +305,10 @@ class RMIMessageAdapter extends MessageAdapter implements MasterMessageAdapter {
         // note: addMask was previously enclosed into finally block. This could lead to StackOverflow and
         // offers no real protection, since any exception should terminate ongoing connection anyway.
         addMask(mask);
-        return mask != 0;
+        // note that currentTime is checked against nextRetrieveAttachedAdapter to make sure that it is compatible
+        // with aggregating QD AgetnAdapter so that if we don't make RETRIEVE_ATTACH during this invocation, but
+        // the time has come to, then we return true to signal that retieveMessages must be invoked again.
+        return mask != 0 || currentTime >= nextRetrieveAttachedAdapter;
     }
 
     private void attachedAdapterMessagesAvailable(MessageProvider provider) {

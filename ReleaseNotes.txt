@@ -1,4 +1,9 @@
 
+QDS 3.269:
+
+* [QD-1099] Make DXFeedSubscription and DXEndpoint implement AutoCloseable
+* [QD-962] Some tests in AuthorizationTest do not check the declared functionality
+
 QDS 3.268:
 
 * [QD-1107] dxlib: Add util methods to find day ranges for certain number of weeks, months or years with proper alignment

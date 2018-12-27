@@ -207,7 +207,7 @@ import com.dxfeed.ondemand.OnDemandService;
  * their implementation is in "<b>qds.jar</b>". You need to have "<b>qds.jar</b>" in your classpath
  * in order to use dxFeed API.
  */
-public abstract class DXEndpoint {
+public abstract class DXEndpoint implements AutoCloseable {
     /**
      * Defines property for endpoint name that is used to distinguish multiple endpoints
      * in the same JVM in logs and in other diagnostic means.
@@ -688,6 +688,7 @@ public abstract class DXEndpoint {
      * The endpoint {@link #getState() state} immediately becomes {@link State#CLOSED CLOSED}.
      * All resources associated with this endpoint are released.
      */
+    @Override
     public abstract void close();
 
     /**

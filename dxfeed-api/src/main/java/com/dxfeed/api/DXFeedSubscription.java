@@ -215,7 +215,7 @@ import com.dxfeed.event.market.MarketEvent;
  *
  * @param <E> the type of events.
   */
-public class DXFeedSubscription<E> implements Serializable, ObservableSubscription<E> {
+public class DXFeedSubscription<E> implements Serializable, ObservableSubscription<E>, AutoCloseable {
     private static final long serialVersionUID = 0;
 
     // closed state
@@ -294,6 +294,7 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
      * <p> This method ensures that subscription can be safely garbage-collected when all outside references
      * to it are lost.
      */
+    @Override
     public synchronized void close() {
         if (closed)
             return;
@@ -892,7 +893,6 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
         }
 
         @Override
-        @SuppressWarnings("unchecked")
         Set<Class<? extends E>> asSet() {
             if (set == null)
                 set = Collections.unmodifiableSet(new IndexedSet<Class<? extends E>, Class<? extends E>>(Arrays.asList(eventTypes)));
