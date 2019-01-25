@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2018 Devexperts LLC
+ * Copyright (C) 2002 - 2019 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -25,13 +25,15 @@ public class CandleSymbolTest extends TestCase {
             CandleExchange exchange = rnd.nextBoolean() ? CandleExchange.DEFAULT : CandleExchange.valueOf(randomChar(rnd));
             CandlePeriod period = CandlePeriod.valueOf((rnd.nextInt(21) - 10) / 10.0, randomEnum(rnd, CandleType.values()));
             CandleSession session = randomEnum(rnd, CandleSession.values());
-            CandleSymbol candleSymbol0 = CandleSymbol.valueOf(baseSymbol, alignment, exchange, period, session);
+            CandlePriceLevel priceLevel = CandlePriceLevel.valueOf((rnd.nextInt(21)) / 10.0);
+            CandleSymbol candleSymbol0 = CandleSymbol.valueOf(baseSymbol, alignment, exchange, period, session, priceLevel);
             CandleSymbol candleSymbol1 = CandleSymbol.valueOf(candleSymbol0.toString());
             assertEquals(baseSymbol, candleSymbol1.getBaseSymbol());
             assertEquals(alignment, candleSymbol1.getAlignment());
             assertEquals(exchange, candleSymbol1.getExchange());
             assertEquals(period, candleSymbol1.getPeriod());
             assertEquals(session, candleSymbol1.getSession());
+            assertEquals(priceLevel, candleSymbol1.getPriceLevel());
             assertEquals(candleSymbol0, candleSymbol1);
         }
     }

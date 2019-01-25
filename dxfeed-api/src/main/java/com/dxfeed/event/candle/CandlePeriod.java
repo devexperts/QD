@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2018 Devexperts LLC
+ * Copyright (C) 2002 - 2019 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -10,6 +10,9 @@
  * !__
  */
 package com.dxfeed.event.candle;
+
+import java.io.ObjectStreamException;
+import java.io.Serializable;
 
 import com.dxfeed.event.market.MarketEventSymbols;
 
@@ -28,7 +31,9 @@ import com.dxfeed.event.market.MarketEventSymbols;
  * The value that this key shall be set to is equal to
  * the corresponding {@link #toString() CandlePeriod.toString()}
  */
-public class CandlePeriod implements CandleSymbolAttribute<CandlePeriod> {
+public class CandlePeriod implements CandleSymbolAttribute<CandlePeriod>, Serializable {
+
+    private static final long serialVersionUID = 0;
 
     /**
      * Tick aggregation where each candle represents an individual tick.
@@ -146,8 +151,7 @@ public class CandlePeriod implements CandleSymbolAttribute<CandlePeriod> {
      */
     @Override
     public int hashCode() {
-        long temp = value != +0.0d ? Double.doubleToLongBits(value) : 0L;
-        return 31 * (int) (temp ^ (temp >>> 32)) + type.hashCode();
+        return 31 * Double.hashCode(value) + type.hashCode();
     }
 
     /**
@@ -218,7 +222,6 @@ public class CandlePeriod implements CandleSymbolAttribute<CandlePeriod> {
         return string == null ? DEFAULT : parse(string);
     }
 
-
     /**
      * Returns candle symbol string with the normalized representation of the candle period attribute.
      * @param symbol candle symbol string.
@@ -238,5 +241,13 @@ public class CandlePeriod implements CandleSymbolAttribute<CandlePeriod> {
         } catch (IllegalArgumentException e) {
             return symbol;
         }
+    }
+
+    protected Object readResolve() throws ObjectStreamException {
+        if (value == 1 && type == CandleType.DAY)
+            return DAY;
+        if (value == 1 && type == CandleType.TICK)
+            return TICK;
+        return this;
     }
 }

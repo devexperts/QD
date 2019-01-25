@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2018 Devexperts LLC
+ * Copyright (C) 2002 - 2019 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -59,6 +59,10 @@ import com.dxfeed.event.market.MarketEventSymbols;
  *     The alignment values can be abbreviated to the first letter. So, a 1 hour candle on a symbol "AAPL" that starts
  *     at the regular trading session at 9:30 am ET can be specified with "AAPL{=h,a=s,tho=true}". Contrast that
  *     to the "AAPL{=h,tho=true}" candle that is aligned at midnight and thus starts at 9:00 am.
+ * <li>"pl" key corresponds to {@link #getPriceLevel() price level} &mdash; price level attribute of this symbol.
+ *     The {@link CandlePriceLevel} defines additional axis to split candles within particular price corridor in
+ *     addition to {@link CandlePeriod} attribute with the default value {@code Double.NaN}. So a one-minute candles
+ *     of "AAPL" with price level 0.1 shall be specified with "AAPL{=m,pl=0.1}".
  * </ul>
  *
  * Keys in the candle symbol are case-sensitive, while values are not. The {@link #valueOf(String)} method parses
@@ -79,6 +83,7 @@ public class CandleSymbol implements Serializable {
     transient CandleSession session;
     transient CandlePeriod period;
     transient CandleAlignment alignment;
+    transient CandlePriceLevel priceLevel;
 
     private CandleSymbol(String symbol) {
         this.symbol = normalize(symbol);
@@ -145,6 +150,14 @@ public class CandleSymbol implements Serializable {
      */
     public CandleAlignment getAlignment() {
         return alignment;
+    }
+
+    /**
+     * Returns price level attribute of this symbol.
+     * @return price level attribute of this symbol.
+     */
+    public CandlePriceLevel getPriceLevel() {
+        return priceLevel;
     }
 
     /**
@@ -228,6 +241,7 @@ public class CandleSymbol implements Serializable {
         symbol = CandleSession.normalizeAttributeForSymbol(symbol);
         symbol = CandlePeriod.normalizeAttributeForSymbol(symbol);
         symbol = CandleAlignment.normalizeAttributeForSymbol(symbol);
+        symbol = CandlePriceLevel.normalizeAttributeForSymbol(symbol);
         return symbol;
     }
 
@@ -243,6 +257,8 @@ public class CandleSymbol implements Serializable {
             period = CandlePeriod.getAttributeForSymbol(symbol);
         if (alignment == null)
             alignment = CandleAlignment.getAttributeForSymbol(symbol);
+        if (priceLevel == null)
+            priceLevel = CandlePriceLevel.getAttributeForSymbol(symbol);
     }
 
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {

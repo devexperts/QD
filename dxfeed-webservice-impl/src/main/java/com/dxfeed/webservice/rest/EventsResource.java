@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2018 Devexperts LLC
+ * Copyright (C) 2002 - 2019 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -300,25 +300,25 @@ public class EventsResource {
     /**
      * Subscribes to event updates and returns a stream of Server-Sent Events.
      *
-     * @param sessionParam Session name. When set, then new web session is created (cookie is set) if needed and this
+     * @param session Session name. When set, then new web session is created (cookie is set) if needed and this
      *                     subscription is stored into the session under a name specified in this parameter, so that this subscription
-     *                     can be later modified. The value of \"DEFAULT_EVENT_SOURCE\" is used by default when \"session\" parameter is set
+     *                     can be later modified. The value of "DEFAULT_EVENT_SOURCE" is used by default when "session" parameter is set
      *                     to an empty string.
      * @param reconnect    Reconnect flag. When set, then existing session is recovered with its subscription.
      *                     "session" parameter is implied when "reconnect" is set.
      */
     @Path("/eventSource")
     @HelpOrder(2)
-    public void doEventSource(String sessionParam, String reconnect)
+    public void doEventSource(String session, String reconnect)
         throws IOException, HttpErrorException
     {
-        String name = sessionParam == null || sessionParam.isEmpty() ? DEFAULT_SESSION : sessionParam;
+        String name = session == null || session.isEmpty() ? DEFAULT_SESSION : session;
         EventConnection conn;
         if (reconnect != null) {
-            HttpSession session = req.getSession(false);
-            if (session == null)
+            HttpSession httpSession = req.getSession(false);
+            if (httpSession == null)
                 throw sessionNotFound();
-            Object attr = session.getAttribute(name);
+            Object attr = httpSession.getAttribute(name);
             if (attr instanceof EventConnection)
                 conn = (EventConnection) attr;
             else
@@ -328,7 +328,7 @@ public class EventsResource {
         // update subscription
         updateSubscription(SubOp.ADD_SUB, conn);
         // store in new session if requested (DO getSession BEFORE STARTING ASYNC)
-        if (sessionParam != null)
+        if (session != null)
             req.getSession(true).setAttribute(name, conn);
         // start asynchronous connection
         boolean wasActive = conn.start(req.startAsync(), format, indent);

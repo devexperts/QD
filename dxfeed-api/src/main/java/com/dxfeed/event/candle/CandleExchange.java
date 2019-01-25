@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2018 Devexperts LLC
+ * Copyright (C) 2002 - 2019 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -10,6 +10,9 @@
  * !__
  */
 package com.dxfeed.event.candle;
+
+import java.io.ObjectStreamException;
+import java.io.Serializable;
 
 import com.dxfeed.event.market.MarketEventSymbols;
 
@@ -23,7 +26,10 @@ import com.dxfeed.event.market.MarketEventSymbols;
  * {@link MarketEventSymbols#getExchangeCode(String) MarketEventSymbols.getExchangeCode} and
  * {@link MarketEventSymbols#changeExchangeCode(String, char) changeExchangeCode} methods.
  */
-public class CandleExchange implements CandleSymbolAttribute<CandleExchange> {
+public class CandleExchange implements CandleSymbolAttribute<CandleExchange>, Serializable {
+
+    private static final long serialVersionUID = 0;
+
     /**
      * Composite exchange where data is taken from all exchanges.
      */
@@ -115,5 +121,11 @@ public class CandleExchange implements CandleSymbolAttribute<CandleExchange> {
      */
     public static CandleExchange getAttributeForSymbol(String symbol) {
         return valueOf(MarketEventSymbols.getExchangeCode(symbol));
+    }
+
+    protected Object readResolve() throws ObjectStreamException {
+        if (exchangeCode == '\0')
+            return COMPOSITE;
+        return this;
     }
 }

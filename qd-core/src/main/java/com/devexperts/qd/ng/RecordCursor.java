@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2018 Devexperts LLC
+ * Copyright (C) 2002 - 2019 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,6 +17,7 @@ import java.util.Objects;
 
 import com.devexperts.io.BufferedInput;
 import com.devexperts.qd.*;
+import com.devexperts.qd.kit.VoidIntField;
 import com.devexperts.qd.util.TimeMarkUtil;
 import com.devexperts.qd.util.TimeSequenceUtil;
 
@@ -760,10 +761,12 @@ public final class RecordCursor {
             formatPosition(sb, intOffset, objOffset);
             if (intFlds != null && intOffset >= 0)
                 for (int i = 0; i < intCount && intOffset + i < intFlds.length; i++)
-                    sb.append(' ').append(record.getIntField(i).getString(this));
+                    if (acceptField(record.getIntField(i)))
+                        sb.append(' ').append(record.getIntField(i).getString(this));
             if (objFlds != null && objOffset >= 0)
                 for (int i = 0; i < objCount && objOffset + i < objFlds.length; i++)
-                    sb.append(' ').append(record.getObjField(i).getString(this));
+                    if (acceptField(record.getObjField(i)))
+                        sb.append(' ').append(record.getObjField(i).getString(this));
         }
         if (readOnly)
             sb.append(", readOnly");
@@ -1323,5 +1326,9 @@ public final class RecordCursor {
             Throws.throwReadOnly();
         intFlds[intOffset + index] = (int) (value >> 32);
         intFlds[intOffset + index + 1] = (int) value;
+    }
+
+    private boolean acceptField(DataField f) {
+        return !(f instanceof VoidIntField);
     }
 }

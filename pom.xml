@@ -3,7 +3,7 @@
   !++
   QDS - Quick Data Signalling Library
   !-
-  Copyright (C) 2002 - 2018 Devexperts LLC
+  Copyright (C) 2002 - 2019 Devexperts LLC
   !-
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
   If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.269</version>
+    <version>3.270</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -129,19 +129,19 @@
         <javadoc.error.pattern>\*?\s*@author.*</javadoc.error.pattern>
 
         <!-- version of Jetty for all web and servlet modules -->
-        <jetty.version>9.2.21.v20170120</jetty.version>
+        <jetty.version>9.4.14.v20181114</jetty.version>
         <!-- need to be in sync with servlet-api -->
         <servlet-api.version>3.1.0</servlet-api.version>
         <!-- need to be in sync with jetty -->
-        <jasper.version>8.0.33</jasper.version>
+        <jasper.version>8.5.33.1</jasper.version>
 
         <!-- versions of frameworks and libraries to use -->
         <log4j.version>1.1.3</log4j.version>
         <log4j2.version>2.8.1</log4j2.version>
         <jackson.version>2.9.4</jackson.version>
         <jaxb.version>2.2.7</jaxb.version>
-        <cometd.version>3.1.1</cometd.version>
-        <slf4j.version>1.7.22</slf4j.version>
+        <cometd.version>4.0.2</cometd.version>
+        <slf4j.version>1.7.25</slf4j.version>
         <aspectj.version>1.8.2</aspectj.version>
         <junit.version>4.12</junit.version>
         <!-- same version as used by cometd above -->

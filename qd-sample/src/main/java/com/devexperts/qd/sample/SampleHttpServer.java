@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2018 Devexperts LLC
+ * Copyright (C) 2002 - 2019 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -50,9 +50,11 @@ public class SampleHttpServer {
             String password = args.length > 2 ? args[2] : "";
 
             DefaultIdentityService identityService = new DefaultIdentityService();
-            HashLoginService login = new HashLoginService();
-            login.setIdentityService(identityService);
-            login.putUser(user, Credential.getCredential(password), new String[]{ROLE});
+            HashLoginService loginService = new HashLoginService();
+            loginService.setIdentityService(identityService);
+            UserStore userStore = new UserStore();
+            userStore.addUser(user, Credential.getCredential(password), new String[]{ROLE});
+            loginService.setUserStore(userStore);
 
             Constraint constraint = new Constraint();
             constraint.setRoles(new String[]{ROLE});
@@ -64,7 +66,7 @@ public class SampleHttpServer {
 
             ConstraintSecurityHandler security = new ConstraintSecurityHandler();
             security.setIdentityService(identityService);
-            security.setLoginService(login);
+            security.setLoginService(loginService);
             security.addConstraintMapping(mapping);
             security.setRealmName("Sample Realm");
             security.setHandler(context);

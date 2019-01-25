@@ -1,4 +1,15 @@
 
+QDS 3.270:
+
+* [QD-1123] dxFeed API: Make CandleSymbol attribute classes Serializable
+* [QD-1113] QD Core: RecordCursor.toString prints both double and wide decimal presentation of wide decimal fields
+* [QD-1044] dxFeed API: Support CandlePriceLevel attribute
+* [QD-1062] dxFeed webservice: Migrate to cometd 4.0.2 and jetty 9.4.14
+  - Additional migration notes from CometD: https://docs.cometd.org/current/reference/#_migration_31_to_40
+  - Additional migration notes from Jetty: https://www.eclipse.org/jetty/documentation/9.4.x/upgrading-jetty.html
+* [QD-1116] dxFeed webservice: "Session" parameter is not working in REST API
+* [QD-1115] Files are updated for year 2019 in copyright
+
 QDS 3.269:
 
 * [QD-1099] Make DXFeedSubscription and DXEndpoint implement AutoCloseable
