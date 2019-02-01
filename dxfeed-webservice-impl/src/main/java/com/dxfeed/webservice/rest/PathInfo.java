@@ -16,6 +16,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import com.devexperts.annotation.Description;
+import com.dxfeed.webservice.rest.Secure.SecureRole;
 
 public class PathInfo implements Comparable<PathInfo> {
     public final Method method;
@@ -24,12 +25,14 @@ public class PathInfo implements Comparable<PathInfo> {
     public final String description;
     public final ParamInfo[] args;
     public final int nArgs;
+    public final SecureRole secure;
 
     public PathInfo(Method method) {
         this.method = method;
         this.path = method.getAnnotation(Path.class).value();
         this.helpOrder = method.getAnnotation(HelpOrder.class).value();
         this.description = method.getAnnotation(Description.class).value();
+        this.secure = method.getAnnotation(Secure.class).value();
         Class<?>[] parameterTypes = method.getParameterTypes();
         Annotation[][] parameterAnnotations = method.getParameterAnnotations();
         nArgs = parameterTypes.length;

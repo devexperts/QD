@@ -11,6 +11,14 @@
  */
 package com.devexperts.rmi.test;
 
+import java.io.*;
+import java.lang.management.ManagementFactory;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
+import javax.management.ObjectName;
+
 import com.devexperts.logging.Logging;
 import com.devexperts.mars.common.MARSNode;
 import com.devexperts.qd.monitoring.JMXEndpoint;
@@ -39,6 +47,12 @@ public class RMIMonitoringTest {
 
     @Rule public Timeout globalTimeout= new Timeout(60, TimeUnit.SECONDS);
 
+    public static final int PORT_00 = (100 + ThreadLocalRandom.current().nextInt(300)) * 100;
+
+    int getPort(int offset) {
+        return PORT_00 + offset;
+    }
+
     private RMIEndpoint client;
     private RMIEndpoint server;
 
@@ -60,7 +74,8 @@ public class RMIMonitoringTest {
             MARSNode.getRoot().subNode("test.fail").setValue("Version 1.0");
             // this shall reuse initialized mars endpoint
             client = RMIEndpoint.createEndpoint();
-            client.connect(":9999");
+            String client_port = ":" + getPort(99);
+            client.connect(client_port);
             client.close();
         } finally {
             Thread.sleep(500); // wait a bit to let it settle writing to log
@@ -71,13 +86,10 @@ public class RMIMonitoringTest {
     }
 
     private void assertNoErrorsAndWarningsInLog(String fileName) throws IOException {
-        BufferedReader in = new BufferedReader(new FileReader(fileName));
-        try {
+        try (BufferedReader in = new BufferedReader(new FileReader(fileName))) {
             String line;
             while ((line = in.readLine()) != null)
                 assertFalse(line, line.startsWith("E ") || line.startsWith("W "));
-        } finally {
-            in.close();
         }
     }
 
@@ -90,7 +102,8 @@ public class RMIMonitoringTest {
         client = RMIEndpoint.newBuilder().withName("testCleanup").build();
 
         for (int attempt = 1; attempt <= 2; attempt++) {
-            client.connect(":12345[name=testCleanupConn]");
+            String client_port = ":" + getPort(45);
+            client.connect(client_port + "[name=testCleanupConn]");
 
             // now check resources that ware created in the process
             Set<String> createdBeans = getCreatedBeans(initialBeans);
@@ -103,7 +116,7 @@ public class RMIMonitoringTest {
             // connectors-specific JMXStats
             assertTrue(containsStartingWith(createdBeans, "com.devexperts.qd.stats:name=testCleanup,connector=testCleanupConn,c=Any,id="));
             // acceptor thread
-            assertTrue(createdThreads.contains("testCleanupConn-:12345-Acceptor"));
+            assertTrue(createdThreads.contains("testCleanupConn-" + client_port + "-Acceptor"));
             // something else might have been create -- we don't care
 
             // new disconnect endpoint
@@ -118,7 +131,7 @@ public class RMIMonitoringTest {
 
             assertFalse(createdBeans.contains("com.devexperts.qd.qtp:type=Connector,name=testCleanupConn"));
             assertFalse(containsStartingWith(createdBeans, "com.devexperts.qd.stats:name=testCleanup,connector=testCleanupConn,c=Any,id="));
-            assertFalse(createdThreads.contains("testCleanupConn-:12345-Acceptor"));
+            assertFalse(createdThreads.contains("testCleanupConn-" + client_port + "-Acceptor"));
         }
 
         // completely close endpoint
@@ -132,10 +145,8 @@ public class RMIMonitoringTest {
         Set<String> resultingThreads = getCreatedThreads(initialThreads);
 
         // dump all remains
-        for (String s : resultingBeans)
-            System.out.println(s);
-        for (String s : resultingThreads)
-            System.out.println(s);
+        resultingBeans.forEach(System.out::println);
+        resultingThreads.forEach(System.out::println);
 
         // we should not have anything remaining
         assertTrue("Should not leave any JMX beans behind", resultingBeans.isEmpty());
@@ -165,9 +176,10 @@ public class RMIMonitoringTest {
         client.getClient().setRequestSendingTimeout(3000L);
 
         for (int attempt = 1; attempt <= 2; attempt++) {
-            server.connect(":1212");
+            int port = getPort(12);
+            server.connect(":" + port);
             Thread.sleep(500);
-            client.connect("localhost:1212");
+            client.connect("localhost:" + port);
 
             // now check resources that ware created in the process
             Set<String> createdBeans = getCreatedBeans(initialBeans);
@@ -189,11 +201,12 @@ public class RMIMonitoringTest {
             assertTrue(containsStartingWith(createdBeans, "com.devexperts.qd.stats:name=server,connector=ServerSocket-RMI,c=Any,id="));
             assertTrue(containsStartingWith(createdBeans, "com.devexperts.qd.stats:name=client,connector=ClientSocket-RMI,c=Any,id="));
             // acceptor thread
-            assertTrue(createdThreads.contains("ServerSocket-RMI-:1212-Acceptor"));
-            assertTrue(createdThreads.contains("localhost:1212-Reader"));
-            assertTrue(createdThreads.contains("localhost:1212-Writer"));
+            assertTrue(createdThreads.contains("ServerSocket-RMI-:" + port + "-Acceptor"));
+            assertTrue(createdThreads.contains("localhost:" + port + "-Reader"));
+            assertTrue(createdThreads.contains("localhost:" + port + "-Writer"));
             assertTrue(createdThreads.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=11192"));
             assertTrue(createdThreads.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=11195"));
+
             server.getServer().export(new SimpleStartService(), StartService.class);
             server.getServer().export(new SimpleUpdateService(), UpdateService.class);
             server.getServer().export(new SimpleCloseService(), CloseService.class);
@@ -232,8 +245,8 @@ public class RMIMonitoringTest {
             assertFalse(createdBeans.contains("com.devexperts.qd.qtp:type=Connector,name=ClientSocket-RMI"));
             assertFalse(containsStartingWith(createdBeans, "com.devexperts.qd.stats:name=server,connector=ServerSocket-RMI,c=Any,id="));
             assertFalse(containsStartingWith(createdBeans, "com.devexperts.qd.stats:name=client,connector=ClientSocket-RMI,c=Any,id="));
-            assertFalse(createdThreads.contains("localhost:1212-Reader"));
-            assertFalse(createdThreads.contains("localhost:1212-Writer"));
+            assertFalse(createdThreads.contains("localhost:" + port + "-Reader"));
+            assertFalse(createdThreads.contains("localhost:" + port + "-Writer"));
         }
 
         // completely close endpoint
@@ -249,11 +262,9 @@ public class RMIMonitoringTest {
 
         // dump all remains
         System.out.println("Beans:");
-        for (String s : resultingBeans)
-            System.out.println(s);
+        resultingBeans.forEach(System.out::println);
         System.out.println("Threads:");
-        for (String s : resultingThreads)
-            System.out.println(s);
+        resultingThreads.forEach(System.out::println);
 
         // we should not have anything remaining
         assertTrue("Should not leave any JMX beans behind", resultingBeans.isEmpty());
@@ -320,11 +331,9 @@ public class RMIMonitoringTest {
 
     private Set<String> getBeans() {
         Set<ObjectName> names = ManagementFactory.getPlatformMBeanServer().queryNames(null, null);
-        Set<String> result = new TreeSet<>();
-        for (ObjectName name : names) {
-            result.add(name.getDomain() + ":" + name.getKeyPropertyListString());
-        }
-        return result;
+        return names.stream()
+            .map(name -> name.getDomain() + ":" + name.getKeyPropertyListString())
+            .collect(Collectors.toCollection(TreeSet::new));
     }
 
     private Set<String> getCreatedBeans(Set<String> initialBeans) {

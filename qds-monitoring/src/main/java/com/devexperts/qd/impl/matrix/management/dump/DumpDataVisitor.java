@@ -11,32 +11,42 @@
  */
 package com.devexperts.qd.impl.matrix.management.dump;
 
+import java.io.PrintStream;
+
 import com.devexperts.qd.DataRecord;
-import com.devexperts.qd.impl.matrix.Collector;
-import com.devexperts.qd.ng.AbstractRecordSink;
-import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.impl.matrix.*;
+import com.devexperts.qd.ng.*;
+import com.devexperts.qd.qtp.BuiltinFields;
 
-class DumpDataVisitor implements CollectorVisitor {
-    private final String filterSymbol;
-    private final String filterRecord;
-
-    DumpDataVisitor(String filterSymbol, String filterRecord) {
-        this.filterSymbol = filterSymbol;
-        this.filterRecord = filterRecord;
+class DumpDataVisitor extends DumpVisitorBase implements CollectorVisitor {
+    DumpDataVisitor(PrintStream out, String filterSymbol, String filterRecord) {
+        super(out, filterSymbol, filterRecord);
     }
 
+    @Override
     public void visit(Collector collector) {
-        System.out.println("--- Data from " + collector);
-        collector.examineData(new DumpDataSink(filterSymbol, filterRecord));
+        out.println("--- Data from " + collector);
+        collector.examineData(new DumpDataSink());
     }
 
-    static class DumpDataSink extends AbstractRecordSink {
-        private final String filterSymbol;
-        private final String filterRecord;
-
-        DumpDataSink(String filterSymbol, String filterRecord) {
-            this.filterSymbol = filterSymbol;
-            this.filterRecord = filterRecord;
+    class DumpDataSink extends AbstractRecordSink implements HistoryBufferDebugSink {
+        @Override
+        public void visitHistoryBuffer(DataRecord r, int cipher, String encodedSymbol, long timeTotalSub, HistoryBuffer hb) {
+            String record = r.getName();
+            String symbol = r.getScheme().getCodec().decode(cipher, encodedSymbol);
+            if (!matches(record, symbol))
+                return;
+            out.println("HistoryBuffer " + r + " " + symbol);
+            out.println("\tisTx=" + hb.isTx());
+            out.println("\tisSweepTx=" + hb.isSweepTx());
+            out.println("\twasSnapshotBeginSeen=" + hb.wasSnapshotBeginSeen());
+            out.println("\twasSnapshotEndSeen=" + hb.wasSnapshotEndSeen());
+            out.println("\twasEverSnapshotMode=" + hb.wasEverSnapshotMode());
+            out.println("\tisWaitingForSnapshotBegin=" + hb.isWaitingForSnapshotBegin());
+            out.println("\tgetSnapshotTime=" + DumpUtil.timeString(r, hb.getSnapshotTime()));
+            out.println("\tgetEverSnapshotTime=" + DumpUtil.timeString(r, hb.getEverSnapshotTime()));
+            out.println("\tgetSnipSnapshotTime=" + DumpUtil.timeString(r, hb.getSnipSnapshotTime()));
+            out.println("\ttimeTotalSub=" + DumpUtil.timeString(r, timeTotalSub));
         }
 
         @Override
@@ -44,22 +54,35 @@ class DumpDataVisitor implements CollectorVisitor {
             DataRecord r = cursor.getRecord();
             String record = r.getName();
             String symbol = cursor.getDecodedSymbol();
-            if ((filterSymbol == null || filterSymbol.equals(symbol)) &&
-                (filterRecord == null || filterRecord.equals(record)))
-            {
-                System.out.print(record);
-                System.out.print('\t');
-                System.out.print(symbol);
-                for (int i = 0; i < cursor.getIntCount(); i++) {
-                    System.out.print('\t');
-                    System.out.print(r.getIntField(i).getString(cursor));
-                }
-                for (int i = 0; i < cursor.getObjCount(); i++) {
-                    System.out.print('\t');
-                    System.out.print(r.getObjField(i).getString(cursor));
-                }
-                System.out.println();
+            if (!matches(record, symbol))
+                return;
+            out.print(record);
+            out.print('\t');
+            out.print(symbol);
+            for (int i = 0; i < cursor.getIntCount(); i++) {
+                out.print('\t');
+                out.print(r.getIntField(i).toString(cursor.getInt(i)));
             }
+            for (int i = 0; i < cursor.getObjCount(); i++) {
+                out.print('\t');
+                out.print(r.getObjField(i).toString(cursor.getObj(i)));
+            }
+            if (cursor.getEventFlags() != 0) {
+                out.print('\t');
+                out.print(BuiltinFields.EVENT_FLAGS_FIELD_NAME);
+                out.print('=');
+                out.print(EventFlag.formatEventFlags(cursor.getEventFlags()));
+            }
+            out.println();
+        }
+
+        @Override
+        public void visitDone(DataRecord r, int cipher, String encodedSymbol, int examineMethodResult) {
+            String record = r.getName();
+            String symbol = r.getScheme().getCodec().decode(cipher, encodedSymbol);
+            if (!matches(record, symbol))
+                return;
+            out.println("HistoryBuffer examined=" + examineMethodResult);
         }
     }
 }

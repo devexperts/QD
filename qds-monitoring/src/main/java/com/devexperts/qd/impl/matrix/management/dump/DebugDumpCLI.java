@@ -15,13 +15,15 @@ import java.io.*;
 import java.util.Arrays;
 import java.util.Locale;
 
-import com.devexperts.qd.impl.matrix.Collector;
 import com.devexperts.qd.impl.matrix.CollectorDebug;
 
 /**
  * Command-line interface for {@link DebugDumpReader}.
  */
 public class DebugDumpCLI {
+
+    private final PrintStream out = System.out;
+
     private enum Cmd {
         INFO,
         VERIFY,
@@ -45,13 +47,13 @@ public class DebugDumpCLI {
     }
 
     private void help() {
-        System.out.println("--- Supported commands ---");
-        System.out.println(Cmd.INFO + "                         - Print dump info");
-        System.out.println(Cmd.VERIFY + "                       - Verify dump's integrity");
-        System.out.println(Cmd.SUB + " [<symbol> [<record>]]    - Print total & agent subscription");
-        System.out.println(Cmd.DATA + " [<symbol> [<record>]]   - Print stored data");
-        System.out.println(Cmd.QUEUE + " [<symbol> [<record>]]  - Analyze queue");
-        System.out.println(Cmd.SYMBOL + " [<symbol> [<record>]] - Analyze symbol refs inside core");
+        out.println("--- Supported commands ---");
+        out.println(Cmd.INFO + "                         - Print dump info");
+        out.println(Cmd.VERIFY + "                       - Verify dump's integrity");
+        out.println(Cmd.SUB + " [<symbol> [<record>]]    - Print total & agent subscription");
+        out.println(Cmd.DATA + " [<symbol> [<record>]]   - Print stored data");
+        out.println(Cmd.QUEUE + " [<symbol> [<record>]]  - Analyze queue");
+        out.println(Cmd.SYMBOL + " [<symbol> [<record>]] - Analyze symbol refs inside core");
     }
 
     public void interactive() throws IOException {
@@ -63,7 +65,7 @@ public class DebugDumpCLI {
     }
 
     private String readLine() throws IOException {
-        System.out.print("? ");
+        out.print("? ");
         return in.readLine();
     }
 
@@ -86,7 +88,7 @@ public class DebugDumpCLI {
         try {
             cmd = Cmd.valueOf(args[0].toUpperCase(Locale.US));
         } catch (IllegalArgumentException e) {
-            System.out.println("Unknown command '" + args[0] + "'");
+            out.println("Unknown command '" + args[0] + "'");
             help();
             return;
         }
@@ -98,31 +100,22 @@ public class DebugDumpCLI {
             reader.dumpInfo();
             break;
         case VERIFY:
-            reader.visit(reader.getOwner(), new CollectorVisitor() {
-                public void visit(Collector collector) {
-                    collector.verify(CollectorDebug.CONSOLE, rci);
-                }
-            });
+            reader.visit(reader.getOwner(), collector ->
+                collector.verify(CollectorDebug.CONSOLE, rci));
             break;
         case SUB:
-            reader.visit(reader.getOwner(), new DumpSubscriptionVisitor(filterSymbol, filterRecord));
+            reader.visit(reader.getOwner(), new DumpSubscriptionVisitor(out, filterSymbol, filterRecord));
             break;
         case DATA:
-            reader.visit(reader.getOwner(), new DumpDataVisitor(filterSymbol, filterRecord));
+            reader.visit(reader.getOwner(), new DumpDataVisitor(out, filterSymbol, filterRecord));
             break;
         case QUEUE:
-            reader.visit(reader.getOwner(), new CollectorVisitor() {
-                public void visit(Collector collector) {
-                    collector.analyzeQueue(CollectorDebug.CONSOLE, filterSymbol, filterRecord);
-                }
-            });
+            reader.visit(reader.getOwner(), collector ->
+                collector.analyzeQueue(CollectorDebug.CONSOLE, filterSymbol, filterRecord));
             break;
         case SYMBOL:
-            reader.visit(reader.getOwner(), new CollectorVisitor() {
-                public void visit(Collector collector) {
-                    collector.analyzeSymbolRefs(CollectorDebug.CONSOLE, filterSymbol, filterRecord, rci);
-                }
-            });
+            reader.visit(reader.getOwner(), collector ->
+                collector.analyzeSymbolRefs(CollectorDebug.CONSOLE, filterSymbol, filterRecord, rci));
             break;
         }
     }

@@ -1363,8 +1363,8 @@ public class History extends Collector implements QDHistory {
         // if anything looks suspicious from concurrency point of view -- skip it
         if (hb != tsub.getObj(tindex, 0))
             return 0;
-        int key = tsub.getInt(tindex);
-        int rid = tsub.getInt(tindex + 1);
+        int key = tsub.getInt(tindex + KEY);
+        int rid = tsub.getInt(tindex + RID);
         int cipher = key;
         String symbol = null;
         if ((key & SymbolCodec.VALID_CIPHER) == 0) {
@@ -1373,11 +1373,21 @@ public class History extends Collector implements QDHistory {
             if (symbol == null)
                 return 0;
         }
+        // DebugDumpReader support
+        if (sink instanceof HistoryBufferDebugSink)
+            ((HistoryBufferDebugSink) sink).visitHistoryBuffer(records[rid], cipher, symbol,
+                tsub.getLong(tindex + TIME_TOTAL), hb);
         // Note, toTime is set to Long.MIN_VALUE, so HB uses "everSnapshotTime" that tracks minimum snapshot
         // time that was ever received and was not subsequently lost due to unsubscribe
+        int examineMethodResult;
         if (hb.examineDataSnapshot(records[rid], cipher, symbol, Long.MIN_VALUE, sink, keeper, null))
-            return -1 - hb.nExamined;
-        return hb.nExamined;
+            examineMethodResult = -1 - hb.nExamined;
+        else
+            examineMethodResult = hb.nExamined;
+        // DebugDumpReader support
+        if (sink instanceof HistoryBufferDebugSink)
+            ((HistoryBufferDebugSink) sink).visitDone(records[rid], cipher, symbol, examineMethodResult);
+        return examineMethodResult;
     }
 
     @Override

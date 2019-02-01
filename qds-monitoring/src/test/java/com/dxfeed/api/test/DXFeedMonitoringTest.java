@@ -14,6 +14,7 @@ package com.dxfeed.api.test;
 import java.lang.management.ManagementFactory;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import javax.management.ObjectName;
 
@@ -29,28 +30,32 @@ public class DXFeedMonitoringTest extends TestCase {
 
     private static final String TEST_SYMBOL = "TEST";
 
+    public static final int PORT_00 = (100 + ThreadLocalRandom.current().nextInt(300)) * 100;
+
+    int getPort(int offset) {
+        return PORT_00 + offset;
+    }
+
     public void testResourcesCleanup() throws InterruptedException {
         Set<String> initialBeans = getBeans();
         Set<String> initialThreads = getThreadsNames();
 
         // we just need a connector to test
+        String jmx_rmi_port = String.valueOf(getPort(93));
+        String jmx_html_port = String.valueOf(getPort(92));
+        String mars_address_port = ":" + getPort(94);
         DXEndpoint endpoint = DXEndpoint.newBuilder()
             .withProperty(MonitoringEndpoint.NAME_PROPERTY, "testCleanup")
-            .withProperty(JMXEndpoint.JMX_HTML_PORT_PROPERTY, "10192")
-            .withProperty(JMXEndpoint.JMX_RMI_PORT_PROPERTY, "10193")
+            .withProperty(JMXEndpoint.JMX_HTML_PORT_PROPERTY, jmx_html_port)
+            .withProperty(JMXEndpoint.JMX_RMI_PORT_PROPERTY, jmx_rmi_port)
             .withProperty(MARSNode.MARS_ROOT_PROPERTY, "testCleanupRoot")
-            .withProperty(MARSNode.MARS_ADDRESS_PROPERTY, ":10194")
+            .withProperty(MARSNode.MARS_ADDRESS_PROPERTY, mars_address_port)
             .build();
 
         // we need to publish and process one event to get processing threads created
         DXFeedSubscription<Trade> sub = endpoint.getFeed().createSubscription(Trade.class);
         final ArrayBlockingQueue<Trade> eventsQueue = new ArrayBlockingQueue<>(1);
-        sub.addEventListener(new DXFeedEventListener<Trade>() {
-            @Override
-            public void eventsReceived(List<Trade> events) {
-                eventsQueue.addAll(events);
-            }
-        });
+        sub.addEventListener(eventsQueue::addAll);
         sub.addSymbols(TEST_SYMBOL);
 
         Trade pubTrade = new Trade(TEST_SYMBOL);
@@ -74,8 +79,8 @@ public class DXFeedMonitoringTest extends TestCase {
             assertTrue(createdBeans.contains("com.devexperts.qd.impl.matrix:name=testCleanup,scheme=DXFeed,c=Stream"));
             assertTrue(createdBeans.contains("com.devexperts.qd.impl.matrix:name=testCleanup,scheme=DXFeed,c=History"));
             // adaptors
-            assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=10192"));
-            assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=RmiServer,port=10193"));
+            assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=" + jmx_html_port));
+            assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=RmiServer,port=" + jmx_rmi_port));
             // root stats
             assertTrue(createdBeans.contains("com.devexperts.qd.stats:name=testCleanup,c=Any,id=!AnyStats"));
             // named connector
@@ -114,10 +119,8 @@ public class DXFeedMonitoringTest extends TestCase {
         Set<String> resultingThreads = getCreatedThreads(initialThreads);
 
         // dump all remains
-        for (String s : resultingBeans)
-            System.out.println(s);
-        for (String s : resultingThreads)
-            System.out.println(s);
+        resultingBeans.forEach(System.out::println);
+        resultingThreads.forEach(System.out::println);
 
         // we should not have anything remaining
         assertTrue("Should not leave any JMX beans behind", resultingBeans.isEmpty());
@@ -134,11 +137,9 @@ public class DXFeedMonitoringTest extends TestCase {
 
     private Set<String> getBeans() {
         Set<ObjectName> names = ManagementFactory.getPlatformMBeanServer().queryNames(null, null);
-        Set<String> result = new TreeSet<>();
-        for (ObjectName name : names) {
-            result.add(name.getDomain() + ":" + name.getKeyPropertyListString());
-        }
-        return result;
+        return names.stream()
+            .map(name -> name.getDomain() + ":" + name.getKeyPropertyListString())
+            .collect(Collectors.toCollection(TreeSet::new));
     }
 
     private Set<String> getCreatedThreads(Set<String> initialThreads) {

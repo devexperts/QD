@@ -47,11 +47,10 @@ public class DebugDumpReader {
     private void read(String fileName) {
         System.out.println("Reading " + fileName);
         try {
-            StreamInput in = new StreamInput(new InflaterInputStream(new TrackingInput(new RandomAccessFile(fileName, "r"))));
-            try {
+            try (StreamInput in =
+                new StreamInput(new InflaterInputStream(new TrackingInput(new RandomAccessFile(fileName, "r")))))
+            {
                 while (parse(in)) /* just loop */ ;
-            } finally {
-                in.close();
             }
         } catch (IOException e) {
             System.out.println("Exception while reading " + fileName);
@@ -61,8 +60,8 @@ public class DebugDumpReader {
 
     private void resolve() {
         System.out.println("Resolving " + objectMap.size() + " objects from " + classMap.size() + " classes");
-        for (ObjectRef ref : objectMap)
-            ref.resolve();
+        objectMap.forEach(ObjectRef::resolveEnums);
+        objectMap.forEach(ObjectRef::resolveFields);
         System.out.println("Snapshot reconstructed");
     }
 
@@ -99,7 +98,7 @@ public class DebugDumpReader {
             classMap.put(desc);
             return;
         }
-        Class clazz;
+        Class<?> clazz;
         try {
             clazz = Class.forName(className);
         } catch (ClassNotFoundException e) {
@@ -143,7 +142,7 @@ public class DebugDumpReader {
         System.out.println("--- Dump information ---");
         System.out.println("Owner = " + owner);
         System.out.println("QDS   = " + version);
-        System.out.println("JVM   = " + ((systemProperties instanceof Map) ? ((Map)systemProperties).get("java.version") : null));
+        System.out.println("JVM   = " + ((systemProperties instanceof Map) ? ((Map<?, ?>)systemProperties).get("java.version") : null));
         if (exception instanceof Throwable) {
             System.out.println("Error = " + exception);
             ((Throwable) exception).printStackTrace(System.out);
@@ -228,20 +227,21 @@ public class DebugDumpReader {
             this.instance = instance;
         }
 
-        void resolve() {}
+        void resolveEnums() {}
+        void resolveFields() {}
     }
 
     class ArrayRef extends ObjectRef {
         int[] refs;
 
-        ArrayRef(int id, Class componentType, int length) {
+        ArrayRef(int id, Class<?> componentType, int length) {
             super(id);
             instance = Array.newInstance(componentType, length);
             refs = new int[length];
         }
 
         @Override
-        void resolve() {
+        void resolveFields() {
             Object[] a = (Object[]) instance;
             for (int i = 0; i < refs.length; i++) {
                 int ref = refs[i];
@@ -268,8 +268,15 @@ public class DebugDumpReader {
             this.classDesc = classDesc;
         }
 
+        void resolveEnums() {
+            if (instance instanceof Enum<?>) {
+                resolveFields();
+                instance = resolveEnum((Enum<?>) instance);
+            }
+        }
+
         @Override
-        void resolve() {
+        void resolveFields() {
             int i = 0;
             ClassDesc cur = classDesc;
             do {
@@ -289,13 +296,22 @@ public class DebugDumpReader {
                 cur = cur.parent;
             } while (cur != null);
         }
+
+        private Object resolveEnum(Enum<?> instance) {
+            try {
+                return Enum.valueOf(instance.getClass(), instance.name());
+            } catch (IllegalArgumentException e) {
+                System.out.println("Cannot resolveFields enum " + instance.getClass().getName() + " with name " + instance.name());
+                return instance;
+            }
+        }
     }
 
     static class ObjectReader {
         final int classId;
-        final Class clazz;
+        final Class<?> clazz;
 
-        ObjectReader(int classId, Class clazz) {
+        ObjectReader(int classId, Class<?> clazz) {
             this.classId = classId;
             this.clazz = clazz;
         }
@@ -356,7 +372,7 @@ public class DebugDumpReader {
     }
 
     class ArrayDesc extends ObjectReader {
-        ArrayDesc(int classId, Class parent) {
+        ArrayDesc(int classId, Class<?> parent) {
             super(classId, Array.newInstance(parent, 0).getClass());
         }
 
@@ -386,7 +402,7 @@ public class DebugDumpReader {
         final FieldDesc[] fields;
         int refCount;
 
-        ClassDesc(int classId, ObjectReader parent, Class clazz, int fieldCount) {
+        ClassDesc(int classId, ObjectReader parent, Class<?> clazz, int fieldCount) {
             super(classId, clazz);
             this.parent = parent instanceof ClassDesc ? (ClassDesc) parent : null;
             fields = new FieldDesc[fieldCount];
@@ -403,9 +419,10 @@ public class DebugDumpReader {
             try {
                 instance = UnsafeHolder.UNSAFE.allocateInstance(clazz);
             } catch (InstantiationException e) {
-                throw ((IOException) new IOException("Cannot allocate instance " + objectId + " of " + clazz.getName()).initCause(e));
+                throw new IOException("Cannot allocate instance " + objectId + " of " + clazz.getName(), e);
             }
-            return readInstanceFields(in, new InstanceRef(objectId, instance, this));
+            InstanceRef result = readInstanceFields(in, new InstanceRef(objectId, instance, this));
+            return result;
         }
 
         private InstanceRef readInstanceFields(BufferedInput in, InstanceRef result) throws IOException {

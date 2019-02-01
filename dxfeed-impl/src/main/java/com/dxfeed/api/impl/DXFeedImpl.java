@@ -41,6 +41,7 @@ public class DXFeedImpl extends DXFeed {
     private static final ThreadLocal<LocalRemoveBatch> LOCAL_REMOVE_BATCH = new ThreadLocal<>();
 
     private final DXEndpointImpl endpoint;
+    private final QDFilter filter;
     private final RecordMode retrieveMode;
     private final QDAgent.Builder[] eventProcessorAgentBuilders = new QDAgent.Builder[N_CONTRACTS];
     private final IndexedSet<DXFeedSubscription<?>, EventProcessor<?, ?>> eventProcessors =
@@ -49,8 +50,24 @@ public class DXFeedImpl extends DXFeed {
     private final LastEventsProcessor lastEventsProcessor; // != null when we have QDTicker in endpoint
     private final long aggregationPeriodMillis;
 
-    DXFeedImpl(DXEndpointImpl endpoint) {
+    // Default constructor for DXEndpointImpl
+    @SuppressWarnings("deprecation")
+    public DXFeedImpl(DXEndpointImpl endpoint) {
+        this(endpoint, QDFilter.ANYTHING);
+    }
+
+    /**
+     * Allows to create DXFeed instance with the specific filter from the given endpoint. Endpoint will not handle
+     * this feed's lifecycle - call closeImpl() or awaitTerminationAndCloseImpl() to clean up resources!
+     * @param endpoint
+     * @param filter
+     * @deprecated For internal use only, do not use!
+     */
+    @Deprecated
+    public DXFeedImpl(DXEndpointImpl endpoint, QDFilter filter) {
         this.endpoint = endpoint;
+        this.filter = filter;
+
         RecordMode mode = RecordMode.FLAGGED_DATA.withAttachment();
         if (endpoint.getQDEndpoint().hasEventTimeSequence())
             mode = mode.withEventTimeSequence();
@@ -58,6 +75,7 @@ public class DXFeedImpl extends DXFeed {
         for (QDContract contract : endpoint.getContracts()) {
             QDAgent.Builder builder = endpoint.getCollector(contract).agentBuilder()
                 .withHistorySnapshot(true)
+                .withFilter(filter)
                 .withAttachmentStrategy(EVENT_PROCESSOR_ATTACHMENT_STRATEGY);
             eventProcessorAgentBuilders[contract.ordinal()] = builder;
         }
@@ -65,7 +83,7 @@ public class DXFeedImpl extends DXFeed {
         if (ticker == null) {
             lastEventsProcessor = null;
         } else {
-            lastEventsProcessor = new LastEventsProcessor(ticker);
+            lastEventsProcessor = new LastEventsProcessor(ticker, filter);
             lastEventsProcessor.start();
         }
         aggregationPeriodMillis = endpoint.hasProperty(DXEndpoint.DXFEED_AGGREGATION_PERIOD_PROPERTY) ?
@@ -92,15 +110,24 @@ public class DXFeedImpl extends DXFeed {
     }
 
     public void closeImpl() {
-        assert endpoint.isClosed(); // assert that close impl is called on endpoint that is already marked as closed
-        // no need to sync, because nothing is added or removed when endpoint is closed
+        // cannot be sure that endpoint is already closed
+        if (!endpoint.isClosed()) {
+            synchronized (endpoint.getLock()) {
+                closeComponents();
+            }
+        } else {
+            // no need to sync, because nothing is added or removed when endpoint is closed
+            closeComponents();
+        }
+        eventProcessors.clear();
+        closeables.clear();
+    }
+
+    private void closeComponents() {
         for (EventProcessor<?, ?> processor : eventProcessors)
             processor.close(false);
-        eventProcessors.clear();
-        // no need to sync, because nothing is added or removed when endpoint is closed
         for (Closeable c : closeables)
             c.close();
-        closeables.clear();
         if (lastEventsProcessor != null)
             lastEventsProcessor.close();
     }
@@ -148,9 +175,13 @@ public class DXFeedImpl extends DXFeed {
         if (delegate == null)
             return event;
         QDTicker ticker = (QDTicker) endpoint.getCollector(QDContract.TICKER); // assert != null (if we have delegate)
-        LocalAddBatch lb = getLocalAddBatch();
         String qdSymbol = delegate.getQDSymbolByEvent(event);
         int cipher = endpoint.encode(qdSymbol);
+
+        // check if symbol is accepted by filter
+        if (!filter.accept(QDContract.TICKER, delegate.getRecord(), cipher, qdSymbol))
+            return event;
+        LocalAddBatch lb = getLocalAddBatch();
         if (ticker.getDataIfAvailable(lb.owner, delegate.getRecord(), cipher, qdSymbol))
             return delegate.getEvent(event, lb.owner.cursor());
         // not found -- return unmodified event
@@ -163,9 +194,13 @@ public class DXFeedImpl extends DXFeed {
         if (delegate == null)
             return null;
         assert lastEventsProcessor != null; // if we have delegate
-        LocalAddBatch lb = getLocalAddBatch();
         String qdSymbol = delegate.getQDSymbolByEventSymbol(symbol);
         int cipher = endpoint.encode(qdSymbol);
+
+        // check if symbol is accepted by filter
+        if (!filter.accept(QDContract.TICKER, delegate.getRecord(), cipher, qdSymbol))
+            return null;
+        LocalAddBatch lb = getLocalAddBatch();
         if (lastEventsProcessor.ticker.getDataIfSubscribed(lb.owner, delegate.getRecord(), cipher, qdSymbol))
             return delegate.createEvent(symbol, lb.owner.cursor());
         // not subscribed -- return null
@@ -180,10 +215,14 @@ public class DXFeedImpl extends DXFeed {
         if (delegate == null)
             return Promise.failed(new IllegalArgumentException(INVALID_EVENT_MSG));
         assert lastEventsProcessor != null; // if we have delegate
-        LocalAddBatch lb = getLocalAddBatch();
         String qdSymbol = delegate.getQDSymbolByEventSymbol(symbol);
         int cipher = endpoint.encode(qdSymbol);
+
+        // check if symbol is accepted by filter
+        if (!filter.accept(QDContract.TICKER, delegate.getRecord(), cipher, qdSymbol))
+            return Promise.failed(new CancellationException("cancel"));
         // optimization for single event -- check that it is immediately available without subscription
+        LocalAddBatch lb = getLocalAddBatch();
         if (lastEventsProcessor.ticker.getDataIfAvailable(lb.owner, delegate.getRecord(), cipher, qdSymbol))
             return Promise.completed(delegate.createEvent(symbol, lb.owner.cursor()));
         // not found -- need to subscribe
@@ -202,7 +241,7 @@ public class DXFeedImpl extends DXFeed {
         if (eventType == null)
             throw new NullPointerException();
         List<Promise<E>> result = new ArrayList<>(symbols.size());
-        assert lastEventsProcessor != null; // if we have delegate
+
         LocalAddBatch lb = null;
         for (Object symbol : symbols) {
             EventDelegate<E> delegate = getLastingEventDelegateOrNull(eventType, symbol);
@@ -210,12 +249,20 @@ public class DXFeedImpl extends DXFeed {
                 result.add(Promise.failed(new IllegalArgumentException(INVALID_EVENT_MSG)));
                 continue;
             }
+            assert lastEventsProcessor != null; // if we have delegate
+            String qdSymbol = delegate.getQDSymbolByEventSymbol(symbol);
+            int cipher = endpoint.encode(qdSymbol);
+
+            // check if symbol is accepted by filter
+            if (!filter.accept(QDContract.TICKER, delegate.getRecord(), cipher, qdSymbol)) {
+                result.add(Promise.failed(new CancellationException("cancel")));
+                continue;
+            }
+
             if (lb == null) {
                 lb = getLocalAddBatch();
                 lb.subscribeStartBatch();
             }
-            String qdSymbol = delegate.getQDSymbolByEventSymbol(symbol);
-            int cipher = endpoint.encode(qdSymbol);
             LastEventPromise<E> promise = new LastEventPromise<>(symbol, delegate, cipher, qdSymbol);
             result.add(promise);
             // optimization for single event -- check that it is immediately available without subscription
@@ -351,6 +398,10 @@ public class DXFeedImpl extends DXFeed {
         QDHistory history = (QDHistory) endpoint.getCollector(QDContract.HISTORY); // assert != null (if we have delegate)
         String qdSymbol = delegate.getQDSymbolByEventSymbol(symbol);
         int cipher = endpoint.encode(qdSymbol);
+
+        // check if symbol is accepted by filter
+        if (!filter.accept(QDContract.HISTORY, delegate.getRecord(), cipher, qdSymbol))
+            return Collections.emptyList();
         // check subscription
         if (!history.isSubscribed(delegate.getRecord(), cipher, qdSymbol, fromQDTime))
             return null; // not subscribed
@@ -366,6 +417,10 @@ public class DXFeedImpl extends DXFeed {
         QDHistory history = (QDHistory) endpoint.getCollector(QDContract.HISTORY); // assert != null (if we have delegate)
         String qdSymbol = delegate.getQDSymbolByEventSymbol(symbol);
         int cipher = endpoint.encode(qdSymbol);
+
+        // check if symbol is accepted by filter
+        if (!filter.accept(QDContract.HISTORY, delegate.getRecord(), cipher, qdSymbol))
+            return Promise.failed(new CancellationException("cancel"));
         // check if data is available in history without subscription
         HistoryFetchResult<E> fetch = new HistoryFetchResult<>(symbol, fromQDTime, delegate, true);
         history.examineData(delegate.getRecord(), cipher, qdSymbol, fetchQDTime, toQDTime, fetch);
@@ -1074,10 +1129,11 @@ public class DXFeedImpl extends DXFeed {
         final QDTicker ticker;
         final QDAgent tickerAgent;
 
-        LastEventsProcessor(QDTicker ticker) {
+        LastEventsProcessor(QDTicker ticker, QDFilter filter) {
             super(endpoint.getOrCreateExecutor());
             this.ticker = ticker;
             tickerAgent = ticker.agentBuilder() // anonymous, so that JMX beans are not registered (see QD-445)
+                .withFilter(filter)
                 .withAttachmentStrategy(LAST_EVENT_ATTACHMENT_STRATEGY)
                 .build();
         }
@@ -1087,7 +1143,6 @@ public class DXFeedImpl extends DXFeed {
         }
 
         void close() {
-            assert endpoint.isClosed(); // should have been already closed
             stopProcessing();
             tickerAgent.close();
         }

@@ -11,40 +11,32 @@
  */
 package com.devexperts.qd.impl.matrix.management.dump;
 
-import com.devexperts.qd.*;
+import java.io.PrintStream;
+
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.QDHistory;
 import com.devexperts.qd.impl.matrix.Collector;
-import com.devexperts.qd.impl.matrix.CollectorDebug;
 import com.devexperts.qd.ng.AbstractRecordSink;
 import com.devexperts.qd.ng.RecordCursor;
 
-class DumpSubscriptionVisitor implements CollectorVisitor {
-    private final String filterSymbol;
-    private final String filterRecord;
-
-    DumpSubscriptionVisitor(String filterSymbol, String filterRecord) {
-        this.filterSymbol = filterSymbol;
-        this.filterRecord = filterRecord;
+class DumpSubscriptionVisitor extends DumpVisitorBase implements CollectorVisitor {
+    DumpSubscriptionVisitor(PrintStream out, String filterSymbol, String filterRecord) {
+        super(out, filterSymbol, filterRecord);
     }
 
+    @Override
     public void visit(Collector collector) {
-        final DumpSubscriptionSink dss = new DumpSubscriptionSink(filterSymbol, filterRecord,
-            collector instanceof QDHistory);
-        collector.visitAgents(new CollectorDebug.AgentVisitor() {
-            public void visitAgent(QDAgent agent) {
-                System.out.println("--- Subscription from " + agent);
-                agent.examineSubscription(dss);
-            }
+        DumpSubscriptionSink dss = new DumpSubscriptionSink(collector instanceof QDHistory);
+        collector.visitAgents(agent -> {
+            out.println("--- Subscription from " + agent);
+            agent.examineSubscription(dss);
         });
     }
 
-    static class DumpSubscriptionSink extends AbstractRecordSink {
-        private final String filterSymbol;
-        private final String filterRecord;
+    class DumpSubscriptionSink extends AbstractRecordSink {
         private final boolean history;
 
-        DumpSubscriptionSink(String filterSymbol, String filterRecord, boolean history) {
-            this.filterSymbol = filterSymbol;
-            this.filterRecord = filterRecord;
+        DumpSubscriptionSink(boolean history) {
             this.history = history;
         }
 
@@ -53,20 +45,14 @@ class DumpSubscriptionVisitor implements CollectorVisitor {
             DataRecord r = cursor.getRecord();
             String record = r.getName();
             String symbol = cursor.getDecodedSymbol();
-            if ((filterSymbol == null || filterSymbol.equals(symbol)) &&
-                (filterRecord == null || filterRecord.equals(record)))
-            {
-                System.out.print(record);
-                System.out.print('\t');
-                System.out.print(symbol);
-                if (history) {
-                    for (int i = 0; i < 2; i++) {
-                        System.out.print('\t');
-                        System.out.print(r.getIntField(i).getString(cursor));
-                    }
-                }
-                System.out.println();
-            }
+            if (!matches(record, symbol))
+                return;
+            out.print(record);
+            out.print('\t');
+            out.print(symbol);
+            if (history)
+                DumpUtil.printTime(out, r, cursor);
+            out.println();
         }
     }
 }

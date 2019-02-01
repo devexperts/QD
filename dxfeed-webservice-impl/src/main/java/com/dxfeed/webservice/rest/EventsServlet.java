@@ -13,6 +13,7 @@ package com.dxfeed.webservice.rest;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Map;
 import javax.servlet.ServletException;
 import javax.servlet.http.*;
 
@@ -56,6 +57,21 @@ public class EventsServlet extends HttpServlet {
         process(req, resp);
     }
 
+    /**
+     * Validates access to REST Web functionality for the given {@code pathInfo}.
+     * @param pathInfo path for which to check security
+     * @param request HTTP Servlet request, additional security information can be added to request attributes
+     * @param response HTTP Servlet response
+     * @throws HttpErrorException if security is not valid
+     * @deprecated For internal use only, do not use!
+     */
+    @Deprecated
+    protected void validateSecurity(PathInfo pathInfo, HttpServletRequest request, HttpServletResponse response)
+        throws HttpErrorException
+    {
+    }
+
+    @SuppressWarnings("deprecation")
     private void process(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         // parse URI
         String path = req.getPathInfo();
@@ -73,14 +89,18 @@ public class EventsServlet extends HttpServlet {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND);
             return;
         }
+
         // create resource, configure and invoke
         try {
+            validateSecurity(pathInfo, req, resp);
             pathInfo.invokeFor(new EventsResource(req, resp, format));
+        } catch (HttpErrorException e) {
+            handleHttpException(e, resp);
         } catch (InvocationTargetException e) {
             // handle errors
             Throwable cause = e.getCause();
             if (cause instanceof HttpErrorException) {
-                resp.sendError(((HttpErrorException) cause).getStatusCode());
+                handleHttpException((HttpErrorException) cause, resp);
                 return;
             }
             if (cause instanceof ServletException)
@@ -89,5 +109,15 @@ public class EventsServlet extends HttpServlet {
                 throw (IOException) cause;
             throw new ServletException(cause);
         }
+    }
+
+    private void handleHttpException(HttpErrorException e, HttpServletResponse response) throws IOException {
+        if (response.isCommitted())
+            return;
+
+        for (Map.Entry<String, String> header : e.getHeaders().entrySet()) {
+            response.setHeader(header.getKey(), header.getValue());
+        }
+        response.sendError(e.getStatusCode());
     }
 }

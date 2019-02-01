@@ -16,12 +16,14 @@ import java.beans.PropertyChangeListener;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
+import javax.annotation.*;
 
 import com.devexperts.logging.Logging;
+import com.devexperts.qd.QDFilter;
 import com.devexperts.util.TimeFormat;
 import com.dxfeed.api.*;
+import com.dxfeed.api.impl.DXEndpointImpl;
+import com.dxfeed.api.impl.DXFeedImpl;
 import com.dxfeed.api.osub.TimeSeriesSubscriptionSymbol;
 import com.dxfeed.event.EventType;
 import com.dxfeed.event.TimeSeriesEvent;
@@ -29,6 +31,7 @@ import com.dxfeed.ondemand.OnDemandService;
 import com.dxfeed.webservice.DXFeedContext;
 import com.dxfeed.webservice.EventSymbolMap;
 import org.cometd.annotation.*;
+import org.cometd.bayeux.Promise;
 import org.cometd.bayeux.server.ServerMessage;
 import org.cometd.bayeux.server.ServerSession;
 import org.cometd.server.ServerSessionImpl;
@@ -59,9 +62,8 @@ public class DataService {
 
     // ------------------------ instance ------------------------
 
-    private DXEndpoint sharedEndpoint;
+    private DXEndpointImpl sharedEndpoint;
     private OnDemandService sharedOnDemand;
-    private DXFeed sharedFeed;
 
     private final ConcurrentHashMap<ServerSession, SessionState> sessions = new ConcurrentHashMap<>();
 
@@ -71,9 +73,12 @@ public class DataService {
     @PostConstruct
     public void init() {
         DXFeedContext.INSTANCE.acquire();
-        sharedEndpoint = DXFeedContext.INSTANCE.getEndpoint();
+        DXEndpoint endpoint = DXFeedContext.INSTANCE.getEndpoint();
+        if (!(endpoint instanceof DXEndpointImpl))
+            throw new IllegalStateException("Unsupported DXEndpoint implementation!");
+
+        sharedEndpoint = (DXEndpointImpl) endpoint;
         sharedOnDemand = OnDemandService.getInstance(sharedEndpoint);
-        sharedFeed = sharedEndpoint.getFeed();
     }
 
     @PreDestroy
@@ -133,13 +138,24 @@ public class DataService {
     }
 
     private SessionState getOrCreateSession(ServerSession remote) {
+        QDFilter filter = (QDFilter) remote.getAttribute(DXFeedContext.QD_FILTER_PARAM);
+        if (filter == null) {
+            filter = QDFilter.ANYTHING;
+        }
+
         SessionState session = sessions.get(remote);
-        if (session != null)
+        if (session != null && !filter.toString().equals(session.filter.toString())) {
+            session.removed(remote, false);
+            session = null;
+        }
+        if (session != null) {
             return session;
-        session = new SessionState(remote);
+        }
+        session = new SessionState(remote, filter);
         SessionState result = sessions.putIfAbsent(remote, session);
-        if (result != null)
+        if (result != null) {
             return result;
+        }
         remote.addListener(session);
         return session;
     }
@@ -149,21 +165,29 @@ public class DataService {
     {
         private final ServerSession remote;
         private final ServerSessionImpl sessionImpl;
+        private final QDFilter filter;
 
         private final Map<Class<?>, DXFeedSubscription<Object>> regularSubscriptionsMap = new HashMap<>();
         private final Map<Class<?>, DXFeedSubscription<Object>> timeSeriesSubscriptionsMap = new HashMap<>();
         private final EventSymbolMap symbolMap = new EventSymbolMap();
 
-        private DXFeed feed = sharedFeed;
+        private DXFeed feed;
+        private DXFeedImpl realTimeFeed;
         private OnDemandService onDemand;
+        private DXFeedImpl onDemandFeed;
         private volatile boolean closed;
         private SessionStats stats = new SessionStats();
         private SessionStats tmpStats = new SessionStats();
 
-        SessionState(ServerSession remote) {
-            log.info("Create session=" + remote.getId());
+        @SuppressWarnings("deprecation")
+        SessionState(@Nonnull ServerSession remote, @Nonnull QDFilter filter) {
+            log.info("Create session=" + remote.getId() + ", filter=" + filter);
             this.remote = remote;
             this.sessionImpl = (remote instanceof ServerSessionImpl) ? (ServerSessionImpl) remote : null;
+            this.filter = filter;
+
+            this.realTimeFeed = new DXFeedImpl(sharedEndpoint, filter);
+            this.feed = realTimeFeed;
 
             stats.sessionId = remote.getId();
             stats.numSessions = 1;
@@ -218,7 +242,7 @@ public class DataService {
                 synchronized (SessionState.this) {
                     // need to sync for potential candleSymbolMap updates
                     remote.deliver(server, timeSeries ? TIME_SERIES_DATA_CHANNEL : DATA_CHANNEL,
-                        new DataMessage(sendScheme, eventType, events, symbolMap));
+                        new DataMessage(sendScheme, eventType, events, symbolMap), Promise.noop());
                 }
                 sendScheme = false; // don't need to send afterwards
             }
@@ -308,15 +332,17 @@ public class DataService {
         private void deliverStateChange(String propertyName, Object value) {
             Map<String, Object> stateChange =
                 Collections.singletonMap(propertyName, value);
-            remote.deliver(server, STATE_CHANNEL, stateChange);
+            remote.deliver(server, STATE_CHANNEL, stateChange, Promise.noop());
         }
 
+        @SuppressWarnings("deprecation")
         private synchronized OnDemandService ensureOnDemand() {
             if (onDemand == null) {
-                DXEndpoint endpoint = DXEndpoint.create(DXEndpoint.Role.ON_DEMAND_FEED);
+                DXEndpointImpl endpoint = (DXEndpointImpl) DXEndpoint.create(DXEndpoint.Role.ON_DEMAND_FEED);
                 onDemand = OnDemandService.getInstance(endpoint);
                 onDemand.addPropertyChangeListener(this);
-                attachTo(endpoint.getFeed());
+                onDemandFeed = new DXFeedImpl(endpoint, filter);
+                attachTo(onDemandFeed);
             }
             return onDemand;
         }
@@ -364,7 +390,8 @@ public class DataService {
             log.info("onDemandStopAndResume()");
             OnDemandService onDemand = clearOnDemandButNotCloseItYet();
             if (onDemand != null) {
-                attachTo(sharedFeed);
+                attachTo(realTimeFeed);
+                onDemandFeed.awaitTerminationAndCloseImpl();
                 onDemand.getEndpoint().closeAndAwaitTermination();
             }
         }

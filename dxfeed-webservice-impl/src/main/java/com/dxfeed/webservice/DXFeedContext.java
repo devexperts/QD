@@ -27,6 +27,7 @@ import com.dxfeed.event.market.MarketEvent;
 public class DXFeedContext {
     public static final DXFeedContext INSTANCE = new DXFeedContext();
     public static final String CONFIG_CONTEXT = "java:comp/env/" + DXEndpoint.DXFEED_PROPERTIES_PROPERTY;
+    public static final String QD_FILTER_PARAM = "com.dxfeed.webservice.DXFeedContext.QDFilter";
 
     public enum Group {
         MARKET("Market events", "javadoc/com/dxfeed/event/market/MarketEvent.html", "MarketEvent"),

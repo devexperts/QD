@@ -45,7 +45,7 @@ public class DebugDumpImpl implements DebugDump {
     );
 
     private static final Pattern EXCLUDE_CLASS_PATTERN = Pattern.compile(
-        "java\\.lang\\.Thread");
+        "java\\.lang\\.Thread|.*\\$\\$Lambda\\$.*");
 
     private int nextClassId = FIRST_CLASS_ID;
     private int nextObjectId = FIRST_OBJECT_ID;

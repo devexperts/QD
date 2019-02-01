@@ -1,4 +1,12 @@
 
+QDS 3.271:
+
+* [QD-1121] dxFeed webservice: Add support for security checks
+  - not a public API: for internal use only
+* [QD-984] Improve DebugDumpReader to see HistoryBuffer state
+  - A bug with wrong History "sub" information due to non-resolved enums is also fixed
+* [QD-988] BUG FIX: Monitoring tests sometimes fall because the ports are already in use
+
 QDS 3.270:
 
 * [QD-1123] dxFeed API: Make CandleSymbol attribute classes Serializable

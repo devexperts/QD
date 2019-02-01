@@ -22,7 +22,7 @@ import static com.devexperts.qd.impl.matrix.History.*;
 /**
  * The <code>HistoryBuffer</code> stores historic values for certain data record and symbol.
  */
-final class HistoryBuffer {
+public final class HistoryBuffer {
     private static final Logging log = Logging.getLogging(HistoryBuffer.class);
 
     // HistoryBuffer data storage
@@ -456,51 +456,57 @@ final class HistoryBuffer {
         return removeCount;
     }
 
-    // ========== Transaction and snapshot support ==========
+    // ========== Transaction and snapshot support getters ==========
 
     // returns true when HB is a part of any kind of in-progress transaction
-    boolean isTx() {
+    public boolean isTx() {
         return (flags & (SWEEP_TX_FLAG | EXPLICIT_TX_FLAG)) != 0;
     }
 
-    boolean isSweepTx() {
+    public boolean isSweepTx() {
         return (flags & SWEEP_TX_FLAG) != 0;
     }
 
-    boolean wasSnapshotBeginSeen() {
+    public boolean wasSnapshotBeginSeen() {
         return (flags & SNAPSHOT_BEGIN_SEEN_FLAG) != 0;
     }
 
-    boolean wasSnapshotEndSeen() {
+    public boolean wasSnapshotEndSeen() {
         return (flags & SNAPSHOT_END_SEEN_FLAG) != 0;
     }
 
-    boolean wasEverSnapshotMode() {
+    public boolean wasEverSnapshotMode() {
         return (flags & EVER_SNAPSHOT_MODE_FLAG) != 0;
     }
 
-    boolean isWaitingForSnapshotBegin() {
+    public boolean isWaitingForSnapshotBegin() {
         return (flags & (EVER_SNAPSHOT_MODE_FLAG | SNAPSHOT_BEGIN_SEEN_FLAG | SNAPSHOT_END_SEEN_FLAG)) ==
             EVER_SNAPSHOT_MODE_FLAG;
     }
+
+    public long getSnapshotTime() {
+        return snapshotTime;
+    }
+
+    public long getEverSnapshotTime() {
+        return everSnapshotTime;
+    }
+
+    public long getSnipSnapshotTime() {
+        return snipSnapshotTime;
+    }
+
+    boolean isSnipToTime(long time) {
+        return time == snipSnapshotTime;
+    }
+
+    // ========== Transaction and snapshot support state update methods ==========
 
     void resetSnapshot() {
         // It is invoked when total subscription changes
         // Must not have any snapshot flags while waiting fresh snapshot from upstream data source
         // Implicit snapshot sweep transaction will linger if it was in progress until next snapshot.
         flags &= ~(SNAPSHOT_BEGIN_SEEN_FLAG | SNAPSHOT_END_SEEN_FLAG);
-    }
-
-    long getSnapshotTime() {
-        return snapshotTime;
-    }
-
-    long getEverSnapshotTime() {
-        return everSnapshotTime;
-    }
-
-    boolean isSnipToTime(long time) {
-        return time == snipSnapshotTime;
     }
 
     // (0) Is invoked from processRecordSource when SNAPSHOT_BEGIN/MODE flag is set

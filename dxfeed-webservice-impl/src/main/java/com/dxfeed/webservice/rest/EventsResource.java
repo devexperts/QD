@@ -26,9 +26,12 @@ import javax.servlet.http.*;
 
 import com.devexperts.annotation.Description;
 import com.devexperts.logging.Logging;
+import com.devexperts.qd.QDFilter;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimePeriod;
 import com.dxfeed.api.*;
+import com.dxfeed.api.impl.DXEndpointImpl;
+import com.dxfeed.api.impl.DXFeedImpl;
 import com.dxfeed.api.osub.IndexedEventSubscriptionSymbol;
 import com.dxfeed.api.osub.TimeSeriesSubscriptionSymbol;
 import com.dxfeed.event.*;
@@ -36,6 +39,8 @@ import com.dxfeed.event.market.OrderSource;
 import com.dxfeed.promise.*;
 import com.dxfeed.webservice.DXFeedContext;
 import com.dxfeed.webservice.EventSymbolMap;
+
+import static com.dxfeed.webservice.rest.Secure.SecureRole.*;
 
 /**
  * @dgen.annotate method { name = "do.*"; access = public; }
@@ -153,6 +158,7 @@ public class EventsResource {
      * Shows human-readable help.
      */
     @Path(HELP_PATH)
+    @Secure(NONE)
     @HelpOrder(0)
     public void doHelp() throws ServletException, IOException {
         req.getRequestDispatcher("/jsp/rest/help.jsp").forward(req, resp);
@@ -169,6 +175,7 @@ public class EventsResource {
      */
     @SuppressWarnings("unchecked")
     @Path("/events")
+    @Secure(AUTH_REQUEST)
     @HelpOrder(1)
     public void doEvents(Date toTime, TimePeriod timeout) throws HttpErrorException {
         if (timeout != null && timeout.getTime() == 0) {
@@ -308,23 +315,33 @@ public class EventsResource {
      *                     "session" parameter is implied when "reconnect" is set.
      */
     @Path("/eventSource")
+    @Secure(AUTH_SESSION)
     @HelpOrder(2)
     public void doEventSource(String session, String reconnect)
         throws IOException, HttpErrorException
     {
         String name = session == null || session.isEmpty() ? DEFAULT_SESSION : session;
+        QDFilter filter = (QDFilter) req.getAttribute(DXFeedContext.QD_FILTER_PARAM);
+        if (filter == null) {
+            filter = QDFilter.ANYTHING;
+        }
+
         EventConnection conn;
         if (reconnect != null) {
             HttpSession httpSession = req.getSession(false);
             if (httpSession == null)
                 throw sessionNotFound();
             Object attr = httpSession.getAttribute(name);
-            if (attr instanceof EventConnection)
+            if (attr instanceof EventConnection) {
                 conn = (EventConnection) attr;
-            else
+                if (!filter.toString().equals(conn.filter.toString()))
+                    throw sessionNotFound();
+            } else {
                 throw sessionNotFound();
-        } else
-            conn = new EventConnection();
+            }
+        } else {
+            conn = new EventConnection(filter);
+        }
         // update subscription
         updateSubscription(SubOp.ADD_SUB, conn);
         // store in new session if requested (DO getSession BEFORE STARTING ASYNC)
@@ -344,6 +361,7 @@ public class EventsResource {
      * @throws HttpErrorException
      */
     @Path("/addSubscription")
+    @Secure(AUTH_REQUEST)
     @HelpOrder(3)
     public void doAddSubscription(String session) throws HttpErrorException, IOException {
         HttpSession httpSession = req.getSession();
@@ -364,6 +382,7 @@ public class EventsResource {
      * @param session Session name.
      */
     @Path("/removeSubscription")
+    @Secure(AUTH_REQUEST)
     @HelpOrder(4)
     public void doRemoveSubscription(String session) throws HttpErrorException, IOException {
         HttpSession httpSession = req.getSession();
@@ -543,7 +562,7 @@ public class EventsResource {
         }
     }
 
-    enum SubOp {ADD_SUB, REMOVE_SUB}
+    enum SubOp { ADD_SUB, REMOVE_SUB }
 
     /**
      * Class for "/eventSource" connection.
@@ -555,10 +574,23 @@ public class EventsResource {
             new ConcurrentHashMap<>();
         private final EventSymbolMap symbolMap = new EventSymbolMap();
 
+        private final QDFilter filter;
+        private final DXFeedImpl feed;
+
         @GuardedBy("this")
         private Format format;
         @GuardedBy("this")
         private String indent;
+
+        @SuppressWarnings("deprecation")
+        public EventConnection(@Nonnull QDFilter filter) {
+            DXEndpoint endpoint = DXFeedContext.INSTANCE.getEndpoint();
+            if (!(endpoint instanceof DXEndpointImpl))
+                throw new IllegalStateException("Unsupported DXEndpoint implementation!");
+
+            this.filter = filter;
+            this.feed = new DXFeedImpl((DXEndpointImpl) endpoint, filter);
+        }
 
         // returns null if it is already closed and cannot add anything more
         private synchronized DXFeedSubscription<EventType<?>> createSubSync(Class<? extends EventType<?>> et) {
@@ -575,7 +607,7 @@ public class EventsResource {
         }
 
         private DXFeed getFeed() {
-            return DXFeedContext.INSTANCE.getFeed();
+            return feed;
         }
 
         public synchronized boolean start(AsyncContext async, Format format, String indent) throws IOException {
@@ -643,6 +675,8 @@ public class EventsResource {
             StringBuilder sb = new StringBuilder();
             sb.append("event connection #");
             sb.append(id);
+            sb.append(", filter=");
+            sb.append(filter);
             sb.append(" [");
             int i = 0;
             for (Map.Entry<Class<? extends EventType<?>>, DXFeedSubscription<EventType<?>>> entry : subscriptions.entrySet()) {
