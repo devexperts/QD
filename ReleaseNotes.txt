@@ -1,4 +1,9 @@
 
+QDS 3.272:
+
+* [QD-1125] dxFeed webservice: Use session filter for one-time REST requests
+  - not a public API: for internal use only
+
 QDS 3.271:
 
 * [QD-1121] dxFeed webservice: Add support for security checks

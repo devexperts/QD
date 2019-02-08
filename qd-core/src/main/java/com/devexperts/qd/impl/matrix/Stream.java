@@ -117,7 +117,7 @@ class Stream extends Collector implements QDStream {
                 for (Agent agent = ait.start(this, wildcardCipher, rid); agent != null; agent = ait.next()) {
                     if (possibleDuplicate && dist.isDuplicate(agent.number, position))
                         continue;
-                    if (agent.filter.accept(contract, record, cipher, symbol))
+                    if (agent.filter.getUpdatedFilter().accept(contract, record, cipher, symbol))
                         dist.add(agent.number, position, 0, rid);
                 }
             }

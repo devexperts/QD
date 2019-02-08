@@ -86,11 +86,11 @@ public abstract class QDFilter implements SubscriptionFilter, StableSubscription
     @GuardedBy("updated")
     private ArrayList<UpdateListener> listeners; // always null for non-dynamic filters, init on demand, clear on fire
 
-    // Updated initialized for dynamic filter and shared across all its descendants, sync(this) for write, use getUpdated()
-    private volatile Updated updated;
+    // Updated is shared across all descendants of this filter
+    private final Updated updated;
 
     protected QDFilter(DataScheme scheme) {
-        this.scheme = scheme;
+        this(scheme, null);
     }
 
     /**
@@ -99,12 +99,11 @@ public abstract class QDFilter implements SubscriptionFilter, StableSubscription
      * Scheme must match with the source scheme (if specified).
      */
     protected QDFilter(DataScheme scheme, QDFilter source) {
-        this(scheme);
-        if (source != null) {
-            if (source.scheme != scheme)
-                throw new IllegalArgumentException("Scheme must match in an updated instance of dynamic filter");
-            this.updated = source.getUpdated();
-        }
+        if (source != null && source.scheme != scheme)
+            throw new IllegalArgumentException("Scheme must match in an updated instance of dynamic filter");
+
+        this.scheme = scheme;
+        this.updated = (source != null) ? source.updated : new Updated(this);
     }
 
     /**
@@ -325,28 +324,17 @@ public abstract class QDFilter implements SubscriptionFilter, StableSubscription
      * @return an object that tracks the most-recent version of the {@link #isDynamic() dynamic} filter.
      */
     public Updated getUpdated() {
-        Updated updated = this.updated;
-        if (updated != null)
-            return updated;
-        synchronized (this) {
-            updated = this.updated;
-            if (updated == null)
-                this.updated = updated = new Updated(this);
-        }
         return updated;
     }
 
     /**
      * Returns new value of this filter if this is a {@link #isDynamic() dynamic} filter that has updated.
-     * Returns this if this filter has not updated. This method always returns this when this filter is not dynamic.
-     * This method returns the most recent new filter in series of updates that has happened so far.
+     * Returns {@code this} if this filter has not updated. This method always returns {@code this} when this filter
+     * is not dynamic. This method returns the most recent new filter in series of updates that has happened so far.
      * Use {@link #addUpdateListener(UpdateListener) addUpdateListener} method to get notification on updates.
-     * This method is a more efficient shortcut for
-     * <code>{@link #getUpdated() getUpdated}().{@link Updated#getFilter() getFilter}()</code>.
      */
     public QDFilter getUpdatedFilter() {
-        Updated updated = this.updated;
-        return updated == null ? this : updated.filter;
+        return updated.filter;
     }
 
     /**
@@ -369,7 +357,7 @@ public abstract class QDFilter implements SubscriptionFilter, StableSubscription
     private boolean addUpdateListenerNoFireImpl(UpdateListener listener) {
         if (!isDynamic())
             return false;
-        synchronized (getUpdated()) {
+        synchronized (updated) {
             boolean fireImmediately = getUpdatedFilter() != this;
             // don't need add the filter that we'll immediately fire
             if (!fireImmediately) {
@@ -389,7 +377,7 @@ public abstract class QDFilter implements SubscriptionFilter, StableSubscription
      * is not dynamic this method does nothing.
      */
     public void removeUpdateListener(UpdateListener listener) {
-        synchronized (getUpdated()) {
+        synchronized (updated) {
             if (listeners != null) {
                 boolean wasEmpty = listeners.isEmpty();
                 listeners.remove(listener);
@@ -411,9 +399,9 @@ public abstract class QDFilter implements SubscriptionFilter, StableSubscription
      */
     protected void fireFilterUpdated(QDFilter updatedFilter) {
         ArrayList<UpdateListener> fireListeners;
-        synchronized (getUpdated()) {
-            if (getUpdatedFilter() != this)
-                return; // ignore subsequence calls when we've already updated
+        synchronized (updated) {
+            if (updated.getFilter() != this)
+                return; // ignore subsequent calls when we've already updated
             if (updatedFilter == null)
                 updatedFilter = produceUpdatedFilter();
             if (updatedFilter == this)

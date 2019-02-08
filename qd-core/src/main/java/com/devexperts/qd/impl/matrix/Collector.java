@@ -879,7 +879,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
     // is overridden by Stream to properly support wildcards
     // is overridden by History to complain about non-history records
     protected boolean isSubAllowed(Agent agent, DataRecord record, int cipher, String symbol) {
-        return agent.filter.accept(contract, record, cipher, symbol);
+        return agent.filter.getUpdatedFilter().accept(contract, record, cipher, symbol);
     }
 
     // is overridden by History to implement subscription filtering

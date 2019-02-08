@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.271</version>
+    <version>3.272</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>

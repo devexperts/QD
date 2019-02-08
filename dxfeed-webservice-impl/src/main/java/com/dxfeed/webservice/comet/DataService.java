@@ -62,7 +62,7 @@ public class DataService {
 
     // ------------------------ instance ------------------------
 
-    private DXEndpointImpl sharedEndpoint;
+    private DXEndpoint sharedEndpoint;
     private OnDemandService sharedOnDemand;
 
     private final ConcurrentHashMap<ServerSession, SessionState> sessions = new ConcurrentHashMap<>();
@@ -73,11 +73,7 @@ public class DataService {
     @PostConstruct
     public void init() {
         DXFeedContext.INSTANCE.acquire();
-        DXEndpoint endpoint = DXFeedContext.INSTANCE.getEndpoint();
-        if (!(endpoint instanceof DXEndpointImpl))
-            throw new IllegalStateException("Unsupported DXEndpoint implementation!");
-
-        sharedEndpoint = (DXEndpointImpl) endpoint;
+        sharedEndpoint = DXFeedContext.INSTANCE.getEndpoint();
         sharedOnDemand = OnDemandService.getInstance(sharedEndpoint);
     }
 
@@ -138,7 +134,7 @@ public class DataService {
     }
 
     private SessionState getOrCreateSession(ServerSession remote) {
-        QDFilter filter = (QDFilter) remote.getAttribute(DXFeedContext.QD_FILTER_PARAM);
+        QDFilter filter = (QDFilter) remote.getAttribute(DXFeedContext.FILTER_PARAM);
         if (filter == null) {
             filter = QDFilter.ANYTHING;
         }
@@ -172,7 +168,6 @@ public class DataService {
         private final EventSymbolMap symbolMap = new EventSymbolMap();
 
         private DXFeed feed;
-        private DXFeedImpl realTimeFeed;
         private OnDemandService onDemand;
         private DXFeedImpl onDemandFeed;
         private volatile boolean closed;
@@ -185,9 +180,7 @@ public class DataService {
             this.remote = remote;
             this.sessionImpl = (remote instanceof ServerSessionImpl) ? (ServerSessionImpl) remote : null;
             this.filter = filter;
-
-            this.realTimeFeed = new DXFeedImpl(sharedEndpoint, filter);
-            this.feed = realTimeFeed;
+            this.feed = DXFeedContext.INSTANCE.getFeed(filter);
 
             stats.sessionId = remote.getId();
             stats.numSessions = 1;
@@ -214,8 +207,10 @@ public class DataService {
                 return;
             log.info("Close session=" + remote.getId() + ", timeout=" + timeout);
             OnDemandService onDemand = clearOnDemandButNotCloseItYet();
-            if (onDemand != null)
+            if (onDemand != null) {
+                onDemandFeed.closeImpl();
                 onDemand.getEndpoint().close();
+            }
             closeSubscriptions();
             sessions.remove(remote);
         }
@@ -386,11 +381,12 @@ public class DataService {
         }
 
         // Available to JS API via /service/onDemand
+        @SuppressWarnings("deprecation")
         public void onDemandStopAndResume() throws InterruptedException {
             log.info("onDemandStopAndResume()");
             OnDemandService onDemand = clearOnDemandButNotCloseItYet();
             if (onDemand != null) {
-                attachTo(realTimeFeed);
+                attachTo(DXFeedContext.INSTANCE.getFeed(filter));
                 onDemandFeed.awaitTerminationAndCloseImpl();
                 onDemand.getEndpoint().closeAndAwaitTermination();
             }

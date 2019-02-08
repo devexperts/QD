@@ -42,6 +42,7 @@ public class DXFeedImpl extends DXFeed {
 
     private final DXEndpointImpl endpoint;
     private final QDFilter filter;
+    private final QDFilter.UpdateListener filterListener;
     private final RecordMode retrieveMode;
     private final QDAgent.Builder[] eventProcessorAgentBuilders = new QDAgent.Builder[N_CONTRACTS];
     private final IndexedSet<DXFeedSubscription<?>, EventProcessor<?, ?>> eventProcessors =
@@ -67,6 +68,13 @@ public class DXFeedImpl extends DXFeed {
     public DXFeedImpl(DXEndpointImpl endpoint, QDFilter filter) {
         this.endpoint = endpoint;
         this.filter = filter;
+        if (filter.isDynamic()) {
+            // Add filter to force automatic update
+            filterListener = this::updateSubscriptionsOnFilterUpdate;
+            filter.getUpdated().addUpdateListener(filterListener);
+        } else {
+            filterListener = null;
+        }
 
         RecordMode mode = RecordMode.FLAGGED_DATA.withAttachment();
         if (endpoint.getQDEndpoint().hasEventTimeSequence())
@@ -102,11 +110,13 @@ public class DXFeedImpl extends DXFeed {
     }
 
     public void awaitTerminationAndCloseImpl() throws InterruptedException {
+        // Async iteration
         for (EventProcessor<?, ?> processor : eventProcessors.toArray(new EventProcessor[eventProcessors.size()])) {
             if (processor == null)
                 break;
-            processor.awaitTerminationAndClose();
+            processor.awaitTermination();
         }
+        closeImpl();
     }
 
     public void closeImpl() {
@@ -119,17 +129,23 @@ public class DXFeedImpl extends DXFeed {
             // no need to sync, because nothing is added or removed when endpoint is closed
             closeComponents();
         }
-        eventProcessors.clear();
-        closeables.clear();
     }
 
     private void closeComponents() {
         for (EventProcessor<?, ?> processor : eventProcessors)
             processor.close(false);
+        eventProcessors.clear();
         for (Closeable c : closeables)
             c.close();
+        closeables.clear();
         if (lastEventsProcessor != null)
             lastEventsProcessor.close();
+
+        // Remove listener for dynamic filter
+        if (filterListener != null) {
+            assert filter.isDynamic(); // filter listener is created only for dynamic filters
+            filter.getUpdated().removeUpdateListener(filterListener);
+        }
     }
 
     private void removeEventProcessor(DXFeedSubscription<?> subscription) {
@@ -153,18 +169,21 @@ public class DXFeedImpl extends DXFeed {
     @Override
     @SuppressWarnings("unchecked")
     public void attachSubscription(DXFeedSubscription<?> subscription) {
+        //FIXME Store listener for later removal on detach. Check for double addition.
         subscription.addChangeListener(new SubscriptionChangeListener(subscription, false));
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public void detachSubscription(DXFeedSubscription<?> subscription) {
+        //FIXME Remove the same listener that was added before.
         subscription.removeChangeListener(new SubscriptionChangeListener(subscription, false));
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public void detachSubscriptionAndClear(DXFeedSubscription<?> subscription) {
+        //FIXME Remove the same listener that was added before.
         subscription.removeChangeListener(new SubscriptionChangeListener(subscription, true));
     }
 
@@ -179,7 +198,7 @@ public class DXFeedImpl extends DXFeed {
         int cipher = endpoint.encode(qdSymbol);
 
         // check if symbol is accepted by filter
-        if (!filter.accept(QDContract.TICKER, delegate.getRecord(), cipher, qdSymbol))
+        if (!filter.getUpdatedFilter().accept(QDContract.TICKER, delegate.getRecord(), cipher, qdSymbol))
             return event;
         LocalAddBatch lb = getLocalAddBatch();
         if (ticker.getDataIfAvailable(lb.owner, delegate.getRecord(), cipher, qdSymbol))
@@ -198,7 +217,7 @@ public class DXFeedImpl extends DXFeed {
         int cipher = endpoint.encode(qdSymbol);
 
         // check if symbol is accepted by filter
-        if (!filter.accept(QDContract.TICKER, delegate.getRecord(), cipher, qdSymbol))
+        if (!filter.getUpdatedFilter().accept(QDContract.TICKER, delegate.getRecord(), cipher, qdSymbol))
             return null;
         LocalAddBatch lb = getLocalAddBatch();
         if (lastEventsProcessor.ticker.getDataIfSubscribed(lb.owner, delegate.getRecord(), cipher, qdSymbol))
@@ -219,7 +238,7 @@ public class DXFeedImpl extends DXFeed {
         int cipher = endpoint.encode(qdSymbol);
 
         // check if symbol is accepted by filter
-        if (!filter.accept(QDContract.TICKER, delegate.getRecord(), cipher, qdSymbol))
+        if (!filter.getUpdatedFilter().accept(QDContract.TICKER, delegate.getRecord(), cipher, qdSymbol))
             return Promise.failed(new CancellationException("cancel"));
         // optimization for single event -- check that it is immediately available without subscription
         LocalAddBatch lb = getLocalAddBatch();
@@ -254,7 +273,7 @@ public class DXFeedImpl extends DXFeed {
             int cipher = endpoint.encode(qdSymbol);
 
             // check if symbol is accepted by filter
-            if (!filter.accept(QDContract.TICKER, delegate.getRecord(), cipher, qdSymbol)) {
+            if (!filter.getUpdatedFilter().accept(QDContract.TICKER, delegate.getRecord(), cipher, qdSymbol)) {
                 result.add(Promise.failed(new CancellationException("cancel")));
                 continue;
             }
@@ -400,7 +419,7 @@ public class DXFeedImpl extends DXFeed {
         int cipher = endpoint.encode(qdSymbol);
 
         // check if symbol is accepted by filter
-        if (!filter.accept(QDContract.HISTORY, delegate.getRecord(), cipher, qdSymbol))
+        if (!filter.getUpdatedFilter().accept(QDContract.HISTORY, delegate.getRecord(), cipher, qdSymbol))
             return Collections.emptyList();
         // check subscription
         if (!history.isSubscribed(delegate.getRecord(), cipher, qdSymbol, fromQDTime))
@@ -419,7 +438,7 @@ public class DXFeedImpl extends DXFeed {
         int cipher = endpoint.encode(qdSymbol);
 
         // check if symbol is accepted by filter
-        if (!filter.accept(QDContract.HISTORY, delegate.getRecord(), cipher, qdSymbol))
+        if (!filter.getUpdatedFilter().accept(QDContract.HISTORY, delegate.getRecord(), cipher, qdSymbol))
             return Promise.failed(new CancellationException("cancel"));
         // check if data is available in history without subscription
         HistoryFetchResult<E> fetch = new HistoryFetchResult<>(symbol, fromQDTime, delegate, true);
@@ -522,6 +541,19 @@ public class DXFeedImpl extends DXFeed {
 
     public long getAggregationPeriodMillis() {
         return aggregationPeriodMillis;
+    }
+
+    private void updateSubscriptionsOnFilterUpdate(QDFilter updatedFilter) {
+        // Filter parameter is ignored since agents will always use latest filter version on subscription
+        for (EventProcessor<?, ?> processor : eventProcessors) {
+            Set<?> symbols = processor.subscription.getSymbols();
+            EnumMap<QDContract, RecordBuffer> sub = toSubscription(processor.subscription, symbols, true);
+            for (QDContract contract : sub.keySet()) {
+                RecordBuffer buffer = sub.get(contract);
+                processor.getOrCreateAgent(contract).setSubscription(buffer);
+                buffer.release();
+            }
+        }
     }
 
     private <E> void executePromiseHandler(final Promise<E> promise, final PromiseHandler<? super E> handler) {
@@ -884,7 +916,7 @@ public class DXFeedImpl extends DXFeed {
             QDAgent agent = agents[contract.ordinal()];
             if (agent != null)
                 return agent;
-            agent = eventProcessorAgentBuilders[contract.ordinal()].build();
+            agent = eventProcessorAgentBuilders[contract.ordinal()].withFilter(filter.getUpdatedFilter()).build();
             if (endpoint.getRole() == DXEndpoint.Role.STREAM_FEED)
                 agent.setBufferOverflowStrategy(QDAgent.BufferOverflowStrategy.BLOCK);
             agents[contract.ordinal()] = agent;
@@ -940,11 +972,6 @@ public class DXFeedImpl extends DXFeed {
                 QDLog.log.trace("signalNoMoreDataToProcess on " + this);
             if (terminationLatch != null)
                 terminationLatch.countDown();
-        }
-
-        void awaitTerminationAndClose() throws InterruptedException {
-            awaitTermination();
-            close(false);
         }
 
         private void awaitTermination() throws InterruptedException {

@@ -12,11 +12,15 @@
 package com.dxfeed.webservice;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
+import com.devexperts.qd.QDFilter;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.DXFeed;
+import com.dxfeed.api.impl.DXEndpointImpl;
+import com.dxfeed.api.impl.DXFeedImpl;
 import com.dxfeed.event.*;
 import com.dxfeed.event.candle.Candle;
 import com.dxfeed.event.market.MarketEvent;
@@ -27,7 +31,7 @@ import com.dxfeed.event.market.MarketEvent;
 public class DXFeedContext {
     public static final DXFeedContext INSTANCE = new DXFeedContext();
     public static final String CONFIG_CONTEXT = "java:comp/env/" + DXEndpoint.DXFEED_PROPERTIES_PROPERTY;
-    public static final String QD_FILTER_PARAM = "com.dxfeed.webservice.DXFeedContext.QDFilter";
+    public static final String FILTER_PARAM = DXFeedContext.class.getName() + ".filter";
 
     public enum Group {
         MARKET("Market events", "javadoc/com/dxfeed/event/market/MarketEvent.html", "MarketEvent"),
@@ -54,6 +58,7 @@ public class DXFeedContext {
     private int refCount;
     private DXEndpoint endpoint;
     private DXFeed feed;
+    private Map<String, DXFeedImpl> filteredFeeds = new ConcurrentHashMap<>();
 
     private DXFeedContext() {}
 
@@ -96,10 +101,14 @@ public class DXFeedContext {
     }
 
     private void shutdown() {
+        for (DXFeedImpl feed : filteredFeeds.values()) {
+            feed.closeImpl();
+        }
         endpoint.close();
         // let GC do its job faster
         endpoint = null;
         feed = null;
+        filteredFeeds.clear();
         eventTypes.clear();
     }
 
@@ -130,6 +139,17 @@ public class DXFeedContext {
 
     public DXFeed getFeed() {
         return feed;
+    }
+
+    @Deprecated
+    @SuppressWarnings("deprecation")
+    public DXFeed getFeed(QDFilter filter) {
+        Objects.requireNonNull(filter, "filter");
+        if (!(endpoint instanceof DXEndpointImpl))
+            throw new IllegalStateException("Unsupported DXEndpoint implementation!");
+
+        return filteredFeeds.computeIfAbsent(filter.toString(),
+            (key) -> new DXFeedImpl((DXEndpointImpl) endpoint, filter));
     }
 
     public DXEndpoint.Builder newBuilder() {

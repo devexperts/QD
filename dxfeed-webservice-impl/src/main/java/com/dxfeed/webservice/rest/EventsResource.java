@@ -30,8 +30,6 @@ import com.devexperts.qd.QDFilter;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimePeriod;
 import com.dxfeed.api.*;
-import com.dxfeed.api.impl.DXEndpointImpl;
-import com.dxfeed.api.impl.DXFeedImpl;
 import com.dxfeed.api.osub.IndexedEventSubscriptionSymbol;
 import com.dxfeed.api.osub.TimeSeriesSubscriptionSymbol;
 import com.dxfeed.event.*;
@@ -205,7 +203,7 @@ public class EventsResource {
     private void buildPromisesList(Date toTime, List<Promise<?>> promiseList, EventSymbolMap symbolMap)
         throws HttpErrorException
     {
-        DXFeed feed = DXFeedContext.INSTANCE.getFeed();
+        DXFeed feed = getFeed(getFilter());
         List<OrderSource> sourceList = resolveSourceList(Collections.singletonList(OrderSource.DEFAULT));
         for (String evt : eventList) {
             Class<?> et = DXFeedContext.INSTANCE.getEventTypes().get(evt);
@@ -252,7 +250,7 @@ public class EventsResource {
         throws HttpErrorException
     {
         boolean ok = true;
-        DXFeed feed = DXFeedContext.INSTANCE.getFeed();
+        DXFeed feed = getFeed(getFilter());
         List<OrderSource> sourceList = resolveSourceList(Collections.singletonList(OrderSource.DEFAULT));
         for (String evt : eventList) {
             Class<?> et = DXFeedContext.INSTANCE.getEventTypes().get(evt);
@@ -321,10 +319,7 @@ public class EventsResource {
         throws IOException, HttpErrorException
     {
         String name = session == null || session.isEmpty() ? DEFAULT_SESSION : session;
-        QDFilter filter = (QDFilter) req.getAttribute(DXFeedContext.QD_FILTER_PARAM);
-        if (filter == null) {
-            filter = QDFilter.ANYTHING;
-        }
+        QDFilter filter = getFilter();
 
         EventConnection conn;
         if (reconnect != null) {
@@ -340,7 +335,7 @@ public class EventsResource {
                 throw sessionNotFound();
             }
         } else {
-            conn = new EventConnection(filter);
+            conn = new EventConnection(getFeed(filter), filter);
         }
         // update subscription
         updateSubscription(SubOp.ADD_SUB, conn);
@@ -467,6 +462,16 @@ public class EventsResource {
         }
     }
 
+    private QDFilter getFilter() {
+        QDFilter filter = (QDFilter) req.getAttribute(DXFeedContext.FILTER_PARAM);
+        return (filter != null) ? filter : QDFilter.ANYTHING;
+    }
+
+    @SuppressWarnings("deprecation")
+    private DXFeed getFeed(QDFilter filter) {
+        return DXFeedContext.INSTANCE.getFeed(filter);
+    }
+
     // ============================== helper classes  ==============================
 
     private static final AtomicLong REQUEST_ID = new AtomicLong();
@@ -575,7 +580,7 @@ public class EventsResource {
         private final EventSymbolMap symbolMap = new EventSymbolMap();
 
         private final QDFilter filter;
-        private final DXFeedImpl feed;
+        private final DXFeed feed;
 
         @GuardedBy("this")
         private Format format;
@@ -583,13 +588,9 @@ public class EventsResource {
         private String indent;
 
         @SuppressWarnings("deprecation")
-        public EventConnection(@Nonnull QDFilter filter) {
-            DXEndpoint endpoint = DXFeedContext.INSTANCE.getEndpoint();
-            if (!(endpoint instanceof DXEndpointImpl))
-                throw new IllegalStateException("Unsupported DXEndpoint implementation!");
-
+        public EventConnection(@Nonnull DXFeed feed, @Nonnull QDFilter filter) {
+            this.feed = feed;
             this.filter = filter;
-            this.feed = new DXFeedImpl((DXEndpointImpl) endpoint, filter);
         }
 
         // returns null if it is already closed and cannot add anything more
@@ -602,12 +603,8 @@ public class EventsResource {
             subscriptions.put(et, sub);
             // only attach subscription on connection that is already active
             if (isActive())
-                getFeed().attachSubscription(sub);
+                feed.attachSubscription(sub);
             return sub;
-        }
-
-        private DXFeed getFeed() {
-            return feed;
         }
 
         public synchronized boolean start(AsyncContext async, Format format, String indent) throws IOException {
@@ -621,7 +618,7 @@ public class EventsResource {
         protected void startImpl() {
             // attach subscriptions
             for (DXFeedSubscription<EventType<?>> sub : subscriptions.values())
-                getFeed().attachSubscription(sub);
+                feed.attachSubscription(sub);
         }
 
         @Override
@@ -629,7 +626,7 @@ public class EventsResource {
         protected void stopImpl() {
             // close subscriptions
             for (DXFeedSubscription<EventType<?>> sub : subscriptions.values())
-                getFeed().detachSubscription(sub);
+                feed.detachSubscription(sub);
         }
 
         @Override
