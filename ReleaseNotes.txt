@@ -1,3 +1,9 @@
+QDS 3.273:
+
+* [QD-1132] Tools.invoke involving a FileConnector always takes at least one second
+* [QD-1130] Automatic ServerSocket port allocation support for tests
+* [QD-1128] qd-tools: ConnectTest takes too long
+* [QD-1126] Add Order Record for ERISX exchange
 
 QDS 3.272:
 

@@ -259,7 +259,8 @@ public class OnDemandConnector extends AbstractMessageConnector
         resolvedAddress.append(addr);
     }
 
-    synchronized void handlerClosed(ReplayConnectionHandler handler) {
+    @Override
+    protected synchronized void handlerClosed(AbstractConnectionHandler handler) {
         if (handler != this.handler)
             return;
         this.handler = null;

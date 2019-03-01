@@ -59,11 +59,13 @@ class SocketAcceptor extends QTPWorkerThread {
                 log.info("Trying to listen at " + LogUtil.hideCredentials(address));
                 try {
                     serverSocket = this.serverSocket = ServerSocketFactory.getDefault().createServerSocket(port, 0, bindAddress);
+                    ServerSocketTestHelper.completePortPromise(connector.getName(), serverSocket.getLocalPort());
                 } catch (Throwable t) {
                     log.error("Failed to listen at " + LogUtil.hideCredentials(address), t);
                     continue; // retry listening again
                 }
-                log.info("Listening at " + LogUtil.hideCredentials(address));
+                log.info("Listening at " + LogUtil.hideCredentials(address) +
+                    (port == 0 ? " on port " + serverSocket.getLocalPort() : ""));
                 connector.notifyMessageConnectorListeners();
                 // the following code handle concurrent close of the acceptor thread while socket was being created
                 // Note, that volatile this.serverSocket was assigned first,

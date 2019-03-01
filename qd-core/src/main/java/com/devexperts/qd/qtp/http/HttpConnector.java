@@ -230,11 +230,13 @@ public class HttpConnector extends AbstractMessageConnector
         return handler;
     }
 
-    protected synchronized void handlerClosed(HttpConnectorHandler handler) {
+    @Override
+    protected synchronized void handlerClosed(AbstractConnectionHandler handler) {
         if (handler != this.handler)
             return;
         this.handler = null;
-        start();
+        if (!file)
+            start();
     }
 
     /**

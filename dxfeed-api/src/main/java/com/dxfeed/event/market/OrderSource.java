@@ -225,6 +225,13 @@ public final class OrderSource extends IndexedEventSource {
     public static final OrderSource GLBX = new OrderSource("GLBX", PUB_ORDER);
 
     /**
+     * Eris Exchange group of companies.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource ERIS = new OrderSource("ERIS", PUB_ORDER);
+
+    /**
      * Eurex Exchange.
      * {@link Order} events are {@link #isPublishable(Class) publishable} on this
      * source and the corresponding subscription can be observed via {@link DXPublisher}.

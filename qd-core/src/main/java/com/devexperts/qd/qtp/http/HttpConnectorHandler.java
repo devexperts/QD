@@ -93,7 +93,6 @@ class HttpConnectorHandler extends AbstractConnectionHandler<HttpConnector> {
         if (stats != null)
             stats.close();
         log.error("Disconnected from " + LogUtil.hideCredentials(address), reason);
-        connector.handlerClosed(this);
     }
 
     // returns false if POST is not a supported method

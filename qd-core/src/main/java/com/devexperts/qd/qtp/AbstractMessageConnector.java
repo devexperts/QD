@@ -187,6 +187,17 @@ public abstract class AbstractMessageConnector implements MessageConnector {
         public void join() throws InterruptedException;
     }
 
+    /**
+     * Invoked by handler to notify about associated connector about handler's death.
+     * <p>
+     * Recommended implementation template:<br>
+     * - check if handler is still actual (beware of asynchronous execution) and cut-out local handler reference<br>
+     * - restart processing (if needed)
+     *
+     * @param handler - the notifying handler
+     */
+    protected void handlerClosed(AbstractConnectionHandler handler) {}
+
     @Override
     public final void stop() {
         stopImpl();

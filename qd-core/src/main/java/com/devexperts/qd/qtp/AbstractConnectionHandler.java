@@ -60,6 +60,7 @@ public abstract class AbstractConnectionHandler<C extends AbstractMessageConnect
         try {
             closeImpl(reason);
         } finally {
+            connector.handlerClosed(this);
             connector.addClosedConnectionStats(connectionStats);
             connector.notifyMessageConnectorListeners();
         }

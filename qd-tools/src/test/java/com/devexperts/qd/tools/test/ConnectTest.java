@@ -17,26 +17,32 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
 
 import com.devexperts.qd.*;
 import com.devexperts.qd.kit.*;
 import com.devexperts.qd.ng.*;
 import com.devexperts.qd.qtp.*;
 import com.devexperts.qd.qtp.file.*;
+import com.devexperts.qd.qtp.socket.ServerSocketTestHelper;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.tools.AbstractTool;
 import com.devexperts.qd.tools.Tools;
 import com.devexperts.services.Services;
 import com.devexperts.test.ThreadCleanCheck;
+import com.dxfeed.promise.Promise;
 import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
+@RunWith(Parameterized.class)
 public class ConnectTest extends TestCase {
     private static final DataScheme SCHEME = QDFactory.getDefaultScheme();
     private static final String CONNECT = "connect";
-    private static final String EXPECTED_FILE = "connect-test-expected.temp";
-    private static final String OUTPUT_FILE = "connect-test-output.temp";
-    private static final String SUBSCRIPTION_FILE = "connect-test-subscription.temp";
+    private static final long CONNECTOR_INIT_TIMEOUT = 3_000; // max wait time for connector init (millis)
 
     private static final Random RNG = new Random();
 
@@ -46,76 +52,97 @@ public class ConnectTest extends TestCase {
             SCHEME.findRecordByName("Trade.1min"),
             SCHEME.findRecordByName("Trade.30min")
     };
+
     private static final String[] SYMBOLS = {
             "AAPL",
             "IBM",
             "GOOG",
             "SPX"
     };
+
     private static final int NUMBER_OF_EVENTS = 500;
+    // Poll period for operations checking effect of a parallel process execution (millis)
+    private static final int POLL_PERIOD = 10;
 
     // to fail from another thread
     private AtomicReference<String> failMessage;
 
+    // unique ID of the test invocation
+    private String testID;
+
+    private String expectedFile;
+    private String outputFile;
+
+    // test parameters
+    private final String recordsSpec;
+    private final String symbolsSpec;
+
+    @Parameters
+    public static Collection<Object[]> params() {
+        return Arrays.asList(new Object[][] {
+            // { recordsSpec, symbolsSpec }
+            {"Trade.1min", "AAPL"},
+            {"Trade.5min", "AAPL,IBM"},
+            {"*", "AAPL,IBM,GOOG,SPX"},
+            {"Trade.30min", "GOOG,AAPL"},
+            {"Trade*", "IBM"},
+            {"Quote", "AAPL,SPX"}
+        });
+    }
+
+    public ConnectTest(String recordsSpec, String symbolsSpec) {
+        this.recordsSpec = recordsSpec;
+        this.symbolsSpec = symbolsSpec;
+    }
+
+
     @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() {
         ThreadCleanCheck.before();
+        testID = UUID.randomUUID().toString();
         failMessage = new AtomicReference<>();
+        expectedFile = testID + "-connect-test-expected.temp";
+        outputFile = testID + "-connect-test-output.temp";
         deleteFiles();
     }
 
     @Override
+    @After
     public void tearDown() {
         deleteFiles();
         ThreadCleanCheck.after();
     }
 
+    @Test
     public void testSubscriptionByRecordsAndSymbols() {
-        testSupport(this::testSubscriptionByRecordsAndSymbols);
-    }
-
-    public void testSubscriptionMirroring() {
-        testSupport(this::testSubscriptionMirroring);
-    }
-
-    // common test cases for connect with different subscriptions
-    private void testSupport(BiConsumer<String, String> testKind) {
-        testKind.accept("Trade.1min", "AAPL");
-        testKind.accept("Trade.5min", "AAPL,IBM");
-        testKind.accept("*", "AAPL,IBM,GOOG,SPX");
-        testKind.accept("Trade.30min", "GOOG,AAPL");
-        testKind.accept("Trade*", "IBM");
-        testKind.accept("Quote", "AAPL,SPX");
-    }
-
-    private void testSubscriptionByRecordsAndSymbols(String recordsSpec, String symbolsSpec) {
         try {
             RecordBuffer buffer = generate(NUMBER_OF_EVENTS);
             writeExpected(buffer, recordsSpec, symbolsSpec);
             buffer.rewind();
 
-            int port = 4477 + RNG.nextInt(1000);
-            QDEndpoint dataEndpoint = createDataSourceEndpoint("data-source-endpoint", port,
-                    Collections.singletonList(QDContract.STREAM));
+            Promise<Integer> dataPort = ServerSocketTestHelper.createPortPromise(testID + "-data-cn");
+            QDEndpoint dataEndpoint = createDataSourceEndpoint("data-source-endpoint", testID + "-data-cn",
+                Collections.singletonList(QDContract.STREAM));
             RecordBuffer subscription = createSubscription(recordsSpec, symbolsSpec);
             CountDownLatch subscribed = new CountDownLatch(1);
             CountDownLatch send = new CountDownLatch(1);
             distributeOnSubscriptionArrived(buffer, subscription, dataEndpoint, subscribed, send);
 
             doConnect(new String[] {
-                    "localhost:" + port,
+                    "localhost:" + awaitPort(dataPort),
                     recordsSpec,
                     symbolsSpec,
                     "-q", // do not spam to stdout
                     "-n", "connect-via-records-and-symbols",
                     "-c", "stream", // no conflations
-                    "--tape", OUTPUT_FILE + "[format=text,time=none]"
+                    "--tape", outputFile + "[format=text,time=none]"
             }, subscribed, send);
 
             dataEndpoint.close();
 
             assertNull(failMessage.get(), failMessage.get());
-            assertEquals(getContent(Paths.get(EXPECTED_FILE)), getContent(Paths.get(OUTPUT_FILE)));
+            assertEquals(getContent(Paths.get(expectedFile)), getContent(Paths.get(outputFile)));
         } catch (InterruptedException ignored) {
         } catch (IOException e) {
             e.printStackTrace();
@@ -123,28 +150,29 @@ public class ConnectTest extends TestCase {
         }
     }
 
-    private void testSubscriptionMirroring(String recordsSpec, String symbolsSpec) {
+    @Test
+    public void testSubscriptionMirroring() {
         try {
             RecordBuffer buffer = generate(NUMBER_OF_EVENTS);
             writeExpected(buffer, recordsSpec, symbolsSpec);
             buffer.rewind();
 
-            int subscriptionPort = 4747 + RNG.nextInt(1000);
             RecordBuffer subscription = createSubscription(recordsSpec, symbolsSpec);
-            QDEndpoint subscriptionSource = createSubscriptionSourceEndpoint(subscriptionPort, "subscription-source",
-                    Collections.singletonList(QDContract.STREAM), subscription);
-            int dataPort = 5747 + RNG.nextInt(1000);
-            QDEndpoint dataSource = createDataSourceEndpoint("data-source", dataPort,
-                    Collections.singletonList(QDContract.STREAM));
+            Promise<Integer> subscriptionPort = ServerSocketTestHelper.createPortPromise(testID + "-sub-cn" );
+            QDEndpoint subscriptionSource = createSubscriptionSourceEndpoint("subscription-source", testID + "-sub-cn",
+                Collections.singletonList(QDContract.STREAM), subscription);
+            Promise<Integer> dataPort = ServerSocketTestHelper.createPortPromise(testID + "-data-cn");
+            QDEndpoint dataSource = createDataSourceEndpoint("data-source", testID + "-data-cn",
+                Collections.singletonList(QDContract.STREAM));
 
             CountDownLatch subscribed = new CountDownLatch(1);
             CountDownLatch send = new CountDownLatch(1);
             distributeOnSubscriptionArrived(buffer, subscription, dataSource, subscribed, send);
 
             doConnect(new String[] {
-                    "localhost:" + dataPort,
-                    "localhost:" + subscriptionPort,
-                    "-t", OUTPUT_FILE + "[format=text,time=none]",
+                    "localhost:" + awaitPort(dataPort),
+                    "localhost:" + awaitPort(subscriptionPort),
+                    "-t", outputFile + "[format=text,time=none]",
                     "-q",
                     "-n", "connect-via-subscription-mirroring",
                     "-c", "stream"
@@ -153,7 +181,7 @@ public class ConnectTest extends TestCase {
             dataSource.close();
             subscriptionSource.close();
             assertNull(failMessage.get(), failMessage.get());
-            assertEquals(getContent(Paths.get(EXPECTED_FILE)), getContent(Paths.get(OUTPUT_FILE)));
+            assertEquals(getContent(Paths.get(expectedFile)), getContent(Paths.get(outputFile)));
         } catch (InterruptedException ignored) {
         } catch (IOException e) {
             e.printStackTrace();
@@ -168,7 +196,7 @@ public class ConnectTest extends TestCase {
         RecordBuffer resultSubscription = new RecordBuffer(RecordMode.SUBSCRIPTION);
         NavigableSet<Item> allItems = parseSubscription(subscription);
         provider.setRecordListener(p -> {
-            p.retrieveData(resultSubscription);
+            p.retrieve(resultSubscription);
             NavigableSet<Item> items = parseSubscription(resultSubscription);
             if (allItems.equals(items)) {
                 if (subscribed.getCount() == 1) {
@@ -190,7 +218,6 @@ public class ConnectTest extends TestCase {
             throws InterruptedException, IOException {
         AbstractTool connect = Tools.getTool(CONNECT);
         connect.parse(args);
-        Services.startup();
         Thread connectThread = new Thread(connect::execute, "connect-thread");
         connectThread.start();
 
@@ -208,7 +235,8 @@ public class ConnectTest extends TestCase {
     }
 
     private void waitForSubscriptionAndData(CountDownLatch subscribed, CountDownLatch send,
-            long timeToSubscribe, long timeToWrite) throws InterruptedException, IOException {
+            long timeToSubscribe, long timeToWrite) throws InterruptedException, IOException
+    {
         // wait for subscription
         subscribed.await(timeToSubscribe, TimeUnit.MILLISECONDS);
         if (subscribed.getCount() == 1) {
@@ -216,40 +244,57 @@ public class ConnectTest extends TestCase {
         }
         // wait for data
         send.await();
-        Path outputFile = Paths.get(OUTPUT_FILE);
-        Path expectedPath = Paths.get(EXPECTED_FILE);
-        long expectedSize = Files.exists(expectedPath) ? Files.size(expectedPath) : 0;
+        Path outputPath = Paths.get(outputFile);
+        Path expectedPath = Paths.get(expectedFile);
+        // Expected output size. Output file may be a bit shorter than expected on finish until dumping tool is closed.
+        // If outputFile is larger than expected then test is failed anyway.
+        long waitSize = Files.exists(expectedPath) ? Math.max(Files.size(expectedPath) - 10, 0) : -1;
         long startTime = System.currentTimeMillis();
         long currentTime = startTime;
-        while ((!Files.exists(outputFile) || Files.size(outputFile) != expectedSize)
-                && currentTime < startTime + timeToWrite) {
-            Thread.sleep(startTime + timeToWrite - currentTime);
+        do {  // give a chance to receive some data even when output is not expected
+            Thread.sleep(Math.min(startTime + timeToWrite - currentTime, POLL_PERIOD));
             currentTime = System.currentTimeMillis();
-        }
+        } while (fileSize(outputPath) < waitSize && currentTime < startTime + timeToWrite);
     }
 
-    private QDEndpoint createDataSourceEndpoint(String name, int port,
-            Collection<? extends QDCollector.Factory> contracts) {
+    /**
+     * Get a size of file or -1 if file does not exists
+     * @param file - a file to be checked
+     * @return size of file in bytes or -1 if file was not found
+     * @throws IOException
+     */
+    private long fileSize(Path file) throws IOException {
+        return Files.exists(file) ? Files.size(file) : -1;
+    }
+
+    private int awaitPort(Promise<Integer> portPromise) {
+        return portPromise.await(CONNECTOR_INIT_TIMEOUT, TimeUnit.MILLISECONDS);
+    }
+
+    private QDEndpoint createDataSourceEndpoint(String name, String connectorName,
+        Collection<? extends QDCollector.Factory> contracts)
+    {
         QDEndpoint dataSource = QDEndpoint.newBuilder()
                 .withName(name)
                 .withScheme(SCHEME)
                 .withCollectors(contracts)
                 .build();
         dataSource.addConnectors(MessageConnectors.createMessageConnectors(
-                new AgentAdapter.Factory(dataSource, null), ":" + port, QDStats.VOID));
+                new AgentAdapter.Factory(dataSource, null), ":0[name=" + connectorName + "]", QDStats.VOID));
         dataSource.startConnectors();
         return dataSource;
     }
 
-    private QDEndpoint createSubscriptionSourceEndpoint(int port, String name, Collection<QDContract> contracts,
-            RecordSource subscription) {
+    private QDEndpoint createSubscriptionSourceEndpoint(String name, String connectorName,
+        Collection<QDContract> contracts, RecordSource subscription)
+    {
         QDEndpoint subscriptionSource = QDEndpoint.newBuilder()
                 .withName(name)
                 .withScheme(SCHEME)
                 .withCollectors(contracts)
                 .build();
         subscriptionSource.addConnectors(MessageConnectors.createMessageConnectors(
-                new DistributorAdapter.Factory(subscriptionSource, null), ":" + port, QDStats.VOID));
+            new DistributorAdapter.Factory(subscriptionSource, null), ":0[name=" + connectorName + "]", QDStats.VOID));
         subscriptionSource.startConnectors();
         QDAgent subscriptionAgent = subscriptionSource.getStream().agentBuilder().build();
         subscriptionAgent.addSubscription(subscription);
@@ -269,7 +314,7 @@ public class ConnectTest extends TestCase {
                 filtered.append(cursor);
             }
         }
-        try (FileWriterImpl expected = new FileWriterImpl(EXPECTED_FILE, SCHEME, params)) {
+        try (FileWriterImpl expected = new FileWriterImpl(expectedFile, SCHEME, params)) {
             expected.open();
             expected.addSendMessageType(MessageType.STREAM_DATA); // like connect does
             while (expected.visitData(filtered, MessageType.STREAM_DATA)) {
@@ -360,9 +405,8 @@ public class ConnectTest extends TestCase {
 
     private void deleteFiles() {
         try {
-            Files.deleteIfExists(Paths.get(EXPECTED_FILE));
-            Files.deleteIfExists(Paths.get(OUTPUT_FILE));
-            Files.deleteIfExists(Paths.get(SUBSCRIPTION_FILE));
+            Files.deleteIfExists(Paths.get(expectedFile));
+            Files.deleteIfExists(Paths.get(outputFile));
         } catch (IOException e) {
             e.printStackTrace();
         }

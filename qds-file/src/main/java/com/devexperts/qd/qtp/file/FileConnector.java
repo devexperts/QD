@@ -74,7 +74,7 @@ public class FileConnector extends AbstractMessageConnector implements FileConne
 
     @Override
     public synchronized void start() {
-        if (isActive())
+        if (handler != null)
             return;
         log.info("Starting FileConnector to " + LogUtil.hideCredentials(getAddress()));
         handler = new FileReaderHandler(this);
@@ -84,8 +84,6 @@ public class FileConnector extends AbstractMessageConnector implements FileConne
 
     @Override
     protected synchronized Joinable stopImpl() {
-        if (!isActive())
-            return null;
         FileReaderHandler handler = this.handler;
         this.handler = null; // Clear before actual close to avoid recursion.
         if (handler != null) {
@@ -94,6 +92,14 @@ public class FileConnector extends AbstractMessageConnector implements FileConne
         }
         return handler;
     }
+
+    @Override
+    protected synchronized void handlerClosed(AbstractConnectionHandler handler) {
+        if (handler != this.handler)
+            return;
+        this.handler = null;
+    }
+
 
     @Override
     public synchronized String getAddress() {
@@ -143,11 +149,6 @@ public class FileConnector extends AbstractMessageConnector implements FileConne
 
     @Override
     public boolean isActive() {
-        FileReaderHandler handler = this.handler;
-        if (handler != null && !handler.isAlive()) {
-            this.handler = null;
-            notifyMessageConnectorListeners();
-        }
         return handler != null;
     }
 

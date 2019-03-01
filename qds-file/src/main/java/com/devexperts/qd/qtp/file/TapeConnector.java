@@ -65,12 +65,14 @@ public class TapeConnector extends AbstractMessageConnector implements TapeConne
     }
 
     @Override
+    protected synchronized void handlerClosed(AbstractConnectionHandler handler) {
+        if (handler != this.handler)
+            return;
+        this.handler = null;
+    }
+
+    @Override
     public boolean isActive() {
-        FileWriterHandler handler = this.handler;
-        if (handler != null && !handler.isAlive()) {
-            this.handler = null;
-            notifyMessageConnectorListeners();
-        }
         return handler != null;
     }
 

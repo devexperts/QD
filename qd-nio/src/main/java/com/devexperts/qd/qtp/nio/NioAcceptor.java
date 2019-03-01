@@ -16,6 +16,7 @@ import java.net.Socket;
 import java.nio.channels.*;
 
 import com.devexperts.qd.qtp.ReconnectHelper;
+import com.devexperts.qd.qtp.socket.ServerSocketTestHelper;
 import com.devexperts.qd.qtp.socket.SocketUtil;
 import com.devexperts.util.LogUtil;
 
@@ -44,7 +45,9 @@ class NioAcceptor extends NioWorkerThread {
                 reconnectHelper.sleepBeforeConnection();
                 log.info("Trying to listen at " + LogUtil.hideCredentials(core.address));
                 serverChannel.socket().bind(core.bindSocketAddress);
-                log.info("Listening at " + LogUtil.hideCredentials(core.address));
+                ServerSocketTestHelper.completePortPromise(core.connector.getName(), serverChannel.socket().getLocalPort());
+                log.info("Listening at " + LogUtil.hideCredentials(core.address) +
+                    (core.bindSocketAddress.getPort() == 0 ? " on port " + serverChannel.socket().getLocalPort() : ""));
             } catch (InterruptedException e) {
                 return;
             } catch (IOException e) {

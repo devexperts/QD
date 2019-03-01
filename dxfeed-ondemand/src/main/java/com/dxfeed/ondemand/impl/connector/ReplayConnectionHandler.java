@@ -133,7 +133,6 @@ class ReplayConnectionHandler extends AbstractConnectionHandler<OnDemandConnecto
         replay.stop();
         closeAdapter();
         log.info("Replay stopped");
-        connector.handlerClosed(this);
     }
 
     public void joinAll() throws InterruptedException {
