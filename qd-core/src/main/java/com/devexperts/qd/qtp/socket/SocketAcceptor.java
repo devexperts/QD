@@ -11,14 +11,16 @@
  */
 package com.devexperts.qd.qtp.socket;
 
-import java.io.IOException;
-import java.net.*;
-import javax.net.ServerSocketFactory;
-
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.qtp.QTPWorkerThread;
 import com.devexperts.qd.qtp.ReconnectHelper;
 import com.devexperts.util.LogUtil;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import javax.net.ServerSocketFactory;
 
 class SocketAcceptor extends QTPWorkerThread {
     private static final Logging log = Logging.getLogging(ServerSocketConnector.class);
@@ -75,6 +77,13 @@ class SocketAcceptor extends QTPWorkerThread {
                     return;
             }
             Socket socket = serverSocket.accept();
+            if (!connector.isNewConnectionAllowed()) {
+                log.warn("Rejected client socket connection because of maxConnections limit: " +
+                    LogUtil.hideCredentials(SocketUtil.getAcceptedSocketAddress(socket)));
+                socket.close();
+                continue;
+            }
+
             log.info("Accepted client socket connection: " + LogUtil.hideCredentials(SocketUtil.getAcceptedSocketAddress(socket)));
             SocketHandler handler = new SocketHandler(connector, new ServerSocketSource(socket));
             connector.addHandler(handler);

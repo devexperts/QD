@@ -1,3 +1,10 @@
+QDS 3.274:
+
+* [QD-1140] Flaky test: FileConnectorCorruptedTest
+* [QD-1138] Data race in DXEndpoint state processing
+* [QD-1135] Support limit on the number of connections per server port
+* [QD-1133] Tests optimization
+
 QDS 3.273:
 
 * [QD-1132] Tools.invoke involving a FileConnector always takes at least one second

@@ -12,6 +12,7 @@
 package com.devexperts.qd.test;
 
 import java.io.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
@@ -21,31 +22,43 @@ import com.devexperts.qd.qtp.nio.NioServerConnector;
 import com.devexperts.qd.qtp.socket.ServerSocketConnector;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.test.ThreadCleanCheck;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
-public class SocketRebindTest extends TestCase {
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeFalse;
+
+public class SocketRebindTest {
     private static final String LOG_FILE = "SocketRebindTest.log";
 
-    private static final int PORT = 12345;
+    private final int PORT = 20_000 + ThreadLocalRandom.current().nextInt(10_000);
 
-    @Override
+    @Before
     public void setUp() {
         ThreadCleanCheck.before();
         Logging.configureLogFile(LOG_FILE);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         Logging.configureLogFile(System.getProperty("log.file"));
         assertTrue(new File(LOG_FILE).delete());
         ThreadCleanCheck.after();
     }
 
+    @Test
     public void testRebind() throws IOException, InterruptedException {
         implTestRebind(false);
     }
 
+    @Test
     public void testRebindNio() throws IOException, InterruptedException {
+        assumeFalse("Known issue: QD-1137",
+            System.getProperty("os.name").toLowerCase().startsWith("mac") &&
+            System.getProperty("java.version").startsWith("1.8"));
         implTestRebind(true);
     }
 
@@ -67,7 +80,7 @@ public class SocketRebindTest extends TestCase {
     }
 
     // note: delays in this test are subject to be tuned
-    public void implTestRebind(boolean nio) throws IOException, InterruptedException {
+    private void implTestRebind(boolean nio) throws IOException, InterruptedException {
         ApplicationConnectionFactory aFactory = MessageConnectors.applicationConnectionFactory(new NamedFakeFactory("Foo"));
         ApplicationConnectionFactory bFactory = MessageConnectors.applicationConnectionFactory(new NamedFakeFactory("Bar"));
 

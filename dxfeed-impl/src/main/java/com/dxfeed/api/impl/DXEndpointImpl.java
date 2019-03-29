@@ -281,7 +281,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
         if (address == null)
             throw new NullPointerException();
         synchronized (lock) {
-            if (stateHolder.isClosed() || address.equals(this.address))
+            if (stateHolder.state == State.CLOSED || address.equals(this.address))
                 return;
             disconnect();
             qdEndpoint.initializeConnectorsForAddress(address);
@@ -417,25 +417,6 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
         synchronized (lock) {
             return stateHolder.makeClosed();
         }
-    }
-
-    // lock-free
-    private State computeState() {
-        if (stateHolder.isClosed())
-            return State.CLOSED;
-        State state = State.NOT_CONNECTED;
-        for (MessageConnector connector : qdEndpoint.getConnectors()) {
-            switch (connector.getState()) {
-            case CONNECTING:
-                if (state != State.CONNECTED)
-                    state = State.CONNECTING;
-                break;
-            case CONNECTED:
-                state = State.CONNECTED;
-                break;
-            }
-        }
-        return state;
     }
 
     public boolean hasProperty(String key) {
@@ -729,14 +710,11 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
     private class StateHolder implements Runnable {
         // SYNC(lock+this) on write to State.CLOSE; SYNC(this) on any other writes
         volatile State state = State.NOT_CONNECTED;
-
-        // notify changes from oldState to newState
-        State oldState; // null when no notification was delivered yet
-        State newState = state; // new state in previous notification
+        private State lastFiredState = state;
 
         // at most one task is scheduled at any time
-        int scheduled;           // > 0 when run() is scheduled to run, increment only any subsequent change
-        Thread processingThread; // current thread that processes notifications
+        private int scheduled; // > 0 when run() is scheduled to run or is running, increment on any change
+        private volatile Thread processingThread; // current thread that processes notifications
 
         // SYNC(lock), for connect & disconnect method to immediately recompute state
         synchronized void updateNow() {
@@ -767,29 +745,46 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
 
         @Override
         public void run() {
+            int lastScheduled = 0;
             while (true) { // loop while we need to fire state change events
-                State computedState = computeState();
+                State oldState;
+                State newState;
                 synchronized (this) {
-                    if (state == State.CLOSED)
-                        computedState = State.CLOSED; // closed while were computing state
-                    oldState = newState;
-                    newState = state = computedState;
-                    if (newState == oldState) {
+                    state = computeState();
+                    oldState = lastFiredState;
+                    newState = state;
+                    if (newState == oldState && scheduled == lastScheduled) {
                         // no change in state -- leave event processing loop
                         processingThread = null;
                         scheduled = 0;
                         notifyAll(); // wakeup awaitOuter
                         return;
                     }
+                    lastScheduled = scheduled;
+                    lastFiredState = newState;
                     // keep reference to processing thread to catch inner wait
                     processingThread = Thread.currentThread();
                 }
-                fireStateChangeEvent(oldState, newState);
+                if (oldState != newState)
+                    fireStateChangeEvent(oldState, newState);
             }
         }
 
-        boolean isClosed() {
-            return state == State.CLOSED;
+        @GuardedBy("this")
+        private State computeState() {
+            if (state == State.CLOSED)
+                return State.CLOSED;
+            boolean hasConnecting = false;
+            for (MessageConnector connector : qdEndpoint.getConnectors()) {
+                switch (connector.getState()) {
+                case CONNECTING:
+                    hasConnecting = true;
+                    break;
+                case CONNECTED:
+                    return State.CONNECTED;
+                }
+            }
+            return hasConnecting ? State.CONNECTING : State.NOT_CONNECTED;
         }
 
         // SYNC(lock) (then syncs on this)
@@ -817,34 +812,27 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
                 awaitOuter(condition);
         }
 
-        private void awaitInner(State condition) throws InterruptedException {
+        private synchronized void awaitInner(State condition) throws InterruptedException {
             // reenter from inside of run() event processing loop - run inner processing loop and wait
-            int lastScheduled = 0;
             while (true) {
-                State computedState = computeState();
-                synchronized (this) {
-                    if (state != State.CLOSED) // make sure not closed while were computing state
-                        state = computedState;
-                    if (isCondition(condition))
-                        return; // condition satisfied at currently computed state and no pending changes -- wait no more
-                    if (scheduled == lastScheduled)
-                        wait(); // wait until anything changes (see notifyAll in scheduleImpl)
-                    lastScheduled = scheduled;
-                }
+                state = computeState();
+                if (isCondition(condition))
+                    return;
+                wait(); // wait until anything changes (see notifyAll in scheduleImpl)
             }
         }
 
         private synchronized void awaitOuter(State condition) throws InterruptedException {
             // just wait normally from another thread
             // wait until processed state is in expected condition and no further changes scheduled
-            while (!isCondition(condition))
+            while (!isCondition(condition) || scheduled != 0)
                 wait();
         }
 
         @GuardedBy("this")
-        // true when computed state is as expected or closed and no pending changes
+        // true when computed state is as expected or closed
         private boolean isCondition(State condition) {
-            return (state == State.CLOSED || state == condition) && scheduled == 0;
+            return state == State.CLOSED || state == condition;
         }
     }
 }

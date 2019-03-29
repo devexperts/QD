@@ -287,7 +287,7 @@ public class RMIRoutingTest {
             summator.sum(256, 458);
             fail();
         } catch (RMIException e) {
-            assertTrue(e.getType() == RMIExceptionType.SECURITY_VIOLATION);
+            assertSame(RMIExceptionType.SECURITY_VIOLATION, e.getType());
         }
         client.close();
     }
@@ -323,9 +323,11 @@ public class RMIRoutingTest {
         }
 
         log.info("----------------------------------------- **** -----------------------------------------");
+        clients.disconnect();
+        muxs.disconnect();
         servers.connect(":" + NTU.port(port + 2));
-        clients.connect(NTU.LOCAL_HOST + ":" + NTU.port(port + 3));
         muxs.connect(new String[][]{{":" + NTU.port(port + 3)},{NTU.LOCAL_HOST + ":" + NTU.port(port + 2)}});
+        clients.connect(NTU.LOCAL_HOST + ":" + NTU.port(port + 3));
         log.info("----------------------------------------- **** -----------------------------------------");
         dist = clients.clients[0].getClient().createRequest(null, op);
         dist.send();

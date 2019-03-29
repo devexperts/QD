@@ -53,7 +53,7 @@ public class InstrumentsServerTest extends TestCase {
         // start dest connection
         InstrumentProfileCollector dest = new InstrumentProfileCollector();
         destConnection = InstrumentProfileConnection.createConnection("localhost:" + (randomPortOffset + 2), dest);
-        destConnection.setUpdatePeriod(500);
+        destConnection.setUpdatePeriod(10);
         destConnection.start();
 
         // attach listener

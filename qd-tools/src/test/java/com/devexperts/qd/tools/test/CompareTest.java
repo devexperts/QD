@@ -79,7 +79,7 @@ public class CompareTest extends TestCase {
                     "Quote", SYMBOL,
                     "--names", "a/b",
                     "-A", "localhost:" + randomPortOffset,
-                    "-s", "1",
+                    "-s", "0.1s",
                     "-c", "stream");
             }
         };
@@ -97,7 +97,7 @@ public class CompareTest extends TestCase {
                     "Quote", SYMBOL,
                     "--names", "c/d",
                     "-C", "ticker",
-                    "-s", "1",
+                    "-s", "0.1s",
                     "-c", "stream");
             }
         };
@@ -116,7 +116,7 @@ public class CompareTest extends TestCase {
                     "--names", "e/f",
                     "-R", "Quote&A",
                     "--fields", "BidPrice,AskPrice",
-                    "-s", "1",
+                    "-s", "0.1s",
                     "-c", "stream");
             }
         };

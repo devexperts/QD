@@ -11,18 +11,17 @@
  */
 package com.devexperts.qd.qtp.socket;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.HashSet;
-import java.util.Set;
-
 import com.devexperts.connector.codec.CodecConnectionFactory;
 import com.devexperts.connector.codec.CodecFactory;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.connector.proto.ConfigurationKey;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDLog;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.AbstractMessageConnector;
+import com.devexperts.qd.qtp.MessageAdapter;
+import com.devexperts.qd.qtp.MessageConnector;
+import com.devexperts.qd.qtp.MessageConnectorState;
+import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.qtp.help.MessageConnectorProperty;
 import com.devexperts.qd.qtp.help.MessageConnectorSummary;
 import com.devexperts.qd.stats.QDStats;
@@ -31,6 +30,11 @@ import com.devexperts.services.Services;
 import com.devexperts.transport.stats.ConnectionStats;
 import com.devexperts.transport.stats.EndpointStats;
 import com.devexperts.util.LogUtil;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * The <code>ServerSocketConnector</code> handles standard server socket using blocking API.
@@ -46,6 +50,8 @@ public class ServerSocketConnector extends AbstractMessageConnector implements S
     protected String bindAddrString = BIND_ANY_ADDRESS;
     protected InetAddress bindAddr;
     protected boolean useTls;
+    // 0 stands for unlimited number of connections
+    protected int maxConnections;
 
     protected final Set<SocketHandler> handlers = new HashSet<>();
     protected final SocketHandler.CloseListener closeListener = this::handlerClosed;
@@ -117,6 +123,21 @@ public class ServerSocketConnector extends AbstractMessageConnector implements S
             log.info("Setting bindAddr=" + bindAddrString);
             this.bindAddr = bindAddrString.isEmpty() ? null : InetAddress.getByName(bindAddrString);
             this.bindAddrString = bindAddrString;
+            reconfigure();
+        }
+    }
+
+    @Override
+    public int getMaxConnections() {
+        return maxConnections;
+    }
+
+    @Override
+    @MessageConnectorProperty("Max number of connections allowed for connector")
+    public synchronized void setMaxConnections(int maxConnections) {
+        if (maxConnections != this.maxConnections) {
+            log.info("Setting maxConnections=" + maxConnections);
+            this.maxConnections = maxConnections;
             reconfigure();
         }
     }
@@ -257,5 +278,9 @@ public class ServerSocketConnector extends AbstractMessageConnector implements S
 
     protected synchronized void handlerClosed(SocketHandler handler) {
         handlers.remove(handler);
+    }
+
+    protected synchronized boolean isNewConnectionAllowed() {
+        return maxConnections == 0 || getConnectionCount() < maxConnections;
     }
 }

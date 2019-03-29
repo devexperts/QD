@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.273</version>
+        <version>3.274</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -52,7 +52,8 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <!-- Must fork always, because tests fudge system properties a lot -->
-                    <forkMode>always</forkMode>
+                    <forkCount>1C</forkCount>
+                    <reuseForks>false</reuseForks>
                     <!-- We need to solve class-path issues to test log4j compatibility -->
                     <excludes>
                         <exclude>**/Log4jCompatibilityTest*</exclude>

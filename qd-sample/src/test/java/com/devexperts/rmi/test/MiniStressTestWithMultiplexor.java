@@ -12,12 +12,16 @@
 package com.devexperts.rmi.test;
 
 import java.util.Random;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import com.devexperts.logging.Logging;
+import com.devexperts.qd.qtp.socket.ServerSocketTestHelper;
 import com.devexperts.qd.tools.Tools;
 import com.devexperts.rmi.RMIException;
 import com.devexperts.rmi.RMIRequest;
 import com.devexperts.test.TraceRunner;
+import com.dxfeed.promise.Promise;
 import org.junit.runner.RunWith;
 
 import static org.junit.Assert.*;
@@ -40,15 +44,21 @@ public class MiniStressTestWithMultiplexor extends MiniStressTest {
     @Override
     public void setUp() {
         super.setUp();
+        String testId = UUID.randomUUID().toString();
+        Promise<Integer> p1 = ServerSocketTestHelper.createPortPromise(testId + "-distributor");
+        Promise<Integer> p2 = ServerSocketTestHelper.createPortPromise(testId + "-agent");
         toolThread = new Thread("Tool-thread") {
             @Override
             public void run() {
                 toolOk = Tools.invoke("multiplexor",
-                    ":" + randomPortDistributor, ":" + randomPortAgent,
+                    ":" + randomPortDistributor + "[name=" + testId + "-distributor]",
+                    ":" + randomPortAgent + "[name=" + testId + "-agent]",
                     "-s", "10", "-R");
             }
         };
         toolThread.start();
+        p1.await(10, TimeUnit.SECONDS);
+        p2.await(10, TimeUnit.SECONDS);
     }
 
     @Override

@@ -59,6 +59,12 @@ class NioAcceptor extends NioWorkerThread {
         SocketChannel channel;
         try {
             channel = serverChannel.accept();
+            if (!core.connector.isNewConnectionAllowed()) {
+                log.warn("Rejected client socket connection because of maxConnections limit: " +
+                    LogUtil.hideCredentials(SocketUtil.getAcceptedSocketAddress(channel.socket())));
+                closeClientSocket(channel);
+                return;
+            }
             log.info("Accepted client socket " + LogUtil.hideCredentials(SocketUtil.getAcceptedSocketAddress(channel.socket())));
         } catch (ClosedChannelException e) {
             core.close();
@@ -78,11 +84,7 @@ class NioAcceptor extends NioWorkerThread {
             core.registerConnection(new NioConnection(core, channel));
         } catch (Throwable t) {
             log.error("Failed to configure accepted client socket", t);
-            try {
-                channel.close();
-            } catch (IOException e) {
-                log.error("Failed to close client socket", e);
-            }
+            closeClientSocket(channel);
         }
     }
 
@@ -94,5 +96,13 @@ class NioAcceptor extends NioWorkerThread {
             log.error("Failed to close server socket at " + LogUtil.hideCredentials(core.address), t);
         }
         interrupt();
+    }
+
+    private void closeClientSocket(SocketChannel channel) {
+        try {
+            channel.close();
+        } catch (IOException e) {
+            log.error("Failed to close client socket", e);
+        }
     }
 }

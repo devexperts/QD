@@ -35,4 +35,11 @@ public interface ServerSocketConnectorMBean extends MessageConnectorMBean {
     public String getBindAddr();
 
     public void setBindAddr(String String) throws UnknownHostException;
+
+    /**
+     * Max number of connections
+     */
+    public int getMaxConnections();
+
+    public void setMaxConnections(int maxConnections);
 }

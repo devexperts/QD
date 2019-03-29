@@ -152,11 +152,11 @@ public class RMICommonTest {
             long result = num.getValue();
             if (result != 2 && result != 5)
                 fail();
-            assertEquals(num.getValue(), result);
+            assertEquals(result, num.getValue());
             log.info("---");
             server.getServer().unexport(two);
             Thread.sleep(150);
-            assertEquals(num.getValue(), 5);
+            assertEquals(5, num.getValue());
         } catch (RMIException e) {
             fail(e.getMessage());
         }

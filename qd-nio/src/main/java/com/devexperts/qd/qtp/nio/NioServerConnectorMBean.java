@@ -36,6 +36,13 @@ public interface NioServerConnectorMBean extends MessageConnectorMBean {
     public void setBindAddr(String bindAddress) throws UnknownHostException;
 
     /**
+     * Max number of connections
+     */
+    public int getMaxConnections();
+
+    public void setMaxConnections(int maxConnections);
+
+    /**
      * SO_TIMEOUT option value
      */
     public int getSocketTimeout();

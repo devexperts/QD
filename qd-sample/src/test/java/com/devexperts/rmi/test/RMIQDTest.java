@@ -40,7 +40,7 @@ import static org.junit.Assert.assertEquals;
 public class RMIQDTest {
     private static final Logging log = Logging.getLogging(RMIQDTest.class);
 
-    private static final int N_RECS = 100_000;
+    private static final int N_RECS = 10_000;
 
     private static final DataScheme SCHEME = DXFeedScheme.getInstance();
     private static final DataRecord RECORD = SCHEME.findRecordByName("Trade");

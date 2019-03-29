@@ -11,13 +11,11 @@
  */
 package com.devexperts.qd.qtp.nio;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.concurrent.atomic.AtomicReference;
-
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.monitoring.Monitored;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.AbstractMessageConnector;
+import com.devexperts.qd.qtp.MessageConnector;
+import com.devexperts.qd.qtp.MessageConnectorState;
 import com.devexperts.qd.qtp.help.MessageConnectorProperty;
 import com.devexperts.qd.qtp.help.MessageConnectorSummary;
 import com.devexperts.qd.stats.QDStats;
@@ -25,6 +23,10 @@ import com.devexperts.qd.util.QDConfig;
 import com.devexperts.transport.stats.EndpointStats;
 import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Server socket connector that uses scalable non-blocking socket API (java.nio).
@@ -44,6 +46,8 @@ public class NioServerConnector extends AbstractMessageConnector implements NioS
     private static final String ANY_BIND_ADDRESS = "*";
 
     private int port;
+    // 0 stands for unlimited number of connections
+    int maxConnections;
     private String bindAddressString = ANY_BIND_ADDRESS;
     InetAddress bindAddress;
 
@@ -58,7 +62,7 @@ public class NioServerConnector extends AbstractMessageConnector implements NioS
      * Creates new NIO server socket connector.
      *
      * @param factory application connection factory to use
-     * @param port TCP port to use
+     * @param port    TCP port to use
      * @throws NullPointerException if {@code factory} is {@code null}
      */
     public NioServerConnector(ApplicationConnectionFactory factory, int port) {
@@ -166,6 +170,21 @@ public class NioServerConnector extends AbstractMessageConnector implements NioS
     }
 
     @Override
+    public int getMaxConnections() {
+        return maxConnections;
+    }
+
+    @Override
+    @MessageConnectorProperty("Max number of connections allowed for connector")
+    public synchronized void setMaxConnections(int maxConnections) {
+        if (maxConnections != this.maxConnections) {
+            log.info("Setting maxConnections=" + maxConnections);
+            this.maxConnections = maxConnections;
+            reconfigure();
+        }
+    }
+
+    @Override
     public synchronized int getSocketTimeout() {
         return socketTimeout;
     }
@@ -249,5 +268,9 @@ public class NioServerConnector extends AbstractMessageConnector implements NioS
     public synchronized void setStats(QDStats stats) {
         super.setStats(stats);
         stats.addMBean("NIOServerConnector", this);
+    }
+
+    protected synchronized boolean isNewConnectionAllowed() {
+        return maxConnections == 0 || getConnectionCount() < maxConnections;
     }
 }

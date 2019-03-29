@@ -318,7 +318,8 @@ public class RMIAsynchronousFunctionalityTest {
 
         RMIService<Double> calculatorService = new DifferentServices.CalculatorService();
         private static final RMIOperation<Void> ERROR = RMIOperation.valueOf(DifferentServices.CALCULATOR_SERVICE.getServiceName(), void.class, "ERROR");
-        private static CountDownLatch start = new CountDownLatch(1);
+        private static volatile CountDownLatch start = new CountDownLatch(1);
+        private static volatile long taskDuration = 0;
 
         CalculatorWithWaitService() {
             super(DifferentServices.CALCULATOR_SERVICE.getServiceName());
@@ -333,11 +334,24 @@ public class RMIAsynchronousFunctionalityTest {
                 task.completeExceptionally(new IOException());
             } else {
                 try {
-                    Thread.sleep(300);
+                    sleep(taskDuration);
                 } catch (InterruptedException e) {
                     task.completeExceptionally(e);
                 }
                 calculatorService.processTask(task);
+            }
+        }
+
+        private void sleep(long millis) throws InterruptedException {
+            if (millis == 0)
+                return;
+            long deadline = System.currentTimeMillis() + millis;
+            while (System.currentTimeMillis() < deadline) {
+                Thread.sleep(10);
+                RMITask<String> current = RMITask.current(String.class);
+                if (current.getState().isCompletedOrCancelling()) {
+                    break;
+                }
             }
         }
     }
@@ -353,6 +367,7 @@ public class RMIAsynchronousFunctionalityTest {
         sum = channelLogic.clientPort.createRequest(DifferentServices.CalculatorService.PLUS, 35.6, 42.4);
         promiseHandler = new PromiseHandlerTest(sum);
         sum.getPromise().whenDone(promiseHandler);
+        CalculatorWithWaitService.taskDuration = 0;
         sum.send();
         try {
             assertEquals(sum.getBlocking(), (Double) 78.0);
@@ -364,6 +379,7 @@ public class RMIAsynchronousFunctionalityTest {
         log.info("-------------------------------");
 
         CalculatorWithWaitService.start = new CountDownLatch(1);
+        CalculatorWithWaitService.taskDuration = 1_000;
         sum = channelLogic.clientPort.createRequest(DifferentServices.CalculatorService.PLUS, 35.6, 42.4);
         promiseHandler = new PromiseHandlerTest(sum);
         sum.getPromise().whenDone(promiseHandler);
@@ -464,7 +480,7 @@ public class RMIAsynchronousFunctionalityTest {
 
         private static final CountDownLatch startedCloseRequestSum = new CountDownLatch(1);
         private static final CountDownLatch failedCloseRequestSum = new CountDownLatch(1);
-        private static final long SLEEP = 400;
+        private static final long SLEEP = 50;
         private static ExecutorService executorService;
 
         private SumWithPromiseImpl() {

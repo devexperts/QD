@@ -26,10 +26,13 @@ import com.devexperts.qd.qtp.DistributorAdapter;
 import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.qtp.file.FileConnector;
 import com.devexperts.qd.qtp.file.FileReaderParams;
-import junit.framework.Assert;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
-public class FileConnectorCorruptedTest extends TestCase {
+import static org.junit.Assert.*;
+
+public class FileConnectorCorruptedTest  {
     private static final String TIME_1 = "20140601-120000-0400";
     private static final String TIME_2 = "20140601-130000-0400";
     private static final String TIME_3 = "20140601-140000-0400";
@@ -49,19 +52,31 @@ public class FileConnectorCorruptedTest extends TestCase {
             new CompactIntField(3, "Quote.Ask.Size"),
         }, new DataObjField[0]);
 
-    private static final DataScheme SCHEME = new DefaultScheme(new PentaCodec(), RECORD);
+    private static final DataScheme SCHEME = new DefaultScheme(PentaCodec.INSTANCE, RECORD);
 
     private FileConnector connector;
 
-    @Override
-    protected void tearDown() throws Exception {
+
+    @Before
+    public void setUp() {
+        deleteFiles();
+    }
+
+    @After
+    public void tearDown() {
         if (connector != null)
             connector.stop();
+        deleteFiles();
+    }
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    private void deleteFiles() {
         FILE_1.delete();
         FILE_2.delete();
         FILE_3.delete();
     }
 
+    @Test
     public void testSkipCorruptedTextFileAndGoNext() throws IOException, InterruptedException {
         // Create data files.
         writeTextFile(FILE_1,
@@ -76,12 +91,13 @@ public class FileConnectorCorruptedTest extends TestCase {
             "Quote\tMSFT\t50\t51");
         BlockingQueue<String> symbols = readSymbols(null);
         // Wait and check for all received symbols.
-        assertEquals("IBM", symbols.poll(1, TimeUnit.SECONDS));
-        assertEquals("MSFT", symbols.poll(1, TimeUnit.SECONDS));
+        assertEquals("IBM", symbols.poll(10, TimeUnit.SECONDS));
+        assertEquals("MSFT", symbols.poll(10, TimeUnit.SECONDS));
         // Make sure it does not cycle and there are no more symbols.
-        assertEquals(null, symbols.poll(1, TimeUnit.SECONDS));
+        assertNull("No data expected", symbols.poll(1, TimeUnit.SECONDS));
     }
 
+    @Test
     public void testSkipCorruptedBinaryFileAndGoNext() throws IOException, InterruptedException {
         // Create data files.
         writeBinaryFile(FILE_1,
@@ -95,12 +111,13 @@ public class FileConnectorCorruptedTest extends TestCase {
         );
         BlockingQueue<String> symbols = readSymbols(null);
         // Wait and check for all received symbols.
-        assertEquals("IBM", symbols.poll(1, TimeUnit.SECONDS));
-        assertEquals("MSFT", symbols.poll(1, TimeUnit.SECONDS));
+        assertEquals("IBM", symbols.poll(10, TimeUnit.SECONDS));
+        assertEquals("MSFT", symbols.poll(10, TimeUnit.SECONDS));
         // Make sure it does not cycle and there are no more symbols.
-        assertEquals(null, symbols.poll(1, TimeUnit.SECONDS));
+        assertNull("No data expected", symbols.poll(1, TimeUnit.SECONDS));
     }
 
+    @Test
     public void testRescanFileListOnFailure() throws IOException, InterruptedException {
         // create files
         writeTextFile(FILE_1,
@@ -114,27 +131,31 @@ public class FileConnectorCorruptedTest extends TestCase {
         // Create queue.
         final boolean[] firstSymbol = {true};
         BlockingQueue<String> symbols = readSymbols(provider -> {
-            // Delete 2nd file on first symbol reading.
             if (firstSymbol[0]) {
-                Assert.assertTrue(FILE_2.delete());
+                // Delete 2nd file on first symbol reading.
+                assertTrue(FILE_2.delete());
+                // ... and immediately create 3rd data file.
+                try {
+                    writeTextFile(FILE_3,
+                        "==STREAM_DATA",
+                        "=Quote EventSymbol BidPrice AskPrice",
+                        "Quote MSFT 50 51");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 firstSymbol[0] = false;
             }
         });
-        assertEquals("IBM", symbols.poll(1, TimeUnit.SECONDS));
-        // Create 3rd data file.
-        writeTextFile(FILE_3,
-            "==STREAM_DATA",
-            "=Quote\tEventSymbol\tBidPrice\tAskPrice",
-            "Quote\tMSFT\t50\t51");
+        assertEquals("IBM", symbols.poll(10, TimeUnit.SECONDS));
         // Read symbol from 3rd data file.
-        assertEquals("MSFT", symbols.poll(1, TimeUnit.SECONDS));
+        assertEquals("MSFT", symbols.poll(10, TimeUnit.SECONDS));
         // Make sure it does not cycle and there are no more symbols.
-        assertEquals(null, symbols.poll(1, TimeUnit.SECONDS));
+        assertNull("No data expected", symbols.poll(1, TimeUnit.SECONDS));
     }
 
     private BlockingQueue<String> readSymbols(final RecordListener recordListener) {
         // create stream
-        QDStream stream = QDFactory.getDefaultFactory().createStream(SCHEME);
+        QDStream stream = QDFactory.getDefaultFactory().streamBuilder().withScheme(SCHEME).build();
         stream.setEnableWildcards(true);
         // create and subscribe agent
         QDAgent agent = stream.agentBuilder().build();

@@ -11,15 +11,15 @@
  */
 package com.devexperts.qd.qtp.nio;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import com.devexperts.io.ChunkPool;
 import com.devexperts.qd.qtp.AbstractMessageConnector;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimePeriod;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Main class consolidating NIO server connection logic.

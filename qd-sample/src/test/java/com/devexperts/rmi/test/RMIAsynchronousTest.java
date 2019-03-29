@@ -332,8 +332,8 @@ public class RMIAsynchronousTest {
     }
 
     private static class FirstCount implements CountService {
-        static final AtomicInteger count = new AtomicInteger();
-        static final int INCREMENT_PARAMETER = 1;
+        final AtomicInteger count = new AtomicInteger();
+        final int INCREMENT_PARAMETER = 1;
 
         @Override
         public int getCount() {
@@ -347,8 +347,8 @@ public class RMIAsynchronousTest {
     }
 
     private static class SecondCount implements CountService {
-        static final AtomicInteger count = new AtomicInteger();
-        static final int INCREMENT_PARAMETER = 2;
+        final AtomicInteger count = new AtomicInteger();
+        final int INCREMENT_PARAMETER = 2;
 
         @Override
         public int getCount() {
@@ -401,6 +401,7 @@ public class RMIAsynchronousTest {
 
         log.info("---");
 
+        // TODO: lowering this time wouldn't help because RMI checks for request timeouts no faster than once per second
         client.getClient().setRequestSendingTimeout(300);
         try {
             client.getClient().getProxy(RMICommonTest.Summator.class, "Summator").sum(10, 30);
@@ -458,12 +459,24 @@ public class RMIAsynchronousTest {
                 START_EXECUTE.countDown();
                 start = System.currentTimeMillis();
                 try {
-                    Thread.sleep((Long) task.getRequestMessage().getParameters().getObject()[0]);
+                    sleep((Long) task.getRequestMessage().getParameters().getObject()[0], task);
                 } catch (InterruptedException e) {
                     task.completeExceptionally(e);
                 }
             } else {
                 task.completeExceptionally(RMIExceptionType.OPERATION_NOT_PROVIDED, null);
+            }
+        }
+
+        private void sleep(long millis, RMITask task) throws InterruptedException {
+            if (millis == 0)
+                return;
+            long deadline = System.currentTimeMillis() + millis;
+            while (System.currentTimeMillis() < deadline) {
+                Thread.sleep(10);
+                if (task.getState().isCompletedOrCancelling()) {
+                    break;
+                }
             }
         }
     }

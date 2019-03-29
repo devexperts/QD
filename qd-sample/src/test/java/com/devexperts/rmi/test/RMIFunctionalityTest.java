@@ -197,88 +197,101 @@ public class RMIFunctionalityTest {
     }
 
     @Test
-    public void testWithTLS() throws InterruptedException {
-        //test default tls
+    public void testWithTLSDefaultSettings() throws InterruptedException {
         Properties props = System.getProperties();
-        SampleCert.init();
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class, "summator"), channelLogic);
-//
-        NTU.connect(server,  "tls[isServer]+:" + NTU.port(7));
-        NTU.connect(client,    "" + NTU.LOCAL_HOST + ":" + NTU.port(7) + "[tls=true]" );
         try {
-            channelLogic.initPorts();
-        } catch (InterruptedException e) {
-            fail(e.getMessage());
-        }
-        implTestSummator(1);
-        server.disconnect();
-        client.disconnect();
-        Thread.sleep(500);
-
-        System.out.println("-----------------------");
-
-        System.getProperties().setProperty("com.devexperts.connector.codec.ssl.protocols", "TLSv1.1");
-        NTU.connect(server, "tls[isServer,protocols=TLSv1.1;TLSv1.2]+:" + NTU.port(7));
-        NTU.connect(client, "tls+" + NTU.LOCAL_HOST + ":" + NTU.port(7));
-        try {
-            channelLogic.initPorts();
-        } catch (InterruptedException e) {
-            fail(e.getMessage());
-        }
-        implTestSummator(2);
-        server.disconnect();
-        client.disconnect();
-        Thread.sleep(500);
-
-        System.out.println("-----------------------");
-
-        //test tls versions
-        System.out.println("test tls versions");
-        if (channelLogic.type != TestType.REGULAR) {
+            SampleCert.init();
+            NTU.exportServices(server.getServer(),
+                new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class,
+                    "summator"), channelLogic);
+            //
+            NTU.connect(server, "tls[isServer]+:" + NTU.port(7));
+            NTU.connect(client, "" + NTU.LOCAL_HOST + ":" + NTU.port(7) + "[tls=true]");
+            try {
+                channelLogic.initPorts();
+            } catch (InterruptedException e) {
+                fail(e.getMessage());
+            }
+            implTestSummator(1);
+            server.disconnect();
+            client.disconnect();
+        } finally {
             System.setProperties(props);
+        }
+    }
+
+    @Test
+    public void testWithTLSv11v12() throws InterruptedException {
+        Properties props = System.getProperties();
+        try {
+            SampleCert.init();
+            NTU.exportServices(server.getServer(),
+                new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class,
+                    "summator"), channelLogic);
+            System.getProperties().setProperty("com.devexperts.connector.codec.ssl.protocols", "TLSv1.1");
+            NTU.connect(server, "tls[isServer,protocols=TLSv1.1;TLSv1.2]+:" + NTU.port(47));
+            NTU.connect(client, "tls+" + NTU.LOCAL_HOST + ":" + NTU.port(47));
+            try {
+                channelLogic.initPorts();
+            } catch (InterruptedException e) {
+                fail(e.getMessage());
+            }
+            implTestSummator(1);
+            server.disconnect();
+            client.disconnect();
+        } finally {
+            System.setProperties(props);
+        }
+    }
+
+    @Test
+    public void testWithTLSVersionsMismatch() throws InterruptedException {
+        if(channelLogic.type != TestType.REGULAR)
             return;
-        }
-        CountDownLatch connectedVersion = new CountDownLatch(2);
-        CountDownLatch notConnectedVersion = new CountDownLatch(2);
-        client.addEndpointListener(endpoint -> {
-            if (endpoint.isConnected()) {
-                connectedVersion.countDown();
-            } else {
-                notConnectedVersion.countDown();
-            }
-        });
-        server.addEndpointListener(endpoint -> {
-            if (endpoint.isConnected()) {
-                connectedVersion.countDown();
-            } else {
-                notConnectedVersion.countDown();
-            }
-        });
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class, "summator"), channelLogic);
-        client.getClient().setRequestSendingTimeout(1000);
-        NTU.connect(server, "tls[isServer,protocols=TLSv1.2]+:" + NTU.port(7));
-        NTU.connect(client, "tls+" + NTU.LOCAL_HOST + ":" + NTU.port(7));
+        Properties props = System.getProperties();
         try {
-            channelLogic.initPorts();
-        } catch (InterruptedException e) {
-            fail(e.getMessage());
+            SampleCert.init();
+            System.getProperties().setProperty("com.devexperts.connector.codec.ssl.protocols", "TLSv1.1");
+            CountDownLatch connectedVersion = new CountDownLatch(2);
+            CountDownLatch notConnectedVersion = new CountDownLatch(2);
+            client.addEndpointListener(endpoint -> {
+                (endpoint.isConnected() ? connectedVersion : notConnectedVersion).countDown();
+            });
+            server.addEndpointListener(endpoint -> {
+                (endpoint.isConnected() ? connectedVersion : notConnectedVersion).countDown();
+            });
+            NTU.exportServices(server.getServer(),
+                new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class,
+                    "summator"),
+                channelLogic);
+            client.getClient().setRequestSendingTimeout(1000);
+            NTU.connect(server, "tls[isServer,protocols=TLSv1.2]+:" + NTU.port(57));
+            NTU.connect(client, "tls+" + NTU.LOCAL_HOST + ":" + NTU.port(57));
+            try {
+                channelLogic.initPorts();
+            } catch (InterruptedException e) {
+                fail(e.getMessage());
+            }
+            assertTrue(connectedVersion.await(10, TimeUnit.SECONDS));
+            RMICommonTest.Summator summator =
+                channelLogic.clientPort.getProxy(RMICommonTest.Summator.class, "summator");
+            Random rnd = new Random(123514623655723586L);
+            try {
+                int a = rnd.nextInt();
+                int b = rnd.nextInt();
+                summator.sum(a, b);
+                fail();
+            } catch (RMIException e) {
+                assertEquals(RMIExceptionType.REQUEST_SENDING_TIMEOUT, e.getType());
+            } catch (Exception e) {
+                fail();
+            }
+            assertTrue(notConnectedVersion.await(10, TimeUnit.SECONDS));
+            server.disconnect();
+            client.disconnect();
+        } finally {
+            System.setProperties(props);
         }
-        assertTrue(connectedVersion.await(10, TimeUnit.SECONDS));
-        RMICommonTest.Summator summator = channelLogic.clientPort.getProxy(RMICommonTest.Summator.class, "summator");
-        Random rnd = new Random(123514623655723586L);
-        try {
-            int a = rnd.nextInt();
-            int b = rnd.nextInt();
-            summator.sum(a, b);
-            fail();
-        } catch (RMIException e) {
-            assertEquals(RMIExceptionType.REQUEST_SENDING_TIMEOUT, e.getType());
-        } catch (Exception e) {
-            fail();
-        }
-        assertTrue(notConnectedVersion.await(10, TimeUnit.SECONDS));
-        server.disconnect();
-        client.disconnect();
     }
 
     @Test
@@ -720,12 +733,20 @@ public class RMIFunctionalityTest {
     public static class LargeRequestProcessorImpl2 implements LargeRequestProcessor {
         @Override
         public int process(byte[] data) {
-            if (data.length >= LARGE_SIZE)
+            if (data.length >= LARGE_SIZE) {
+                // make sure we have time to cancel request
                 try {
-                    Thread.sleep(1000); // make sure we have time to cancel request
+                    long deadline = System.currentTimeMillis() + 5000;
+                    while (System.currentTimeMillis() < deadline) {
+                        Thread.sleep(50);
+                        if (RMITask.current().getState().isCompletedOrCancelling()) {
+                            break;
+                        }
+                    }
                 } catch (InterruptedException e) {
                     // nothing
                 }
+            }
             return Arrays.hashCode(data);
         }
     }
