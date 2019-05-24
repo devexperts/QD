@@ -11,8 +11,7 @@
  */
 package com.dxfeed.api.test;
 
-import java.util.Collections;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.*;
 
 import com.devexperts.test.ThreadCleanCheck;
@@ -27,14 +26,21 @@ public class CandleAddRemoveSubTest extends TestCase {
     private DXPublisher publisher;
     private DXFeedSubscription<Candle> sub;
 
+    private CandleSymbol symbol1 = CandleSymbol.valueOf("X", CandlePeriod.valueOf(5, CandleType.MINUTE));
+    private CandleSymbol symbol2 = CandleSymbol.valueOf("Y", CandlePeriod.valueOf(5, CandleType.MINUTE));
+    private CandleSymbol symbol3 = CandleSymbol.valueOf("Z", CandlePeriod.valueOf(5, CandleType.MINUTE));
+    private CandleSymbol[] symbols = {symbol1, symbol2, symbol3};
+    private long time;
+
     private final BlockingQueue<Object> added = new LinkedBlockingQueue<>();
     private final BlockingQueue<Object> removed = new LinkedBlockingQueue<>();
-    private final BlockingQueue<Candle> received = new LinkedBlockingQueue<>();
+    private final BlockingQueue<Object> received = new LinkedBlockingQueue<>();
 
     @Override
     protected void setUp() throws Exception {
         ThreadCleanCheck.before();
         endpoint = DXEndpoint.create(DXEndpoint.Role.LOCAL_HUB);
+        endpoint.executor(Runnable::run);
         feed = endpoint.getFeed();
         publisher = endpoint.getPublisher();
         sub = feed.createSubscription(Candle.class);
@@ -49,116 +55,206 @@ public class CandleAddRemoveSubTest extends TestCase {
                 removed.addAll(symbols);
             }
         });
-        sub.addEventListener(received::addAll);
+        sub.addEventListener((candles) -> {
+            candles.stream().map(Candle::getEventSymbol).forEach(received::add);
+        });
     }
 
     @Override
     protected void tearDown() throws Exception {
-        endpoint.close();
+        endpoint.closeAndAwaitTermination();
+        checkQueues(null, null, null);
         ThreadCleanCheck.after();
     }
 
     public void testCandleAddRemoveSub() throws InterruptedException {
-        CandleSymbol symbol = CandleSymbol.valueOf("T", CandlePeriod.valueOf(5, CandleType.MINUTE));
-
         // subscribe
-        sub.addSymbols(symbol);
-        assertEquals(symbol, added.poll(1, TimeUnit.SECONDS));
-        assertEquals(0, added.size());
-        assertEquals(0, removed.size());
+        sub.addSymbols(symbol1);
+        checkQueues(symbol1, null, null);
 
         // shall receive this event (subscribed)
-        publisher.publishEvents(Collections.singletonList(new Candle(symbol)));
-        assertEquals(symbol, received.poll(1, TimeUnit.SECONDS).getEventSymbol());
-        assertEquals(0, received.size());
+        publish();
+        checkQueues(null, null, symbol1);
 
         // unsubscribe
-        sub.removeSymbols(symbol);
-        assertEquals(symbol, removed.poll(1, TimeUnit.SECONDS));
-        assertEquals(0, added.size());
-        assertEquals(0, removed.size());
+        sub.removeSymbols(symbol1);
+        checkQueues(null, symbol1, null);
 
         // shall NOT receive this event (not subscribed)
-        publisher.publishEvents(Collections.singletonList(new Candle(symbol)));
-        assertEquals(null, received.poll(300, TimeUnit.MILLISECONDS));
+        publish();
+        checkQueues(null, null, null);
     }
 
     public void testCandleAddClearSub() throws InterruptedException {
-        CandleSymbol symbol = CandleSymbol.valueOf("T", CandlePeriod.valueOf(5, CandleType.MINUTE));
-
         // subscribe
-        sub.addSymbols(symbol);
-        assertEquals(symbol, added.poll(1, TimeUnit.SECONDS));
-        assertEquals(0, added.size());
-        assertEquals(0, removed.size());
+        sub.addSymbols(symbol1);
+        checkQueues(symbol1, null, null);
 
         // shall receive this event (subscribed)
-        publisher.publishEvents(Collections.singletonList(new Candle(symbol)));
-        assertEquals(symbol, received.poll(1, TimeUnit.SECONDS).getEventSymbol());
-        assertEquals(0, received.size());
+        publish();
+        checkQueues(null, null, symbol1);
 
         // unsubscribe with clear
         sub.clear();
-        assertEquals(symbol, removed.poll(1, TimeUnit.SECONDS));
-        assertEquals(0, added.size());
-        assertEquals(0, removed.size());
+        checkQueues(null, symbol1, null);
 
         // shall NOT receive this event (not subscribed)
-        publisher.publishEvents(Collections.singletonList(new Candle(symbol)));
-        assertEquals(null, received.poll(300, TimeUnit.MILLISECONDS));
+        publish();
+        checkQueues(null, null, null);
+    }
+
+    public void testReAttach() throws InterruptedException {
+        feed.detachSubscription(sub);
+        feed.attachSubscription(sub);
+        testCandleAddDetachSub();
+    }
+
+    public void testIdempotentAttach() throws InterruptedException {
+        feed.attachSubscription(sub);
+        feed.attachSubscription(sub);
+        testCandleAddDetachSub();
+    }
+
+    public void testIdempotentDetach() throws InterruptedException {
+        feed.detachSubscription(sub);
+        feed.detachSubscription(sub);
+        feed.attachSubscription(sub);
+        testCandleAddDetachSub();
+    }
+
+    public void testIdempotentReAttach() throws InterruptedException {
+        feed.detachSubscription(sub);
+        feed.detachSubscription(sub);
+        feed.attachSubscription(sub);
+        feed.attachSubscription(sub);
+        testCandleAddDetachSub();
+    }
+
+    public void testIdempotentAttachAfterFirstChangeListener() throws InterruptedException {
+        feed.detachSubscription(sub);
+        sub.addChangeListener(emptyChangeListener());
+        feed.attachSubscription(sub);
+        feed.attachSubscription(sub);
+        testCandleAddDetachSub();
+    }
+
+    public void testIdempotentAttachAfterSecondChangeListener() throws InterruptedException {
+        sub.addChangeListener(emptyChangeListener());
+        feed.attachSubscription(sub);
+        feed.attachSubscription(sub);
+        testCandleAddDetachSub();
+    }
+
+    public void testIdempotentReAttachWithManyChangeListener() throws InterruptedException {
+        sub.addChangeListener(emptyChangeListener());
+        feed.detachSubscription(sub);
+        feed.detachSubscription(sub);
+        sub.addChangeListener(emptyChangeListener());
+        feed.attachSubscription(sub);
+        feed.attachSubscription(sub);
+        sub.addChangeListener(emptyChangeListener());
+        testCandleAddDetachSub();
+    }
+
+    public void testDetachAfterSecondChangeListener() throws InterruptedException {
+        sub.addChangeListener(emptyChangeListener());
+        testCandleAddDetachSub();
+    }
+
+    public void testDualAttach() throws InterruptedException {
+        DXEndpoint secondEndpoint = DXEndpoint.create(DXEndpoint.Role.LOCAL_HUB);
+        secondEndpoint.executor(Runnable::run);
+        secondEndpoint.getFeed().attachSubscription(sub);
+        testCandleAddDetachSub();
+        secondEndpoint.closeAndAwaitTermination();
+    }
+
+    public void testDualAttachAndDetach() throws InterruptedException {
+        DXEndpoint secondEndpoint = DXEndpoint.create(DXEndpoint.Role.LOCAL_HUB);
+        secondEndpoint.executor(Runnable::run);
+        secondEndpoint.getFeed().attachSubscription(sub);
+        secondEndpoint.getFeed().detachSubscription(sub);
+        testCandleAddDetachSub();
+        secondEndpoint.closeAndAwaitTermination();
+    }
+
+    public void testDualAttachAndReAttach() throws InterruptedException {
+        DXEndpoint secondEndpoint = DXEndpoint.create(DXEndpoint.Role.LOCAL_HUB);
+        secondEndpoint.executor(Runnable::run);
+        secondEndpoint.getFeed().detachSubscription(sub);
+        feed.detachSubscription(sub);
+        secondEndpoint.getFeed().attachSubscription(sub);
+        sub.addChangeListener(emptyChangeListener());
+        secondEndpoint.getFeed().detachSubscription(sub);
+        feed.attachSubscription(sub);
+        testCandleAddDetachSub();
+        secondEndpoint.closeAndAwaitTermination();
     }
 
     public void testCandleAddDetachSub() throws InterruptedException {
-        CandleSymbol symbol = CandleSymbol.valueOf("T", CandlePeriod.valueOf(5, CandleType.MINUTE));
-
         // subscribe
-        sub.addSymbols(symbol);
-        assertEquals(symbol, added.poll(1, TimeUnit.SECONDS));
-        assertEquals(0, added.size());
-        assertEquals(0, removed.size());
+        sub.addSymbols(symbol1);
+        checkQueues(symbol1, null, null);
 
         // shall receive this event (subscribed)
-        publisher.publishEvents(Collections.singletonList(new Candle(symbol)));
-        assertEquals(symbol, received.poll(1, TimeUnit.SECONDS).getEventSymbol());
-        assertEquals(0, received.size());
+        publish();
+        checkQueues(null, null, symbol1);
 
         // detach sub
         feed.detachSubscription(sub);
-        assertEquals(symbol, removed.poll(1, TimeUnit.SECONDS));
-        assertEquals(0, added.size());
-        assertEquals(0, removed.size());
+        checkQueues(null, symbol1, null);
 
         // shall NOT receive this event (detached!)
-        publisher.publishEvents(Collections.singletonList(new Candle(symbol)));
-        assertEquals(null, received.poll(300, TimeUnit.MILLISECONDS));
+        publish();
+        checkQueues(null, null, null);
     }
 
     public void testCandleSetSub() throws InterruptedException {
-        CandleSymbol symbol1 = CandleSymbol.valueOf("X", CandlePeriod.valueOf(5, CandleType.MINUTE));
-        CandleSymbol symbol2 = CandleSymbol.valueOf("Y", CandlePeriod.valueOf(5, CandleType.MINUTE));
-
         // set sub to symbol1
         sub.setSymbols(symbol1);
-        assertEquals(symbol1, added.poll(1, TimeUnit.SECONDS));
-        assertEquals(0, added.size());
-        assertEquals(0, removed.size());
+        checkQueues(symbol1, null, null);
 
         // shall receive this event (subscribed)
-        publisher.publishEvents(Collections.singletonList(new Candle(symbol1)));
-        assertEquals(symbol1, received.poll(1, TimeUnit.SECONDS).getEventSymbol());
-        assertEquals(0, received.size());
+        publish();
+        checkQueues(null, null, symbol1);
 
         // set sub to symbol2
         sub.setSymbols(symbol2);
-        assertEquals(symbol2, added.poll(1, TimeUnit.SECONDS));
-        assertEquals(symbol1, removed.poll(1, TimeUnit.SECONDS));
-        assertEquals(0, added.size());
-        assertEquals(0, removed.size());
+        checkQueues(symbol2, symbol1, null);
 
         // shall receive only symbol2 event
-        publisher.publishEvents(Collections.singletonList(new Candle(symbol1)));
-        publisher.publishEvents(Collections.singletonList(new Candle(symbol2)));
-        assertEquals(symbol2, received.poll(1, TimeUnit.SECONDS).getEventSymbol());
-        assertEquals(0, received.size());
+        publish();
+        checkQueues(null, null, symbol2);
+
+        // clear subscription for expected tearDown
+        sub.clear();
+        checkQueues(null, symbol2, null);
+    }
+
+    private void publish() {
+        // publish all symbols, including never subscribed ones
+        List<Candle> candles = new ArrayList<>();
+        for (CandleSymbol symbol : symbols) {
+            Candle candle = new Candle(symbol);
+            // make all candle use different time to avoid conflation
+            candle.setTime(time += 1000);
+            candles.add(candle);
+        }
+        publisher.publishEvents(candles);
+    }
+
+    private void checkQueues(CandleSymbol addedSymbol, CandleSymbol removedSymbol, CandleSymbol receivedSymbol) {
+        assertEquals(addedSymbol, added.poll());
+        assertEquals(removedSymbol, removed.poll());
+        assertEquals(receivedSymbol, received.poll());
+        assertTrue(added.isEmpty());
+        assertTrue(removed.isEmpty());
+        assertTrue(received.isEmpty());
+    }
+
+    private ObservableSubscriptionChangeListener emptyChangeListener() {
+        return symbols -> {
+            // do nothing
+        };
     }
 }

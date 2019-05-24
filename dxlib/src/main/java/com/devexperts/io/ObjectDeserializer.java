@@ -13,8 +13,7 @@ package com.devexperts.io;
 
 import java.io.*;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Date;
+import java.util.*;
 import java.util.zip.DataFormatException;
 
 import com.devexperts.logging.Logging;
@@ -34,6 +33,8 @@ class ObjectDeserializer extends ObjectInputStream {
     private static final int MAX_BYTES_TO_LOG =
         SystemProperties.getIntProperty(ObjectDeserializer.class, "maxBytesToLog", 1024);
 
+    private static final char[] DIGITS = "0123456789ABCDEF".toCharArray();
+
     // ========== pooling implementation ==========
 
     private static final int MAX_POOLED_BUFFER =
@@ -42,9 +43,12 @@ class ObjectDeserializer extends ObjectInputStream {
     private static final LockFreePool<ObjectDeserializer> POOL =
         new LockFreePool<>(ObjectDeserializer.class.getName(), 16);
 
-    private static ObjectDeserializer allocate() throws IOException {
+    private static ObjectDeserializer allocate(SerialClassContext serialContext) throws IOException {
         ObjectDeserializer od = POOL.poll();
-        return od != null ? od : new ObjectDeserializer(new ByteArrayInput());
+        if (od == null)
+            od = new ObjectDeserializer(new ByteArrayInput());
+        od.serialContext = Objects.requireNonNull(serialContext);
+        return od;
     }
 
     private static void release(ObjectDeserializer od) throws IOException {
@@ -67,19 +71,20 @@ class ObjectDeserializer extends ObjectInputStream {
         // return to pool
         od.bai.setBuffer(null);
         od.bao.setBuffer(null);
-        od.serializationContext = null;
+        od.dumpBytes = null;
+        od.serialContext = null;
         POOL.offer(od);
     }
 
     // ========== static package-private interface methods ==========
 
     static Object toObject(byte[] bytes, SerialClassContext serialContext) throws IOException {
+        if (bytes == null)
+            return null;
+        ObjectDeserializer od = allocate(serialContext);
         try {
-            if (bytes == null)
-                return null;
-            ObjectDeserializer od = allocate();
             od.decompressAndSetInput(bytes, 0, bytes.length);
-            od.initObjectInput(serialContext);
+            od.checkObjectHeader();
             Object object;
             try {
                 object = od.readObject();
@@ -89,46 +94,8 @@ class ObjectDeserializer extends ObjectInputStream {
             release(od); // Release only after successful read to the last byte.
             return object;
         } catch (Throwable t) {
-            dumpError(t, null, bytes, bytes.length, serialContext.getClassLoader());
+            od.dumpError(null, t);
             return rethrowIOException(t);
-        }
-    }
-
-    private static final char[] DIGITS = "0123456789ABCDEF".toCharArray();
-
-    @SuppressWarnings("rawtypes")
-    private static void dumpError(Throwable thrown, Class[] types, byte[] bytes, int length, ClassLoader cl) {
-        try {
-            if (!DUMP_ERRORS)
-                return;
-
-            StringBuilder message = new StringBuilder("An error occurred while deserializing object");
-            if (types != null)
-                message.append("s:\n  Object types: ").append(Arrays.toString(types)).append('\n');
-            else
-                message.append(":\n");
-            message.append("  Classloader: ").append(cl).append('\n');
-            if (length <= MAX_BYTES_TO_LOG) {
-                message.append("  Bytes: [");
-                for (int i = 0; i < length; i++) {
-                    byte b = bytes[i];
-                    message.append(DIGITS[(b >> 4) & 0xF]).append(DIGITS[b & 0xF]).append(' ');
-                }
-                message.setCharAt(message.length() - 1, ']');
-            } else {
-                String fileName = "deserialization-" + new SimpleDateFormat("yyyyMMdd-HHmmss.SSS").format(new Date()) + ".dump";
-                try {
-                    try (FileOutputStream outputStream = new FileOutputStream(fileName)) {
-                        outputStream.write(bytes, 0, length);
-                    }
-                    message.append("  Bytes were dumped into \"").append(fileName).append('\"');
-                } catch (Throwable t) {
-                    message.append("  Failed to dump bytes into \"").append(fileName).append("\" because of").append(t.toString());
-                }
-            }
-            log.error(message.toString(), thrown);
-        } catch (Throwable t) {
-            // ignored
         }
     }
 
@@ -138,15 +105,14 @@ class ObjectDeserializer extends ObjectInputStream {
             throw new IOException("Illegal length: " + length);
         if (length == -1)
             return null;
-        return readBody(serialContext, in, (int) length);
+        return readBody(in, (int) length, serialContext);
     }
 
-    static Object readBody(SerialClassContext serialContext, DataInput in, int length) throws IOException {
-        ObjectDeserializer od = allocate();
-        byte[] bytes = od.readFullyIntoBuffer(in, length);
+    static Object readBody(DataInput in, int length, SerialClassContext serialContext) throws IOException {
+        ObjectDeserializer od = allocate(serialContext);
         try {
-            od.decompressAndSetInput(bytes, 0, length);
-            od.initObjectInput(serialContext);
+            od.decompressAndSetInput(in, length);
+            od.checkObjectHeader();
             Object object;
             try {
                 object = od.readObject();
@@ -156,17 +122,16 @@ class ObjectDeserializer extends ObjectInputStream {
             release(od); // Release only after successful read to the last byte.
             return object;
         } catch (Throwable t) {
-            dumpError(t, null, bytes, length, serialContext.getClassLoader());
+            od.dumpError(null, t);
             return rethrowIOException(t);
         }
     }
 
     @SuppressWarnings("rawtypes")
-    static Object[] readBodiesWithTypes(SerialClassContext serialContext, DataInput in, int length, Class<?>[] types) throws IOException {
-        ObjectDeserializer od = allocate();
-        byte[] bytes = od.readFullyIntoBuffer(in, length);
+    static Object[] readBodiesWithTypes(DataInput in, int length, Class<?>[] types, SerialClassContext serialContext) throws IOException {
+        ObjectDeserializer od = allocate(serialContext);
         try {
-            od.decompressAndSetInput(bytes, 0, length);
+            od.decompressAndSetInput(in, length);
             int expectedSignature = ObjectIOImplUtil.getDeclaredTypesSignature(types);
             int actualSignature = od.bai.readInt();
             if (actualSignature != expectedSignature)
@@ -182,7 +147,7 @@ class ObjectDeserializer extends ObjectInputStream {
                 else
                     objectsPresent = true;
             if (objectsPresent) {
-                od.initObjectInput(serialContext);
+                od.checkObjectHeader();
                 for (int i = 0; i < types.length; i++)
                     if (!CompactSerializer.isCompact(types[i]))
                         try {
@@ -196,7 +161,7 @@ class ObjectDeserializer extends ObjectInputStream {
             release(od); // Release only after successful read to the last byte.
             return objects;
         } catch (Throwable t) {
-            dumpError(t, types, bytes, length, serialContext.getClassLoader());
+            od.dumpError(types, t);
             return rethrowIOException(t);
         }
     }
@@ -218,7 +183,11 @@ class ObjectDeserializer extends ObjectInputStream {
     private final ByteArrayInput bai;
     private final ByteArrayOutput bao;
     private byte[] pooledBuffer;
-    private SerialClassContext serializationContext;
+
+    private byte[] dumpBytes;
+    private int dumpOffset;
+    private int dumpLength;
+    private SerialClassContext serialContext;
 
     private ObjectDeserializer(ByteArrayInput bai) throws IOException {
         super(bai);
@@ -238,7 +207,19 @@ class ObjectDeserializer extends ObjectInputStream {
         return bytes;
     }
 
+    private void decompressAndSetInput(DataInput in, int length) throws IOException {
+        if (in instanceof BufferedInput && ((BufferedInput) in).readToCaptureBytes(this::decompressAndSetInput, length))
+            return;
+        decompressAndSetInput(readFullyIntoBuffer(in, length), 0, length);
+    }
+
     private void decompressAndSetInput(byte[] bytes, int offset, int length) {
+        dumpBytes = bytes;
+        dumpOffset = offset;
+        dumpLength = length;
+        // * it is possible that (bytes == pooledBuffer) so care is taken not to override bytes
+        // * for performance we try to decompress in same buffer, possibly pooledBuffer
+        // * recursive compression should not happen, dunno why it is written this way
         try {
             while (Compression.isCompressed(bytes, offset, length)) {
                 if (pooledBuffer == null)
@@ -259,13 +240,46 @@ class ObjectDeserializer extends ObjectInputStream {
         bai.setInput(bytes, offset, length);
     }
 
-    private void initObjectInput(SerialClassContext serialContext) throws IOException {
-        assert serialContext != null;
+    private void checkObjectHeader() throws IOException {
         for (byte b : ObjectIOImplUtil.STREAM_HEADER) {
             if (bai.readByte() != b)
                 throw new StreamCorruptedException("invalid stream header");
         }
-        this.serializationContext = serialContext;
+    }
+
+    @SuppressWarnings("rawtypes")
+    private void dumpError(Class[] types, Throwable thrown) {
+        if (!DUMP_ERRORS)
+            return;
+        try {
+            StringBuilder message = new StringBuilder("An error has occurred while deserializing object:\n");
+            if (types != null)
+                message.append("  Object types: ").append(Arrays.toString(types)).append("\n");
+            ClassLoader cl = serialContext.getClassLoader();
+            if (cl != null)
+                message.append("  Classloader: ").append(cl).append('\n');
+            if (dumpLength <= MAX_BYTES_TO_LOG) {
+                message.append("  Bytes: [");
+                for (int i = 0; i < dumpLength; i++) {
+                    byte b = dumpBytes[dumpOffset + i];
+                    message.append(DIGITS[(b >> 4) & 0xF]).append(DIGITS[b & 0xF]).append(' ');
+                }
+                message.setCharAt(message.length() - 1, ']');
+            } else {
+                String fileName = "deserialization-" + new SimpleDateFormat("yyyyMMdd-HHmmss.SSS").format(new Date()) + ".dump";
+                try {
+                    try (FileOutputStream outputStream = new FileOutputStream(fileName)) {
+                        outputStream.write(dumpBytes, dumpOffset, dumpLength);
+                    }
+                    message.append("  Bytes were dumped into ").append(fileName);
+                } catch (Throwable t) {
+                    message.append("  Failed to dump bytes into ").append(fileName).append(" because of ").append(t.toString());
+                }
+            }
+            log.error(message.toString(), thrown);
+        } catch (Throwable t) {
+            // ignored
+        }
     }
 
     @Override
@@ -276,16 +290,15 @@ class ObjectDeserializer extends ObjectInputStream {
     @Override
     @SuppressWarnings("rawtypes")
     protected Class resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
-        assert serializationContext != null;
         if (ClassUtil.isPrimitiveType(desc.getName()))
             return ClassUtil.getTypeClass(desc.getName(), null);
         try {
-            serializationContext.check(desc.getName());
+            serialContext.check(desc.getName());
         } catch (ClassNotFoundException e) {
             throw new InvalidClassException(e.getMessage());
         }
         try {
-            return ClassUtil.getTypeClass(desc.getName(), serializationContext.getClassLoader());
+            return ClassUtil.getTypeClass(desc.getName(), serialContext.getClassLoader());
         } catch (ClassNotFoundException ignored) {
             // try super implementation
         }

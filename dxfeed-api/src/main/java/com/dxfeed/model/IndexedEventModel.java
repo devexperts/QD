@@ -54,10 +54,23 @@ import com.dxfeed.model.market.OrderBookModel;
  * effort on data representation logic, while delegating all the data-handling logic to this model.
  * It also showcases some of the advanced methods of this model like {@link #setSizeLimit(int) setSizeLimit}.
  *
+ * <h3>Resource management and closed models</h3>
+ *
+ * Attached model is a potential memory leak. If the pointer to attached model is lost, then there is no way to detach
+ * this model from the feed and the model will not be reclaimed by the garbage collector as long as the corresponding
+ * feed is still used. Detached model can be reclaimed by the garbage collector, but detaching model requires knowing
+ * the pointer to the feed at the place of the call, which is not always convenient.
+ *
+ * <p> The convenient way to detach model from the feed is to call its {@link #close close} method. Closed model
+ * becomes permanently detached from all feeds, removes all its listeners and is guaranteed to be reclaimable by
+ * the garbage collector as soon as all external references to it are cleared.
+ *
  * <h3><a name="threadsAndLocksSection">Threads and locks</a></h3>
  *
  * This class is <b>not</b> tread-safe and requires external synchronization.
- * You must query the state of {@link #attach(DXFeed) attached} model only from
+ * The only thread-safe methods are {@link #attach attach}, {@link #detach detach} and {@link #close close}.
+ *
+ * <p> You must query the state of {@link #attach(DXFeed) attached} model only from
  * inside of the notification invocations or from within the thread that performs
  * those notifications.
  *
@@ -103,6 +116,15 @@ public class IndexedEventModel<E extends IndexedEvent<?>>
      */
     public IndexedEventModel(Class<? extends E> eventType) {
         super(eventType);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void close() {
+        super.close();
+        events.clear();
     }
 
     /**
@@ -173,6 +195,8 @@ public class IndexedEventModel<E extends IndexedEvent<?>>
 
         @Override
         public void addListener(ObservableListModelListener<? super E> listener) {
+            if (IndexedEventModel.this.isClosed())
+                return;
             listeners.add(listener);
         }
 

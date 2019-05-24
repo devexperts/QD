@@ -39,8 +39,8 @@ class OrderBookList extends CheckedTreeList<Order> implements ObservableListMode
         }
     }
 
-    private List<ObservableListModelListener<? super Order>> listeners =
-        new CopyOnWriteArrayList<>();
+    private volatile boolean closed;
+    private final List<ObservableListModelListener<? super Order>> listeners = new CopyOnWriteArrayList<>();
 
     private OrderBookModelFilter filter;
     private boolean modelChanged;
@@ -62,10 +62,17 @@ class OrderBookList extends CheckedTreeList<Order> implements ObservableListMode
         super(c);
     }
 
+    void close() {
+        closed = true;
+        listeners.clear();
+    }
+
     // ObservableListModel<Order> Interface Implementation
 
     @Override
     public void addListener(ObservableListModelListener<? super Order> listener) {
+        if (closed)
+            return;
         listeners.add(listener);
     }
 

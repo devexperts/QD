@@ -46,7 +46,7 @@ final class SerializationMarshallerImpl<T> extends Marshaller<T> {
             throw new IllegalArgumentException();
         if (serialClassContext == null)
             throw new NullPointerException();
-        Object object = ObjectDeserializer.readBody(serialClassContext, in, length);
+        Object object = ObjectDeserializer.readBody(in, length, serialClassContext);
         if (!isCorrectType(object))
             throw new InvalidClassException("Invalid type " + object.getClass().getName() + ", expected " + type.getName());
         return (T) object;

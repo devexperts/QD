@@ -14,6 +14,7 @@ package com.dxfeed.api;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -222,7 +223,7 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
     private volatile boolean closed;
 
     // initialized during construction in init() method
-    private transient EventTypeSet eventTypeSet;
+    private transient Set<Class<? extends E>> eventTypeSet;
     private transient IndexerFunction<Object, Object> eventSymbolIndexer;
     private transient IndexedSet<Object, Object> symbols;
     private transient ObservableSubscriptionChangeListener changeListeners;
@@ -300,10 +301,10 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
             return;
         closed = true;
         eventListeners = null;
-        if (changeListeners != null) {
-            changeListeners.subscriptionClosed();
-            changeListeners = null;
-        }
+        ObservableSubscriptionChangeListener notifyListeners = changeListeners;
+        changeListeners = null;
+        if (notifyListeners != null)
+            notifyListeners.subscriptionClosed();
     }
 
     /**
@@ -311,7 +312,7 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
      */
     @Override
     public Set<Class<? extends E>> getEventTypes() {
-        return eventTypeSet.asSet();
+        return eventTypeSet;
     }
 
     /**
@@ -548,6 +549,7 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
      * (its set of change listeners is empty).
      *
      * This method does nothing if this subscription is closed.
+     *
      * @param listener the event listener.
      * @throws NullPointerException if listener is null.
      * @throws IllegalStateException if subscription is attached and is not empty.
@@ -559,26 +561,19 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
             return;
         if (changeListeners != null && !symbols.isEmpty())
             throw new IllegalStateException("Cannot add event listener to non-empty attached subscription. Add event listeners first");
-        if (eventListeners == null)
-            eventListeners = listener;
-        else
-            eventListeners = new EventListeners<>(addListener(eventListeners, listener));
+        eventListeners = addListener(eventListeners, listener, false, EventListeners::new);
     }
 
     /**
      * Removes listener for events.
+     *
      * @param listener the event listener.
      * @throws NullPointerException if listener is null.
      */
     public synchronized void removeEventListener(DXFeedEventListener<E> listener) {
         if (listener == null)
             throw new NullPointerException();
-        if (eventListeners == null)
-            return;
-        if (eventListeners == listener)
-            eventListeners = null;
-        else if (eventListeners instanceof EventListeners)
-            eventListeners = ((EventListeners<E>) eventListeners).remove(listener);
+        eventListeners = removeListener(eventListeners, listener, EventListeners::new);
     }
 
     /**
@@ -604,17 +599,10 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
             throw new NullPointerException();
         if (closed)
             return;
-        if (changeListeners == null)
-            changeListeners = listener;
-        else if (changeListeners == listener)
-            return;
-        else {
-            if (changeListeners instanceof ChangeListeners && findListener((ChangeListeners) changeListeners, listener) >= 0)
-                return;
-            changeListeners = new ChangeListeners(addListener(changeListeners, listener));
-        }
+        ObservableSubscriptionChangeListener oldListeners = changeListeners;
+        changeListeners = addListener(changeListeners, listener, true, ChangeListeners::new);
         // notify new listener on a set of symbols
-        if (!symbols.isEmpty())
+        if (changeListeners != oldListeners && !symbols.isEmpty())
             listener.symbolsAdded(symbols);
     }
 
@@ -632,19 +620,11 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
     public synchronized void removeChangeListener(ObservableSubscriptionChangeListener listener) {
         if (listener == null)
             throw new NullPointerException();
-        if (changeListeners == null)
-            return;
-        if (changeListeners.equals(listener))
-            changeListeners = null;
-        else if (changeListeners instanceof ChangeListeners) {
-            ChangeListeners oldListeners = (ChangeListeners) changeListeners;
-            changeListeners = oldListeners.remove(listener);
-            if (changeListeners == oldListeners)
-                return;
-        } else
-            return;
+        ObservableSubscriptionChangeListener oldListeners = changeListeners;
+        changeListeners = removeListener(changeListeners, listener, ChangeListeners::new);
         // notify listener on close
-        listener.subscriptionClosed();
+        if (changeListeners != oldListeners)
+            listener.subscriptionClosed();
     }
 
     //----------------------- package-private API for DXFeed -----------------------
@@ -712,23 +692,18 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
         return a;
     }
 
-    private void init(Class<? extends E> eventType) {
-        eventTypeSet = new SingletonEventTypeSet(eventType);
-        initRest();
-    }
-
     @SafeVarargs
     private final void init(Class<? extends E>... eventTypes) {
-        if (eventTypes.length == 1) {
-            init(eventTypes[0]);
+        if (eventTypes.length == 0) {
+            throw new IllegalArgumentException();
+        } else if (eventTypes.length == 1) {
+            eventTypeSet = Collections.singleton(Objects.requireNonNull(eventTypes[0]));
         } else {
-            this.eventTypeSet = new MultipleEventTypes(eventTypes);
-            initRest();
+            Set<Class<? extends E>> set = IndexedSet.create();
+            for (Class<? extends E> eventType : eventTypes)
+                set.add(Objects.requireNonNull(eventType));
+            eventTypeSet = Collections.unmodifiableSet(set);
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private void initRest() {
         eventSymbolIndexer = getClass() == DXFeedSubscription.class ? IndexerFunction.DEFAULT : this::undecorateSymbol;
         symbols = IndexedSet.create(eventSymbolIndexer);
     }
@@ -760,14 +735,11 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
     private void addAndNotify(IndexedSet<Object, Object> added, IndexedSet<Object, Object> removed) {
         // was there and "the same" -- don't process it
         added.removeIf(o -> !putSymbol(o));
-        if (added.isEmpty() && (removed == null || removed.isEmpty()))
-            return;
-        if (changeListeners != null) {
-            if (removed != null && !removed.isEmpty())
-                changeListeners.symbolsRemoved(removed);
-            if (!added.isEmpty())
-                changeListeners.symbolsAdded(added);
-        }
+        if (changeListeners != null && removed != null && !removed.isEmpty())
+            changeListeners.symbolsRemoved(removed);
+        // make 2nd check for changeListeners in case it was nullified during 1st notification
+        if (changeListeners != null && !added.isEmpty())
+            changeListeners.symbolsAdded(added);
     }
 
     private synchronized void addSymbolImpl(Object symbol) {
@@ -823,7 +795,7 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
     }
 
     private synchronized void writeObject(ObjectOutputStream out) throws IOException {
-        writeCompactCollection(out, eventTypeSet.asSet());
+        writeCompactCollection(out, eventTypeSet);
         writeCompactCollection(out, symbols);
         writeCompactCollection(out, getSerializable(eventListeners));
         writeCompactCollection(out, getSerializable(changeListeners));
@@ -831,73 +803,11 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
 
     @SuppressWarnings("unchecked")
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
-        int n = IOUtil.readCompactInt(in);
-        Class<? extends E>[] eventTypes = (Class<? extends E>[]) new Class<?>[n];
-        for (int i = 0; i < n; i++)
-            eventTypes[i] = (Class<? extends E>) in.readObject();
-        init(eventTypes);
+        Object[] eventTypes = readCompactCollection(in);
+        init(Arrays.copyOf(eventTypes, eventTypes.length, Class[].class));
         Collections.addAll(symbols, readCompactCollection(in));
-        eventListeners = new EventListeners<E>(DXFeedSubscription.<EventListeners<E>>readCompactCollection(in)).simplify();
-        changeListeners = new ChangeListeners(DXFeedSubscription.<ObservableSubscriptionChangeListener>readCompactCollection(in)).simplify();
-    }
-
-    private abstract class EventTypeSet {
-        protected EventTypeSet() {}
-
-        abstract boolean contains(Class<?> eventType);
-        abstract Set<Class<? extends E>> asSet();
-    }
-
-    private class SingletonEventTypeSet extends EventTypeSet {
-        private final Class<? extends E> eventType;
-        private Set<Class<? extends E>> set;
-
-        SingletonEventTypeSet(Class<? extends E> eventType) {
-            if (eventType == null)
-                throw new NullPointerException();
-            this.eventType = eventType;
-        }
-
-        @Override
-        boolean contains(Class<?> eventType) {
-            return this.eventType == eventType;
-        }
-
-        @Override
-        Set<Class<? extends E>> asSet() {
-            if (set == null)
-                set = Collections.singleton(eventType);
-            return set;
-        }
-    }
-
-    private class MultipleEventTypes extends EventTypeSet {
-        private final Class<? extends E>[] eventTypes;
-        private Set<Class<? extends E>> set;
-
-        @SuppressWarnings("unchecked")
-        MultipleEventTypes(Class<? extends E>... eventTypes) {
-            if (eventTypes.length == 0)
-                throw new IllegalArgumentException();
-            for (Class<? extends E> eventType : eventTypes)
-                if (eventType == null)
-                    throw new NullPointerException();
-            int n = eventTypes.length;
-            this.eventTypes = (Class<E>[]) new Class<?>[n];
-            System.arraycopy(eventTypes, 0, this.eventTypes, 0, n);
-        }
-
-        @Override
-        boolean contains(Class<?> eventType) {
-            return asSet().contains(eventType);
-        }
-
-        @Override
-        Set<Class<? extends E>> asSet() {
-            if (set == null)
-                set = Collections.unmodifiableSet(new IndexedSet<Class<? extends E>, Class<? extends E>>(Arrays.asList(eventTypes)));
-            return set;
-        }
+        eventListeners = simplifyListener(readCompactCollection(in), EventListeners::new);
+        changeListeners = simplifyListener(readCompactCollection(in), ChangeListeners::new);
     }
 
     private class UndecoratedSymbols extends AbstractSet<Object> {
@@ -958,20 +868,47 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
         return Collections.emptyList();
     }
 
-    static <L> Object[] addListener(L oldList, L newListener) {
-        int n = oldList instanceof ListenerList ? ((ListenerList<?>) oldList).a.length : 1;
-        Object[] a = new Object[n + 1];
-        if (oldList instanceof ListenerList)
-            System.arraycopy(((ListenerList<?>) oldList).a, 0, a, 0, n);
-        else
-            a[0] = oldList;
-        a[n] = newListener;
-        return a;
+    @SuppressWarnings("unchecked")
+    private static <L> L simplifyListener(Object[] a, Function<Object[], L> listWrapper) {
+        return a.length == 0 ? null : a.length == 1 ? (L) a[0] : listWrapper.apply(a);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <L> L addListener(L oneOrList, L listener, boolean idempotent, Function<Object[], L> listWrapper) {
+        if (oneOrList == null)
+            return listener;
+        if (idempotent && listener.equals(oneOrList))
+            return oneOrList;
+        if (!(oneOrList instanceof ListenerList))
+            return listWrapper.apply(new Object[]{oneOrList, listener});
+
+        ListenerList<L> list = (ListenerList<L>) oneOrList;
+        if (idempotent && findListener(list, listener) >= 0)
+            return oneOrList;
+        Object[] a = Arrays.copyOf(list.a, list.a.length + 1);
+        a[a.length - 1] = listener;
+        return listWrapper.apply(a);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <L> L removeListener(L oneOrList, L listener, Function<Object[], L> listWrapper) {
+        if (oneOrList == null)
+            return null;
+        if (listener.equals(oneOrList))
+            return null;
+        if (!(oneOrList instanceof ListenerList))
+            return oneOrList;
+
+        ListenerList<L> list = (ListenerList<L>) oneOrList;
+        int i = findListener(list, listener);
+        if (i < 0)
+            return oneOrList;
+        return list.a.length == 2 ? (L) list.a[1 - i] : listWrapper.apply(removeListenerAt(list, i));
     }
 
     static <L> int findListener(ListenerList<L> oldList, L newListener) {
         for (int i = 0; i < oldList.a.length; i++)
-            if (oldList.a[i] == newListener)
+            if (newListener.equals(oldList.a[i]))
                 return i;
         return -1;
     }
@@ -989,19 +926,6 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
         protected ListenerList(Object[] a) {
             this.a = a;
         }
-
-        abstract L create(Object[] a);
-
-        @SuppressWarnings({"unchecked"})
-        L simplify() {
-            return a.length == 0 ? null : a.length == 1 ? (L) a[0] : (L) this;
-        }
-
-        @SuppressWarnings({"unchecked"})
-        L remove(L listener) {
-            int i = findListener(this, listener);
-            return i < 0 ? (L) this : a.length == 2 ? (L) a[1 - i] : create(removeListenerAt(this, i)) ;
-        }
     }
 
     private static class EventListeners<E> extends ListenerList<DXFeedEventListener<E>> implements DXFeedEventListener<E> {
@@ -1010,15 +934,17 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
         }
 
         @Override
-        DXFeedEventListener<E> create(Object[] a) {
-            return new EventListeners<>(a);
-        }
-
-        @Override
         @SuppressWarnings({"unchecked"})
         public void eventsReceived(List<E> events) {
-            for (Object listener : a)
-                ((DXFeedEventListener<E>) listener).eventsReceived(events);
+            Throwable error = null;
+            for (Object listener : a) {
+                try {
+                    ((DXFeedEventListener<E>) listener).eventsReceived(events);
+                } catch (RuntimeException|Error e) {
+                    error = e;
+                }
+            }
+            rethrow(error);
         }
     }
 
@@ -1028,26 +954,49 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
         }
 
         @Override
-        ObservableSubscriptionChangeListener create(Object[] a) {
-            return new ChangeListeners(a);
-        }
-
-        @Override
         public void symbolsAdded(Set<?> symbols) {
-            for (Object listener : a)
-                ((ObservableSubscriptionChangeListener) listener).symbolsAdded(symbols);
+            Throwable error = null;
+            for (Object listener : a) {
+                try {
+                    ((ObservableSubscriptionChangeListener) listener).symbolsAdded(symbols);
+                } catch (RuntimeException|Error e) {
+                    error = e;
+                }
+            }
+            rethrow(error);
         }
 
         @Override
         public void symbolsRemoved(Set<?> symbols) {
-            for (Object listener : a)
-                ((ObservableSubscriptionChangeListener) listener).symbolsRemoved(symbols);
+            Throwable error = null;
+            for (Object listener : a) {
+                try {
+                    ((ObservableSubscriptionChangeListener) listener).symbolsRemoved(symbols);
+                } catch (RuntimeException|Error e) {
+                    error = e;
+                }
+            }
+            rethrow(error);
         }
 
         @Override
         public void subscriptionClosed() {
-            for (Object listener : a)
-                ((ObservableSubscriptionChangeListener) listener).subscriptionClosed();
+            Throwable error = null;
+            for (Object listener : a) {
+                try {
+                    ((ObservableSubscriptionChangeListener) listener).subscriptionClosed();
+                } catch (RuntimeException|Error e) {
+                    error = e;
+                }
+            }
+            rethrow(error);
         }
+    }
+
+    static void rethrow(Throwable error) {
+        if (error instanceof RuntimeException)
+            throw (RuntimeException) error;
+        if (error instanceof Error)
+            throw (Error) error;
     }
 }

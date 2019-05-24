@@ -14,6 +14,8 @@ package com.devexperts.qd.monitoring;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.Properties;
 import javax.management.remote.JMXServiceURL;
 import javax.management.remote.rmi.RMIConnectorServer;
@@ -26,6 +28,8 @@ import com.devexperts.qd.QDLog;
  * Separate class so that </code>RMIConnectorServer</code> class is loaded only when needed.
  */
 class JmxRmi {
+    private JmxRmi() {}
+
     static JmxConnector init(Properties props) throws IOException {
         Integer port = Integer.decode(props.getProperty(JMXEndpoint.JMX_RMI_PORT_PROPERTY));
 
@@ -41,7 +45,8 @@ class JmxRmi {
         if (!JmxConnectors.addConnector(connector))
             return null; // port is already taken
 
-        LocateRegistry.createRegistry(port);
+        Registry registry = LocateRegistry.createRegistry(port);
+        connector.setRegistry(registry);
         connector.setRegistration(Management.registerMBean(rmiServer, null, name));
         rmiServer.start();
         QDLog.log.info("RMI management port is " + port);
@@ -50,16 +55,23 @@ class JmxRmi {
 
     private static class ConnectorImpl extends JmxConnector {
         private final RMIConnectorServer rmiServer;
+        private Registry registry;
 
         ConnectorImpl(int port, String name, RMIConnectorServer rmiServer) {
             super(port, name);
             this.rmiServer = rmiServer;
         }
 
+        void setRegistry(Registry registry) {
+            this.registry = registry;
+        }
+
         @Override
         public void stop() throws IOException {
             super.stop();
             rmiServer.stop();
+            if (registry != null)
+                UnicastRemoteObject.unexportObject(registry, true);
         }
     }
 }

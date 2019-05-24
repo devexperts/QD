@@ -108,13 +108,13 @@ public class DeserializationErrorHandlingTest extends TestCase {
     private void checkLog(boolean severalObjects, boolean manyBytes, IOException thrown) throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader(findLogFile()));
         try {
-            assertTrue(reader.readLine().endsWith("An error occurred while deserializing object" + (severalObjects ? "s" : "") + ":"));
+            assertTrue(reader.readLine().endsWith("An error has occurred while deserializing object:"));
             if (severalObjects)
                 assertEquals("  Object types: [class java.lang.Void, class java.lang.Integer, class [I, class java.lang.Object]", reader.readLine());
             assertEquals("  Classloader: I'm a class loader", reader.readLine());
             if (manyBytes) {
                 String bytesLine = reader.readLine();
-                Matcher matcher = Pattern.compile("  Bytes were dumped into \"" + ERR_FILE_PATTERN + "\"").matcher(bytesLine);
+                Matcher matcher = Pattern.compile("  Bytes were dumped into " + ERR_FILE_PATTERN).matcher(bytesLine);
                 assertTrue(matcher.matches());
                 checkBytesDump(matcher.group(1));
             } else

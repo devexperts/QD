@@ -20,6 +20,7 @@ import javax.annotation.*;
 
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.QDFilter;
+import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimeFormat;
 import com.dxfeed.api.*;
 import com.dxfeed.api.impl.DXEndpointImpl;
@@ -43,6 +44,10 @@ public class DataService {
     private static final String DATA_CHANNEL = "/service/data";
     private static final String TIME_SERIES_DATA_CHANNEL = "/service/timeSeriesData";
     private static final String STATE_CHANNEL = "/service/state";
+
+    private static final int DEFAULT_BATCH_SIZE = 100;
+    private int messageBatchSize = SystemProperties.getIntProperty(
+        DataService.class, "messageBatchSize", DEFAULT_BATCH_SIZE, 1, 10_000);
 
     // ------------------------ static shared ------------------------
 
@@ -234,12 +239,18 @@ public class DataService {
 
             @Override
             public void eventsReceived(List<T> events) {
-                synchronized (SessionState.this) {
-                    // need to sync for potential candleSymbolMap updates
-                    remote.deliver(server, timeSeries ? TIME_SERIES_DATA_CHANNEL : DATA_CHANNEL,
-                        new DataMessage(sendScheme, eventType, events, symbolMap), Promise.noop());
+                int length = events.size();
+                for (int i = 0; i < length; i += messageBatchSize) {
+                    // Break list of events into smaller batches
+                    List<T> eventsBatch = events.subList(i, Math.min(length, i + messageBatchSize));
+
+                    synchronized (SessionState.this) {
+                        // need to sync for potential candleSymbolMap updates
+                        remote.deliver(server, timeSeries ? TIME_SERIES_DATA_CHANNEL : DATA_CHANNEL,
+                            new DataMessage(sendScheme, eventType, eventsBatch, symbolMap), Promise.noop());
+                    }
+                    sendScheme = false; // don't need to send afterwards
                 }
-                sendScheme = false; // don't need to send afterwards
             }
         }
 

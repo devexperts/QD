@@ -94,7 +94,7 @@ public class FileReader implements MessageReader {
     private long lastTime;
 
     private FileFormat format; // from params or from first bytes
-    private ChunkedInput input = new ChunkedInput(FileConstants.CHUNK_POOL);
+    private final ChunkedInput input = new ChunkedInput(FileConstants.CHUNK_POOL);
     private boolean hasBytesOnHold; // true when parsing an inputPart
     private BufferedInputPart inputPart; // when file is delimited with ".time" file marks we need to parse parts
     private AbstractQTPParser parser;
@@ -272,7 +272,7 @@ public class FileReader implements MessageReader {
         if (hasStop)
             filesFilter.filterByStopTime(stopTime);
         // configure fileFilter with start time and stop time
-        return rescanFileList(startTime);
+        return rescanFileList(startTime, FileConnector.NA_TIME);
     }
 
     /**
@@ -281,10 +281,10 @@ public class FileReader implements MessageReader {
      *
      * @return false if files are not found
      */
-    private boolean rescanFileList(long rescanStartTime) throws InterruptedException {
+    private boolean rescanFileList(long rescanStartTime, long lastFileTime) throws InterruptedException {
         if (filesFilter == null)
             return true; // not reading multiple files
-        filesFilter.filterByStartTime(rescanStartTime);
+        filesFilter.filterByStartAndPreviousFileTime(rescanStartTime, lastFileTime);
         // try to get list of files until succeeded
         if (!waitAngGetFileList())
             // quit if no files found (which could happen only when stop is set, otherwise wait for files)
@@ -380,7 +380,7 @@ public class FileReader implements MessageReader {
                 initNextAddress();
             } else {
                 // rescan file list on every failure and start from the next
-                boolean hasNextFile = rescanFileList(lastFileTime + 1);
+                boolean hasNextFile = rescanFileList(lastFileTime + 1, lastFileTime);
                 // no cycle and no next file --- stop reading
                 if (!hasNextFile && !params.isCycle())
                     return;

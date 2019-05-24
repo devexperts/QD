@@ -169,21 +169,21 @@ public class DXFeedImpl extends DXFeed {
     @Override
     @SuppressWarnings("unchecked")
     public void attachSubscription(DXFeedSubscription<?> subscription) {
-        //FIXME Store listener for later removal on detach. Check for double addition.
+        // SubscriptionChangeListener uses (subscription, feed) pair as identity, so no need to store reference here
         subscription.addChangeListener(new SubscriptionChangeListener(subscription, false));
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public void detachSubscription(DXFeedSubscription<?> subscription) {
-        //FIXME Remove the same listener that was added before.
+        // SubscriptionChangeListener uses (subscription, feed) pair as identity, so no need to store reference here
         subscription.removeChangeListener(new SubscriptionChangeListener(subscription, false));
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public void detachSubscriptionAndClear(DXFeedSubscription<?> subscription) {
-        //FIXME Remove the same listener that was added before.
+        // SubscriptionChangeListener uses (subscription, feed) pair as identity, so no need to store reference here
         subscription.removeChangeListener(new SubscriptionChangeListener(subscription, true));
     }
 

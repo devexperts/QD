@@ -95,9 +95,12 @@ class TimestampedFilenameFilter implements FilenameFilter {
         // find first file based on start time.
         int first = 0;
         for (TimestampedFile file : timestampedFiles) {
-            if (file.time < startTime)
+            if (file.time <= startTime)
                 first++;
         }
+        // previous file with time < startTime may contain part of the data
+        if (first > 0)
+            first--;
         // return everything beginning with first.
         List<TimestampedFile> timestampedFileList = timestampedFiles.subList(first, timestampedFiles.size());
         return timestampedFileList.toArray(new TimestampedFile[timestampedFileList.size()]);
@@ -138,6 +141,15 @@ class TimestampedFilenameFilter implements FilenameFilter {
     public void filterByStartTime(long startTime) {
         this.startTime = startTime;
         this.prevTime = Long.MIN_VALUE;
+    }
+
+    /**
+     * Configures filter to find the file that goes after the file with a specified timestamp and also
+     * contains the requested start time and all the files after that. Overrides previous calls to filterXXX method.
+     */
+    public void filterByStartAndPreviousFileTime(long startTime, long prevTime) {
+        this.startTime = startTime;
+        this.prevTime = prevTime;
     }
 
     /**

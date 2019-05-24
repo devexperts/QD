@@ -1,3 +1,15 @@
+
+QDS 3.275:
+
+* [QD-1155] dxFeed API: OrderBookModel memory leak
+* [QD-1153] dxFeed webservice: Split large messages into smaller ones in web sockets
+  - messages are split into batches of 100, can be configured by JVM parameter
+  "-Dcom.dxfeed.webservice.comet.DataService.messageBatchSize=<n>"
+* [QD-1147] JMX RMI connection doesn't release used port after stop
+* [QD-1152] Flaky test: LockTimeoutTest.testLockTooLongWarning
+* [QD-1114] Tools: Tape file reader returns quotes partially when 'start' parameter isn't equal to the beginning of a file
+* [QD-1139] dxlib: Marshalled shall not create extra copy of serial byte array during deserialization
+
 QDS 3.274:
 
 * [QD-1140] Flaky test: FileConnectorCorruptedTest
@@ -685,7 +697,8 @@ QDS 3.231:
 * [QD-782] BUG FIX: Minor memory leak in OrderBookModel
 
 QDS 3.230:
-initial merge of rmi & hs branches onto trunk
+
+* initial merge of rmi & hs branches onto trunk
 
 --- hs branch ---
 
@@ -4311,6 +4324,7 @@ QDS 3.40:
 * QDServices.createService and DataScheme.getServices are generified.
 
 QDS 3.39:
+
 * QDS is build with 1.5.0_12 (source=1.5, target=1.5)
   Generics and stuff are now allowed in QDS sources.
 * MARS common modules are integrated into qds-tools.jar,
@@ -5113,7 +5127,7 @@ QDS 3.8:
   subscription problems once and for all.
 * Detailed error report (to stderr) if broken QTP message is received.
 
-QDS 3.6/3.7:
+QDS 3.7:
 
 * MessageConnectorAuditor contracts changes ("message" string instead
   of "address" string is now passed into the methods).

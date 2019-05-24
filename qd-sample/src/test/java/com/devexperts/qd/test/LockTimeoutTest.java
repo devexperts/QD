@@ -14,6 +14,7 @@ package com.devexperts.qd.test;
 import java.io.*;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import com.devexperts.logging.Logging;
@@ -29,6 +30,7 @@ public class LockTimeoutTest extends TestCase {
     private static final String LOG_FILE = "LockTimeoutTest.log";
     private static final Pattern LOG_PATTERN =
         Pattern.compile(".*Ticker local lock is taking too long to acquire for setSub operation. Last operation was retData.*");
+    private volatile boolean stopVisitor;
 
     public void testLockTooLongWarning() throws IOException {
         Logging.configureLogFile(LOG_FILE);
@@ -42,6 +44,7 @@ public class LockTimeoutTest extends TestCase {
         agent.setSubscription(sub.examiningIterator());
 
         final CyclicBarrier barrier = new CyclicBarrier(2); // sync two threads
+        stopVisitor = false;
         agent.setDataListener(new DataListener() {
             public void dataAvailable(DataProvider provider) {
                 provider.retrieveData(new DataVisitor() {
@@ -57,10 +60,17 @@ public class LockTimeoutTest extends TestCase {
                             } catch (BrokenBarrierException e) {
                                 fail(e.toString());
                             }
-                            // block for 0.4 sec
-                            Thread.sleep(400);
+                            // block until long lock waiting is reported
+                            long deadline = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(10);
+                            do {
+                                Thread.sleep(100);
+                                if (checkLogFile(false))
+                                    break;
+                            } while (!stopVisitor && System.currentTimeMillis() < deadline);
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
+                        } catch (IOException e) {
+                            e.printStackTrace();
                         }
                     }
 
@@ -86,6 +96,7 @@ public class LockTimeoutTest extends TestCase {
                 }
                 // now try!!!
                 agent.setSubscription(sub.examiningIterator());
+                stopVisitor = true;
             }
         }).start();
 
@@ -97,20 +108,23 @@ public class LockTimeoutTest extends TestCase {
         Tweaks.setTickerDefaults(SCHEME);
         Logging.configureLogFile(System.getProperty("log.file"));
 
-        checkLogFile();
+        checkLogFile(true);
         assertTrue(new File(LOG_FILE).delete());
     }
 
-    private void checkLogFile() throws IOException {
+    private boolean checkLogFile(boolean reportFailure) throws IOException {
         BufferedReader br = new BufferedReader(new FileReader(LOG_FILE));
         try {
             String line;
-            while ((line = br.readLine()) != null)
+            while ((line = br.readLine()) != null) {
                 if (LOG_PATTERN.matcher(line).matches())
-                    return;
-            fail("Required log pattern is not found in " + LOG_FILE);
+                    return true;
+            }
+            if (reportFailure)
+                fail("Required log pattern is not found in " + LOG_FILE);
         } finally {
             br.close();
         }
+        return false;
     }
 }

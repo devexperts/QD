@@ -11,6 +11,8 @@
  */
 package com.devexperts.io.test;
 
+import java.io.*;
+import java.lang.management.ManagementFactory;
 import java.util.Arrays;
 
 import com.devexperts.io.Marshalled;
@@ -38,5 +40,48 @@ public class MarshalledTest extends TestCase {
         assertTrue(oneFromBytes.equals(oneFromObject));
         assertEquals(oneFromBytes.hashCode(), oneFromObject.hashCode());
         assertEquals(oneFromBytes.toString(), oneFromObject.toString());
+    }
+
+    public static final int BIG_SIZE = 1000_000;
+
+    public static class BigObject implements Serializable {
+        private static final long serialVersionUID = 0;
+
+        public transient long used;
+
+        private void writeObject(ObjectOutputStream out) throws IOException {
+            for (int i = 0; i < BIG_SIZE / 4; i++)
+                out.writeInt(i);
+        }
+
+        private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+            used = getUsed();
+            for (int i = 0; i < BIG_SIZE / 4; i++)
+                assertEquals(i, in.readInt());
+        }
+    }
+
+    public static long getUsed() {
+        return ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed();
+    }
+
+    public void testMemoryDuplication() {
+        /* This test attempts to catch duplicate memory allocation during deserialization.
+         * Unfortunately there is no easy way to test memory allocation directly.
+         * Therefore this test makes several attempts and checks median value of used memory in hope
+         * to avoid both garbage collections and concurrent memory allocation by other processes.
+         * Nevertheless, this test could be highly unstable. Disable it in this case.
+         */
+        long[] allocations = new long[20];
+        Marshalled original = Marshalled.forObject(new BigObject());
+        for (int i = 0; i < allocations.length; i++) {
+            long used = getUsed();
+            long time = System.currentTimeMillis();
+            BigObject result = (BigObject) Marshalled.forBytes(original.getBytes()).getObject();
+            allocations[i] = result.used - used;
+//          System.out.println(result.used - used + " in " + (System.currentTimeMillis() - time));
+        }
+        Arrays.sort(allocations);
+        assertTrue("deserialization allocates too much memory", allocations[allocations.length / 2] < BIG_SIZE);
     }
 }

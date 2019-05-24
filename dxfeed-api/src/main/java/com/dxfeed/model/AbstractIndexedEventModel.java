@@ -37,8 +37,8 @@ import com.dxfeed.impl.AbstractIndexedList;
  * {@link #attach(DXFeed) attached} to a {@link DXFeed} instance to start operation.
  *
  * <p>Model change notifications are provided by an abstract {@link #modelChanged(List) modelChanged} method
- * that must be overriden in concrete implementation classes.
- * This class also provides abstract {@link #createEntry() createEntry} method that must be overriden to return a
+ * that must be overridden in concrete implementation classes.
+ * This class also provides abstract {@link #createEntry() createEntry} method that must be overridden to return a
  * fresh instance of an {@link Entry} class that is used inside this class to wrap incoming events and
  * may be augmented with an additional event-related information if needed.
  *
@@ -49,10 +49,23 @@ import com.dxfeed.impl.AbstractIndexedList;
  * The eventFlags are only used and must be taken into account when processing indexed events directly via low-level
  * {@link DXFeedSubscription} class.
  *
- * <h3>Threads and locks</h3>
+ * <h3>Resource management and closed models</h3>
+ *
+ * Attached model is a potential memory leak. If the pointer to attached model is lost, then there is no way to detach
+ * this model from the feed and the model will not be reclaimed by the garbage collector as long as the corresponding
+ * feed is still used. Detached model can be reclaimed by the garbage collector, but detaching model requires knowing
+ * the pointer to the feed at the place of the call, which is not always convenient.
+ *
+ * <p> The convenient way to detach model from the feed is to call its {@link #close close} method. Closed model
+ * becomes permanently detached from all feeds, removes all its listeners and is guaranteed to be reclaimable by
+ * the garbage collector as soon as all external references to it are cleared.
+ *
+ * <h3><a name="threadsAndLocksSection">Threads and locks</a></h3>
  *
  * This class is <b>not</b> tread-safe and requires external synchronization.
- * You must query the state of {@link #attach(DXFeed) attached} model only from
+ * The only thread-safe methods are {@link #attach attach}, {@link #detach detach} and {@link #close close}.
+ *
+ * <p> You must query the state of {@link #attach(DXFeed) attached} model only from
  * inside of the notification invocations or from within the thread that performs
  * those notifications.
  *
@@ -79,6 +92,7 @@ import com.dxfeed.impl.AbstractIndexedList;
  * @param <N> the type of concrete entries in the model.
  */
 public abstract class AbstractIndexedEventModel<E extends IndexedEvent<?>, N extends AbstractIndexedEventModel.Entry<E>>
+    implements AutoCloseable
 {
     // ================================== private instance fields ==================================
 
@@ -143,6 +157,20 @@ public abstract class AbstractIndexedEventModel<E extends IndexedEvent<?>, N ext
      */
     public void detach(DXFeed feed) {
         feed.detachSubscription(subscription);
+    }
+
+    protected boolean isClosed() {
+        return subscription.isClosed();
+    }
+
+    /**
+     * Closes this model and makes it <i>permanently detached</i>.
+     *
+     * <p> This method ensures that model can be safely garbage-collected when all outside references to it are lost.
+     */
+    @Override
+    public void close() {
+        subscription.close();
     }
 
     /**

@@ -63,9 +63,21 @@ import static com.dxfeed.model.market.CheckedTreeList.Node;
  * that shows how to use this model, concentrating your
  * effort on data representation logic, while delegating all the data-handling logic to this model.
  *
+ * <h3>Resource management and closed models</h3>
+ *
+ * Attached model is a potential memory leak. If the pointer to attached model is lost, then there is no way to detach
+ * this model from the feed and the model will not be reclaimed by the garbage collector as long as the corresponding
+ * feed is still used. Detached model can be reclaimed by the garbage collector, but detaching model requires knowing
+ * the pointer to the feed at the place of the call, which is not always convenient.
+ *
+ * <p> The convenient way to detach model from the feed is to call its {@link #close close} method. Closed model
+ * becomes permanently detached from all feeds, removes all its listeners and is guaranteed to be reclaimable by
+ * the garbage collector as soon as all external references to it are cleared.
+ *
  * <h3><a name="threadsAndLocksSection">Threads and locks</a></h3>
  *
  * This class is <b>not</b> tread-safe and requires external synchronization.
+ * The only thread-safe methods are {@link #attach attach}, {@link #detach detach} and {@link #close close}.
  * See {@link AbstractIndexedEventModel} class documentation for details and constrains on
  * the usage of this class.
  *
@@ -83,7 +95,7 @@ import static com.dxfeed.model.market.CheckedTreeList.Node;
  * <a href="../../api/DXFeedSubscription.html#threadsAndLocksSection">Threads and locks</a>
  * section of {@link DXFeedSubscription} class documentation.
  */
-public final class OrderBookModel {
+public final class OrderBookModel implements AutoCloseable {
 
     // ================================== private instance fields ==================================
 
@@ -130,6 +142,19 @@ public final class OrderBookModel {
      */
     public void detach(DXFeed feed) {
         indexedEvents.detach(feed);
+    }
+
+    /**
+     * Closes this model and makes it <i>permanently detached</i>.
+     *
+     * <p> This method ensures that model can be safely garbage-collected when all outside references to it are lost.
+     */
+    @Override
+    public void close() {
+        indexedEvents.close();
+        buyOrders.close();
+        sellOrders.close();
+        listeners.clear();
     }
 
     /**
@@ -270,6 +295,8 @@ public final class OrderBookModel {
      * @param listener the listener for listening to the list changes.
      */
     public void addListener(OrderBookModelListener listener) {
+        if (indexedEvents.isClosed())
+            return;
         listeners.add(listener);
     }
 
@@ -390,6 +417,11 @@ public final class OrderBookModel {
 
         IndexedOrderModel() {
             super(Order.class);
+        }
+
+        @Override
+        protected boolean isClosed() {
+            return super.isClosed();
         }
 
         // make it available from the outer class

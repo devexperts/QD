@@ -141,7 +141,7 @@ final class TypedMarshallerImpl<T> extends Marshaller.Typed<T> {
     public T readObjectFrom(BufferedInput in, int length, SerialClassContext serialContext) throws IOException {
         if (serialContext == null)
             throw new NullPointerException();
-        Object[] objects = ObjectDeserializer.readBodiesWithTypes(serialContext, in, length, getClasses(serialContext.getClassLoader()));
+        Object[] objects = ObjectDeserializer.readBodiesWithTypes(in, length, getClasses(serialContext.getClassLoader()), serialContext);
         // unwrap from an array of object when single
         return single ? (T) objects[0] : (T) objects;
     }

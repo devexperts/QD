@@ -828,6 +828,29 @@ public abstract class BufferedInput extends InputStream implements ObjectInput {
         }
     }
 
+    /** @deprecated internal API */
+    @Deprecated
+    static interface CaptureBytes {
+        public void captureBytes(byte[] buffer, int offset, int length);
+    }
+
+    /**
+     * Reads data from this buffered input into specified byte output.
+     * This method is designed to capture buffered bytes for direct processing.
+     * It is currently limited to single chunk of bytes held by this buffered input.
+     *
+     * @deprecated internal API for ObjectDeserializer only
+     */
+    @Deprecated
+    boolean readToCaptureBytes(CaptureBytes out, int length) {
+        if (length <= limit - position) {
+            out.captureBytes(buffer, position, length);
+            position += length;
+            return true;
+        }
+        return false;
+    }
+
     // ========== Implementation Details ==========
 
     private static final EOFException EOF_EXCEPTION = new EOFException("End of buffer."); // Reused to avoid garbage; has truncated stack trace.
