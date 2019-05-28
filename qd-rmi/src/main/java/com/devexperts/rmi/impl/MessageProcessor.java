@@ -276,7 +276,9 @@ class MessageProcessor {
         if (RMIEndpointImpl.RMI_TRACE_LOG)
             log.trace("Create task " + task + " at " + connection);
 
-        connection.tasksManager.registerTask(task);
+        if (requestInfo.message.getRequestType() != RMIRequestType.ONE_WAY)
+            connection.tasksManager.registerTask(task);
+
         Executor executor = service.getExecutor();
         if (executor == null) {
             executor = nestedTask ? channel.getExecutor() : connection.endpoint.getServer().getDefaultExecutor();

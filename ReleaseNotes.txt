@@ -1,4 +1,8 @@
 
+QDS 3.276:
+
+* [QD-1156] RMI: Memory leak of one-way requests on server side
+
 QDS 3.275:
 
 * [QD-1155] dxFeed API: OrderBookModel memory leak

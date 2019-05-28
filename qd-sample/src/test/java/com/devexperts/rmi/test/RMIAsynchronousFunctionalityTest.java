@@ -12,6 +12,7 @@
 package com.devexperts.rmi.test;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.util.Arrays;
 import java.util.concurrent.*;
@@ -554,8 +555,8 @@ public class RMIAsynchronousFunctionalityTest {
     @Test
     public void testOneWaySending() throws InterruptedException {
         channelLogic.setForward(true);
-        RMIFunctionalityTest.CompletingPing impl = new RMIFunctionalityTest.CompletingPing();
-        NTU.exportServices(remoteEndpoint.getServer(), new RMIServiceImplementation<>(impl, RMICommonTest.Ping.class), channelLogic);
+        RMIFunctionalityTest.CompletingPing pingService = new RMIFunctionalityTest.CompletingPing();
+        NTU.exportServices(remoteEndpoint.getServer(), new RMIServiceImplementation<>(pingService, RMICommonTest.Ping.class), channelLogic);
         server.getServer().export(privateEndpoint.getClient().getService("*"));
 
         connectDefault(false, 93, 95);
@@ -569,6 +570,16 @@ public class RMIAsynchronousFunctionalityTest {
         }
         RMIRequest<Void> request = channelLogic.clientPort.createRequest(new RMIRequestMessage<>(RMIRequestType.ONE_WAY, operation));
         request.send();
-        impl.waitForCompletion();
+        pingService.waitForCompletion();
+
+        assertEquals(1, pingService.rmiTasks.size());
+        WeakReference<RMITask> taskRef = pingService.rmiTasks.remove();
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+        while (taskRef.get() != null && System.nanoTime() < deadline ) {
+            System.gc();
+            Thread.sleep(100);
+        }
+        assertNull("RMI task leaked", taskRef.get());
     }
+
 }

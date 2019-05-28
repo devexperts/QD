@@ -12,6 +12,7 @@
 package com.devexperts.rmi.test;
 
 import java.io.Serializable;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.AccessController;
 import java.security.cert.X509Certificate;
@@ -571,10 +572,14 @@ public class RMIFunctionalityTest {
 
 
     public static class CompletingPing implements RMICommonTest.Ping {
+        final Queue<WeakReference<RMITask>> rmiTasks = new ConcurrentLinkedQueue<>();
         boolean done = false;
 
         @Override
         public synchronized void ping() {
+            RMITask task = RMITask.current();
+            if (task != null)
+                rmiTasks.add(new WeakReference<>(task));
             done = true;
             notifyAll();
         }
