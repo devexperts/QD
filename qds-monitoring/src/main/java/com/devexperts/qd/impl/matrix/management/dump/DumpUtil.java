@@ -18,10 +18,13 @@ import com.devexperts.qd.ng.RecordCursor;
 
 public class DumpUtil {
     static void printTime(PrintStream out, DataRecord r, RecordCursor cursor) {
-        for (int i = 0; i < 2; i++) {
-            out.print('\t');
-            out.print(r.getIntField(i).toString(cursor.getInt(i)));
-        }
+        out.print("\t");
+        out.print(cursor.getTime());
+        out.print("\t{");
+        out.print(r.getIntField(0).getString(cursor));
+        out.print(" ");
+        out.print(r.getIntField(1).getString(cursor));
+        out.print("}");
     }
 
     static String timeString(DataRecord r, long time) {

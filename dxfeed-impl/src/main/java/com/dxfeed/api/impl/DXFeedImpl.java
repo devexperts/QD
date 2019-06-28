@@ -14,6 +14,7 @@ package com.dxfeed.api.impl;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 
 import com.devexperts.qd.*;
@@ -777,8 +778,9 @@ public class DXFeedImpl extends DXFeed {
         // != null when hasAggregationPeriod is true
         final Runnable snapshotTask;
 
-        // Latch to make sure all data is processed before close
-        volatile CountDownLatch terminationLatch;
+        // Latch to make sure all data is processed before close.
+        // A latch may be set once, if some waiting thread appears but should be reused by all waiting threads.
+        final AtomicReference<CountDownLatch> terminationLatch = new AtomicReference<>();
 
         // Events cache
         List<E> events;
@@ -855,14 +857,13 @@ public class DXFeedImpl extends DXFeed {
                 if (rescheduleTask)
                     rescheduleTask(snapshot);
                 else {
-                    // Task should not be scheduled anymore
-                    if (!snapshot)
-                        signalNoMoreDataToProcess();
                     clearState(snapshot ? STATE_SCHEDULED_SNAPSHOT : STATE_SCHEDULED_DATA);
                     // Concurrent dataAvailable notification might have happened - recheck available flags
                     if ((state.get() & availableMask) != 0)
                         scheduleTaskIfNeeded(snapshot);
                 }
+                if (!hasMoreDataToProcess())
+                    signalNoMoreDataToProcess();
             }
         }
 
@@ -970,16 +971,27 @@ public class DXFeedImpl extends DXFeed {
         private void signalNoMoreDataToProcess() {
             if (TRACE_LOG)
                 QDLog.log.trace("signalNoMoreDataToProcess on " + this);
-            if (terminationLatch != null)
-                terminationLatch.countDown();
+            CountDownLatch latch = terminationLatch.get();
+            if (latch != null)
+                latch.countDown();
         }
 
         private void awaitTermination() throws InterruptedException {
-            terminationLatch = new CountDownLatch(1);
+            if (!hasMoreDataToProcess()) {
+                // happy path
+                if (TRACE_LOG)
+                    QDLog.log.trace("awaitTermination on " + this + " -- no more data to process");
+                return;
+            }
+            CountDownLatch latch = terminationLatch.get();
+            if (latch == null) {
+                terminationLatch.compareAndSet(null, new CountDownLatch(1));
+                latch = terminationLatch.get();
+            }
             if (hasMoreDataToProcess()) {
                 if (TRACE_LOG)
                     QDLog.log.trace("awaitTermination on " + this + " -- await");
-                terminationLatch.await();
+                latch.await();
             } else {
                 if (TRACE_LOG)
                     QDLog.log.trace("awaitTermination on " + this + " -- no more data to process");

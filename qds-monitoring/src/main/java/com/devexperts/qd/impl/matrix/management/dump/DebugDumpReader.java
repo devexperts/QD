@@ -102,7 +102,8 @@ public class DebugDumpReader {
         try {
             clazz = Class.forName(className);
         } catch (ClassNotFoundException e) {
-            throw new IOException("Cannot find class " + className);
+            System.out.println("Cannot find class " + className);
+            clazz = null;
         }
         int fieldCount = in.readCompactInt();
         ClassDesc desc = new ClassDesc(classId, parent, clazz, fieldCount);
@@ -373,7 +374,7 @@ public class DebugDumpReader {
 
     class ArrayDesc extends ObjectReader {
         ArrayDesc(int classId, Class<?> parent) {
-            super(classId, Array.newInstance(parent, 0).getClass());
+            super(classId, parent == null ? Object[].class : Array.newInstance(parent, 0).getClass());
         }
 
         @Override
@@ -411,7 +412,7 @@ public class DebugDumpReader {
 
         @Override
         ObjectRef readObject(BufferedInput in, int objectId) throws IOException {
-            if (Modifier.isAbstract(clazz.getModifiers())) {
+            if (clazz == null || Modifier.isAbstract(clazz.getModifiers())) {
                 skipInstanceFields(in);
                 return new ObjectRef(objectId);
             }

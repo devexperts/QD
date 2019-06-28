@@ -40,7 +40,8 @@ public final class OrderSource extends IndexedEventSource {
 
     // ========================= private static =========================
 
-    private static final int CACHE_SIZE = 100;
+    // Estimated cache size for proper balance of built-in and transient sources
+    private static volatile int CACHE_SIZE = 100;
     private static final SynchronizedIndexedSet<Integer, OrderSource> SOURCES_BY_ID = SynchronizedIndexedSet.createInt(OrderSource::id).withCapacity(CACHE_SIZE);
     private static final SynchronizedIndexedSet<String, OrderSource> SOURCES_BY_NAME = SynchronizedIndexedSet.create(OrderSource::name).withCapacity(CACHE_SIZE);
 
@@ -218,6 +219,13 @@ public final class OrderSource extends IndexedEventSource {
     public static final OrderSource IST = new OrderSource("IST", PUB_ORDER);
 
     /**
+     * Borsa Istanbul Exchange. Record for particular top 20 order book.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource BI20 = new OrderSource("BI20", PUB_ORDER);
+
+    /**
      * CME Globex.
      * {@link Order} events are {@link #isPublishable(Class) publishable} on this
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
@@ -328,8 +336,8 @@ public final class OrderSource extends IndexedEventSource {
             throw new IllegalArgumentException("duplicate id");
         if (!SOURCES_BY_NAME.add(this))
             throw new IllegalArgumentException("duplicate name");
-        if (SOURCES_BY_ID.size() > CACHE_SIZE / 4)
-            throw new IllegalArgumentException("cache size is too small");
+
+        CACHE_SIZE = Math.max(CACHE_SIZE, SOURCES_BY_ID.size() * 4);
 
         for (int i = 0; i < N_TYPES; i++) {
             if ((pubFlags & (1 << i)) != 0)

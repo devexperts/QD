@@ -13,8 +13,11 @@ package com.devexperts.qd.impl.matrix.management.dump;
 
 import java.io.PrintStream;
 
+import com.devexperts.qd.DataField;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.impl.matrix.*;
+import com.devexperts.qd.kit.VoidIntField;
+import com.devexperts.qd.kit.VoidObjField;
 import com.devexperts.qd.ng.*;
 import com.devexperts.qd.qtp.BuiltinFields;
 
@@ -31,41 +34,45 @@ class DumpDataVisitor extends DumpVisitorBase implements CollectorVisitor {
 
     class DumpDataSink extends AbstractRecordSink implements HistoryBufferDebugSink {
         @Override
-        public void visitHistoryBuffer(DataRecord r, int cipher, String encodedSymbol, long timeTotalSub, HistoryBuffer hb) {
-            String record = r.getName();
-            String symbol = r.getScheme().getCodec().decode(cipher, encodedSymbol);
+        public void visitHistoryBuffer(DataRecord record, int cipher, String encodedSymbol, long timeTotalSub, HistoryBuffer hb) {
+            String symbol = record.getScheme().getCodec().decode(cipher, encodedSymbol);
             if (!matches(record, symbol))
                 return;
-            out.println("HistoryBuffer " + r + " " + symbol);
+            out.println("HistoryBuffer " + record + " " + symbol);
             out.println("\tisTx=" + hb.isTx());
             out.println("\tisSweepTx=" + hb.isSweepTx());
             out.println("\twasSnapshotBeginSeen=" + hb.wasSnapshotBeginSeen());
             out.println("\twasSnapshotEndSeen=" + hb.wasSnapshotEndSeen());
             out.println("\twasEverSnapshotMode=" + hb.wasEverSnapshotMode());
             out.println("\tisWaitingForSnapshotBegin=" + hb.isWaitingForSnapshotBegin());
-            out.println("\tgetSnapshotTime=" + DumpUtil.timeString(r, hb.getSnapshotTime()));
-            out.println("\tgetEverSnapshotTime=" + DumpUtil.timeString(r, hb.getEverSnapshotTime()));
-            out.println("\tgetSnipSnapshotTime=" + DumpUtil.timeString(r, hb.getSnipSnapshotTime()));
-            out.println("\ttimeTotalSub=" + DumpUtil.timeString(r, timeTotalSub));
+            out.println("\tgetSnapshotTime=" + DumpUtil.timeString(record, hb.getSnapshotTime()));
+            out.println("\tgetEverSnapshotTime=" + DumpUtil.timeString(record, hb.getEverSnapshotTime()));
+            out.println("\tgetSnipSnapshotTime=" + DumpUtil.timeString(record, hb.getSnipSnapshotTime()));
+            out.println("\ttimeTotalSub=" + DumpUtil.timeString(record, timeTotalSub));
         }
 
         @Override
         public void append(RecordCursor cursor) {
-            DataRecord r = cursor.getRecord();
-            String record = r.getName();
+            DataRecord record = cursor.getRecord();
             String symbol = cursor.getDecodedSymbol();
             if (!matches(record, symbol))
                 return;
-            out.print(record);
+            out.print(record.getName());
             out.print('\t');
             out.print(symbol);
             for (int i = 0; i < cursor.getIntCount(); i++) {
+                DataField field = record.getIntField(i);
+                if (field instanceof VoidIntField)
+                    continue;
                 out.print('\t');
-                out.print(r.getIntField(i).toString(cursor.getInt(i)));
+                out.print(field.getString(cursor));
             }
             for (int i = 0; i < cursor.getObjCount(); i++) {
+                DataField field = record.getIntField(i);
+                if (field instanceof VoidObjField)
+                    continue;
                 out.print('\t');
-                out.print(r.getObjField(i).toString(cursor.getObj(i)));
+                out.print(field.getString(cursor));
             }
             if (cursor.getEventFlags() != 0) {
                 out.print('\t');
@@ -77,9 +84,8 @@ class DumpDataVisitor extends DumpVisitorBase implements CollectorVisitor {
         }
 
         @Override
-        public void visitDone(DataRecord r, int cipher, String encodedSymbol, int examineMethodResult) {
-            String record = r.getName();
-            String symbol = r.getScheme().getCodec().decode(cipher, encodedSymbol);
+        public void visitDone(DataRecord record, int cipher, String encodedSymbol, int examineMethodResult) {
+            String symbol = record.getScheme().getCodec().decode(cipher, encodedSymbol);
             if (!matches(record, symbol))
                 return;
             out.println("HistoryBuffer examined=" + examineMethodResult);

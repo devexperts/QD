@@ -13,9 +13,11 @@ package com.devexperts.qd.test;
 
 import java.util.BitSet;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import com.devexperts.qd.*;
 import com.devexperts.qd.kit.*;
+import com.devexperts.qd.ng.RecordBuffer;
 import junit.framework.TestCase;
 
 /**
@@ -26,15 +28,15 @@ public class LargeSubscriptionTest extends TestCase {
         super(s);
     }
 
-    private static final SymbolCodec codec = new PentaCodec();
+    private static final SymbolCodec codec = PentaCodec.INSTANCE;
     private static final DataRecord record = new DefaultRecord(0, "Haba", false, null, null);
-    private static final DataScheme scheme = new DefaultScheme(codec, new DataRecord[] {record});
+    private static final DataScheme scheme = new DefaultScheme(codec, record);
 
-    private static SubscriptionIterator sub(int size, boolean encodeable) {
+    private static RecordBuffer sub(int size, boolean encodeable) {
         Random rnd = new Random();
         BitSet sub = new BitSet(1 << 24);
         char[] c = new char[6];
-        SubscriptionBuffer sb = new SubscriptionBuffer();
+        RecordBuffer sb = new RecordBuffer();
         while (sb.size() < size) {
             int r = rnd.nextInt() & 0xFFFFFF;
             if (sub.get(r))
@@ -44,25 +46,39 @@ public class LargeSubscriptionTest extends TestCase {
                 c[c.length - 1 - i] = (char) ((encodeable ? 'A' : 'a') + ((r >> (i << 2)) & 0x0F));
             int cipher = codec.encode(c, 0, c.length);
             String symbol = cipher == 0 ? new String(c) : null;
-            sb.visitRecord(record, cipher, symbol);
+            sb.add(record, cipher, symbol);
         }
         return sb;
     }
 
     public void testLargeSubscription() {
-        int size = 40000;
-        int threshold = 4;
+        int size = 100_000;
+        long threshold = 1_000;
 
-        QDTicker ticker = QDFactory.getDefaultFactory().createTicker(scheme);
-        QDDistributor distributor = ticker.distributorBuilder().build();
+        // measure until get a good result: warm-up & test environment instability may affect a couple of iterations
+        long minTime = 0;
+        for (int i = 0; i < 10; i++) {
+            long time = measureSubscribeAndClose(size);
+            if (i == 0 || minTime > time)
+                minTime = time;
+            if (minTime < threshold)
+                break;
+        }
+        assertTrue("subscribe & close exceeds " + threshold + " ms: " + minTime, minTime < threshold);
+    }
+
+    private long measureSubscribeAndClose(int subSize) {
+        QDTicker ticker = QDFactory.getDefaultFactory().tickerBuilder().withScheme(scheme).build();
         QDAgent agent = ticker.agentBuilder().build();
-        SubscriptionIterator sub = sub(size, true);
-        long time1 = System.currentTimeMillis();
+        RecordBuffer sub = sub(subSize, true);
+        long time1 = System.nanoTime();
         agent.setSubscription(sub);
-        long time2 = System.currentTimeMillis();
+        long time2 = System.nanoTime();
         agent.close();
-        long time3 = System.currentTimeMillis();
-        System.out.println("Size " + size + ", subscribe " + (time2 - time1) + ", close " + (time3 - time2));
-        assertTrue("square", (time3 - time2) / (time2 - time1) < threshold);
+        long time3 = System.nanoTime();
+        long subscribeMillis = TimeUnit.NANOSECONDS.toMillis(time2 - time1);
+        long closeMillis = TimeUnit.NANOSECONDS.toMillis(time3 - time2);
+        System.out.println("Size " + subSize + ", subscribe " + subscribeMillis + " ms, close " + closeMillis + " ms");
+        return closeMillis + subscribeMillis;
     }
 }

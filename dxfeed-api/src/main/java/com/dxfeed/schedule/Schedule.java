@@ -37,7 +37,7 @@ public final class Schedule {
 
     private static final String CACHE_LIMIT_PROPERTY = "com.dxfeed.schedule.cache";
     private static final String DOWNLOAD_PROPERTY = "com.dxfeed.schedule.download";
-    private static final String DOWNLOAD_AUTO = "http://www.dxfeed.com/downloads/api/supplemental-data/schedule.zip,1d";
+    private static final String DOWNLOAD_AUTO = "http://downloads.dxfeed.com/schedule/schedule.zip,1d";
 
     // ========== Instance Lookup ==========
 

@@ -13,9 +13,9 @@ package com.devexperts.qd.impl.matrix.management.dump;
 
 import java.io.PrintStream;
 
-import com.devexperts.qd.DataRecord;
-import com.devexperts.qd.QDHistory;
+import com.devexperts.qd.*;
 import com.devexperts.qd.impl.matrix.Collector;
+import com.devexperts.qd.impl.matrix.CollectorDebug;
 import com.devexperts.qd.ng.AbstractRecordSink;
 import com.devexperts.qd.ng.RecordCursor;
 
@@ -26,32 +26,39 @@ class DumpSubscriptionVisitor extends DumpVisitorBase implements CollectorVisito
 
     @Override
     public void visit(Collector collector) {
-        DumpSubscriptionSink dss = new DumpSubscriptionSink(collector instanceof QDHistory);
-        collector.visitAgents(agent -> {
-            out.println("--- Subscription from " + agent);
-            agent.examineSubscription(dss);
-        });
+        collector.visitAgents(new DumpSubscriptionSink(collector instanceof QDHistory));
     }
 
-    class DumpSubscriptionSink extends AbstractRecordSink {
+    class DumpSubscriptionSink extends AbstractRecordSink implements CollectorDebug.AgentVisitor {
         private final boolean history;
+        private QDAgent agent;
 
         DumpSubscriptionSink(boolean history) {
             this.history = history;
         }
 
         @Override
+        public void visitAgent(QDAgent agent) {
+            this.agent = agent;
+            agent.examineSubscription(this);
+        }
+
+        @Override
         public void append(RecordCursor cursor) {
-            DataRecord r = cursor.getRecord();
-            String record = r.getName();
+            DataRecord record = cursor.getRecord();
             String symbol = cursor.getDecodedSymbol();
             if (!matches(record, symbol))
                 return;
-            out.print(record);
+            if (agent != null) {
+                out.print("--- Subscription from ");
+                out.println(agent);
+                agent = null;
+            }
+            out.print(record.getName());
             out.print('\t');
             out.print(symbol);
             if (history)
-                DumpUtil.printTime(out, r, cursor);
+                DumpUtil.printTime(out, record, cursor);
             out.println();
         }
     }

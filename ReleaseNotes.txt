@@ -1,4 +1,16 @@
 
+QDS 3.277:
+
+* [QD-1171] Add order record for BITIP top20 book
+* [QD-1161] DXEndpoint.closeAndAwaitTermination hangs sporadically
+* [QD-1159] [Schedule] Incorrect TR 2019 holidays
+* [QD-1124] Change schedule.zip default location
+  - new location: http://downloads.dxfeed.com/schedule/schedule.zip
+* [QD-1131] MARS fails to join multicast group for synchronization tracker on Mac OS
+* [QD-1142] Flaky test: LargeSubscriptionTest
+* [QD-1158] Flaky test: JmxRmiTest.testRmiRestart
+* [QD-1174] Tools: DebugDumpReader shall understand wide decimal and ignore unknown classes
+
 QDS 3.276:
 
 * [QD-1156] RMI: Memory leak of one-way requests on server side

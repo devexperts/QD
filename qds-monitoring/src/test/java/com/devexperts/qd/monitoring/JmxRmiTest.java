@@ -15,19 +15,35 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.util.Properties;
 
 public class JmxRmiTest {
     @Test
-    public void testRmiRestart() throws IOException {
+    public void testRmiRestart() throws IOException, InterruptedException {
         Properties props = new Properties();
-        props.put("jmx.rmi.port", "11987");
+        int port = 11987;
+        props.put("jmx.rmi.port", String.valueOf(port));
         JmxConnector jmxConnector = JmxRmi.init(props);
         Assert.assertNotNull(jmxConnector);
         jmxConnector.stop();
+        waitForSocket(port);
         // no exception is thrown: java.rmi.server.ExportException: internal error: ObjID already in use
         jmxConnector = JmxRmi.init(props);
         Assert.assertNotNull(jmxConnector);
         jmxConnector.stop();
+    }
+
+    private void waitForSocket(int port) throws InterruptedException {
+        // probe for socket
+        long deadline = System.currentTimeMillis() + 10_000L;
+        while (System.currentTimeMillis() < deadline) {
+            try (ServerSocket socket = new ServerSocket(port)) {
+                break;
+            } catch (IOException e) {
+                // swallow
+            }
+            Thread.sleep(10);
+        }
     }
 }

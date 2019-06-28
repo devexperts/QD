@@ -215,7 +215,7 @@ public class ImplCodeGen {
             publishable();
 
         ctx.delegate("Order", Order.class, "Order").
-            suffixes("|#NTV|#NFX|#ESPD|#XNFI|#DEA|#DEX|#BYX|#BZX|#IST|#ISE|#BATE|#CHIX|#BXTR|#GLBX|#ERIS|#XEUR|#ICE|#CFE").
+            suffixes("|#NTV|#NFX|#ESPD|#XNFI|#DEA|#DEX|#BYX|#BZX|#IST|#BI20|#ISE|#BATE|#CHIX|#BXTR|#GLBX|#ERIS|#XEUR|#ICE|#CFE").
             inheritDelegateFrom(ORDER_BASE_DELEGATE).
             inheritMappingFrom(ORDER_BASE_MAPPING).
             source("m.getRecordSource()").

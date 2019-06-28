@@ -13,6 +13,8 @@ package com.devexperts.qd.impl.matrix.management.dump;
 
 import java.io.PrintStream;
 
+import com.devexperts.qd.DataRecord;
+
 class DumpVisitorBase {
     final PrintStream out;
     final String filterSymbol;
@@ -24,8 +26,8 @@ class DumpVisitorBase {
         this.filterRecord = filterRecord;
     }
 
-    boolean matches(String record, String symbol) {
+    boolean matches(DataRecord record, String symbol) {
         return (filterSymbol == null || filterSymbol.equals(symbol)) &&
-            (filterRecord == null || filterRecord.equals(record));
+            (filterRecord == null || filterRecord.equals(record.getName()));
     }
 }
