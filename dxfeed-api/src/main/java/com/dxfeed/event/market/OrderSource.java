@@ -120,6 +120,11 @@ public final class OrderSource extends IndexedEventSource {
      */
     public static final OrderSource DEFAULT = new OrderSource(0, "DEFAULT", PUB_ORDER | PUB_SPREAD_ORDER);
 
+    // ======== BEGIN: Custom OrderSource definitions ========
+
+    // ATTENTION: Every time a custom OrderSource constant is added run com.dxfeed.api.codegen.ImplCodeGen
+    // and commit updated implementation classes.
+
     /**
      * NASDAQ Total View.
      * {@link Order} events are {@link #isPublishable(Class) publishable} on this
@@ -205,6 +210,13 @@ public final class OrderSource extends IndexedEventSource {
     public static final OrderSource CHIX = new OrderSource("CHIX", PUB_ORDER);
 
     /**
+     * Bats Europe DXE Exchange.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource CEUX = new OrderSource("CEUX", PUB_ORDER);
+
+    /**
      * Bats Europe TRF.
      * {@link Order} events are {@link #isPublishable(Class) publishable} on this
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
@@ -252,6 +264,11 @@ public final class OrderSource extends IndexedEventSource {
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
      */
     public static final OrderSource CFE = new OrderSource("CFE", PUB_ORDER);
+
+    // ATTENTION: Every time a custom OrderSource constant is added run com.dxfeed.api.codegen.ImplCodeGen
+    // and commit updated implementation classes.
+
+    // ======== END: Custom OrderSource definitions ========
 
     /**
      * Determines whether specified source identifier refers to special order source.

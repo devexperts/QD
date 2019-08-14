@@ -1,4 +1,8 @@
 
+QDS 3.278:
+
+* [QD-1157] New order source for BATS EU: CEUX
+
 QDS 3.277:
 
 * [QD-1171] Add order record for BITIP top20 book

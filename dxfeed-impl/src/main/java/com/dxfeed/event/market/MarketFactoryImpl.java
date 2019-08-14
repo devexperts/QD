@@ -193,7 +193,7 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         builder.addRequiredField("Profile", "Description", SerialFieldType.UTF_CHAR_ARRAY);
         builder.addOptionalField("Profile", "StatusReason", SerialFieldType.UTF_CHAR_ARRAY, "Profile", "StatusReason", true);
 
-        for (String suffix : SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.suffixes", "|#NTV|#NFX|#ESPD|#XNFI|#DEA|#DEX|#BYX|#BZX|#IST|#BI20|#ISE|#BATE|#CHIX|#BXTR|#GLBX|#ERIS|#XEUR|#ICE|#CFE").split("\\|")) {
+        for (String suffix : SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.suffixes", "|#NTV|#NFX|#ESPD|#XNFI|#ICE|#ISE|#DEA|#DEX|#BYX|#BZX|#BATE|#CHIX|#CEUX|#BXTR|#IST|#BI20|#GLBX|#ERIS|#XEUR|#CFE").split("\\|")) {
             String recordName = "Order" + suffix;
             builder.addRequiredField(recordName, "Void", SerialFieldType.VOID, SchemeFieldTime.FIRST_TIME_INT_FIELD);
             builder.addRequiredField(recordName, "Index", SerialFieldType.COMPACT_INT, SchemeFieldTime.SECOND_TIME_INT_FIELD);
@@ -205,7 +205,7 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             if (suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.Order.suffixes.count", "")))
                 builder.addOptionalField(recordName, "Count", select(SerialFieldType.COMPACT_INT), "Order", "Count", true);
             builder.addRequiredField(recordName, "Flags", SerialFieldType.COMPACT_INT);
-            if (suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.Order.suffixes.mmid", "|#NTV|#BATE|#CHIX|#BXTR")))
+            if (suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.Order.suffixes.mmid", "|#NTV|#BATE|#CHIX|#CEUX|#BXTR")))
                 builder.addOptionalField(recordName, "MMID", SerialFieldType.SHORT_STRING, "Order", "MarketMaker", true);
         }
 

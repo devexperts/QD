@@ -18,7 +18,9 @@ import com.dxfeed.event.candle.DailyCandle;
 import com.dxfeed.event.candle.impl.CandleEventMapping;
 import com.dxfeed.event.market.MarketEventDelegateImpl;
 import com.dxfeed.event.market.Order;
+import com.dxfeed.event.market.OrderBase;
 import com.dxfeed.event.market.OrderBaseDelegateImpl;
+import com.dxfeed.event.market.OrderSource;
 import com.dxfeed.event.market.Profile;
 import com.dxfeed.event.market.Quote;
 import com.dxfeed.event.market.SpreadOrder;
@@ -36,6 +38,7 @@ import com.dxfeed.event.option.TheoPrice;
 import com.dxfeed.event.option.Underlying;
 
 import java.io.IOException;
+import java.util.stream.Collectors;
 
 /**
  * Main class to generate all implementation-related code for dxFeed.
@@ -215,7 +218,7 @@ public class ImplCodeGen {
             publishable();
 
         ctx.delegate("Order", Order.class, "Order").
-            suffixes("|#NTV|#NFX|#ESPD|#XNFI|#DEA|#DEX|#BYX|#BZX|#IST|#BI20|#ISE|#BATE|#CHIX|#BXTR|#GLBX|#ERIS|#XEUR|#ICE|#CFE").
+            suffixes(getOrderSuffixes(Order.class)).
             inheritDelegateFrom(ORDER_BASE_DELEGATE).
             inheritMappingFrom(ORDER_BASE_MAPPING).
             source("m.getRecordSource()").
@@ -234,7 +237,7 @@ public class ImplCodeGen {
             map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes("com.dxfeed.event.order.impl.Order.suffixes.count", "").
             map("Flags", "Flags", FieldType.FLAGS).
             map("MarketMaker", "MMID", FieldType.SHORT_STRING).onlySuffixes(
-                "com.dxfeed.event.order.impl.Order.suffixes.mmid", "|#NTV|#BATE|#CHIX|#BXTR").
+                "com.dxfeed.event.order.impl.Order.suffixes.mmid", "|#NTV|#BATE|#CHIX|#CEUX|#BXTR").
             injectPutEventCode(
                 "if (index < 0)",
                 "\tthrow new IllegalArgumentException(\"Invalid index to publish\");",
@@ -246,7 +249,7 @@ public class ImplCodeGen {
             publishable();
 
         ctx.delegate("SpreadOrder", SpreadOrder.class, "SpreadOrder").
-            suffixes("|#ISE").
+            suffixes(getOrderSuffixes(SpreadOrder.class)).
             inheritDelegateFrom(ORDER_BASE_DELEGATE).
             inheritMappingFrom(ORDER_BASE_MAPPING).
             source("m.getRecordSource()").
@@ -483,5 +486,20 @@ public class ImplCodeGen {
             publishable();
 
         ctx.generateSources();
+    }
+
+    /**
+     * Get record suffixes for publishable order sources of specified type as a string delimited by '|' (pipe) symbol.
+     *
+     * @param eventType - eventType either <code>{@link Order}.<b>class</b></code>
+     *                     or <code>{@link SpreadOrder}.<b>class</b></code>.
+     * @return a list of publishable record suffixes delimited by '|' symbol.
+     * @see OrderSource#publishable(Class)
+     */
+    private String getOrderSuffixes(Class<? extends OrderBase> eventType) {
+        return OrderSource.publishable(eventType).stream().
+            filter(os -> !OrderSource.DEFAULT.equals(os) && !OrderSource.isSpecialSourceId(os.id())).
+            map(orderSource -> "|#" + orderSource.name()).
+            collect(Collectors.joining());
     }
 }

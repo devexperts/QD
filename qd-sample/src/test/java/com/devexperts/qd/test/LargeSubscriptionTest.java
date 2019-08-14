@@ -11,9 +11,12 @@
  */
 package com.devexperts.qd.test;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.util.BitSet;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import java.util.function.LongSupplier;
 
 import com.devexperts.qd.*;
 import com.devexperts.qd.kit.*;
@@ -24,13 +27,21 @@ import junit.framework.TestCase;
  * Large subscription performance unit test.
  */
 public class LargeSubscriptionTest extends TestCase {
+
     public LargeSubscriptionTest(String s) {
         super(s);
+
+        // Measure only CPU time if possible to minimize CI system overload effects.
+        ThreadMXBean threadMX = ManagementFactory.getThreadMXBean();
+        cpuTimeMarksSupplier = threadMX.isCurrentThreadCpuTimeSupported() && threadMX.isThreadCpuTimeEnabled() ?
+            threadMX::getCurrentThreadCpuTime : System::nanoTime;
     }
 
     private static final SymbolCodec codec = PentaCodec.INSTANCE;
     private static final DataRecord record = new DefaultRecord(0, "Haba", false, null, null);
     private static final DataScheme scheme = new DefaultScheme(codec, record);
+
+    private final LongSupplier cpuTimeMarksSupplier;
 
     private static RecordBuffer sub(int size, boolean encodeable) {
         Random rnd = new Random();
@@ -71,14 +82,18 @@ public class LargeSubscriptionTest extends TestCase {
         QDTicker ticker = QDFactory.getDefaultFactory().tickerBuilder().withScheme(scheme).build();
         QDAgent agent = ticker.agentBuilder().build();
         RecordBuffer sub = sub(subSize, true);
-        long time1 = System.nanoTime();
+        long time1 = getTimeMark();
         agent.setSubscription(sub);
-        long time2 = System.nanoTime();
+        long time2 = getTimeMark();
         agent.close();
-        long time3 = System.nanoTime();
+        long time3 = getTimeMark();
         long subscribeMillis = TimeUnit.NANOSECONDS.toMillis(time2 - time1);
         long closeMillis = TimeUnit.NANOSECONDS.toMillis(time3 - time2);
         System.out.println("Size " + subSize + ", subscribe " + subscribeMillis + " ms, close " + closeMillis + " ms");
         return closeMillis + subscribeMillis;
+    }
+
+    private long getTimeMark() {
+        return cpuTimeMarksSupplier.getAsLong();
     }
 }
