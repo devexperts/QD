@@ -123,7 +123,8 @@ public class IndexedSetTest extends TestCase {
     public void testDefaultIndexer() {
         assertTrue("IndexerFunction.DEFAULT != null", IndexerFunction.DEFAULT != null);
         assertTrue("Indexer.DEFAULT != null", Indexer.DEFAULT != null);
-        assertTrue("Indexer.DEFAULT == IndexerFunction.DEFAULT", Indexer.DEFAULT == IndexerFunction.DEFAULT);
+        // Contract changed: [QD-1193] Deadlock: Indexer vs IndexerFunction initialization circular dependencies
+        // assertTrue("Indexer.DEFAULT == IndexerFunction.DEFAULT", Indexer.DEFAULT == IndexerFunction.DEFAULT);
     }
 
     public void testNull() {

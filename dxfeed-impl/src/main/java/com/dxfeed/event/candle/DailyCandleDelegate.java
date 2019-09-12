@@ -54,7 +54,7 @@ public final class DailyCandleDelegate extends CandleEventDelegateImpl<DailyCand
         event.setBidVolumeAsDouble(m.getBidVolumeDouble(cursor));
         event.setAskVolumeAsDouble(m.getAskVolumeDouble(cursor));
         event.setImpVolatility(m.getImpVolatility(cursor));
-        event.setOpenInterest(m.getOpenInterest(cursor));
+        event.setOpenInterestAsDouble(m.getOpenInterestDouble(cursor));
         return event;
     }
 
@@ -74,7 +74,7 @@ public final class DailyCandleDelegate extends CandleEventDelegateImpl<DailyCand
         m.setBidVolumeDouble(cursor, event.getBidVolumeAsDouble());
         m.setAskVolumeDouble(cursor, event.getAskVolumeAsDouble());
         m.setImpVolatility(cursor, event.getImpVolatility());
-        m.setOpenInterest(cursor, event.getOpenInterest());
+        m.setOpenInterestDouble(cursor, event.getOpenInterestAsDouble());
         return cursor;
     }
 // END: CODE AUTOMATICALLY GENERATED

@@ -52,6 +52,7 @@ public final class CandleFactoryImpl extends EventDelegateFactory implements Rec
             if (!suffix.matches(".*[{,]price=(bid|ask|mark|s)[,}].*"))
                 builder.addOptionalField(recordName, "Ask.Volume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Candle", "AskVolume", true);
             builder.addOptionalField(recordName, "ImpVolatility", select(SerialFieldType.DECIMAL), "Candle", "ImpVolatility", true);
+            builder.addOptionalField(recordName, "OpenInterest", select(SerialFieldType.DECIMAL, "dxscheme.oi"), "Candle", "OpenInterest", true);
         }
 
         for (String suffix : SystemProperties.getProperty("com.dxfeed.event.candle.impl.Trade.suffixes", "133ticks|144ticks|233ticks|333ticks|400ticks|512ticks|1600ticks|3200ticks|1min|2min|3min|4min|5min|6min|10min|12min|15min|20min|30min|1hour|2hour|3hour|4hour|6hour|8hour|12hour|Day|2Day|3Day|4Day|Week|Month|OptExp").split("\\|")) {
@@ -70,8 +71,7 @@ public final class CandleFactoryImpl extends EventDelegateFactory implements Rec
             if (!suffix.matches(".*[{,]price=(bid|ask|mark|s)[,}].*"))
                 builder.addOptionalField(recordName, "Ask.Volume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Candle", "AskVolume", true);
             builder.addOptionalField(recordName, "ImpVolatility", select(SerialFieldType.DECIMAL), "Candle", "ImpVolatility", true);
-            if (suffix.matches(".*Day|Week|Month|OptExp"))
-                builder.addOptionalField(recordName, "OpenInterest", select(SerialFieldType.DECIMAL), "DailyCandle", "OpenInterest", true);
+            builder.addOptionalField(recordName, "OpenInterest", select(SerialFieldType.DECIMAL, "dxscheme.oi"), "Candle", "OpenInterest", true);
         }
     }
 

@@ -63,7 +63,6 @@ public class ImplCodeGen {
         "1min|2min|3min|4min|5min|6min|10min|12min|15min|20min|30min|" +
         "1hour|2hour|3hour|4hour|6hour|8hour|12hour|Day|2Day|3Day|4Day|Week|Month|OptExp";
     private static final String BID_ASK_VOLUME_SUFFIXES = ".*[{,]price=(bid|ask|mark|s)[,}].*";
-    private static final String TRADE_DAILY_ONLY_SUFFIXES = ".*Day|Week|Month|OptExp";
 
     public static void main(String[] args) throws IOException {
         new ImplCodeGen("", false).run();
@@ -390,6 +389,7 @@ public class ImplCodeGen {
             map("BidVolume", "Bid.Volume", FieldType.VOLUME).exceptSuffixes(BID_ASK_VOLUME_SUFFIXES).optional().
             map("AskVolume", "Ask.Volume", FieldType.VOLUME).exceptSuffixes(BID_ASK_VOLUME_SUFFIXES).optional().
             map("ImpVolatility", FieldType.DECIMAL_AS_DOUBLE).optional().
+            map("OpenInterest", FieldType.OPEN_INTEREST).optional().
             publishable();
 
         // use common mapping for "Candle" record, just generate Trade records and bind them to Candle delegate
@@ -406,7 +406,8 @@ public class ImplCodeGen {
             field("VWAP", FieldType.PRICE).optional().
             field("Bid.Volume", FieldType.VOLUME).exceptSuffixes(BID_ASK_VOLUME_SUFFIXES).optional().
             field("Ask.Volume", FieldType.VOLUME).exceptSuffixes(BID_ASK_VOLUME_SUFFIXES).optional().
-            field("ImpVolatility", FieldType.DECIMAL_AS_DOUBLE).optional();
+            field("ImpVolatility", FieldType.DECIMAL_AS_DOUBLE).optional().
+            field("OpenInterest", FieldType.OPEN_INTEREST).optional();
 
         ctx.delegate("DailyCandle", DailyCandle.class, "Candle", "Trade."). // use common mapping for "Candle" record
             suffixes(TRADE_RECORD_SUFFIXES).
@@ -423,7 +424,7 @@ public class ImplCodeGen {
             map("BidVolume", "Bid.Volume", FieldType.VOLUME).exceptSuffixes(BID_ASK_VOLUME_SUFFIXES).optional().
             map("AskVolume", "Ask.Volume", FieldType.VOLUME).exceptSuffixes(BID_ASK_VOLUME_SUFFIXES).optional().
             map("ImpVolatility", FieldType.DECIMAL_AS_DOUBLE).optional().
-            map("OpenInterest", FieldType.DECIMAL_AS_LONG).onlySuffixes(null, TRADE_DAILY_ONLY_SUFFIXES).optional().
+            map("OpenInterest", FieldType.OPEN_INTEREST).optional().
             publishable();
 
         ctx.delegate("Message", Message.class, "Message").

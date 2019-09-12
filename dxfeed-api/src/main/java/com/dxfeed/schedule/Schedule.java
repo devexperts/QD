@@ -489,8 +489,12 @@ public final class Schedule {
             this.end = end;
         }
 
-        Session create(Day day, Calendar calendar, long time) {
-            return new Session(day, type, start.get(calendar, time), end.get(calendar, time));
+        Session create(Day day, Calendar calendar, long time, long startShift, long endShift) {
+            long start = this.start.get(calendar, time) + startShift;
+            long end = this.end.get(calendar, time) + endShift;
+            if (end <= start)
+                throw new IllegalArgumentException("start=" + start + " >= end=" + end);
+            return new Session(day, type, start, end);
         }
 
         public String toString() {
@@ -576,6 +580,8 @@ public final class Schedule {
         }
     }
 
+    private static final Pattern SDS_EC_PATTERN = Pattern.compile("ec[0-9]{4}");
+
     final String def;
     private String name;
     private Calendar calendar;
@@ -584,6 +590,7 @@ public final class Schedule {
 
     private LongHashSet holidays;
     private LongHashSet shortdays;
+    private long earlyClose;
     private DayDef[] weekDays;
     private LongHashMap<DayDef> specialDays;
 
@@ -616,6 +623,15 @@ public final class Schedule {
         TimeZone timeZone = TimeZone.getTimeZone(tz);
         LongHashSet holidays = readDays(defaults.holidays, props.get("hd"));
         LongHashSet shortdays = readDays(defaults.shortdays, props.get("sd"));
+        String sds = props.get("sds");
+        long earlyClose;
+        if (sds == null || sds.isEmpty()) {
+            earlyClose = 0;
+        } else if (SDS_EC_PATTERN.matcher(sds).matches()) {
+            earlyClose = new TimeDef(def, sds.substring(2)).offset();
+        } else {
+            throw new IllegalArgumentException("unknown short day strategy for " + def);
+        }
         String td = props.get("td");
         if (td == null)
             td = "12345";
@@ -656,6 +672,7 @@ public final class Schedule {
             this.dayOffset = dayStart.offset();
             this.holidays = holidays;
             this.shortdays = shortdays;
+            this.earlyClose = earlyClose;
             this.weekDays = weekDays;
             this.specialDays = specialDays;
 
@@ -706,15 +723,35 @@ public final class Schedule {
         Day day = new Day(this, dayId, yearMonthDay, holiday, shortday, def.resetTime.get(calendar, time));
         if (holiday)
             day.setSessions(Collections.singletonList(new Session(day, SessionType.NO_TRADING, def.dayStart.get(calendar, time), def.dayEnd.get(calendar, time))));
-        else if (def.sessions.length == 1)
-            day.setSessions(Collections.singletonList(def.sessions[0].create(day, calendar, time)));
         else {
             ArrayList<Session> sessions = new ArrayList<>(def.sessions.length);
-            for (SessionDef s : def.sessions)
-                sessions.add(s.create(day, calendar, time));
+            int lastRegular = (shortday && earlyClose != 0) ? getLastRegularSessionIndex(def) : def.sessions.length;
+            long shift = -1 * earlyClose;
+            for (int i = 0; i < def.sessions.length; i++) {
+                SessionDef session = def.sessions[i];
+                if (i < lastRegular)
+                    sessions.add(session.create(day, calendar, time, 0, 0));
+                else if (i == lastRegular)
+                    sessions.add(session.create(day, calendar, time, 0, shift));
+                else if (i < def.sessions.length - 1)
+                    sessions.add(session.create(day, calendar, time, shift, shift));
+                else
+                    sessions.add(session.create(day, calendar, time, shift, 0));
+            }
+            if (lastRegular == def.sessions.length - 1) {
+                long endTime = sessions.get(sessions.size() - 1).getEndTime();
+                sessions.add(new Session(day, SessionType.NO_TRADING, endTime, endTime - shift));
+            }
             day.setSessions(Collections.unmodifiableList(sessions));
         }
         return day;
+    }
+
+    private static int getLastRegularSessionIndex(DayDef def) {
+        for (int i = def.sessions.length - 1; i >= 0; i--)
+            if (def.sessions[i].type == SessionType.REGULAR)
+                return i;
+        return def.sessions.length;
     }
 
     private static final LongHashSet EMPTY_SET = new LongHashSet();

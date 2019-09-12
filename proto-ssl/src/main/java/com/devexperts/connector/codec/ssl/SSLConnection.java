@@ -22,15 +22,18 @@ import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.connector.proto.TransportConnection;
 import com.devexperts.io.*;
 import com.devexperts.util.ExecutorProvider;
+import com.devexperts.util.SystemProperties;
 
 class SSLConnection extends CodecConnection<SSLConnectionFactory> {
+
+    private static final String SYNC_SSL_ENGINE_PROPERTY = "com.devexperts.connector.codec.ssl.synchronizeSSLEngine";
 
     private static final ThreadLocal<ByteBuffer> inAppBuffer = new ThreadLocal<>(); // todo: optionally: this may be replaced by buffer pooling
     private static final ThreadLocal<ByteBuffer> inNetBuffer = new ThreadLocal<>();
     private static final ThreadLocal<ByteBuffer> outAppBuffer = new ThreadLocal<>();
     private static final ThreadLocal<ByteBuffer> outNetBuffer = new ThreadLocal<>();
 
-    private final SSLEngine engine;
+    private final SSLEngineAdapter engine;
     private final ExecutorProvider.Reference executorReference;
 
     private final ChunkedInput inNetChunkedInput;
@@ -43,11 +46,15 @@ class SSLConnection extends CodecConnection<SSLConnectionFactory> {
     private volatile boolean isExecutingTask = false;
     private volatile boolean hasUnsentChunks = false;
 
-    SSLConnection(ApplicationConnectionFactory delegateFactory, SSLConnectionFactory factory, TransportConnection transportConnection,
+    SSLConnection(ApplicationConnectionFactory delegateFactory, SSLConnectionFactory factory,
+        TransportConnection transportConnection,
         SSLEngine engine, ExecutorProvider.Reference executorReference) throws IOException
     {
         super(delegateFactory, factory, transportConnection);
-        this.engine = engine;
+        // [QD-1196] SSLEngineImpl wrap/unwrap deadlock workaround
+        boolean syncEngine = SystemProperties.getBooleanProperty(SYNC_SSL_ENGINE_PROPERTY, true);
+        this.engine = syncEngine ? new SSLEngineSynchronizedAdapter(engine) : new SSLEngineAdapter(engine);
+
         this.executorReference = executorReference;
         inNetChunkedInput = new ChunkedInput(factory.getChunkPool());
         outAppChunkedInput = new ChunkedInput(factory.getChunkPool());

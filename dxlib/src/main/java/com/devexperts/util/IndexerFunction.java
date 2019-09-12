@@ -53,7 +53,7 @@ public interface IndexerFunction<K, V> extends Serializable {
      * into a self-reference mapping.
      */
     @SuppressWarnings("rawtypes")
-    public static final IndexerFunction DEFAULT = Indexer.DefaultIndexer.getOrCreateDefault();
+    public static final IndexerFunction DEFAULT = new DefaultIndexerFunction();
 
     // ========== Object Key Operations ==========
 
@@ -326,4 +326,29 @@ public interface IndexerFunction<K, V> extends Serializable {
             return key == getObjectKey(value);
         }
     }
+
+    /**
+     * Default strategy that treats values as their own keys <b>(key&nbsp;==&nbsp;value)</b>.
+     */
+    @SuppressWarnings("rawtypes")
+    static final class DefaultIndexerFunction implements IndexerFunction {
+        private static final long serialVersionUID = 0;
+
+        DefaultIndexerFunction() {}
+
+        @Override
+        public Object getObjectKey(Object value) {
+            return value;
+        }
+
+        // Substitute DefaultIndexer implementation for backward compatibility
+        private Object writeReplace() {
+            return Indexer.DEFAULT;
+        }
+
+        private Object readResolve() {
+            return IndexerFunction.DEFAULT;
+        }
+    }
+
 }

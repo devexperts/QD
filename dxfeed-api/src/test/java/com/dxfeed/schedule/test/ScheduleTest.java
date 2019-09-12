@@ -12,7 +12,16 @@
 package com.dxfeed.schedule.test;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.dxfeed.schedule.*;
 import junit.framework.TestCase;
@@ -69,6 +78,112 @@ public class ScheduleTest extends TestCase {
         check("0=0500/0600rt-+030405", "000000,050000,060000", "NO_TRADING,REGULAR,NO_TRADING");
 
         check("0=d0100230005000600rt0300", "010000,050000,060000", "NO_TRADING,REGULAR,NO_TRADING");
+    }
+
+    public void testShortDaysStrategyEarlyClose () {
+        Map<Integer, String> map = new HashMap<>();
+        map.put(1, "07000930");
+        map.put(2, "09301230");
+        map.put(3, "12301530");
+        checkSessions("sd=20191224;sds=ec0330;0=p07000930r09301600a16001900", 20191224, map);
+
+        map.clear();
+        map.put(1, "07000930");
+        map.put(2, "09301600");
+        map.put(3, "16001900");
+        checkSessions("sd=20191224;sds=ec0000;0=p07000930r09301600a16001900", 20191224, map);
+
+        map.clear();
+        map.put(1, "07000930");
+        map.put(2, "09301600");
+        map.put(3, "16001900");
+        checkSessions("sd=20191224;sds=ec0330;0=p07000930r09301600a16001900", 20191223, map);
+
+        map.clear();
+        map.put(1, "07000930");
+        map.put(2, "09301600");
+        map.put(3, "16001900");
+        checkSessions("sd=20191224;0=p07000930r09301600a16001900", 20191224, map);
+
+        map.clear();
+        map.put(1, "07000930");
+        map.put(2, "09301600");
+        map.put(3, "16001900");
+        checkSessions("sd=20191224;sds=ec0330;0=p07000930p09301600a16001900", 20191224, map);
+
+        map.clear();
+        map.put(1, "07000800");
+        map.put(2, "08001200");
+        map.put(3, "12001300");
+        map.put(4, "13001500");
+        map.put(5, "15001700");
+        checkSessions("sd=20191224;sds=ec0200;0=p07000800r08001200p12001300r13001700a17001900", 20191224, map);
+
+        map.clear();
+        map.put(1, "07000930");
+        map.put(2, "09302030");
+        map.put(3, "20300000");
+        checkSessions("sd=20191224;sds=ec0330;0=p07000930r0930+0000", 20191224, map, true);
+
+        checkException("sd=20191224;sds=0330;0=p07000930p09301600a16001900", "unknown short day strategy for");
+        checkException("sd=20191224;sds=ec-0330;0=p07000930p09301600a16001900", "unknown short day strategy for");
+        checkException("sd=20191224;sds=ec+0330;0=p07000930p09301600a16001900", "unknown short day strategy for");
+        checkException("sd=20191224;sds=ec0j60;0=p07000930p09301600a16001900", "unknown short day strategy for");
+    }
+
+    private void checkSessions(String extra, int day, Map<Integer, String> map) {
+        checkSessions(extra, day, map, false);
+    }
+
+    private void checkSessions(String extra, int day, Map<Integer, String> map, boolean extraSession) {
+        LocalDate date = LocalDate.of(day / 10_000, (day % 10_000) / 100, day % 100);
+        List<Session> sessions = Schedule.getInstance(gmtde(extra)).getDayByYearMonthDay(day).getSessions();
+        for (Map.Entry<Integer, String> entry : map.entrySet()) {
+            Session session = sessions.get(entry.getKey());
+            long startTime = toMillis(date, entry.getValue().substring(0, 4), session.getStartTime());
+            long endTime = toMillis(date, entry.getValue().substring(4), session.getEndTime());
+            assertEquals(session.getStartTime(), startTime);
+            assertEquals(session.getEndTime(),  endTime);
+        }
+        if (extraSession)
+            assertEquals(sessions.get(sessions.size() - 1).getType(), SessionType.NO_TRADING);
+        String nonShortExtra = Arrays.stream(extra.split(";"))
+            .filter(s -> !s.startsWith("sds=")).collect(Collectors.joining(";"));
+        Schedule nonShortSchedule = Schedule.getInstance(gmtde(nonShortExtra));
+        List<Session> nonShortSessions = nonShortSchedule.getDayByYearMonthDay(day).getSessions();
+        int size = extraSession ? nonShortSessions.size() + 1 : nonShortSessions.size();
+        assertEquals(size, sessions.size());
+        assertEquals(nonShortSessions.get(0).getStartTime(), sessions.get(0).getStartTime());
+        long nonShortEndTime = nonShortSessions.get(nonShortSessions.size() - 1).getEndTime();
+        long endTime = sessions.get(sessions.size() - 1).getEndTime();
+        assertEquals(nonShortEndTime, endTime);
+    }
+
+    private String gmtde(String extra) {
+        return "(tz=GMT;de=+0000;" + extra + ")";
+    }
+
+    private long toMillis(LocalDate date, String sTime, long datetime) {
+        Instant instant = Instant.ofEpochMilli(datetime);
+        if (ZonedDateTime.ofInstant(instant, ZoneId.of("GMT")).toLocalDate().compareTo(date) > 0)
+            date = date.plusDays(1);
+        int time = Integer.parseInt(sTime);
+        ZonedDateTime zdt = ZonedDateTime.of(date, LocalTime.of(time / 100, time % 100), ZoneId.of("GMT"));
+        return zdt.toInstant().toEpochMilli();
+    }
+
+    private void checkException(String extra, String message) {
+        boolean thrown = false;
+        try {
+            gmt(extra);
+        }
+        catch (Throwable t) {
+            if (t instanceof IllegalArgumentException)
+                thrown = t.getMessage().contains(message);
+            else
+                throw t;
+        }
+        assertTrue(message, thrown);
     }
 
     private Schedule gmt(String extra) {

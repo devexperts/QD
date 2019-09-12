@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.278</version>
+        <version>3.279</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -99,6 +99,18 @@
             <artifactId>log4j-core</artifactId>
             <version>${log4j2.version}</version>
             <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.binarytweed</groupId>
+            <artifactId>quarantining-test-runner</artifactId>
+            <version>0.0.3</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>junit</groupId>
+                    <artifactId>junit</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 </project>

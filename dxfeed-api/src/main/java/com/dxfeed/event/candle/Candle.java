@@ -11,18 +11,25 @@
  */
 package com.dxfeed.event.candle;
 
-import javax.xml.bind.annotation.*;
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
-
 import com.devexperts.util.TimeFormat;
 import com.devexperts.util.TimeUtil;
 import com.dxfeed.api.DXFeedTimeSeriesSubscription;
 import com.dxfeed.api.osub.TimeSeriesSubscriptionSymbol;
-import com.dxfeed.event.*;
+import com.dxfeed.event.IndexedEvent;
+import com.dxfeed.event.IndexedEventSource;
+import com.dxfeed.event.LastingEvent;
+import com.dxfeed.event.TimeSeriesEvent;
 import com.dxfeed.impl.XmlCandleSymbolAdapter;
 import com.dxfeed.impl.XmlTimeAdapter;
 import com.dxfeed.model.AbstractIndexedEventModel;
 import com.dxfeed.model.TimeSeriesEventModel;
+
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlSchemaType;
+import javax.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 /**
  * Candle event with open, high, low, close prices and other information for a specific period.
@@ -59,6 +66,8 @@ import com.dxfeed.model.TimeSeriesEventModel;
  * <li>{@link #getAskVolume() askVolume} - bid volume in this candle;
  * <li>{@link #getAskVolumeAsDouble() askVolumeAsDouble} - bid volume in this candle as floating number with fractions;
  * <li>{@link #getImpVolatility() impVolatility} - implied volatility;
+ * <li>{@link #getOpenInterest() openInterest} - open interest;
+ * <li>{@link #getOpenInterestAsDouble()} () openInterestAsDouble} - open interest as floating number with fractions;
  * </ul>
  *
  * <h3><a name="eventFlagsSection">Event flags, transactions and snapshots</a></h3>
@@ -91,7 +100,7 @@ import com.dxfeed.model.TimeSeriesEventModel;
 @XmlType(propOrder = {
     "eventSymbol", "eventTime", "eventFlags", "index", "time", "sequence",
     "count", "open", "high", "low", "close", "volumeAsDouble", "VWAP",
-    "bidVolumeAsDouble", "askVolumeAsDouble", "impVolatility"
+    "bidVolumeAsDouble", "askVolumeAsDouble", "impVolatility", "openInterestAsDouble"
 })
 public class Candle implements TimeSeriesEvent<CandleSymbol>, LastingEvent<CandleSymbol> {
     private static final long serialVersionUID = 3;
@@ -129,6 +138,7 @@ public class Candle implements TimeSeriesEvent<CandleSymbol>, LastingEvent<Candl
     private double bidVolume = Double.NaN;
     private double askVolume = Double.NaN;
     private double impVolatility = Double.NaN;
+    private double openInterest = Double.NaN;
 
     /**
      * Creates new candle with default values.
@@ -497,6 +507,40 @@ public class Candle implements TimeSeriesEvent<CandleSymbol>, LastingEvent<Candl
     }
 
     /**
+     * Returns open interest.
+     * @return open interest.
+     */
+    @XmlTransient
+    public long getOpenInterest() {
+        return (long) openInterest;
+    }
+
+    /**
+     * Changes open interest.
+     * @param openInterest open interest.
+     */
+    public void setOpenInterest(long openInterest) {
+        this.openInterest = openInterest;
+    }
+
+    /**
+     * Returns open interest as floating number with fractions.
+     * @return open interest in this candle as floating number with fractions.
+     */
+    @XmlElement(name = "openInterest")
+    public double getOpenInterestAsDouble() {
+        return openInterest;
+    }
+
+    /**
+     * Changes open interest as floating number with fractions.
+     * @param openInterest open interest as floating number with fractions.
+     */
+    public void setOpenInterestAsDouble(double openInterest) {
+        this.openInterest = openInterest;
+    }
+
+    /**
      * Returns string representation of this candle.
      * @return string representation of this candle.
      */
@@ -521,6 +565,7 @@ public class Candle implements TimeSeriesEvent<CandleSymbol>, LastingEvent<Candl
             ", bidVolume=" + bidVolume +
             ", askVolume=" + askVolume +
             ", impVolatility=" + impVolatility +
+            ", openInterest=" + openInterest +
             "";
     }
 }

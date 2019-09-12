@@ -1,3 +1,12 @@
+QDS 3.279:
+
+* [QD-1182] [Schedule] Add ability to specify schedule for short days
+* [QD-1200] dxFeed API: Move OpenInterest field from DailyCandle to Candle
+* [QD-1199] dxFeed webservice: Migrate to cometd 4.0.4 and jetty 9.4.18
+* [QD-1196] SSLEngineImpl wrap/unwrap deadlock workaround
+  - External synchronization is applied for internally used javax.net.ssl.SSLEnginge by default and can be controlled
+    by JVM parameter "-Dcom.devexperts.connector.codec.ssl.synchronizeSSLEngine=true|false"
+* [QD-1193] Deadlock: Indexer vs IndexerFunction initialization circular dependencies
 
 QDS 3.278:
 

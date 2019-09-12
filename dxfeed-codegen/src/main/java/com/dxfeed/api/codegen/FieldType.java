@@ -99,6 +99,14 @@ enum FieldType {
         .addAccess(Access.createWithAccessPattern("WideDecimal", "long", "0", "getAsWideDecimal(cursor, %s)", "setAsWideDecimal(cursor, %s, %s)"))
         .setMapper(new DefaultMapper(double.class))
     ),
+    OPEN_INTEREST(new Builder()
+        .addField(new Field(false, SerialFieldType.DECIMAL, true, "dxscheme.oi"))
+        .addAccess(Access.createWithAccessPattern("", "long", "0", "getAsLong(cursor, %s)", "setAsLong(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Double", "double", "Double.NaN", "getAsDouble(cursor, %s)", "setAsDouble(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getAsTinyDecimal(cursor, %s)", "setAsTinyDecimal(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("WideDecimal", "long", "0", "getAsWideDecimal(cursor, %s)", "setAsWideDecimal(cursor, %s, %s)"))
+        .setMapper(new DefaultMapper("Double", double.class))
+    ),
     DECIMAL_AS_DOUBLE(new Builder()
         .addField(new Field(false, SerialFieldType.DECIMAL, true))
         .addAccess(Access.createWithAccessPattern("", "double", "Double.NaN", "getAsDouble(cursor, %s)", "setAsDouble(cursor, %s, %s)"))

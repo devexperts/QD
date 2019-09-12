@@ -14,22 +14,16 @@ package com.dxfeed.event.candle;
 import javax.xml.bind.annotation.XmlRootElement;
 
 /**
- * Candle with an additional properties that are collected for optionable indices, stocks, and futures on a
- * daily basis. See {@link Candle}.
+ * In previous versions this class has represented candle with an additional properties that are collected for
+ * optionable indices, stocks, and futures on a daily basis, for example implied volatility or open interest.
+ * All additional properties were moved to {@link Candle} class.
  *
- * <h3>Properties</h3>
- *
- * {@code DailyCandle} event has the following properties in addition to {@link Candle}
- *
- * <ul>
- * <li>{@link #getOpenInterest() openInterest} - open interest;
- * </ul>
+ * @deprecated use {@link Candle} instead.
  */
+@Deprecated
 @XmlRootElement(name = "DailyCandle")
 public class DailyCandle extends Candle {
     private static final long serialVersionUID = 0;
-
-    private long openInterest;
 
     /**
      * Creates new daily candle with default values.
@@ -45,29 +39,11 @@ public class DailyCandle extends Candle {
     }
 
     /**
-     * Returns open interest.
-     * @return open interest.
-     */
-    public long getOpenInterest() {
-        return openInterest;
-    }
-
-    /**
-     * Changes open interest.
-     * @param openInterest open interest.
-     */
-    public void setOpenInterest(long openInterest) {
-        this.openInterest = openInterest;
-    }
-
-    /**
      * Returns string representation of this daily candle.
      * @return string representation of this daily candle.
      */
     @Override
     public String toString() {
-        return "DailyCandle{" + baseFieldsToString() +
-            ", openInterest=" + openInterest +
-            "}";
+        return "DailyCandle{" + baseFieldsToString() + "}";
     }
 }

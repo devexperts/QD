@@ -34,7 +34,7 @@ public abstract class Indexer<K, V> implements IndexerFunction<K, V> {
      * into a self-reference mapping.
      */
     @SuppressWarnings("rawtypes")
-    public static final Indexer DEFAULT = DefaultIndexer.getOrCreateDefault();
+    public static final Indexer DEFAULT = new DefaultIndexer();
 
     // ========== Standard Subclasses ==========
 
@@ -45,18 +45,6 @@ public abstract class Indexer<K, V> implements IndexerFunction<K, V> {
     static final class DefaultIndexer extends Indexer {
         private static final long serialVersionUID = 0;
 
-        // Work-around for varying static initialization order
-        // This code makes sure that default is initialized to a single value regardless of class initialization order
-        static synchronized Indexer getOrCreateDefault() {
-            Indexer def = DEFAULT; // Indexer.DEFAULT
-            if (def != null)
-                return def;
-            def = (Indexer) IndexerFunction.DEFAULT;
-            if (def != null)
-                return def;
-            return new DefaultIndexer();
-        }
-
         DefaultIndexer() {}
 
         @Override
@@ -66,7 +54,7 @@ public abstract class Indexer<K, V> implements IndexerFunction<K, V> {
 
         @SuppressWarnings("ReadResolveAndWriteReplaceProtected")
         public Object readResolve() {
-            return IndexerFunction.DEFAULT;
+            return Indexer.DEFAULT;
         }
     }
 
