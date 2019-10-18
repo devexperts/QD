@@ -492,9 +492,13 @@ public final class Schedule {
         Session create(Day day, Calendar calendar, long time, long startShift, long endShift) {
             long start = this.start.get(calendar, time) + startShift;
             long end = this.end.get(calendar, time) + endShift;
-            if (end <= start)
-                throw new IllegalArgumentException("start=" + start + " >= end=" + end);
+            if (start > end)
+                throw new IllegalArgumentException("start=" + start + " > end=" + end);
             return new Session(day, type, start, end);
+        }
+
+        boolean isTooShort(Calendar calendar, long time, long earlyClose) {
+            return start.get(calendar, time) >= end.get(calendar, time) - earlyClose;
         }
 
         public String toString() {
@@ -678,7 +682,42 @@ public final class Schedule {
 
             idCache.clear();
             ymdCache.clear();
+
+            checkEarlyClose();
         }
+    }
+
+    private void checkEarlyClose() {
+        if (earlyClose == 0)
+            return;
+        for (long sd : shortdays) {
+            if (holidays.contains(sd))
+                continue;
+            if (!checkShortDay((int) sd))
+                return;
+        }
+    }
+
+    private boolean checkShortDay(int yearMonthDay) {
+        int year = yearMonthDay / 10000;
+        int month = yearMonthDay / 100 % 100;
+        int day = yearMonthDay % 100;
+        int dayId = DayUtil.getDayIdByYearMonthDay(year, month, day);
+        long time = dayId * DAY_LENGTH - rawOffset + DAY_LENGTH / 2;
+        DayDef def = specialDays.get(yearMonthDay);
+        if (def == null)
+            def = weekDays[dayOfWeek(dayId)];
+        int lastRegular = getLastRegularSessionIndex(def);
+        if (lastRegular < def.sessions.length) {
+            SessionDef session = def.sessions[lastRegular];
+            if (session.isTooShort(calendar, time, earlyClose)) {
+                Logging log = Logging.getLogging(getClass());
+                log.warn("Last regular session of short day " + yearMonthDay +
+                    " in " + this.def + " is too short for early close strategy. Strategy will be ignored.");
+                return false;
+            }
+        }
+        return true;
     }
 
     private Day getDay(int dayId) {
@@ -726,6 +765,12 @@ public final class Schedule {
         else {
             ArrayList<Session> sessions = new ArrayList<>(def.sessions.length);
             int lastRegular = (shortday && earlyClose != 0) ? getLastRegularSessionIndex(def) : def.sessions.length;
+            if (lastRegular < def.sessions.length) {
+                SessionDef session = def.sessions[lastRegular];
+                if (session.isTooShort(calendar, time, earlyClose))
+                    // last regular session is too short for early close short day strategy - switch off it
+                    lastRegular = def.sessions.length;
+            }
             long shift = -1 * earlyClose;
             for (int i = 0; i < def.sessions.length; i++) {
                 SessionDef session = def.sessions[i];

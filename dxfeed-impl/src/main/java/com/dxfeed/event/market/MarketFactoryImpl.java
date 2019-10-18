@@ -27,6 +27,7 @@ import com.dxfeed.api.impl.EventDelegateFactory;
 import com.dxfeed.api.impl.EventDelegateFlags;
 import com.dxfeed.api.impl.SchemeBuilder;
 import com.dxfeed.api.impl.SchemeFieldTime;
+import com.dxfeed.event.market.impl.AnalyticOrderMapping;
 import com.dxfeed.event.market.impl.BookMapping;
 import com.dxfeed.event.market.impl.FundamentalMapping;
 import com.dxfeed.event.market.impl.MarketMakerMapping;
@@ -202,11 +203,37 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             builder.addOptionalField(recordName, "TimeNanoPart", SerialFieldType.COMPACT_INT, "Order", "TimeNanoPart", false);
             builder.addRequiredField(recordName, "Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
             builder.addRequiredField(recordName, "Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addOptionalField(recordName, "ExecutedSize", select(SerialFieldType.DECIMAL), "Order", "ExecutedSize", false);
             if (suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.Order.suffixes.count", "")))
                 builder.addOptionalField(recordName, "Count", select(SerialFieldType.COMPACT_INT), "Order", "Count", true);
             builder.addRequiredField(recordName, "Flags", SerialFieldType.COMPACT_INT);
             if (suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.Order.suffixes.mmid", "|#NTV|#BATE|#CHIX|#CEUX|#BXTR")))
                 builder.addOptionalField(recordName, "MMID", SerialFieldType.SHORT_STRING, "Order", "MarketMaker", true);
+            builder.addOptionalField(recordName, "IcebergPeakSize", select(SerialFieldType.DECIMAL), "Order", "IcebergPeakSize", false);
+            builder.addOptionalField(recordName, "IcebergHiddenSize", select(SerialFieldType.DECIMAL), "Order", "IcebergHiddenSize", false);
+            builder.addOptionalField(recordName, "IcebergExecutedSize", select(SerialFieldType.DECIMAL), "Order", "IcebergExecutedSize", false);
+            builder.addOptionalField(recordName, "IcebergFlags", SerialFieldType.COMPACT_INT, "Order", "IcebergFlags", false);
+        }
+
+        for (String suffix : SystemProperties.getProperty("com.dxfeed.event.market.impl.AnalyticOrder.suffixes", "|#GLBX").split("\\|")) {
+            String recordName = "AnalyticOrder" + suffix;
+            builder.addRequiredField(recordName, "Void", SerialFieldType.VOID, SchemeFieldTime.FIRST_TIME_INT_FIELD);
+            builder.addRequiredField(recordName, "Index", SerialFieldType.COMPACT_INT, SchemeFieldTime.SECOND_TIME_INT_FIELD);
+            builder.addRequiredField(recordName, "Time", SerialFieldType.TIME);
+            builder.addRequiredField(recordName, "Sequence", SerialFieldType.SEQUENCE);
+            builder.addOptionalField(recordName, "TimeNanoPart", SerialFieldType.COMPACT_INT, "AnalyticOrder", "TimeNanoPart", false);
+            builder.addRequiredField(recordName, "Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addOptionalField(recordName, "ExecutedSize", select(SerialFieldType.DECIMAL), "AnalyticOrder", "ExecutedSize", false);
+            if (suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.AnalyticOrder.suffixes.count", "")))
+                builder.addOptionalField(recordName, "Count", select(SerialFieldType.COMPACT_INT), "AnalyticOrder", "Count", true);
+            builder.addRequiredField(recordName, "Flags", SerialFieldType.COMPACT_INT);
+            if (suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.AnalyticOrder.suffixes.mmid", "|#NTV|#BATE|#CHIX|#CEUX|#BXTR")))
+                builder.addOptionalField(recordName, "MMID", SerialFieldType.SHORT_STRING, "AnalyticOrder", "MarketMaker", true);
+            builder.addOptionalField(recordName, "IcebergPeakSize", select(SerialFieldType.DECIMAL), "AnalyticOrder", "IcebergPeakSize", false);
+            builder.addOptionalField(recordName, "IcebergHiddenSize", select(SerialFieldType.DECIMAL), "AnalyticOrder", "IcebergHiddenSize", false);
+            builder.addOptionalField(recordName, "IcebergExecutedSize", select(SerialFieldType.DECIMAL), "AnalyticOrder", "IcebergExecutedSize", false);
+            builder.addOptionalField(recordName, "IcebergFlags", SerialFieldType.COMPACT_INT, "AnalyticOrder", "IcebergFlags", false);
         }
 
         for (String suffix : SystemProperties.getProperty("com.dxfeed.event.market.impl.SpreadOrder.suffixes", "|#ISE").split("\\|")) {
@@ -218,6 +245,7 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             builder.addOptionalField(recordName, "TimeNanoPart", SerialFieldType.COMPACT_INT, "SpreadOrder", "TimeNanoPart", false);
             builder.addRequiredField(recordName, "Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
             builder.addRequiredField(recordName, "Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addOptionalField(recordName, "ExecutedSize", select(SerialFieldType.DECIMAL), "SpreadOrder", "ExecutedSize", false);
             if (suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.SpreadOrder.suffixes.count", "")))
                 builder.addOptionalField(recordName, "Count", select(SerialFieldType.COMPACT_INT), "SpreadOrder", "Count", true);
             builder.addRequiredField(recordName, "Flags", SerialFieldType.COMPACT_INT);
@@ -289,6 +317,9 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         } else if (record.getMapping(OrderMapping.class) != null) {
             result.add(new OrderDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
             result.add(new OrderDelegate(record, QDContract.HISTORY, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB)));
+        } else if (record.getMapping(AnalyticOrderMapping.class) != null) {
+            result.add(new AnalyticOrderDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
+            result.add(new AnalyticOrderDelegate(record, QDContract.HISTORY, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB)));
         } else if (record.getMapping(SpreadOrderMapping.class) != null) {
             result.add(new SpreadOrderDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
             result.add(new SpreadOrderDelegate(record, QDContract.HISTORY, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB)));
@@ -321,6 +352,8 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             result.add(new ProfileDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
         } else if (record.getMapping(OrderMapping.class) != null) {
             result.add(new OrderDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
+        } else if (record.getMapping(AnalyticOrderMapping.class) != null) {
+            result.add(new AnalyticOrderDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
         } else if (record.getMapping(SpreadOrderMapping.class) != null) {
             result.add(new SpreadOrderDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
         } else if (record.getMapping(MarketMakerMapping.class) != null) {
@@ -351,6 +384,8 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             return new ProfileMapping(record);
         if (baseRecordName.equals("Order"))
             return new OrderMapping(record);
+        if (baseRecordName.equals("AnalyticOrder"))
+            return new AnalyticOrderMapping(record);
         if (baseRecordName.equals("SpreadOrder"))
             return new SpreadOrderMapping(record);
         if (baseRecordName.equals("MarketMaker"))

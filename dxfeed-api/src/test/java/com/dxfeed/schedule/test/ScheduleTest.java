@@ -125,6 +125,12 @@ public class ScheduleTest extends TestCase {
         map.put(3, "20300000");
         checkSessions("sd=20191224;sds=ec0330;0=p07000930r0930+0000", 20191224, map, true);
 
+        map.clear();
+        map.put(1, "10001700");
+        map.put(2, "17001800");
+        map.put(3, "18001900");
+        checkSessions("sd=20191224;sds=ec0330;0=p10001700r17001800a18001900", 20191224, map);
+
         checkException("sd=20191224;sds=0330;0=p07000930p09301600a16001900", "unknown short day strategy for");
         checkException("sd=20191224;sds=ec-0330;0=p07000930p09301600a16001900", "unknown short day strategy for");
         checkException("sd=20191224;sds=ec+0330;0=p07000930p09301600a16001900", "unknown short day strategy for");

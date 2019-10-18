@@ -61,9 +61,12 @@ class SocketAcceptor extends QTPWorkerThread {
                 log.info("Trying to listen at " + LogUtil.hideCredentials(address));
                 try {
                     serverSocket = this.serverSocket = ServerSocketFactory.getDefault().createServerSocket(port, 0, bindAddress);
+                    //noinspection deprecation
                     ServerSocketTestHelper.completePortPromise(connector.getName(), serverSocket.getLocalPort());
                 } catch (Throwable t) {
                     log.error("Failed to listen at " + LogUtil.hideCredentials(address), t);
+                    //noinspection deprecation
+                    ServerSocketTestHelper.failPortPromise(connector.getName(), t);
                     continue; // retry listening again
                 }
                 log.info("Listening at " + LogUtil.hideCredentials(address) +

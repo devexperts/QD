@@ -49,6 +49,7 @@ public final class SpreadOrderDelegate extends OrderBaseDelegateImpl<SpreadOrder
         event.setTimeNanoPart(m.getTimeNanoPart(cursor));
         event.setPrice(m.getPrice(cursor));
         event.setSizeAsDouble(m.getSizeDouble(cursor));
+        event.setExecutedSize(m.getExecutedSize(cursor));
         event.setCount(m.getCount(cursor));
         event.setFlags(m.getFlags(cursor));
         event.setSpreadSymbol(m.getSpreadSymbol(cursor));
@@ -66,6 +67,7 @@ public final class SpreadOrderDelegate extends OrderBaseDelegateImpl<SpreadOrder
         m.setTimeNanoPart(cursor, event.getTimeNanoPart());
         m.setPrice(cursor, event.getPrice());
         m.setSizeDouble(cursor, event.getSizeAsDouble());
+        m.setExecutedSize(cursor, event.getExecutedSize());
         m.setCount(cursor, (int) event.getCount());
         m.setFlags(cursor, event.getFlags());
         m.setSpreadSymbol(cursor, event.getSpreadSymbol());

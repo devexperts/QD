@@ -9,18 +9,18 @@
  * http://mozilla.org/MPL/2.0/.
  * !__
  */
-package com.devexperts.connector.codec.shaper;
+package com.devexperts.connector.codec.shaped;
 
 import com.devexperts.connector.codec.CodecFactory;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 
 /**
- * This codec does not change underying data but artificially constrains
+ * This codec does not change underlying data but artificially constrains
  * connection outbound throughput by specified value.
  *
  * It can be used for testing purposes.
  */
-public class ShaperCodecFactory implements CodecFactory {
+public class ShapedCodecFactory implements CodecFactory {
     public ApplicationConnectionFactory createCodec(String name, ApplicationConnectionFactory delegate) {
         if (name.equalsIgnoreCase("shaped"))
             return new ShapedConnectionFactory(delegate);

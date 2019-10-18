@@ -73,6 +73,20 @@ public class ServerSocketTestHelper {
         }
     }
 
+    /**
+     * Fail a port promise associated with provided connector name (if it exists). The method is used by connectors
+     * supporting this testing facility.
+     *
+     * @param connectorName - a name of promise to be completed
+     * @param exception - a cause of connection failure
+     */
+    public static void failPortPromise(String connectorName, Throwable exception) {
+        Promise<Integer> p = promises.get(connectorName);
+        if (p != null) {
+            p.completeExceptionally(exception);
+        }
+    }
+
     private ServerSocketTestHelper() {
         // no instances
     }

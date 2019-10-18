@@ -163,6 +163,12 @@ public class OrderBookModelTest extends TestCase {
         assertNSellChangesQueued(0);
     }
 
+    public void testOrderBookModelIgnoresAnalyticOrder() {
+        publisher.publishEvents(Collections.singletonList(analyticOrderBuy(4, 500, Q, MMID)));
+        assertNBuyChangesQueued(0);
+        assertNSellChangesQueued(0);
+    }
+
     private void assertNBuyChangesQueued(int n) {
         assertEquals(n, buyQueued);
         buyQueued = 0;
@@ -411,6 +417,25 @@ public class OrderBookModelTest extends TestCase {
         order.setMarketMaker(mmid);
         order.setEventSymbol(symbol);
         return order;
+    }
+
+    private AnalyticOrder analyticOrderBuy(int index, int value, char exchange, String mmid) {
+        return createAnalyticOrder(Scope.ORDER, Side.BUY, index, value, exchange, mmid);
+    }
+
+    private AnalyticOrder createAnalyticOrder(Scope scope, Side side, long index, int value, char exchange, String mmid) {
+        AnalyticOrder analyticOrder = new AnalyticOrder();
+        analyticOrder.setScope(scope);
+        analyticOrder.setIndex(index);
+        analyticOrder.setOrderSide(side);
+        analyticOrder.setPrice(value * 10.0);
+        analyticOrder.setSize(value);
+        analyticOrder.setExchangeCode(exchange);
+        analyticOrder.setMarketMaker(mmid);
+        analyticOrder.setEventSymbol(symbol);
+        analyticOrder.setIcebergHiddenSize(value * 1.0);
+        analyticOrder.setIcebergPeakSize(value * 1.0);
+        return analyticOrder;
     }
 
     private boolean same(Order order, Order old) {

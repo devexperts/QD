@@ -97,7 +97,7 @@ import com.dxfeed.model.IndexedEventModel;
  * <h3>Implementation details</h3>
  *
  * This event is implemented on top of QDS records {@code SpreadOrder#<source-id>},
- * where {@code <source-id>} is up to 3 ASCII characters with a mnemonic for the source like "ISE".
+ * where {@code <source-id>} is up to 4 ASCII characters with a mnemonic for the source like "ISE".
  */
 @XmlRootElement(name = "SpreadOrder")
 @XmlType(propOrder = { "spreadSymbol" })

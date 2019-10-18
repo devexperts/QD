@@ -12,19 +12,23 @@
 package com.devexperts.rmi.test;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Collectors;
 
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.qtp.*;
 import com.devexperts.qd.qtp.socket.ServerSocketConnector;
+import com.devexperts.qd.qtp.socket.ServerSocketTestHelper;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.RMIServer;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
 import com.devexperts.rmi.task.RMIService;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.impl.DXEndpointImpl;
+import com.dxfeed.promise.Promise;
 
 /**
  * Networking utility methods for tests that run over network.
@@ -47,6 +51,29 @@ public class NTU {
     public static void connect(RMIEndpoint endpoint, String address) {
         endpoint.connect(address);
         waitConnected(((RMIEndpointImpl) endpoint).getQdEndpoint());
+    }
+
+    public static String localHost(int port) {
+        return LOCAL_HOST + ":" + port;
+    }
+
+    public static int connectServer(RMIEndpoint endpoint) {
+        return connectServer(endpoint, null, null);
+    }
+
+    public static int connectServer(RMIEndpoint endpoint, String prefix) {
+        return connectServer(endpoint, prefix, null);
+    }
+
+    public static int connectServer(RMIEndpoint endpoint, String prefix, String opts) {
+        String name = UUID.randomUUID().toString();
+        Promise<Integer> portPromise = ServerSocketTestHelper.createPortPromise(name);
+        String address = (prefix == null ? "" : prefix) + ":0[name=" + name +
+            (opts == null ? "" : "," + opts) + "]";
+        endpoint.connect(address);
+        int localPort = portPromise.await(10_000, TimeUnit.MILLISECONDS);
+        waitConnected(((RMIEndpointImpl) endpoint).getQdEndpoint());
+        return localPort;
     }
 
     public static void connect(DXEndpoint endpoint, String address) {

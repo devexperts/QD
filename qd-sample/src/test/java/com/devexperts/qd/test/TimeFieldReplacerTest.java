@@ -11,11 +11,6 @@
  */
 package com.devexperts.qd.test;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.function.ToLongFunction;
-
 import com.devexperts.test.TraceRunnerWithParametersFactory;
 import com.devexperts.util.TimePeriod;
 import com.dxfeed.api.DXEndpoint;
@@ -23,10 +18,27 @@ import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.event.EventType;
 import com.dxfeed.event.candle.Candle;
 import com.dxfeed.event.candle.CandleSymbol;
-import com.dxfeed.event.market.*;
-import org.junit.*;
+import com.dxfeed.event.market.AnalyticOrder;
+import com.dxfeed.event.market.Order;
+import com.dxfeed.event.market.Profile;
+import com.dxfeed.event.market.Quote;
+import com.dxfeed.event.market.Side;
+import com.dxfeed.event.market.SpreadOrder;
+import com.dxfeed.event.market.TimeAndSale;
+import com.dxfeed.event.market.Trade;
+import com.dxfeed.event.market.TradeETH;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.ToLongFunction;
 
 @SuppressWarnings("unchecked")
 @RunWith(Parameterized.class)
@@ -135,6 +147,14 @@ public class TimeFieldReplacerTest {
         initialEvent.setOrderSide(Side.BUY);
         initialEvent.setTime(INITIAL_TIME_MILLIS);
         testEvent(initialEvent, Order::getTime);
+    }
+
+    @Test
+    public void testAnalyticOrder() throws Exception {
+        AnalyticOrder initialEvent = new AnalyticOrder("IBM");
+        initialEvent.setOrderSide(Side.BUY);
+        initialEvent.setTime(INITIAL_TIME_MILLIS);
+        testEvent(initialEvent, AnalyticOrder::getTime);
     }
 
     @Test

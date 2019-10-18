@@ -55,6 +55,7 @@ import com.dxfeed.model.market.OrderBookModel;
  * <li>{@link #getPrice() price} - price of this order;
  * <li>{@link #getSize() size} - size of this order as integer number (rounded toward zero);
  * <li>{@link #getSizeAsDouble() sizeAsDouble} - size of this order as floating number with fractions;
+ * <li>{@link #getExecutedSize()} - executed size of this order;
  * <li>{@link #getCount() count} - number of individual orders in this aggregate order;
  * <li>{@link #getExchangeCode() exchangeCode} - exchange code of this order;
  * <li>{@link #getOrderSide() orderSide} - side of this order;
@@ -106,7 +107,7 @@ import com.dxfeed.model.market.OrderBookModel;
  * record {@code MarketMaker} for market-maker quotes and futures price level aggregates with {@link Scope#AGGREGATE},
  * record {@code Order} for the most fine-grained {@link Scope#ORDER} with zero source id,
  * and records {@code Order#<source-id>} for specific source ids,
- * where {@code <source-id>} is up to 3 ASCII characters with a mnemonic for the source like "NTV".
+ * where {@code <source-id>} is up to 4 ASCII characters with a mnemonic for the source like "NTV".
  */
 @XmlRootElement(name = "Order")
 @XmlType(propOrder = { "marketMaker" })

@@ -27,12 +27,15 @@ import com.dxfeed.model.AbstractIndexedEventModel;
 import com.dxfeed.model.market.OrderBookModel;
 
 /**
- * Base class for common fields of {@link Order} and {@link SpreadOrder} events.
+ * Base class for common fields of {@link Order}, {@link AnalyticOrder} and {@link SpreadOrder} events.
  * Order events represent a snapshot for a full available market depth for a symbol.
  * The collection of order events of a symbol represents the most recent information that is
  * available about orders on the market at any given moment of time.
  *
  * <p>{@link Order} event represents market depth for a <b>specific symbol</b>.
+ *
+ * <p>{@link AnalyticOrder} event represents market depth for a <b>specific symbol</b> extended with an analytic
+ * information, for example, whether particular order represent an iceberg or not.
  *
  * <p>{@link SpreadOrder} event represents market depth for
  *    <b>all spreads on a given underlying symbol</b>.
@@ -80,7 +83,7 @@ import com.dxfeed.model.market.OrderBookModel;
  */
 @XmlType(propOrder = {
     "eventFlags", "index", "time", "timeNanoPart", "sequence", "source",
-    "price", "sizeAsDouble", "count", "exchangeCode", "orderSide", "scope"
+    "price", "sizeAsDouble", "executedSize", "count", "exchangeCode", "orderSide", "scope"
 })
 public class OrderBase extends MarketEvent implements IndexedEvent<String> {
     private static final long serialVersionUID = 3;
@@ -193,6 +196,7 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
     private int timeNanoPart;
     private double price = Double.NaN;
     private double size = Double.NaN;
+    private double executedSize = Double.NaN;
     private long count;
     private int flags;
 
@@ -437,6 +441,24 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
     }
 
     /**
+     * Returns executed size of this order.
+     *
+     * @return executed size of this order.
+     */
+    public double getExecutedSize() {
+        return executedSize;
+    }
+
+    /**
+     * Changes executed size of this order.
+     *
+     * @param executedSize executed size of this order.
+     */
+    public void setExecutedSize(double executedSize) {
+        this.executedSize = executedSize;
+    }
+
+    /**
      * Returns number of individual orders in this aggregate order.
      * @return number of individual orders in this aggregate order.
      */
@@ -571,6 +593,7 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
             ", timeNanoPart=" + timeNanoPart +
             ", price=" + price +
             ", size=" + size +
+            ", executedSize=" + executedSize +
             ", count=" + count +
             ", exchange=" + Util.encodeChar(getExchangeCode()) +
             ", side=" + getOrderSide() +

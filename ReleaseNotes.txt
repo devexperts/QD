@@ -1,3 +1,16 @@
+QDS 3.280:
+
+* [QD-1202] dxFeed API: Add AnalyticOrder event
+  - com.dxfeed.event.market.AnalyticOrder is introduced.
+* [QD-1201] [Schedule] Short days robustness
+* [QD-1160] Flaky test: RMIFunctionalityTest.testLargeRequests
+* [QD-1172] Flaky test: RMIFunctionalityTest.testLargeResponses
+* [QD-1175] Flaky test: RMIFunctionalityTest.testLargeRequestCancellations
+* [QD-1195] Publish "shaped" connection codec.
+  - Output throughput limit is specified with 'outLimit' parameter (as a bytes-per-second float number):
+    "shaped[outLimit=100k]+:7000"
+* [QD-1154] Flaky test: SocketRebindTest
+
 QDS 3.279:
 
 * [QD-1182] [Schedule] Add ability to specify schedule for short days

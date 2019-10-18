@@ -23,7 +23,7 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Identifies source of {@link Order} and {@link SpreadOrder} events.
+ * Identifies source of {@link Order}, {@link AnalyticOrder} and {@link SpreadOrder} events.
  * There are the following kinds of order sources:
  * <ul>
  * <li><em>Synthetic</em> sources {@link #COMPOSITE_BID}, {@link #COMPOSITE_ASK},
@@ -46,10 +46,12 @@ public final class OrderSource extends IndexedEventSource {
     private static final SynchronizedIndexedSet<String, OrderSource> SOURCES_BY_NAME = SynchronizedIndexedSet.create(OrderSource::name).withCapacity(CACHE_SIZE);
 
     private static final int TYPE_ORDER = 0;
-    private static final int TYPE_SPREAD_ORDER = 1;
-    private static final int N_TYPES = 2;
+    private static final int TYPE_ANALYTIC_ORDER = 1;
+    private static final int TYPE_SPREAD_ORDER = 2;
+    private static final int N_TYPES = 3;
 
     private static final int PUB_ORDER = 1 << TYPE_ORDER;
+    private static final int PUB_ANALYTIC_ORDER = 1 << TYPE_ANALYTIC_ORDER;
     private static final int PUB_SPREAD_ORDER = 1 << TYPE_SPREAD_ORDER;
 
     @SuppressWarnings("unchecked")
@@ -115,10 +117,10 @@ public final class OrderSource extends IndexedEventSource {
 
     /**
      * Default source for publishing custom order books.
-     * {@link Order} and {@link SpreadOrder} events are {@link #isPublishable(Class) publishable} on this
+     * {@link Order}, {@link AnalyticOrder} and {@link SpreadOrder} events are {@link #isPublishable(Class) publishable} on this
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
      */
-    public static final OrderSource DEFAULT = new OrderSource(0, "DEFAULT", PUB_ORDER | PUB_SPREAD_ORDER);
+    public static final OrderSource DEFAULT = new OrderSource(0, "DEFAULT", PUB_ORDER | PUB_ANALYTIC_ORDER | PUB_SPREAD_ORDER);
 
     // ======== BEGIN: Custom OrderSource definitions ========
 
@@ -239,10 +241,10 @@ public final class OrderSource extends IndexedEventSource {
 
     /**
      * CME Globex.
-     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * {@link Order} and {@link AnalyticOrder} events are {@link #isPublishable(Class) publishable} on this
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
      */
-    public static final OrderSource GLBX = new OrderSource("GLBX", PUB_ORDER);
+    public static final OrderSource GLBX = new OrderSource("GLBX", PUB_ORDER | PUB_ANALYTIC_ORDER);
 
     /**
      * Eris Exchange group of companies.
@@ -315,10 +317,11 @@ public final class OrderSource extends IndexedEventSource {
      * their subscription can be observed directly via {@link DXPublisher}.
      * Subscription on such sources is observed via instances of {@link IndexedEventSubscriptionSymbol} class.
      *
-     * @param eventType either <code>{@link Order}.<b>class</b></code> or <code>{@link SpreadOrder}.<b>class</b></code>.
+     * @param eventType <code>{@link Order}.<b>class</b></code> or <code>{@link AnalyticOrder}.<b>class</b></code>
+     *                  or <code>{@link SpreadOrder}.<b>class</b></code>.
      * @return a list of publishable order sources.
-     * @throws IllegalArgumentException if eventType is
-     *         neither <code>{@link Order}.<b>class</b></code> nor <code>{@link SpreadOrder}.<b>class</b></code>.
+     * @throws IllegalArgumentException if eventType is not in <code>{@link Order}.<b>class</b></code>,
+     * <code>{@link AnalyticOrder}.<b>class</b></code>, <code>{@link SpreadOrder}.<b>class</b></code>
      */
     public static List<OrderSource> publishable(Class<? extends OrderBase> eventType) {
         return PUBLISHABLE_VIEWS[getEventTypeId(eventType)];
@@ -376,10 +379,11 @@ public final class OrderSource extends IndexedEventSource {
      * Subscription on such sources can be observed directly via {@link DXPublisher}.
      * Subscription on such sources is observed via instances of {@link IndexedEventSubscriptionSymbol} class.
      *
-     * @param eventType either <code>{@link Order}.<b>class</b></code> or <code>{@link SpreadOrder}.<b>class</b></code>.
-     * @return {@code true} if {@link Order} and {@link SpreadOrder} events can be directly published with this source.
-     * @throws IllegalArgumentException if eventType is
-     *         neither <code>{@link Order}.<b>class</b></code> nor <code>{@link SpreadOrder}.<b>class</b></code>.
+     * @param eventType <code>{@link Order}.<b>class</b></code> or <code>{@link AnalyticOrder}.<b>class</b></code>
+     *                     or <code>{@link SpreadOrder}.<b>class</b></code>.
+     * @return {@code true} if {@link Order}, {@link AnalyticOrder} and {@link SpreadOrder} events can be directly published with this source.
+     * @throws IllegalArgumentException if eventType differs from
+     *         <code>{@link Order}.<b>class</b></code>, <code>{@link AnalyticOrder}.<b>class</b></code> and <code>{@link SpreadOrder}.<b>class</b></code>.
      */
     public boolean isPublishable(Class<? extends OrderBase> eventType) {
         return (pubFlags & (1 << getEventTypeId(eventType))) != 0;
@@ -424,6 +428,8 @@ public final class OrderSource extends IndexedEventSource {
     private static int getEventTypeId(Class<? extends OrderBase> eventType) {
         if (eventType == Order.class)
             return TYPE_ORDER;
+        if (eventType == AnalyticOrder.class)
+            return TYPE_ANALYTIC_ORDER;
         if (eventType == SpreadOrder.class)
             return TYPE_SPREAD_ORDER;
         throw new IllegalArgumentException("Invalid order event type: " + eventType);

@@ -18,6 +18,8 @@ import java.security.AccessController;
 import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.locks.LockSupport;
+import java.util.function.BooleanSupplier;
 import javax.net.ssl.X509TrustManager;
 import javax.security.auth.Subject;
 
@@ -28,6 +30,10 @@ import com.devexperts.rmi.message.RMIRequestMessage;
 import com.devexperts.rmi.message.RMIRequestType;
 import com.devexperts.rmi.samples.DifferentServices;
 import com.devexperts.rmi.task.*;
+import com.devexperts.rmi.test.RMICommonTest.InfiniteLooper;
+import com.devexperts.rmi.test.RMICommonTest.ServerDisconnectingInfiniteLooper;
+import com.devexperts.rmi.test.RMICommonTest.Summator;
+import com.devexperts.rmi.test.RMICommonTest.SummatorImpl;
 import com.devexperts.test.ThreadCleanCheck;
 import com.devexperts.test.TraceRunnerWithParametersFactory;
 import org.junit.*;
@@ -52,9 +58,9 @@ public class RMIFunctionalityTest {
     private final ChannelLogic channelLogic;
     private final InitFunction initPortForOneWaySanding;
 
-    @Parameterized.Parameters(name="type={0}")
+    @Parameterized.Parameters(name = "type={0}")
     public static Iterable<Object[]> parameters() {
-        return Arrays.asList(new Object[][]{
+        return Arrays.asList(new Object[][] {
             {TestType.REGULAR},
             {TestType.CLIENT_CHANNEL},
             {TestType.SERVER_CHANNEL}
@@ -70,7 +76,7 @@ public class RMIFunctionalityTest {
             .withName("Client")
             .withSide(RMIEndpoint.Side.CLIENT)
             .build();
-        client.setRequestRunningTimeout(20000); // to make sure tests don't run forever
+        client.getClient().setRequestRunningTimeout(20000); // to make sure tests don't run forever
         this.channelLogic = new ChannelLogic(type, client, server, null);
         switch (type) {
         case REGULAR:
@@ -113,9 +119,9 @@ public class RMIFunctionalityTest {
         ThreadCleanCheck.after();
     }
 
-    private void connectDefault(int port) {
-        NTU.connect(server, ":" + NTU.port(port));
-        NTU.connect(client, NTU.LOCAL_HOST + ":" + NTU.port(port));
+    private void connectDefault() {
+        int port = NTU.connectServer(server);
+        NTU.connect(client, NTU.localHost(port));
         try {
             channelLogic.initPorts();
         } catch (InterruptedException e) {
@@ -123,9 +129,9 @@ public class RMIFunctionalityTest {
         }
     }
 
-    private void connectWith(String with, int port) {
-        NTU.connect(server, with + (with.equalsIgnoreCase("tls") ? "[isServer=true]" : "") + "+:" + NTU.port(port));
-        NTU.connect(client, with + "+" + NTU.LOCAL_HOST + ":" + NTU.port(port));
+    private void connectWith(String with) {
+        int port = NTU.connectServer(server, with + (with.equalsIgnoreCase("tls") ? "[isServer=true]+" : "+"));
+        NTU.connect(client, with + "+" + NTU.localHost(port));
         try {
             channelLogic.initPorts();
         } catch (InterruptedException e) {
@@ -133,10 +139,10 @@ public class RMIFunctionalityTest {
         }
     }
 
-        // --------------------------------------------------
+    // --------------------------------------------------
 
     private void implTestSummator(int scale) {
-        RMICommonTest.Summator summator = channelLogic.clientPort.getProxy(RMICommonTest.Summator.class, "summator");
+        Summator summator = channelLogic.clientPort.getProxy(Summator.class, "summator");
         Random rnd = new Random(123514623655723586L);
         final int n = 100;
         int i = 0;
@@ -161,8 +167,10 @@ public class RMIFunctionalityTest {
 
     @Test
     public void testSummator() {
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class, "summator"), channelLogic);
-        connectDefault(1);
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation<>(new SummatorImpl(), Summator.class, "summator"),
+            channelLogic);
+        connectDefault();
         implTestSummator(1);
     }
 
@@ -186,9 +194,11 @@ public class RMIFunctionalityTest {
                 return null;
             }
         });
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class, "summator"), channelLogic);
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation<>(new SummatorImpl(), Summator.class, "summator"),
+            channelLogic);
 
-        connectWith("tls", 5);
+        connectWith("tls");
 
         implTestSummator(1);
         client.disconnect();
@@ -198,16 +208,16 @@ public class RMIFunctionalityTest {
     }
 
     @Test
-    public void testWithTLSDefaultSettings() throws InterruptedException {
+    public void testWithTLSDefaultSettings() {
         Properties props = System.getProperties();
         try {
             SampleCert.init();
             NTU.exportServices(server.getServer(),
-                new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class,
-                    "summator"), channelLogic);
+                new RMIServiceImplementation<>(new SummatorImpl(), Summator.class, "summator"),
+                channelLogic);
             //
-            NTU.connect(server, "tls[isServer]+:" + NTU.port(7));
-            NTU.connect(client, "" + NTU.LOCAL_HOST + ":" + NTU.port(7) + "[tls=true]");
+            int port = NTU.connectServer(server, "tls[isServer]+");
+            NTU.connect(client, NTU.localHost(port) + "[tls=true]");
             try {
                 channelLogic.initPorts();
             } catch (InterruptedException e) {
@@ -222,16 +232,16 @@ public class RMIFunctionalityTest {
     }
 
     @Test
-    public void testWithTLSv11v12() throws InterruptedException {
+    public void testWithTLSv11v12() {
         Properties props = System.getProperties();
         try {
             SampleCert.init();
             NTU.exportServices(server.getServer(),
-                new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class,
+                new RMIServiceImplementation<>(new SummatorImpl(), Summator.class,
                     "summator"), channelLogic);
             System.getProperties().setProperty("com.devexperts.connector.codec.ssl.protocols", "TLSv1.1");
-            NTU.connect(server, "tls[isServer,protocols=TLSv1.1;TLSv1.2]+:" + NTU.port(47));
-            NTU.connect(client, "tls+" + NTU.LOCAL_HOST + ":" + NTU.port(47));
+            int port = NTU.connectServer(server, "tls[isServer,protocols=TLSv1.1;TLSv1.2]+");
+            NTU.connect(client, "tls+" + NTU.localHost(port));
             try {
                 channelLogic.initPorts();
             } catch (InterruptedException e) {
@@ -247,7 +257,7 @@ public class RMIFunctionalityTest {
 
     @Test
     public void testWithTLSVersionsMismatch() throws InterruptedException {
-        if(channelLogic.type != TestType.REGULAR)
+        if (channelLogic.type != TestType.REGULAR)
             return;
         Properties props = System.getProperties();
         try {
@@ -262,20 +272,19 @@ public class RMIFunctionalityTest {
                 (endpoint.isConnected() ? connectedVersion : notConnectedVersion).countDown();
             });
             NTU.exportServices(server.getServer(),
-                new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class,
-                    "summator"),
+                new RMIServiceImplementation<>(new SummatorImpl(), Summator.class, "summator"),
                 channelLogic);
             client.getClient().setRequestSendingTimeout(1000);
-            NTU.connect(server, "tls[isServer,protocols=TLSv1.2]+:" + NTU.port(57));
-            NTU.connect(client, "tls+" + NTU.LOCAL_HOST + ":" + NTU.port(57));
+            int port = NTU.connectServer(server, "tls[isServer,protocols=TLSv1.2]+");
+            NTU.connect(client, "tls+" + NTU.localHost(port));
             try {
                 channelLogic.initPorts();
             } catch (InterruptedException e) {
                 fail(e.getMessage());
             }
             assertTrue(connectedVersion.await(10, TimeUnit.SECONDS));
-            RMICommonTest.Summator summator =
-                channelLogic.clientPort.getProxy(RMICommonTest.Summator.class, "summator");
+            Summator summator =
+                channelLogic.clientPort.getProxy(Summator.class, "summator");
             Random rnd = new Random(123514623655723586L);
             try {
                 int a = rnd.nextInt();
@@ -297,9 +306,11 @@ public class RMIFunctionalityTest {
 
     @Test
     public void testWithSSL() {
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class, "summator"), channelLogic);
-        NTU.connect(server, "ssl[isServer=true," + SampleCert.KEY_STORE_CONFIG + "]+:" + NTU.port(9));
-        NTU.connect(client, "ssl[" + SampleCert.TRUST_STORE_CONFIG + "]+" + NTU.LOCAL_HOST + ":" + NTU.port(9));
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation<>(new SummatorImpl(), Summator.class, "summator"),
+            channelLogic);
+        int port = NTU.connectServer(server, "ssl[isServer=true," + SampleCert.KEY_STORE_CONFIG + "]+" );
+        NTU.connect(client, "ssl[" + SampleCert.TRUST_STORE_CONFIG + "]+" + NTU.localHost(port));
         try {
             channelLogic.initPorts();
         } catch (InterruptedException e) {
@@ -310,26 +321,33 @@ public class RMIFunctionalityTest {
 
     @Test
     public void testWithZLIB() {
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class, "summator"), channelLogic);
-        connectWith("zlib", 11);
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation<>(new SummatorImpl(), Summator.class, "summator"),
+            channelLogic);
+        connectWith("zlib");
         implTestSummator(1);
     }
 
     @Test
     public void testWithXOR() {
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class, "summator"), channelLogic);
-        connectWith("xor", 13);
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation<>(new SummatorImpl(), Summator.class, "summator"),
+            channelLogic);
+        connectWith("xor");
         implTestSummator(1);
     }
 
-// --------------------------------------------------
+    // --------------------------------------------------
 
-    private static final StackTraceElement RMI_LAYER_SEPARATOR_FRAME = new StackTraceElement("com.devexperts.rmi", "<REMOTE-METHOD-INVOCATION>", null, -1); // copied from RMIInvocationHandler
+    private static final StackTraceElement RMI_LAYER_SEPARATOR_FRAME =
+        new StackTraceElement("com.devexperts.rmi", "<REMOTE-METHOD-INVOCATION>", null, -1);
+        // copied from RMIInvocationHandler
 
     @Test
     public void testErrorThrowing() {
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new AIOOBEThrower(), ErrorThrower.class), channelLogic);
-        connectDefault(15);
+        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new AIOOBEThrower(), ErrorThrower.class),
+            channelLogic);
+        connectDefault();
 
         ErrorThrower thrower = channelLogic.clientPort.getProxy(ErrorThrower.class);
         try {
@@ -359,8 +377,9 @@ public class RMIFunctionalityTest {
 
     @Test
     public void testErrorThrowingWithoutDeclare() {
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new AIOOBEThrowerWithoutDeclare(), WithoutDeclareError.class), channelLogic);
-        connectDefault(17);
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation<>(new AIOOBEThrowerWithoutDeclare(), WithoutDeclareError.class), channelLogic);
+        connectDefault();
 
         WithoutDeclareError thrower = channelLogic.clientPort.getProxy(WithoutDeclareError.class);
         try {
@@ -402,7 +421,7 @@ public class RMIFunctionalityTest {
 
     public static class AIOOBEThrower implements ErrorThrower {
         @Override
-        public void throwError() throws Exception {
+        public void throwError() {
             throw new ArrayIndexOutOfBoundsException();
         }
     }
@@ -411,22 +430,26 @@ public class RMIFunctionalityTest {
         StackTraceElement[] reference = Thread.currentThread().getStackTrace();
 
         int pos = 0;
-        while (!reference[pos].getMethodName().equals("assertStackTraceIsLocal"))
+        while (!reference[pos].getMethodName().equals("assertStackTraceIsLocal")) {
             pos++;
+        }
 
         int n = reference.length - pos - 2;
 
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < n; i++) {
             assertEquals(reference[reference.length - 1 - i], examine[examine.length - 1 - i]);
+        }
     }
 
-// --------------------------------------------------
+    // --------------------------------------------------
 
     @Test
     public void testServerDisconnect() {
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new RMICommonTest.ServerDisconnectingInfiniteLooper(server), RMICommonTest.InfiniteLooper.class), channelLogic);
-        connectDefault(21);
-        RMICommonTest.InfiniteLooper looper = channelLogic.clientPort.getProxy(RMICommonTest.InfiniteLooper.class);
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation<>(new ServerDisconnectingInfiniteLooper(server), InfiniteLooper.class),
+            channelLogic);
+        connectDefault();
+        InfiniteLooper looper = channelLogic.clientPort.getProxy(InfiniteLooper.class);
         try {
             looper.loop();
             fail();
@@ -439,13 +462,14 @@ public class RMIFunctionalityTest {
         }
     }
 
-// --------------------------------------------------
+    // --------------------------------------------------
 
     @Test
     public void testRMIExceptionDeclared() {
         RemoteThrower impl = new RemoteThrower();
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(impl, Declared.class, "declared"), channelLogic);
-        connectDefault(23);
+        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(impl, Declared.class, "declared"),
+            channelLogic);
+        connectDefault();
         Declared de = channelLogic.clientPort.getProxy(Declared.class, "declared");
         try {
             de.generateDeclared();
@@ -459,8 +483,9 @@ public class RMIFunctionalityTest {
     public void testRMIExceptionUndeclared() {
         RemoteThrower impl = new RemoteThrower();
 
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(impl, Undeclared.class, "undeclared"), channelLogic);
-        connectDefault(25);
+        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(impl, Undeclared.class, "undeclared"),
+            channelLogic);
+        connectDefault();
         Undeclared un = channelLogic.clientPort.getProxy(Undeclared.class, "undeclared");
         try {
             un.generateUndeclared();
@@ -489,11 +514,12 @@ public class RMIFunctionalityTest {
 
     public class RemoteThrower implements Declared, Undeclared {
         @Override
-        public void generateDeclared() throws RMIException {
+        public void generateDeclared() {
             client.disconnect();
             try {
                 Thread.sleep(100);
-            } catch (InterruptedException ignore) {}
+            } catch (InterruptedException ignore) {
+            }
         }
 
         @Override
@@ -501,24 +527,27 @@ public class RMIFunctionalityTest {
             client.disconnect();
             try {
                 Thread.sleep(100);
-            } catch (InterruptedException ignore) {}
+            } catch (InterruptedException ignore) {
+            }
         }
     }
 
-// --------------------------------------------------
+    // --------------------------------------------------
 
     @SuppressWarnings("unchecked")
     @Test
     public void testCancelOrAbort() {
         log.info(" ---- testCancelOrAbort ---- ");
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new RMICommonTest.SimpleInfiniteLooper(), RMICommonTest.InfiniteLooper.class), channelLogic);
+        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new RMICommonTest.SimpleInfiniteLooper(),
+            InfiniteLooper.class), channelLogic);
         channelLogic.clientPort = client.getClient().getPort(Subject.getSubject(AccessController.getContext()));
-        connectDefault(27);
+        connectDefault();
         final int n = 1000;
         RMIRequest<Void>[] requests = (RMIRequest<Void>[]) new RMIRequest[n];
         RMIOperation<Void> operation = null;
         try {
-            operation = RMIOperation.valueOf(RMICommonTest.InfiniteLooper.class, RMICommonTest.InfiniteLooper.class.getMethod("loop"));
+            operation = RMIOperation
+                .valueOf(InfiniteLooper.class, InfiniteLooper.class.getMethod("loop"));
         } catch (NoSuchMethodException e) {
             fail(e.getMessage());
         }
@@ -568,7 +597,7 @@ public class RMIFunctionalityTest {
         client.disconnect();
     }
 
-// --------------------------------------------------
+    // --------------------------------------------------
 
 
     public static class CompletingPing implements RMICommonTest.Ping {
@@ -598,9 +627,10 @@ public class RMIFunctionalityTest {
     @Test
     public void testOneWaySending() throws InterruptedException {
         CompletingPing impl = new CompletingPing();
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(impl, RMICommonTest.Ping.class), channelLogic);
-        NTU.connect(server, ":" + NTU.port(31));
-        NTU.connect(client, NTU.LOCAL_HOST + ":" + NTU.port(31));
+        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(impl, RMICommonTest.Ping.class),
+            channelLogic);
+        int port = NTU.connectServer(server);
+        NTU.connect(client, NTU.localHost(port));
         initPortForOneWaySanding.apply();
         RMIOperation<Void> operation;
         try {
@@ -614,191 +644,177 @@ public class RMIFunctionalityTest {
         impl.waitForCompletion();
     }
 
-// --------------------------------------------------
+    // --------------------------------------------------
 
-    private static final int LARGE_SIZE = 100000;
+    private static final int LARGE_SIZE = 100_000;
     private static final int SMALL_SIZE = 100;
 
     interface LargeRequestProcessor {
-        public int process(byte[] data) throws RMIException;
-    }
-
-    public static class LargeRequestProcessorImpl1 implements LargeRequestProcessor {
-        private volatile boolean largeReceived = false;
-
-        @Override
-        public int process(byte[] data) {
-            String str = Arrays.toString(data);
-            log.info("process data = " + str.substring(0, str.length() < 1000 ? str.length() : 1000));
-            boolean isLarge = data.length >= LARGE_SIZE;
-            if (isLarge)
-                largeReceived = true;
-            else if (largeReceived)
-                throw new AssertionError("Received large request before small");
-            return Arrays.hashCode(data);
-        }
+        public int process(String reqId, byte[] data) throws RMIException;
     }
 
     @Test
     public void testLargeRequests() throws Exception {
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation<>(
+                (reqId, data) -> {
+                    log.info("processing request " + reqId + ", size = " + data.length);
+                    return Arrays.hashCode(data);
+                },
+                LargeRequestProcessor.class),
+            channelLogic);
+
+        int port = NTU.connectServer(server, "shaped[outLimit=" + LARGE_SIZE + "]+");
+        NTU.connect(client, "shaped[outLimit=" + LARGE_SIZE + "]+" + NTU.localHost(port));
         setSingleThreadExecutorForLargeMethods();
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new LargeRequestProcessorImpl1(), LargeRequestProcessor.class), channelLogic);
-        connectDefault(16);
-        RMIOperation<Integer> processOp = RMIOperation.valueOf(LargeRequestProcessor.class, LargeRequestProcessor.class.getMethod("process", byte[].class));
+        channelLogic.initPorts();
+
+        RMIOperation<Integer> processOp =
+            RMIOperation.valueOf(LargeRequestProcessor.class,
+                LargeRequestProcessor.class.getMethod("process", String.class, byte[].class));
 
         byte[] smallData = new byte[SMALL_SIZE];
         byte[] largeData = new byte[LARGE_SIZE];
-        ArrayList<RMIRequest<Integer>> requests = new ArrayList<>();
+        Random rnd = new Random();
 
-        Random rnd = new Random(6409837516922350791L);
-        for (int i = 0; i < MAX_CONCURRENT_MESSAGES / 2; i++) {
-            rnd.nextBytes(smallData);
-            requests.add(channelLogic.clientPort.createRequest(processOp, (Object) smallData));
-        }
-        for (int i = 0; i < MAX_CONCURRENT_MESSAGES / 2; i++) {
-            rnd.nextBytes(largeData);
-            requests.add(channelLogic.clientPort.createRequest(processOp, (Object) largeData));
-        }
+        // pass a test request to ensure that all initial procedures related to service were performed
+        rnd.nextBytes(smallData);
+        RMIRequest<Integer> testReq = channelLogic.clientPort.createRequest(processOp, "test", smallData.clone());
+        testReq.send();
+        testReq.getPromise().await(10_000, TimeUnit.MILLISECONDS);
 
+        // send large request first and wait it is started sending
+        rnd.nextBytes(largeData);
+        RMIRequest<Integer> largeReq = channelLogic.clientPort.createRequest(processOp, "large", largeData.clone());
+        largeReq.send();
+        assertTrue(waitCondition(10_000, 10, () -> {
+            RMIRequestState state = largeReq.getState();
+            return state != RMIRequestState.NEW && state != RMIRequestState.WAITING_TO_SEND;
+        }));
 
-        requests.forEach(RMIRequest::send);
+        rnd.nextBytes(smallData);
+        RMIRequest<Integer> smallReq = channelLogic.clientPort.createRequest(processOp, "small", smallData.clone());
+        smallReq.send();
+        smallReq.getPromise().await(10_000, TimeUnit.MILLISECONDS);
 
+        assertEquals(Arrays.hashCode(smallData), (int) smallReq.getBlocking());
+        assertEquals(RMIRequestState.SENDING, largeReq.getState());
 
-        for (RMIRequest<Integer> request : requests)
-            assertEquals(Arrays.hashCode((byte[]) request.getParameters()[0]), (int) request.getBlocking());
+        largeReq.cancelOrAbort();
     }
 
-// --------------------------------------------------
+    // --------------------------------------------------
 
     @SuppressWarnings("unused")
     public static interface LargeResultGenerator {
         public byte[] getResult(boolean isLarge);
     }
 
-    public static class LargeResultGeneratorImpl implements LargeResultGenerator {
-
-        private static final Random rnd = new Random(1640983751692235079L);
-
-        @Override
-        public byte[] getResult(final boolean isLarge) {
-            RMITask.current().setCancelListener(task -> log.info("completed!  " + isLarge));
-            log.info("... gerResult(" + isLarge + ")");
-            byte[] result = new byte[isLarge ? LARGE_SIZE : SMALL_SIZE];
-            rnd.nextBytes(result);
-            return result;
-        }
-    }
-
     @Test
     public void testLargeResponses() throws Exception {
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new LargeResultGeneratorImpl(), LargeResultGenerator.class), channelLogic);
-        NTU.connect(server, "shaped[throughput=1000]+:" + NTU.port(37));
-        NTU.connect(client, "shaped[throughput=1000]+" + NTU.LOCAL_HOST + ":" + NTU.port(37));
+        CountDownLatch processingStarted = new CountDownLatch(1);
+        Random rnd = new Random();
+
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation<>(
+                isLarge -> {
+                    processingStarted.countDown();
+                    String s = isLarge ? "large" : "small";
+                    log.info("generatring " + s + " response ...");
+                    RMITask.current().setCancelListener(
+                        task -> log.info(s + " response completed! [" + task.getState() + "]"));
+                    byte[] result = new byte[isLarge ? LARGE_SIZE : SMALL_SIZE];
+                    rnd.nextBytes(result);
+                    return result;
+                },
+                LargeResultGenerator.class), channelLogic);
+
+        int port = NTU.connectServer(server, "shaped[outLimit=" + LARGE_SIZE + "]+");
+        NTU.connect(client, "shaped[outLimit=" + LARGE_SIZE + "]+" + NTU.localHost(port));
         setSingleThreadExecutorForLargeMethods();
         channelLogic.initPorts();
-        RMIOperation<byte[]> getResOp = RMIOperation.valueOf(LargeResultGenerator.class, LargeResultGenerator.class.getMethod("getResult", boolean.class));
-        ArrayList<RMIRequest<byte[]>> requests = new ArrayList<>();
-        for (int i = 0; i < MAX_CONCURRENT_MESSAGES / 2; i++)
-            requests.add(channelLogic.clientPort.createRequest(getResOp, true));
-        for (int i = 0; i < MAX_CONCURRENT_MESSAGES / 2; i++)
-            requests.add(channelLogic.clientPort.createRequest(getResOp, false));
 
-        final boolean[] failed = new boolean[1];
+        RMIOperation<byte[]> getResOp = RMIOperation.valueOf(LargeResultGenerator.class,
+            LargeResultGenerator.class.getMethod("getResult", boolean.class));
 
-        RMIRequestListener listener = new RMIRequestListener() {
-            private volatile boolean largeReceived = false;
+        RMIRequest<byte[]> largeRequest = channelLogic.clientPort.createRequest(getResOp, true);
+        largeRequest.send();
 
-            @Override
-            public void requestCompleted(RMIRequest<?> request) {
-                try {
-                    byte[] result = (byte[]) request.getBlocking();
-                    boolean isLarge = result.length >= LARGE_SIZE;
-                    if (isLarge)
-                        largeReceived = true;
-                    else if (largeReceived)
-                        failed[0] = true;
-                } catch (Exception e) {
-                    throw new AssertionError(e);
-                }
-            }
-        };
+        assertTrue(processingStarted.await(10_000, TimeUnit.MILLISECONDS));
 
-        for (RMIRequest<?> request : requests) {
-            request.setListener(listener);
-            request.send();
-        }
+        RMIRequest<byte[]> smallRequest = channelLogic.clientPort.createRequest(getResOp, false);
+        smallRequest.send();
+        smallRequest.getPromise().await(10_000, TimeUnit.MILLISECONDS);
 
-        for (RMIRequest<?> request : requests)
-            request.getBlocking();
-        assertFalse("Received large response before small", failed[0]);
+        assertFalse("Received large response before small", largeRequest.isCompleted());
+
+        largeRequest.cancelOrAbort();
     }
 
-// --------------------------------------------------
-
-    public static class LargeRequestProcessorImpl2 implements LargeRequestProcessor {
-        @Override
-        public int process(byte[] data) {
-            if (data.length >= LARGE_SIZE) {
-                // make sure we have time to cancel request
-                try {
-                    long deadline = System.currentTimeMillis() + 5000;
-                    while (System.currentTimeMillis() < deadline) {
-                        Thread.sleep(50);
-                        if (RMITask.current().getState().isCompletedOrCancelling()) {
-                            break;
-                        }
-                    }
-                } catch (InterruptedException e) {
-                    // nothing
-                }
-            }
-            return Arrays.hashCode(data);
-        }
-    }
+    // --------------------------------------------------
 
     @Test
     public void testLargeRequestCancellations() throws Exception {
         log.info(" ---- testLargeRequestCancellations ---- ");
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new LargeRequestProcessorImpl2(), LargeRequestProcessor.class), channelLogic);
-        NTU.connect(server, "shaped[throughput=1000]+:" + NTU.port(39));
-        NTU.connect(client, "shaped[throughput=1000]+" + NTU.LOCAL_HOST + ":" + NTU.port(39));
+        CountDownLatch processingStarted = new CountDownLatch(1);
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation<>(
+                (reqId, data) -> {
+                    log.info("processing request " + reqId + " ...");
+                    processingStarted.countDown();
+                    if (data.length >= LARGE_SIZE) // make sure we have time to cancel request
+                        waitCondition(5_000, 10, () -> RMITask.current().getState().isCompletedOrCancelling());
+                    return Arrays.hashCode(data);
+                }, LargeRequestProcessor.class),
+            channelLogic);
+
+        int speedLimit = LARGE_SIZE * MAX_CONCURRENT_MESSAGES / 2;
+        int port = NTU.connectServer(server, "shaped[outLimit=" + speedLimit + "]+");
+        NTU.connect(client, "shaped[outLimit=" + speedLimit + "]+" + NTU.localHost(port));
         setSingleThreadExecutorForLargeMethods();
         channelLogic.initPorts();
-        RMIOperation<Integer> processOp = RMIOperation.valueOf(LargeRequestProcessor.class, LargeRequestProcessor.class.getMethod("process", byte[].class));
+        RMIOperation<Integer> processOp = RMIOperation.valueOf(LargeRequestProcessor.class,
+            LargeRequestProcessor.class.getMethod("process", String.class, byte[].class));
 
         byte[] largeData = new byte[LARGE_SIZE];
         ArrayList<RMIRequest<Integer>> requests = new ArrayList<>();
 
-        Random rnd = new Random(6409837516922350791L);
+        Random rnd = new Random();
         for (int i = 0; i < MAX_CONCURRENT_MESSAGES / 2; i++) {
             rnd.nextBytes(largeData);
-            requests.add(channelLogic.clientPort.createRequest(processOp, (Object) largeData));
-        }
-
-        byte[] smallData = new byte[SMALL_SIZE];
-        rnd.nextBytes(smallData);
-        RMIRequest<Integer> smallRequest = channelLogic.clientPort.createRequest(processOp, (Object) smallData);
-        smallRequest.send();
-
-
-        assertEquals(Arrays.hashCode(smallData), (int) smallRequest.getBlocking());
-
-        log.info("---------------------------------");
-        long currentTime = System.currentTimeMillis();
-        for (RMIRequest<Integer> request : requests) {
+            RMIRequest<Integer> request =
+                channelLogic.clientPort.createRequest(processOp, "large-" + i, largeData.clone());
             request.send();
-            while (request.getState() != RMIRequestState.SENT) {
-                Thread.sleep(10);
-                if (System.currentTimeMillis() > 10000 + currentTime)
-                    fail("TIMEOUT!");
-            }
-            request.cancelWithConfirmation();
+            requests.add(request);
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(10));
         }
 
-        for (RMIRequest<Integer> request : requests)
+        // wait a first large request arrived to server
+        assertTrue(processingStarted.await(10_000, TimeUnit.MILLISECONDS));
+
+        // cancel all requests once they are sent
+        ArrayList<RMIRequest<Integer>> requestsToCancel = new ArrayList<>(requests);
+        assertTrue(waitCondition(10_000, 10, () -> {
+            for (Iterator<RMIRequest<Integer>> it = requestsToCancel.iterator(); it.hasNext(); ) {
+                RMIRequest<Integer> request = it.next();
+                RMIRequestState state = request.getState();
+                if (state == RMIRequestState.SENT) {
+                    // FIXME: RMIRequestState.SENDING should be ok, but will fail test due to RMI cancellation problems
+                    // with in-transition requests. See QD-1136.
+                    log.info("Cancelling " + request.getParameters()[0]);
+                    request.cancelWithConfirmation();
+                    it.remove();
+                } else if (state != RMIRequestState.WAITING_TO_SEND && state != RMIRequestState.SENDING) {
+                    fail("Unexpected state " + state + " for request " + request.getParameters()[0]);
+                }
+            }
+            return requestsToCancel.isEmpty();
+        }));
+
+        for (RMIRequest<Integer> request : requests) {
             try {
                 request.getBlocking();
-                fail();
+                fail("Request " + request.getParameters()[0] + " succeeded");
             } catch (RMIException e) {
                 if (e.getType() != RMIExceptionType.CANCELLED_BEFORE_EXECUTION &&
                     e.getType() != RMIExceptionType.CANCELLED_DURING_EXECUTION)
@@ -808,15 +824,16 @@ public class RMIFunctionalityTest {
                     fail("TYPE = " + e.getType());
                 }
             }
+        }
     }
 
-    ExecutorService newTestLocalExecutor(int size, final String name) {
+    private ExecutorService newTestLocalExecutor(int size, final String name) {
         ExecutorService executorService = Executors.newFixedThreadPool(size, r -> new Thread(r, name));
         executorServices.add(executorService);
         return executorService;
     }
 
-    void setSingleThreadExecutorForLargeMethods() {
+    private void setSingleThreadExecutorForLargeMethods() {
         if (channelLogic.type != TestType.SERVER_CHANNEL) {
             server.getServer().setDefaultExecutor(newTestLocalExecutor(1, "server-large-single"));
             client.getClient().setDefaultExecutor(newTestLocalExecutor(8, "client-large-pool"));
@@ -827,7 +844,7 @@ public class RMIFunctionalityTest {
 
     }
 
-// --------------------------------------------------
+    // --------------------------------------------------
 
     @SuppressWarnings({"SynchronizationOnLocalVariableOrMethodParameter", "WaitNotInLoop"})
     @Test
@@ -835,11 +852,14 @@ public class RMIFunctionalityTest {
         log.info("testImplementationOperation()");
         Family implFed = new Fedorovi();
         Family implIva = new House().getFamily();
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new Sam(), Human.class, "Person"), channelLogic);
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(implFed, Family.class, "Fed"), channelLogic);
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(implIva, Family.class, "Iva"), channelLogic);
+        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new Sam(), Human.class, "Person"),
+            channelLogic);
+        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(implFed, Family.class, "Fed"),
+            channelLogic);
+        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(implIva, Family.class, "Iva"),
+            channelLogic);
 
-        connectDefault(41);
+        connectDefault();
 
         Human person = channelLogic.clientPort.getProxy(Human.class, "Person");
         Family fed = channelLogic.clientPort.getProxy(Family.class, "Fed");
@@ -847,7 +867,7 @@ public class RMIFunctionalityTest {
 
         assertEquals(person.getName(), "Sam");
         assertEquals(person.hashCode(), "Sam".hashCode());
-        assertFalse(person.toString().equals("my name is Sam"));
+        assertNotEquals("my name is Sam", person.toString());
         assertEquals(person.toString("test"), "test my name is Sam");
 
 
@@ -855,7 +875,7 @@ public class RMIFunctionalityTest {
         assertEquals(fed.childrenName()[0], "Alina");
 
         assertEquals(iva.children(), 0);
-        assertEquals(iva.childrenName(), null);
+        assertNull(iva.childrenName());
 
         synchronized (iva) {
             try {
@@ -868,13 +888,17 @@ public class RMIFunctionalityTest {
 
     private interface Human {
         String getName();
+
         public int hashCode();
+
         public boolean equals(Object obj);
+
         public String toString(String str);
     }
 
     public interface Family {
         public int children();
+
         public String[] childrenName();
 
     }
@@ -976,13 +1000,14 @@ public class RMIFunctionalityTest {
         }
     }
 
-// --------------------------------------------------
+    // --------------------------------------------------
 
     @Test
     public void testUndeclaredException() {
         ImplNewService impl = new ImplNewService();
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(impl, NewService.class, "undeclaredException"), channelLogic);
-        connectDefault(45);
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation<>(impl, NewService.class, "undeclaredException"), channelLogic);
+        connectDefault();
         OldService un = channelLogic.clientPort.getProxy(OldService.class, "undeclaredException");
         try {
             un.generate();
@@ -1025,22 +1050,34 @@ public class RMIFunctionalityTest {
     @Test
     public void testCancelExecutionTaskBeforeRunning() {
         Executor executor = command -> {
-            if (command instanceof RMIExecutionTask && !((RMIExecutionTask) command).getTask().getOperation().equals(TestService.OPERATION))
+            if (command instanceof RMIExecutionTask &&
+                !((RMIExecutionTask) command).getTask().getOperation().equals(TestService.OPERATION))
                 ((RMIExecutionTask) command).getTask().complete(50.0);
             command.run();
         };
         client.getClient().setDefaultExecutor(executor);
         server.getServer().setDefaultExecutor(executor);
         NTU.exportServices(server.getServer(), DifferentServices.CALCULATOR_SERVICE, channelLogic);
-        connectDefault(47);
+        connectDefault();
         server.getServer().setDefaultExecutor(executor);
         @SuppressWarnings("unchecked")
-        RMIRequest<Double> request = channelLogic.clientPort.createRequest(DifferentServices.CalculatorService.PLUS, 25.36, 24.2);
+        RMIRequest<Double> request =
+            channelLogic.clientPort.createRequest(DifferentServices.CalculatorService.PLUS, 25.36, 24.2);
         request.send();
         try {
             assertEquals(request.getBlocking(), (Double) 50.0);
         } catch (RMIException e) {
             fail();
         }
+    }
+
+    private boolean waitCondition(long timeout, long pollPeriod, BooleanSupplier condition) {
+        long deadline = System.currentTimeMillis() + timeout;
+        while (!condition.getAsBoolean()) {
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(pollPeriod));
+            if (System.currentTimeMillis() > deadline)
+                return condition.getAsBoolean();
+        }
+        return true;
     }
 }

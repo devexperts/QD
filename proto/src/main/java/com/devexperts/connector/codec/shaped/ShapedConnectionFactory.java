@@ -9,7 +9,7 @@
  * http://mozilla.org/MPL/2.0/.
  * !__
  */
-package com.devexperts.connector.codec.shaper;
+package com.devexperts.connector.codec.shaped;
 
 import java.io.IOException;
 
@@ -17,21 +17,22 @@ import com.devexperts.connector.codec.CodecConnectionFactory;
 import com.devexperts.connector.proto.*;
 
 public class ShapedConnectionFactory extends CodecConnectionFactory {
+
+    private double outLimit = Double.POSITIVE_INFINITY; // bytes per second
+
     ShapedConnectionFactory(ApplicationConnectionFactory delegate) {
         super(delegate);
     }
 
-    double throughput = Double.POSITIVE_INFINITY; // decimal kilobytes per second (or bytes per millisecond)
-
-    public double getThroughput() {
-        return throughput;
+    public double getOutLimit() {
+        return outLimit;
     }
 
-    @Configurable
-    public void setThroughput(double throughput) {
-        if (throughput <= 0)
+    @Configurable(description = "output throughput limit (bytes per second)")
+    public void setOutLimit(double outLimit) {
+        if (outLimit <= 0)
             throw new IllegalArgumentException("positive value expected");
-        this.throughput = throughput;
+        this.outLimit = outLimit;
     }
 
     @Override

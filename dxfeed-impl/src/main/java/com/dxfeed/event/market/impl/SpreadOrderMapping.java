@@ -25,6 +25,7 @@ public class SpreadOrderMapping extends OrderBaseMapping {
     private final int iTimeNanoPart;
     private final int iPrice;
     private final int iSize;
+    private final int iExecutedSize;
     private final int iCount;
     private final int iFlags;
     private final int oSpreadSymbol;
@@ -37,6 +38,7 @@ public class SpreadOrderMapping extends OrderBaseMapping {
         iTimeNanoPart = MappingUtil.findIntField(record, "TimeNanoPart", false);
         iPrice = findIntField("Price", true);
         iSize = findIntField("Size", true);
+        iExecutedSize = findIntField("ExecutedSize", false);
         iCount = findIntField("Count", false);
         iFlags = MappingUtil.findIntField(record, "Flags", true);
         oSpreadSymbol = MappingUtil.findObjField(record, "SpreadSymbol", true);
@@ -148,6 +150,42 @@ public class SpreadOrderMapping extends OrderBaseMapping {
 
     public void setSizeWideDecimal(RecordCursor cursor, long size) {
         setAsWideDecimal(cursor, iSize, size);
+    }
+
+    public double getExecutedSize(RecordCursor cursor) {
+        if (iExecutedSize < 0)
+            return Double.NaN;
+        return getAsDouble(cursor, iExecutedSize);
+    }
+
+    public void setExecutedSize(RecordCursor cursor, double executedSize) {
+        if (iExecutedSize < 0)
+            return;
+        setAsDouble(cursor, iExecutedSize, executedSize);
+    }
+
+    public int getExecutedSizeDecimal(RecordCursor cursor) {
+        if (iExecutedSize < 0)
+            return 0;
+        return getAsTinyDecimal(cursor, iExecutedSize);
+    }
+
+    public void setExecutedSizeDecimal(RecordCursor cursor, int executedSize) {
+        if (iExecutedSize < 0)
+            return;
+        setAsTinyDecimal(cursor, iExecutedSize, executedSize);
+    }
+
+    public long getExecutedSizeWideDecimal(RecordCursor cursor) {
+        if (iExecutedSize < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iExecutedSize);
+    }
+
+    public void setExecutedSizeWideDecimal(RecordCursor cursor, long executedSize) {
+        if (iExecutedSize < 0)
+            return;
+        setAsWideDecimal(cursor, iExecutedSize, executedSize);
     }
 
     public int getCount(RecordCursor cursor) {

@@ -45,14 +45,18 @@ class NioAcceptor extends NioWorkerThread {
                 reconnectHelper.sleepBeforeConnection();
                 log.info("Trying to listen at " + LogUtil.hideCredentials(core.address));
                 serverChannel.socket().bind(core.bindSocketAddress);
+                //noinspection deprecation
                 ServerSocketTestHelper.completePortPromise(core.connector.getName(), serverChannel.socket().getLocalPort());
                 log.info("Listening at " + LogUtil.hideCredentials(core.address) +
                     (core.bindSocketAddress.getPort() == 0 ? " on port " + serverChannel.socket().getLocalPort() : ""));
             } catch (InterruptedException e) {
                 return;
             } catch (IOException e) {
-                if (!core.isClosed())
+                if (!core.isClosed()) {
                     log.error("Failed to listen at " + LogUtil.hideCredentials(core.address), e);
+                    //noinspection deprecation
+                    ServerSocketTestHelper.failPortPromise(core.connector.getName(), e);
+                }
                 return;
             }
 

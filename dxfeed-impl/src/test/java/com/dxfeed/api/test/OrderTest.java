@@ -14,6 +14,7 @@ package com.dxfeed.api.test;
 import java.util.Collections;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import com.devexperts.test.ThreadCleanCheck;
 import com.dxfeed.api.*;
@@ -121,5 +122,37 @@ public class OrderTest extends TestCase {
         assertEquals(12.35, o2.getPrice());
         assertEquals(11, o2.getSize());
         assertEquals(t1, o2.getTime());
+    }
+
+    public void testOrder() throws InterruptedException {
+        Order order = new Order(SYMBOL);
+        order.setOrderSide(Side.BUY);
+        order.setMarketMaker("NSDQ");
+        order.setScope(Scope.ORDER);
+        order.setPrice(10.0);
+        order.setSize(1);
+        order.setIndex(1);
+        publisher.publishEvents(Collections.singleton(order));
+
+        Order received = queue.take();
+        assertEquals(SYMBOL, received.getEventSymbol());
+        assertEquals(Side.BUY, received.getOrderSide());
+        assertEquals(Scope.ORDER, received.getScope());
+        assertEquals(10.0, received.getPrice());
+        assertEquals(1, received.getSize());
+    }
+
+    public void testAnalyticOrderNotReceived() throws InterruptedException {
+        AnalyticOrder analyticOrder = new AnalyticOrder(SYMBOL);
+        analyticOrder.setOrderSide(Side.BUY);
+        analyticOrder.setMarketMaker("NSDQ");
+        analyticOrder.setScope(Scope.ORDER);
+        analyticOrder.setPrice(10.0);
+        analyticOrder.setSize(1);
+        analyticOrder.setIndex(1);
+        publisher.publishEvents(Collections.singleton(analyticOrder));
+
+        Order received = queue.poll(2, TimeUnit.SECONDS);
+        assertNull(received);
     }
 }

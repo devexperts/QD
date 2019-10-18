@@ -443,8 +443,8 @@ public abstract class DXFeed {
      * <h3>Event source</h3>
      *
      * Use the {@link IndexedEventSource#DEFAULT DEFAULT} value for {@code source} with events that do not
-     * have multiple sources (like {@link Series}). For events with multiple sources (like {@link Order}
-     * and {@link SpreadOrder}), use an even-specific source class (for example, {@link OrderSource}).
+     * have multiple sources (like {@link Series}). For events with multiple sources (like {@link Order},
+     * {@link AnalyticOrder}) and {@link SpreadOrder}, use an event-specific source class (for example, {@link OrderSource}).
      * This method does not support <em>synthetic</em> sources of orders (orders that are automatically
      * generated from {@link Quote} events).
      *
@@ -504,8 +504,8 @@ public abstract class DXFeed {
      * <h3>Event source</h3>
      *
      * Use the {@link IndexedEventSource#DEFAULT DEFAULT} value for {@code source} with events that do not
-     * have multiple sources (like {@link Series}). For events with multiple sources (like {@link Order}
-     * and {@link SpreadOrder}), use an even-specific source class (for example, {@link OrderSource}).
+     * have multiple sources (like {@link Series}). For events with multiple sources (like {@link Order},
+     * {@link AnalyticOrder} and {@link SpreadOrder}), use an event-specific source class (for example, {@link OrderSource}).
      * This method does not support <em>synthetic</em> sources of orders (orders that are automatically
      * generated from {@link Quote} events).
      *

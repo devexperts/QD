@@ -11,132 +11,118 @@
  */
 package com.devexperts.qd.test;
 
-import java.io.*;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.regex.Pattern;
-
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.logging.Logging;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.MessageConnector;
+import com.devexperts.qd.qtp.MessageConnectorState;
+import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.qtp.nio.NioServerConnector;
 import com.devexperts.qd.qtp.socket.ServerSocketConnector;
-import com.devexperts.qd.stats.QDStats;
+import com.devexperts.qd.qtp.socket.ServerSocketTestHelper;
 import com.devexperts.test.ThreadCleanCheck;
+import com.dxfeed.promise.Promise;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.assertFalse;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
+import java.util.function.BooleanSupplier;
+
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
 
 public class SocketRebindTest {
-    private static final String LOG_FILE = "SocketRebindTest.log";
 
-    private final int PORT = 20_000 + ThreadLocalRandom.current().nextInt(10_000);
+    private static final Logging log = Logging.getLogging(SocketRebindTest.class);
+    private ServerSocket serverSocket;
+    private MessageConnector connector;
 
     @Before
     public void setUp() {
         ThreadCleanCheck.before();
-        Logging.configureLogFile(LOG_FILE);
     }
 
     @After
-    public void tearDown() throws Exception {
-        Logging.configureLogFile(System.getProperty("log.file"));
-        assertTrue(new File(LOG_FILE).delete());
+    public void tearDown() throws IOException {
+        if (serverSocket != null)
+            serverSocket.close();
+        if (connector != null && connector.isActive())
+            connector.stop();
         ThreadCleanCheck.after();
     }
 
     @Test
-    public void testRebind() throws IOException, InterruptedException {
+    public void testRebind() throws IOException {
         implTestRebind(false);
     }
 
     @Test
-    public void testRebindNio() throws IOException, InterruptedException {
+    public void testRebindNio() throws IOException {
         assumeFalse("Known issue: QD-1137",
             System.getProperty("os.name").toLowerCase().startsWith("mac") &&
-            System.getProperty("java.version").startsWith("1.8"));
+            System.getProperty("java.version").startsWith("1.8")
+        );
         implTestRebind(true);
     }
 
-    private static class NamedFakeFactory implements MessageAdapter.Factory {
-        final String name;
+    private void implTestRebind(boolean nio) throws IOException {
+        ApplicationConnectionFactory factory = MessageConnectors.applicationConnectionFactory(stats -> null);
 
-        public NamedFakeFactory(String name) {
-            this.name = name;
-        }
+        // Bind a server port
+        serverSocket = new ServerSocket(0);
+        final int port = serverSocket.getLocalPort();
 
-        @Override
-        public String toString() {
-            return name;
-        }
+        log.info("Bound server port " + port);
 
-        public MessageAdapter createAdapter(QDStats stats) {
-            return null;
-        }
+        connector = nio ? new NioServerConnector(factory, port) : new ServerSocketConnector(factory, port);
+        connector.setReconnectDelay(50);
+
+        final Thread testThread = Thread.currentThread();
+        connector.addMessageConnectorListener(c -> LockSupport.unpark(testThread));
+
+        String connectorName = UUID.randomUUID().toString();
+        //noinspection deprecation
+        Promise<Integer> p = ServerSocketTestHelper.createPortPromise(connectorName);
+        connector.setName(connectorName);
+
+        // start connector and wait for a failed attempt
+        connector.start();
+        awaitException(p);
+
+        // await a second failed attempt (may miss some, it's ok)
+        //noinspection deprecation
+        p = ServerSocketTestHelper.createPortPromise(connectorName);
+        awaitException(p);
+
+        // free port and wait for successful connection
+        serverSocket.close();
+        serverSocket = null;
+        assertTrue("Successful connect expected",
+            waitCondition(10_000, 10, () -> connector.getState() == MessageConnectorState.CONNECTED));
+
+        connector.stop();
+        assertTrue(waitCondition(10_000, 10, () -> !connector.isActive()));
     }
 
-    // note: delays in this test are subject to be tuned
-    private void implTestRebind(boolean nio) throws IOException, InterruptedException {
-        ApplicationConnectionFactory aFactory = MessageConnectors.applicationConnectionFactory(new NamedFakeFactory("Foo"));
-        ApplicationConnectionFactory bFactory = MessageConnectors.applicationConnectionFactory(new NamedFakeFactory("Bar"));
-
-        ServerSocketConnector a = new ServerSocketConnector(aFactory, PORT);
-        a.start();
-        Thread.sleep(100);
-
-        MessageConnector b = nio ? new NioServerConnector(bFactory, PORT) : new ServerSocketConnector(bFactory, PORT);
-        b.setReconnectDelay(100);
-        b.start();
-
-        Thread.sleep(500);
-        a.stop();
-
-        Thread.sleep(300);
-        b.stop();
-        Thread.sleep(100);
-        assertFalse(a.isActive());
-        assertFalse(b.isActive());
-
-        final String TIME_PATTERN = " \\d{6}? \\d{6}?\\.\\d{3}? ";
-        final String THREAD_START = "\\[";
-        final String THREAD_END = "\\] ";
-        String connectorName = nio ? "NioServer" : "ServerSocket";
-        String acceptorLoggingClass = nio ? "NioAcceptor" : "ServerSocketConnector";
-
-        String[] patterns = {
-            "I" + TIME_PATTERN + THREAD_START + "ServerSocket-" + aFactory + "-:" + PORT + "-Acceptor" + THREAD_END + "ServerSocketConnector - Trying to listen at \\*:" + PORT,
-            "I" + TIME_PATTERN + THREAD_START + "ServerSocket-" + aFactory + "-:" + PORT + "-Acceptor" + THREAD_END + "ServerSocketConnector - Listening at \\*:" + PORT,
-            "I" + TIME_PATTERN + THREAD_START + connectorName + "-" + bFactory + "-:" + PORT + "-Acceptor" + THREAD_END + acceptorLoggingClass + " - Trying to listen at \\*:" + PORT,
-            "E" + TIME_PATTERN + THREAD_START + connectorName + "-" + bFactory + "-:" + PORT + "-Acceptor" + THREAD_END + acceptorLoggingClass + " - Failed to listen at \\*:" + PORT,
-            "I" + TIME_PATTERN + THREAD_START + connectorName + "-" + bFactory + "-:" + PORT + "-Acceptor" + THREAD_END + acceptorLoggingClass + " - Trying to listen at \\*:" + PORT,
-            "E" + TIME_PATTERN + THREAD_START + connectorName + "-" + bFactory + "-:" + PORT + "-Acceptor" + THREAD_END + acceptorLoggingClass + " - Failed to listen at \\*:" + PORT,
-            "I" + TIME_PATTERN + THREAD_START + connectorName + "-" + bFactory + "-:" + PORT + "-Acceptor" + THREAD_END + acceptorLoggingClass + " - Trying to listen at \\*:" + PORT,
-            "I" + TIME_PATTERN + THREAD_START + connectorName + "-" + bFactory + "-:" + PORT + "-Acceptor" + THREAD_END + acceptorLoggingClass + " - Listening at \\*:" + PORT,
-            "I" + TIME_PATTERN + THREAD_START + "main" + THREAD_END + acceptorLoggingClass + " - Stopped listening at \\*:" + PORT,
-        };
-        checkLogFile(patterns);
-    }
-
-    private static void checkLogFile(String[] patterns) throws IOException {
-        BufferedReader br = new BufferedReader(new FileReader(LOG_FILE));
+    private void awaitException(Promise<Integer> p) {
         try {
-            for (String patternStr : patterns) {
-                Pattern pattern = Pattern.compile(patternStr);
-                String line;
-                while ((line = br.readLine()) != null) {
-                    System.out.println(line);
-                    if (pattern.matcher(line).matches())
-                        break;
-                }
-                if (line == null)
-                    fail("Failed to find required subsequence of log lines in " + LOG_FILE  + "\n(last unmatched pattern: " + pattern + ")");
-            }
-        } finally {
-            br.close();
+            p.await(10_000, TimeUnit.MILLISECONDS);
+        } catch (Throwable ignore) {
         }
+        assertTrue("Missed connection exception", !p.hasResult() && !p.isCancelled());
+    }
+
+    private boolean waitCondition(long timeout, long pollPeriod, BooleanSupplier condition) {
+        long deadline = System.currentTimeMillis() + timeout;
+        while (!condition.getAsBoolean()) {
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(pollPeriod));
+            if (System.currentTimeMillis() > deadline)
+                return condition.getAsBoolean();
+        }
+        return true;
     }
 }

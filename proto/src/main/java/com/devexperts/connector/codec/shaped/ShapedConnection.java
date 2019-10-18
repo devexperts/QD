@@ -9,28 +9,40 @@
  * http://mozilla.org/MPL/2.0/.
  * !__
  */
-package com.devexperts.connector.codec.shaper;
-
-import java.io.IOException;
+package com.devexperts.connector.codec.shaped;
 
 import com.devexperts.connector.codec.CodecConnection;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.connector.proto.TransportConnection;
-import com.devexperts.io.*;
+import com.devexperts.io.Chunk;
+import com.devexperts.io.ChunkList;
+import com.devexperts.io.ChunkPool;
+
+import javax.annotation.concurrent.GuardedBy;
+import java.io.IOException;
 
 class ShapedConnection extends CodecConnection<ShapedConnectionFactory> {
-    private final double throughput; // decimal kilobytes per second (or bytes per millisecond)
+    private static final long COMMITTED_BURST_DURATION = 100; // millis
+
+    private final double outLimit; // output throughput limit (bytes per second)
     private final Object chunksLock = new Object();
+    private final ChunkPool chunkPool = ChunkPool.DEFAULT;
+
+    private final double cbs; // Committed Burst Size
 
     private volatile long lastTime;
     private volatile boolean delegateHasChunks = true;
     private ChunkList chunksForSending;
 
-    public ShapedConnection(ApplicationConnectionFactory delegateFactory, ShapedConnectionFactory config,
+    @GuardedBy("chunksLock")
+    private long outBucket;
+
+    ShapedConnection(ApplicationConnectionFactory delegateFactory, ShapedConnectionFactory config,
         TransportConnection transportConnection) throws IOException
     {
         super(delegateFactory, config, transportConnection);
-        throughput = config.throughput;
+        outLimit = config.getOutLimit();
+        cbs = COMMITTED_BURST_DURATION * outLimit / 1000;
     }
 
     @Override
@@ -71,9 +83,13 @@ class ShapedConnection extends CodecConnection<ShapedConnectionFactory> {
                 return null;
 
             long curTime = System.currentTimeMillis();
-            long allowedSize = (long) ((curTime - lastTime) * throughput);
+            long interval = Math.max(curTime - lastTime, 0);
+            outBucket = (long) Math.min(cbs, outBucket + interval * outLimit / 1000);
+            lastTime = curTime;
+            if (outBucket <= 0)
+                return null;
             long availableSize = chunksForSending == null ? 0 : chunksForSending.getTotalLength();
-            if (availableSize < allowedSize && delegateHasChunks) {
+            if (availableSize < outBucket && delegateHasChunks) {
                 delegateHasChunks = false;
                 ChunkList delegateChunks = delegate.retrieveChunks(this);
                 if (delegateChunks != null) {
@@ -86,20 +102,24 @@ class ShapedConnection extends CodecConnection<ShapedConnectionFactory> {
             }
 
             ChunkList result;
-            if (availableSize <= allowedSize) {
+            if (availableSize <= outBucket) {
                 result = chunksForSending;
                 chunksForSending = null;
+                outBucket -= availableSize;
             } else {
-                result = ChunkPool.DEFAULT.getChunkList(this);
-                while (allowedSize > 0) {
+                result = chunkPool.getChunkList(this);
+                while (outBucket > 0) {
                     Chunk chunk = chunksForSending.get(0);
-                    if (chunk.getLength() > allowedSize) {
-                        result.addAll(ChunkPool.DEFAULT.copyToChunkList(chunk.getBytes(), chunk.getOffset(), (int) allowedSize, this), this);
-                        chunksForSending.setChunkRange(0, chunk.getOffset() + (int) allowedSize, chunk.getLength() - (int) allowedSize, this);
-                        allowedSize = 0;
+                    if (chunk.getLength() > outBucket) {
+                        result.addAll(
+                            chunkPool.copyToChunkList(chunk.getBytes(), chunk.getOffset(), (int) outBucket, this),
+                            this);
+                        chunksForSending.setChunkRange(
+                            0, chunk.getOffset() + (int) outBucket, chunk.getLength() - (int) outBucket, this);
+                        outBucket = 0;
                     } else {
                         result.add(chunk = chunksForSending.poll(this), this);
-                        allowedSize -= chunk.getLength();
+                        outBucket -= chunk.getLength();
                     }
                 }
             }
@@ -107,7 +127,6 @@ class ShapedConnection extends CodecConnection<ShapedConnectionFactory> {
             if (result != null)
                 result.handOver(this, owner);
 
-            lastTime = curTime;
             return result;
         }
     }

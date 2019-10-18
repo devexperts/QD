@@ -16,6 +16,7 @@ import com.dxfeed.event.candle.Candle;
 import com.dxfeed.event.candle.CandleEventDelegateImpl;
 import com.dxfeed.event.candle.DailyCandle;
 import com.dxfeed.event.candle.impl.CandleEventMapping;
+import com.dxfeed.event.market.AnalyticOrder;
 import com.dxfeed.event.market.MarketEventDelegateImpl;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.OrderBase;
@@ -58,7 +59,7 @@ public class ImplCodeGen {
     private static final ClassName CANDLE_EVENT_MAPPING = new ClassName(CandleEventMapping.class);
     private static final ClassName ORDER_BASE_MAPPING = new ClassName(OrderBaseMapping.class);
 
-    private static final String TRADE_RECORD_SUFFIXES =
+    private static final String TRADE_RECORD_SUFFIXES = "" +
         "133ticks|144ticks|233ticks|333ticks|400ticks|512ticks|1600ticks|3200ticks|" +
         "1min|2min|3min|4min|5min|6min|10min|12min|15min|20min|30min|" +
         "1hour|2hour|3hour|4hour|6hour|8hour|12hour|Day|2Day|3Day|4Day|Week|Month|OptExp";
@@ -233,10 +234,51 @@ public class ImplCodeGen {
             map("TimeNanoPart", "TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
             map("Price", "Price", FieldType.PRICE).
             map("Size", "Size", FieldType.SIZE).
+            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
             map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes("com.dxfeed.event.order.impl.Order.suffixes.count", "").
             map("Flags", "Flags", FieldType.FLAGS).
             map("MarketMaker", "MMID", FieldType.SHORT_STRING).onlySuffixes(
                 "com.dxfeed.event.order.impl.Order.suffixes.mmid", "|#NTV|#BATE|#CHIX|#CEUX|#BXTR").
+            field("IcebergPeakSize", "IcebergPeakSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
+            field("IcebergHiddenSize", "IcebergHiddenSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
+            field("IcebergExecutedSize", "IcebergExecutedSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
+            field("IcebergFlags", "IcebergFlags", FieldType.FLAGS).optional().disabledByDefault().
+            injectPutEventCode(
+                "if (index < 0)",
+                "\tthrow new IllegalArgumentException(\"Invalid index to publish\");",
+                "if ((event.getEventFlags() & OrderBase.SNAPSHOT_END) != 0 && index != 0)",
+                "\tthrow new IllegalArgumentException(\"SNAPSHOT_END event must have index == 0\");",
+                "if ((event.getEventFlags() & OrderBase.REMOVE_EVENT) == 0 && event.getOrderSide() == Side.UNDEFINED)",
+                "\tthrow new IllegalArgumentException(\"only REMOVE_EVENT event can have side == UNDEFINED\");"
+            ).
+            publishable();
+
+        ctx.delegate("AnalyticOrder", AnalyticOrder.class, "AnalyticOrder").
+            suffixes(getOrderSuffixes(AnalyticOrder.class)).
+            inheritDelegateFrom(ORDER_BASE_DELEGATE).
+            inheritMappingFrom(ORDER_BASE_MAPPING).
+            source("m.getRecordSource()").
+            withPlainEventFlags().
+            map("Void", "Void", FieldType.VOID).time(0).internal().
+            map("Index", "Index", FieldType.INDEX).time(1).internal().
+            assign("Index", "((long)getSource().id() << 32) | (#Index# & 0xFFFFFFFFL)").
+            injectPutEventCode(
+                "int index = (int)event.getIndex();",
+                "#Index=index#;"
+            ).
+            mapTimeAndSequence().
+            map("TimeNanoPart", "TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
+            map("Price", "Price", FieldType.PRICE).
+            map("Size", "Size", FieldType.SIZE).
+            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
+            map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes("com.dxfeed.event.order.impl.AnalyticOrder.suffixes.count", "").
+            map("Flags", "Flags", FieldType.FLAGS).
+            map("MarketMaker", "MMID", FieldType.SHORT_STRING).onlySuffixes(
+                "com.dxfeed.event.order.impl.AnalyticOrder.suffixes.mmid", "|#NTV|#BATE|#CHIX|#CEUX|#BXTR").
+            map("IcebergPeakSize", "IcebergPeakSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
+            map("IcebergHiddenSize", "IcebergHiddenSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
+            map("IcebergExecutedSize", "IcebergExecutedSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
+            map("IcebergFlags", "IcebergFlags", FieldType.FLAGS).optional().disabledByDefault().
             injectPutEventCode(
                 "if (index < 0)",
                 "\tthrow new IllegalArgumentException(\"Invalid index to publish\");",
@@ -264,6 +306,7 @@ public class ImplCodeGen {
             map("TimeNanoPart", "TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
             map("Price", "Price", FieldType.PRICE).
             map("Size", "Size", FieldType.SIZE).
+            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
             map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes("com.dxfeed.event.order.impl.SpreadOrder.suffixes.count", "").
             map("Flags", "Flags", FieldType.FLAGS).
             map("SpreadSymbol", "SpreadSymbol", FieldType.STRING).
@@ -492,8 +535,9 @@ public class ImplCodeGen {
     /**
      * Get record suffixes for publishable order sources of specified type as a string delimited by '|' (pipe) symbol.
      *
-     * @param eventType - eventType either <code>{@link Order}.<b>class</b></code>
-     *                     or <code>{@link SpreadOrder}.<b>class</b></code>.
+     * @param eventType - eventType with possible values <code>{@link Order}.<b>class</b></code>
+     *                  or <code>{@link AnalyticOrder}.<b>class</b></code>
+     *                  or <code>{@link SpreadOrder}.<b>class</b></code>.
      * @return a list of publishable record suffixes delimited by '|' symbol.
      * @see OrderSource#publishable(Class)
      */

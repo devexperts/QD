@@ -25,7 +25,8 @@ public class MarketAccessorImpl {
      * - additional methods can be added
      */
 
-    private MarketAccessorImpl() {}
+    private MarketAccessorImpl() {
+    }
 
 
     // ========== Order accessor methods ==========
@@ -72,8 +73,39 @@ public class MarketAccessorImpl {
         return Scope.valueOf(Util.getBits(flags, OrderBase.SCOPE_MASK, OrderBase.SCOPE_SHIFT));
     }
 
+    /**
+     * @deprecated use {@link #setOrderScope} instead.
+     */
+    @Deprecated
     public static int setScope(int flags, Scope scope) {
         return Util.setBits(flags, OrderBase.SCOPE_MASK, OrderBase.SCOPE_SHIFT, scope.getCode());
+    }
+
+    public static int setOrderScope(int flags, Scope scope) {
+        return Util.setBits(flags, OrderBase.SCOPE_MASK, OrderBase.SCOPE_SHIFT, scope.getCode());
+    }
+
+
+    // ========== AnalyticOrder accessor methods ==========
+
+    public static int getIcebergFlags(AnalyticOrder order) {
+        return order.getIcebergFlags();
+    }
+
+    public static void setIcebergFlags(AnalyticOrder order, int icebergFlags) {
+        order.setIcebergFlags(icebergFlags);
+    }
+
+    public static int orderIcebergType(IcebergType type) {
+        return type.getCode() << AnalyticOrder.ICEBERG_TYPE_SHIFT;
+    }
+
+    public static IcebergType getOrderIcebergType(int flags) {
+        return IcebergType.valueOf(Util.getBits(flags, AnalyticOrder.ICEBERG_TYPE_MASK, AnalyticOrder.ICEBERG_TYPE_SHIFT));
+    }
+
+    public static int setOrderIcebergType(int flags, IcebergType type) {
+        return Util.setBits(flags, AnalyticOrder.ICEBERG_TYPE_MASK, AnalyticOrder.ICEBERG_TYPE_SHIFT, type.getCode());
     }
 
 
@@ -162,7 +194,7 @@ public class MarketAccessorImpl {
         return tradeThroughExempt << TimeAndSale.TTE_SHIFT;
     }
 
-    public static char getTnsTradeThroughExempt(int flags ) {
+    public static char getTnsTradeThroughExempt(int flags) {
         return (char) Util.getBits(flags, TimeAndSale.TTE_MASK, TimeAndSale.TTE_SHIFT);
     }
 
@@ -233,7 +265,9 @@ public class MarketAccessorImpl {
 
     // ----- Auxiliary methods -----
 
-    /** Returns combination of <code>({@link #tnsNew() tnsNew}() | {@link #tnsValidTick(boolean) tnsValidTick}(validTick))</code>. */
+    /**
+     * Returns combination of <code>({@link #tnsNew() tnsNew}() | {@link #tnsValidTick(boolean) tnsValidTick}(validTick))</code>.
+     */
     public static int tnsNewValidTick(boolean validTick) {
         return tnsNew() | tnsValidTick(validTick);
     }
@@ -262,12 +296,16 @@ public class MarketAccessorImpl {
         return getTnsType(flags) == TimeAndSaleType.CANCEL;
     }
 
-    /** Clears ValidTick flag and sets type to CORRECTION. */
+    /**
+     * Clears ValidTick flag and sets type to CORRECTION.
+     */
     public static int correctTns(int flags) {
         return setTnsType(setTnsValidTick(flags, false), TimeAndSaleType.CORRECTION);
     }
 
-    /** Clears ValidTick flag and sets type to CANCEL. */
+    /**
+     * Clears ValidTick flag and sets type to CANCEL.
+     */
     public static int cancelTns(int flags) {
         return setTnsType(setTnsValidTick(flags, false), TimeAndSaleType.CANCEL);
     }
