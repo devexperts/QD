@@ -35,18 +35,20 @@ public class MuxRoutingSide {
         }
     }
 
-    void connect(String[][] addresses) {
-        disconnect();
-        connectServers(addresses[0]);
-        connectClients(addresses[1]);
-    }
-
     void connectClients(String... addresses) {
         ServerRoutingSide.connect(clients, addresses);
     }
 
     void connectServers(String... addresses) {
         ServerRoutingSide.connect(servers, addresses);
+    }
+
+    int[] connectServersAuto(String... opts) {
+        return ServerRoutingSide.connectAuto(servers, opts);
+    }
+
+    int[] connectServersAuto() {
+        return connectServersAuto(new String[servers.length]);
     }
 
     void disconnect() {

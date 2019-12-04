@@ -75,7 +75,7 @@ public class RMICommonTest {
     protected RMIEndpoint client() {
         if (client == null) {
             client = RMIEndpoint.createEndpoint();
-            client.setRequestRunningTimeout(20000); // to make sure tests don't run forever
+            client.getClient().setRequestRunningTimeout(20000); // to make sure tests don't run forever
         }
         return client;
     }
@@ -84,9 +84,8 @@ public class RMICommonTest {
         clientPort = client().getClient().getPort(client.getSecurityController().getSubject());
     }
 
-    private void connectDefault(int port) {
-        NTU.connect(server(), ":" + NTU.port(port));
-        NTU.connect(client(), NTU.LOCAL_HOST + ":" + NTU.port(port));
+    private void connectDefault() {
+        NTU.connectPair(server(), client());
         initPorts();
     }
 
@@ -118,7 +117,7 @@ public class RMICommonTest {
     //only RMIClient
     @Test
     public void testNullSubject() {
-        connectDefault(3);
+        connectDefault();
         exportServices(server().getServer(), new RMIServiceImplementation<>(new SummatorImpl(), Summator.class));
         RMIRequest<Integer> sum = client.getClient().getPort(Marshalled.NULL).createRequest(
             RMIOperation.valueOf(Summator.class, int.class, "sum", int.class, int.class), 25, 48);
@@ -138,7 +137,7 @@ public class RMICommonTest {
     public void testReexporting() throws InterruptedException {
         final CountDownLatch exportLatch = new CountDownLatch(2);
         log.info(" ---- testReexporting ---- ");
-        connectDefault(19);
+        connectDefault();
         try {
             ConstNumber num = clientPort.getProxy(ConstNumber.class, "TwoFive");
             client.getClient().getService("*").addServiceDescriptorsListener(descriptors -> exportLatch.countDown());
@@ -207,7 +206,7 @@ public class RMICommonTest {
 
     public static class SimpleInfiniteLooper implements InfiniteLooper {
         @Override
-        public void loop() throws RMIException, InterruptedException {
+        public void loop() throws InterruptedException {
             long startLoop = System.currentTimeMillis();
             while (!finish && System.currentTimeMillis() < startLoop + 10000) {
                 Thread.sleep(10);
@@ -218,9 +217,9 @@ public class RMICommonTest {
     //only for RMIClient
     @Test
     public void testRequestRunningTimeout() {
-        client().setRequestRunningTimeout(0);
+        client().getClient().setRequestRunningTimeout(0);
         exportServices(server().getServer(), new RMIServiceImplementation<>(new SimpleInfiniteLooper(), InfiniteLooper.class));
-        connectDefault(29);
+        connectDefault();
         InfiniteLooper looper = clientPort.getProxy(InfiniteLooper.class);
         try {
             looper.loop();
@@ -240,7 +239,7 @@ public class RMICommonTest {
         private int submissionsNumber = 0;
 
         CountingExecutorService(ExecutorService es) {
-            this.delegate = es;
+            delegate = es;
         }
 
         // :KLUDGE: only this method is used by RMI
@@ -280,7 +279,7 @@ public class RMICommonTest {
         }
 
         @Override
-        public boolean awaitTermination(long timeout, @Nonnull TimeUnit unit) throws InterruptedException {
+        public boolean awaitTermination(long timeout, @Nonnull TimeUnit unit) {
             throw new UnsupportedOperationException();
         }
 
@@ -306,8 +305,8 @@ public class RMICommonTest {
 
     // only for request-channel-serverPort
     @Test
-    public void testSpecificExecutors() throws InterruptedException {
-        connectDefault(33);
+    public void testSpecificExecutors() {
+        connectDefault();
         // Set custom executor and try
         RMIServiceImplementation<Ping> service;
         Ping proxy;
@@ -368,7 +367,7 @@ public class RMICommonTest {
         } catch (InterruptedException e) {
             fail(e.getMessage());
         }
-        connectDefault(43);
+        connectDefault();
         try {
             assertEquals(sum.getBlocking(), (Double) (12.1321 + 352.561));
         } catch (RMIException e) {
@@ -380,15 +379,16 @@ public class RMICommonTest {
 
     //only RMIClient
     @Test
-    public void testSubject() throws InterruptedException {
+    public void testSubject() {
         initPorts();
         SomeSubject trueSubject = new SomeSubject("true");
         SomeSubject falseSubject = new SomeSubject("false");
-        exportServices(server().getServer(), new RMIServiceImplementation<>(new SummatorImpl(), Summator.class, "summator"));
+        exportServices(server().getServer(),
+            new RMIServiceImplementation<>(new SummatorImpl(), Summator.class, "summator"));
         server().setSecurityController(new SomeSecurityController(trueSubject));
         trueClient = RMIEndpoint.createEndpoint(RMIEndpoint.Side.CLIENT);
-        NTU.connect(server(), ":" + NTU.port(49));
-        NTU.connect(trueClient, NTU.LOCAL_HOST + ":" + NTU.port(49));
+        int port = NTU.connectServer(server());
+        NTU.connect(trueClient, NTU.localHost(port));
         trueClient.setSecurityController(new SomeSecurityController(trueSubject));
         Summator summator = trueClient.getClient().getProxy(Summator.class, "summator");
 
@@ -400,10 +400,10 @@ public class RMICommonTest {
         trueClient.close();
 
         falseClient = RMIEndpoint.createEndpoint(RMIEndpoint.Side.CLIENT);
-        NTU.connect(falseClient, NTU.LOCAL_HOST + ":" + NTU.port(49));
+        NTU.connect(falseClient, NTU.localHost(port));
         log.info("_____________________");
         falseClient.setSecurityController(new SomeSecurityController(falseSubject));
-        summator = falseClient.getProxy(Summator.class, "summator");
+        summator = falseClient.getClient().getProxy(Summator.class, "summator");
         try {
             summator.sum(256, 458);
             fail();
@@ -474,16 +474,16 @@ public class RMICommonTest {
     public void testAuthorization() throws NoSuchMethodException {
         server = RMIEndpoint.createEndpoint(RMIEndpoint.Side.SERVER);
         server.setSecurityController(new BasicSecurityController());
-        NTU.connect(server, ":" + NTU.port(51));
+        int port = NTU.connectServer(server);
         server.getServer().export(new SummatorImpl(), Summator.class);
 
         QDEndpoint endpointClient = QDEndpoint.newBuilder().withName("QD_CLIENT").build().user("test").password("demo");
         client = new RMIEndpointImpl(RMIEndpoint.Side.CLIENT, endpointClient, null, null);
-        NTU.connect(client, NTU.LOCAL_HOST + ":" + NTU.port(51));
+        NTU.connect(client, NTU.localHost(port));
 
         QDEndpoint endpointBadClient = QDEndpoint.newBuilder().withName("QD_BAD_CLIENT").build().user("test").password("test");
         falseClient = new RMIEndpointImpl(RMIEndpoint.Side.CLIENT, endpointBadClient, null, null);
-        NTU.connect(falseClient, NTU.LOCAL_HOST + ":" + NTU.port(51));
+        NTU.connect(falseClient, NTU.localHost(port));
 
         // Operation on good client goes through
         RMIOperation<Integer> operation = RMIOperation.valueOf(Summator.class, Summator.class.getMethod("sum", int.class, int.class));

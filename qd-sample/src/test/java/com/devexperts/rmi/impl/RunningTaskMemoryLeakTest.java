@@ -19,12 +19,14 @@ import com.devexperts.rmi.task.RMITask;
 import com.devexperts.rmi.test.NTU;
 import com.devexperts.rmi.test.TestThreadPool;
 import com.devexperts.test.ThreadCleanCheck;
+import com.devexperts.test.TraceRunner;
 import com.dxfeed.promise.Promise;
 import com.dxfeed.promise.PromiseException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -45,20 +47,24 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 
+@RunWith(TraceRunner.class)
 public class RunningTaskMemoryLeakTest {
     private final Logging log = Logging.getLogging(RunningTaskMemoryLeakTest.class);
-    private final List<Throwable> exceptions = Collections.synchronizedList(new ArrayList<Throwable>());
-    private final ExecutorService executor = new TestThreadPool(5,
-        RunningTaskMemoryLeakTest.class.getSimpleName(), exceptions);
+    private final List<Throwable> exceptions = Collections.synchronizedList(new ArrayList<>());
+    private final ExecutorService executor =
+        new TestThreadPool(5, RunningTaskMemoryLeakTest.class.getSimpleName(), exceptions);
 
     private RMIEndpointImpl server;
     private RMIEndpointImpl client;
     private CountDownLatch oneTaskStarted;
     private DummySupplier proxy;
 
+    private AtomicInteger lastRequestId;
+
     @Before
     public void setUp() {
         ThreadCleanCheck.before();
+        lastRequestId = new AtomicInteger(0);
         server = (RMIEndpointImpl) RMIEndpoint.newBuilder()
             .withName("Server")
             .withSide(RMIEndpoint.Side.SERVER)
@@ -88,17 +94,16 @@ public class RunningTaskMemoryLeakTest {
 
     @Test
     public void testSuccessful() {
-        connect(47);
-        List<Promise<String>> promises = doRequests(1000, 0, 0);
-        promises.forEach(promise ->
-            assertNotNull("Result expected", promise.await(1000, TimeUnit.MILLISECONDS)));
+        connect();
+        List<Promise<String>> promises = doRequests(1000, 0, DummySupplier.OK);
+        promises.forEach(promise -> assertNotNull("Result expected", promise.await(1000, TimeUnit.MILLISECONDS)));
         awaitRunningTasks();
     }
 
     @Test
     public void testExceptional() {
-        connect(57);
-        List<Promise<String>> promises = doRequests(10, 0, 2);
+        connect();
+        List<Promise<String>> promises = doRequests(10, 0, DummySupplier.EXCEPTION);
         promises.forEach(promise -> {
             try {
                 promise.await(5, TimeUnit.SECONDS);
@@ -113,10 +118,9 @@ public class RunningTaskMemoryLeakTest {
     }
 
     @Test
-    @Ignore("Test fails occasionally - QD-1136")
     public void testClientCancel() throws InterruptedException {
-        connect(67);
-        List<Promise<String>> promises = doRequests(1000, Long.MAX_VALUE, 1);
+        connect();
+        List<Promise<String>> promises = doRequests(1000, Long.MAX_VALUE, DummySupplier.FAIL);
         awaitStart();
         promises.forEach(promise -> RMIRequest.of(promise).cancelOrAbort());
         awaitRunningTasks();
@@ -124,8 +128,8 @@ public class RunningTaskMemoryLeakTest {
 
     @Test
     public void testClientCancelWithConfirmation() throws InterruptedException {
-        connect(68);
-        List<Promise<String>> promises = doRequests(1000, Long.MAX_VALUE, 1);
+        connect();
+        List<Promise<String>> promises = doRequests(1000, Long.MAX_VALUE, DummySupplier.FAIL);
         awaitAllSent(promises);
         promises.forEach(promise -> RMIRequest.of(promise).cancelWithConfirmation());
         promises.forEach(promise -> {
@@ -141,19 +145,19 @@ public class RunningTaskMemoryLeakTest {
 
     @Test
     public void testClientDisconnect() throws InterruptedException {
-        connect(77);
+        connect();
         testDisconnect(client);
     }
 
     @Test
     public void testServerDisconnect() throws InterruptedException {
-        connect(87);
+        connect();
         testDisconnect(server);
     }
 
     private void testDisconnect(RMIEndpoint endpoint) throws InterruptedException {
         // send long-working requests and await that all are sent to the server
-        List<Promise<String>> promises = doRequests(1000, Long.MAX_VALUE, 1);
+        List<Promise<String>> promises = doRequests(1000, Long.MAX_VALUE, DummySupplier.FAIL);
         awaitAllSent(promises);
         endpoint.disconnect();
         // all requests should properly fail
@@ -168,10 +172,9 @@ public class RunningTaskMemoryLeakTest {
         awaitRunningTasks();
     }
 
-    private void connect(int port) {
-        port = NTU.port(port);
-        NTU.connect(server, ":" + port);
-        NTU.connect(client, NTU.LOCAL_HOST + ":" + port);
+    private void connect() {
+        int port = NTU.connectServer(server);
+        NTU.connect(client, NTU.localHost(port));
     }
 
     /**
@@ -180,7 +183,7 @@ public class RunningTaskMemoryLeakTest {
      * @param outcome 0 = ok, 1 = fail, 2 = exception
      */
     private List<Promise<String>> doRequests(int qty, long timeout, int outcome) {
-        return Stream.generate(() -> proxy.getPromise(timeout, outcome))
+        return Stream.generate(() -> proxy.getPromise(lastRequestId.incrementAndGet(), timeout, outcome))
             .limit(qty)
             .collect(Collectors.toList());
     }
@@ -198,7 +201,9 @@ public class RunningTaskMemoryLeakTest {
         fail("Memory leak on: " + (hasRunningTask(client) ? "client " : "") + (hasRunningTask(server) ? "server" : ""));
     }
 
-    /** Await that some request started processing on server */
+    /**
+     * Await that some request started processing on server
+     */
     private void awaitStart() throws InterruptedException {
         long timeToStart = 10_000;
         if (!oneTaskStarted.await(timeToStart, TimeUnit.MILLISECONDS)) {
@@ -208,6 +213,7 @@ public class RunningTaskMemoryLeakTest {
 
     /**
      * Await that all specified requests was sent to the server
+     *
      * @param promises - promises corresponding to requests to be checked
      */
     private void awaitAllSent(List<Promise<String>> promises) throws InterruptedException {
@@ -232,12 +238,12 @@ public class RunningTaskMemoryLeakTest {
             Thread.sleep(10);
             now = System.currentTimeMillis();
         }
-        fail(remaining.size() + " of " +  promises.size() + " requests was not sent in " + timeout + " ms" );
+        fail(remaining.size() + " of " + promises.size() + " requests was not sent in " + timeout + " ms");
     }
 
     private boolean hasRunningTask(RMIEndpointImpl endpoint) {
-        for (Iterator<RMIConnection> connectionsIterator = endpoint.concurrentConnectionsIterator(); connectionsIterator.hasNext(); ) {
-            RMIConnection connection = connectionsIterator.next();
+        for (Iterator<RMIConnection> connections = endpoint.concurrentConnectionsIterator(); connections.hasNext(); ) {
+            RMIConnection connection = connections.next();
             if (connection.tasksManager.hasRunningTask()) {
                 return true;
             }
@@ -246,37 +252,41 @@ public class RunningTaskMemoryLeakTest {
     }
 
     private interface DummySupplier {
+
+        static final int OK = 0;
+        static final int FAIL = 1;
+        static final int EXCEPTION = 2;
+
         // outcome: 0 = ok, 1 = fail, 2 = exception
-        Promise<String> getPromise(long millis, int outcome);
+        Promise<String> getPromise(int id, long millis, int outcome);
     }
 
     private class DummySupplierImpl implements DummySupplier {
 
-        private AtomicInteger nextId = new AtomicInteger(1);
         @Override
-        public Promise<String> getPromise(long millis, int outcome) {
+        public Promise<String> getPromise(int id, long millis, int outcome) {
             oneTaskStarted.countDown();
-            int id = nextId.getAndIncrement();
             sleep(millis, id);
-            if (outcome == 2) {
+            if (outcome == EXCEPTION) {
                 throw new RuntimeException("Error");
             }
-            return outcome == 0 ? Promise.completed("Ok") : Promise.failed(new RuntimeException("Fail"));
+            return outcome == OK ? Promise.completed("Ok") : Promise.failed(new RuntimeException("Fail"));
         }
 
         private void sleep(long millis, int id) {
+            log.trace("Started " + id);
+            RMITask<String> current = RMITask.current(String.class);
             try {
                 long start = System.currentTimeMillis();
                 while (System.currentTimeMillis() - start < millis) {
                     Thread.sleep(100);
-                    RMITask<String> current = RMITask.current(String.class);
                     if (current.getState().isCompletedOrCancelling()) {
                         log.info("Cancelled " + id + ": " + current);
                         return;
                     }
                 }
             } catch (InterruptedException ignore) {
-                log.info("Interrupted");
+                log.info("Interrupted " + id + ": " + current);
             }
         }
     }

@@ -12,16 +12,21 @@
 package com.dxfeed.api.codegen;
 
 import java.util.Arrays;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import com.devexperts.qd.*;
 import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.socket.ServerSocketTestHelper;
 import com.dxfeed.api.*;
 import com.dxfeed.api.impl.DXEndpointImpl;
+import com.dxfeed.promise.Promise;
 
 class TestEndpoint implements AutoCloseable {
     private final QDEndpoint endpoint;
     private DXEndpoint publisherEndpoint;
     private DXEndpoint feedEndpoint;
+    private int serverPort;
 
     TestEndpoint(DataScheme scheme) {
         endpoint = QDEndpoint.newBuilder()
@@ -32,28 +37,52 @@ class TestEndpoint implements AutoCloseable {
 
     TestEndpoint connect(int port) {
         MessageAdapter.AbstractFactory distributorFactory = new DistributorAdapter.Factory(endpoint, null);
-        endpoint.addConnectors(MessageConnectors.createMessageConnectors(distributorFactory, "127.0.0.1:" + port, endpoint.getRootStats()));
+        endpoint.addConnectors(MessageConnectors.createMessageConnectors(
+            distributorFactory, "127.0.0.1:" + port, endpoint.getRootStats()));
         endpoint.startConnectors();
         return this;
     }
 
+    @Deprecated
     TestEndpoint bind(int port) {
         AgentAdapter.Factory agentFactory = new AgentAdapter.Factory(endpoint, null);
-        endpoint.addConnectors(MessageConnectors.createMessageConnectors(agentFactory, ":" + port, endpoint.getRootStats()));
+        endpoint.addConnectors(
+            MessageConnectors.createMessageConnectors(agentFactory, ":" + port, endpoint.getRootStats()));
         endpoint.startConnectors();
+        return this;
+    }
+
+    TestEndpoint bindAuto() {
+        AgentAdapter.Factory agentFactory = new AgentAdapter.Factory(endpoint, null);
+        String name = UUID.randomUUID().toString();
+        Promise<Integer> portPromise = ServerSocketTestHelper.createPortPromise(name);
+        endpoint.addConnectors(
+            MessageConnectors.createMessageConnectors(agentFactory, ":0[name=" + name + "]", endpoint.getRootStats()));
+        endpoint.startConnectors();
+        serverPort = portPromise.await(10, TimeUnit.SECONDS);
         return this;
     }
 
     DXPublisher getPublisher() {
-        if (publisherEndpoint == null)
-            publisherEndpoint = new DXEndpointImpl(DXEndpoint.Role.PUBLISHER, endpoint.getCollectors().toArray(new QDCollector[0]));
+        if (publisherEndpoint == null) {
+            publisherEndpoint =
+                new DXEndpointImpl(DXEndpoint.Role.PUBLISHER, endpoint.getCollectors().toArray(new QDCollector[0]));
+        }
         return publisherEndpoint.getPublisher();
     }
 
     DXFeed getFeed() {
-        if (feedEndpoint == null)
-            feedEndpoint = new DXEndpointImpl(DXEndpoint.Role.FEED, endpoint.getCollectors().toArray(new QDCollector[0]));
+        if (feedEndpoint == null) {
+            feedEndpoint =
+                new DXEndpointImpl(DXEndpoint.Role.FEED, endpoint.getCollectors().toArray(new QDCollector[0]));
+        }
         return feedEndpoint.getFeed();
+    }
+
+    int getServerPort() {
+        if (serverPort == 0)
+            throw new IllegalStateException("Not bound to server port");
+        return serverPort;
     }
 
     @Override

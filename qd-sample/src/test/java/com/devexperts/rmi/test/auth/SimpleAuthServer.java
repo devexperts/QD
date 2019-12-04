@@ -25,6 +25,7 @@ import com.devexperts.util.Base64;
 class SimpleAuthServer {
     private static final Logging log = Logging.getLogging(SimpleAuthServer.class);
     private final AuthServiceImpl serviceImpl;
+    private final int port;
 
     static interface AuthService {
 
@@ -112,10 +113,10 @@ class SimpleAuthServer {
         .build();
     private int errorLoginCount;
 
-    SimpleAuthServer(String address, Object subject, AuthToken badClient, AuthToken... clients) {
+    SimpleAuthServer(Object subject, AuthToken badClient, AuthToken... clients) {
         serviceImpl = new AuthServiceImpl(subject, badClient, clients);
         serverAuth.getServer().export(serviceImpl, AuthService.class);
-        NTU.connect(serverAuth, address);
+        port = NTU.connectServer(serverAuth);
     }
 
     void close() {
@@ -125,5 +126,13 @@ class SimpleAuthServer {
 
     public int getErrorLoginCount() {
         return errorLoginCount;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public String getAddress() {
+        return NTU.localHost(getPort());
     }
 }

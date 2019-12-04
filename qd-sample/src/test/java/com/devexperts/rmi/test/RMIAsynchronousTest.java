@@ -96,13 +96,15 @@ public class RMIAsynchronousTest {
         log.info("remoteEndpoint = " + remoteEndpoint);
     }
 
-    private void connectDefault(boolean initPorts, int... ports) {
-        NTU.connect(server, ":" + NTU.port(ports[0]));
-        NTU.connect(client, NTU.LOCAL_HOST + ":" + NTU.port(ports[0]));
-        if (ports.length == 2) {
-            NTU.connect(remoteEndpoint, ":" + NTU.port(ports[1]));
-            NTU.connect(privateEndpoint, NTU.LOCAL_HOST + ":" + NTU.port(ports[1]));
-        }
+    private void connectDefault(boolean initPorts) {
+        NTU.connectPair(server, client);
+        if (initPorts)
+            clientPort = client.getClient().getPort(null);
+    }
+
+    private void connectWithForwarding(boolean initPorts) {
+        NTU.connectPair(server, client);
+        NTU.connectPair(remoteEndpoint, privateEndpoint);
         if (initPorts)
             clientPort = client.getClient().getPort(null);
     }
@@ -128,7 +130,7 @@ public class RMIAsynchronousTest {
         public void processTask(RMITask<Object> task) {
             task.setCancelListener(task1 -> task1.cancel(RMIExceptionType.CANCELLED_DURING_EXECUTION));
             if (task.getOperation().equals(START_WAIT)) {
-                Long startTime = System.currentTimeMillis();
+                long startTime = System.currentTimeMillis();
                 synchronized (lock) {
                     try {
                         startedWait.countDown();
@@ -157,7 +159,7 @@ public class RMIAsynchronousTest {
         log.info("testAsynchronousTask");
         WaitService waitService = new WaitService();
         server.getServer().export(waitService);
-        connectDefault(true, 60);
+        connectDefault(true);
         checkWaitedService(waitService);
         executor.shutdown();
     }
@@ -171,7 +173,7 @@ public class RMIAsynchronousTest {
         WaitService waitService = new WaitService();
         server.getServer().export(privateEndpoint.getClient().getService("*"));
         remoteEndpoint.getServer().export(waitService);
-        connectDefault(true, 61, 62);
+        connectWithForwarding(true);
 //      Thread.sleep(1000);
         checkWaitedService(waitService);
     }
@@ -294,7 +296,7 @@ public class RMIAsynchronousTest {
         CancellationCount service = CancellationCount.INSTANCE;
         remoteEndpoint.getServer().export(service);
         server.getServer().export(privateEndpoint.getClient().getService("*"));
-        connectDefault(true, 64, 65);
+        connectWithForwarding(true);
         service.update();
         log.info("client = " + client + ", server = " + server + ", private = " + privateEndpoint + ", remote = " + remoteEndpoint);
 
@@ -364,27 +366,29 @@ public class RMIAsynchronousTest {
     public static class SummatorImpl implements RMICommonTest.Summator {
 
         @Override
-        public int sum(int a, int b) throws RMIException {
+        public int sum(int a, int b) {
             RMITask.current(int.class).complete(a + b);
             return 0;
         }
 
         @Override
-        public int getOperationsCount() throws RMIException {
-
+        public int getOperationsCount() {
             return 0;
         }
     }
 
     @Test
-    public void testClientServiceWithServiceFilter() throws InterruptedException {
+    public void testClientServiceWithServiceFilter() {
         initRemote();
         log.info("---- testClientServiceWithServiceFilter ---- ");
-        connectDefault(true, 89, 91);
+        connectWithForwarding(true);
 
-        remoteEndpoint.getServer().export(new RMIServiceImplementation<>(new FirstCount(), CountService.class, FirstCount.class.getSimpleName()));
-        remoteEndpoint.getServer().export(new RMIServiceImplementation<>(new SecondCount(), CountService.class, SecondCount.class.getSimpleName()));
-        remoteEndpoint.getServer().export(new RMIServiceImplementation<>(new SummatorImpl(), RMICommonTest.Summator.class, "Summator"));
+        remoteEndpoint.getServer().export(
+            new RMIServiceImplementation<>(new FirstCount(), CountService.class, FirstCount.class.getSimpleName()));
+        remoteEndpoint.getServer().export(
+            new RMIServiceImplementation<>(new SecondCount(), CountService.class, SecondCount.class.getSimpleName()));
+        remoteEndpoint.getServer().export(
+            new RMIServiceImplementation<>(new SummatorImpl(), RMICommonTest.Summator.class, "Summator"));
         server.getServer().export(privateEndpoint.getClient().getService("*Count"));
 
         CountService proxy = client.getClient().getProxy(CountService.class, FirstCount.class.getSimpleName());
@@ -486,7 +490,7 @@ public class RMIAsynchronousTest {
     public void testTaskCancelListenerWithAbort() throws InterruptedException {
         startTime = System.currentTimeMillis();
         server.getServer().export(new MonitoringOfTasksService());
-        connectDefault(true, 74);
+        connectDefault(true);
         RMIRequest<Long> mon = clientPort.createRequest(MonitoringOfTasksService.MONITORING);
         mon.send();
         assertTrue(MonitoringOfTasksService.START_MONITORING.await(10, TimeUnit.SECONDS));

@@ -11,14 +11,21 @@
  */
 package com.dxfeed.model;
 
-import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executor;
-
-import com.dxfeed.api.*;
-import com.dxfeed.event.*;
+import com.dxfeed.api.DXEndpoint;
+import com.dxfeed.api.DXFeed;
+import com.dxfeed.api.DXFeedSubscription;
+import com.dxfeed.event.IndexedEvent;
+import com.dxfeed.event.IndexedEventSource;
+import com.dxfeed.event.TimeSeriesEvent;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.model.market.OrderBookModel;
+
+import java.util.AbstractList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
 
 /**
  * Model for a list of indexed events.
@@ -124,7 +131,7 @@ public class IndexedEventModel<E extends IndexedEvent<?>>
     @Override
     public void close() {
         super.close();
-        events.clear();
+        listeners.clear();
     }
 
     /**
@@ -163,8 +170,9 @@ public class IndexedEventModel<E extends IndexedEvent<?>>
     @Override
     protected void modelChanged(List<Entry<E>> changedEntries) {
         changedEntries.forEach(Entry::commitChange);
-        for (ObservableListModelListener<? super E> listener : listeners)
+        for (ObservableListModelListener<? super E> listener : listeners) {
             listener.modelChanged(change);
+        }
     }
 
     private class Events extends AbstractList<E> implements ObservableListModel<E> {

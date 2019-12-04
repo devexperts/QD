@@ -200,10 +200,8 @@ public class RMICustomBalancingNoAdTest extends AbstractRMICustomBalancingTest {
     private void configure() throws InterruptedException {
         servers = new ServerRoutingSide(2);
         clients = new ClientRoutingSide(1);
-        int[] serverPorts = Ports.findAvailablePort(2);
-        servers.connect(":" + serverPorts[0] + "[advertise=none]", ":" + serverPorts[1] + "[advertise=none]");
-        clients.connect("(" + NTU.LOCAL_HOST + ":" + serverPorts[0] + ")(" + NTU.LOCAL_HOST + ":"
-            + serverPorts[1] + ")");
+        int[] serverPorts = servers.connectAuto("advertise=none", "advertise=none");
+        clients.connect("(" + NTU.localHost(serverPorts[0]) + ")(" + NTU.localHost(serverPorts[1]) + ")");
 
         serviceImpl0 = new DifferentServices.CalculatorService();
         servers.export(0, serviceImpl0);

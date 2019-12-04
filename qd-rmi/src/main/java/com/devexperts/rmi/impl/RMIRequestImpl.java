@@ -26,6 +26,7 @@ import com.devexperts.rmi.message.RMIResponseMessage;
 import com.devexperts.rmi.message.RMIResultMessage;
 import com.devexperts.rmi.message.RMIRoute;
 import com.devexperts.rmi.task.RMIChannel;
+import com.devexperts.rmi.task.RMIChannelState;
 import com.devexperts.rmi.task.RMIChannelType;
 import com.devexperts.rmi.task.RMIServiceId;
 import com.dxfeed.promise.Promise;
@@ -409,11 +410,17 @@ public final class RMIRequestImpl<T> extends RMIRequest<T> implements RMIChannel
         assignedConnection = connection;
     }
 
-    void setSendingState(RMIConnection connection) {
+    /**
+     * Try to switch request in {@link RMIRequestState#WAITING_TO_SEND} state to {@link RMIRequestState#SENDING} state
+     * ( or {@link RMIRequestState#SUCCEEDED} if ONE_WAY) and associate with specified connection.
+     * @param connection connection associated with request
+     * @return {@code true} if transition was performed
+     */
+    boolean setSendingState(RMIConnection connection) {
         Notifier notifier = null;
         synchronized (requestLock) {
-            if (state.isCompleted())
-                return;
+            if (state != RMIRequestState.WAITING_TO_SEND)
+                return false;
             assert assignedConnection == connection; // must be set before setting to sending
             runningStartTime = System.currentTimeMillis();
             assert state == RMIRequestState.WAITING_TO_SEND;
@@ -435,20 +442,22 @@ public final class RMIRequestImpl<T> extends RMIRequest<T> implements RMIChannel
             requestSender.startTimeoutRequestMonitoringThread();
         if (notifier != null)
             notifier.notifyCompleted();
+        return true;
     }
 
     void setSentState(RMIConnection connection) {
         synchronized (requestLock) {
             // Note: that below if applies to one way requests, too (they cannot be in SENDING state)
-            if (state.isCompleted())
-                return;
-            if (state != RMIRequestState.CANCELLING) {
+            if (state == RMIRequestState.SENDING) {
                 assert assignedConnection == connection; // must be set before setting to sent
-                assert state == RMIRequestState.SENDING; // must be in this state
                 state = RMIRequestState.SENT;
             }
-            if (!nestedRequest)
-                channel.open(connection);
+            if (!nestedRequest) {
+                RMIChannelState state = channel.getState();
+                if (state == RMIChannelState.NEW || state == RMIChannelState.CANCELLING) {
+                    channel.open(connection);
+                }
+            }
         }
     }
 
@@ -610,7 +619,9 @@ public final class RMIRequestImpl<T> extends RMIRequest<T> implements RMIChannel
                     // Note: In SENDING state we are already sending request to the other side and
                     // might have actually finished doing sending (but have not updated the state yet),
                     // so there is a chance the were are cancelling request during execution
-                    setFailedStateInternal(RMIExceptionType.CANCELLED_DURING_EXECUTION, null, null);
+                    state = RMIRequestState.FAILED;
+                    responseMessage = new RMIErrorMessage(RMIExceptionType.CANCELLED_DURING_EXECUTION, null, null);
+                    completionTime = System.currentTimeMillis();
                 } else {
                     state = RMIRequestState.CANCELLING;
                     return; // not complete yet

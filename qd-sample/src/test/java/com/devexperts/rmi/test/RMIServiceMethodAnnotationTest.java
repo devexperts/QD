@@ -23,12 +23,11 @@ import com.dxfeed.promise.Promise;
 import org.junit.*;
 import org.junit.runner.RunWith;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 @RunWith(TraceRunner.class)
 public class RMIServiceMethodAnnotationTest {
-    public static final int TIMEOUT_MS = 10000;
+    private static final int TIMEOUT_MS = 10000;
     private TestThreadPool executor;
     private RMIEndpoint server;
     private RMIEndpoint client;
@@ -63,14 +62,13 @@ public class RMIServiceMethodAnnotationTest {
         client = RMIEndpoint.createEndpoint(RMIEndpoint.Side.CLIENT);
         client.getClient().setRequestRunningTimeout(TIMEOUT_MS);
         client.getClient().setRequestSendingTimeout(TIMEOUT_MS);
-        NTU.connect(server, ":" + NTU.port(51));
-        NTU.connect(client, NTU.LOCAL_HOST + ":" + NTU.port(51));
+        NTU.connectPair(server, client);
         server.getServer().export(new AServiceImpl(), AService.class);
         AService proxy = client.getClient().getProxy(AService.class);
         // make sure one request invocations do not wait response and it is null
         for (int i = 0; i < N_REQS; i++) {
             Promise<String> promise = proxy.doOneWay(i);
-            assertEquals(null, promise.await(TIMEOUT_MS, TimeUnit.MILLISECONDS));
+            assertNull(promise.await(TIMEOUT_MS, TimeUnit.MILLISECONDS));
         }
         awaitDoOneBarrier();
         // make sure that two-way invocations wait response

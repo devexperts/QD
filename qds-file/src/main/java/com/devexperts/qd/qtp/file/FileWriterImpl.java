@@ -502,7 +502,8 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
     private class TimestampedSink extends AbstractRecordSink {
         MessageType saveMessage;
         RecordSink sink;
-        long lastIncomingTimeSequence;
+        private long timeSequenceCache;
+        private long timeMillisCache;
         boolean first;
 
         @Override
@@ -514,12 +515,16 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
         public void append(RecordCursor cursor) {
             // convert time sequence to time millis
             long curEventTimeSequence = cursor.getEventTimeSequence();
-            if (curEventTimeSequence != 0 && curEventTimeSequence != lastIncomingTimeSequence) {
-                lastIncomingTimeSequence = curEventTimeSequence;
-                lastIncomingTimeMillis = TimeSequenceUtil.getTimeMillisFromTimeSequence(curEventTimeSequence);
+            if (timeSequenceCache != curEventTimeSequence) {
+                timeSequenceCache = curEventTimeSequence;
+                timeMillisCache = TimeSequenceUtil.getTimeMillisFromTimeSequence(curEventTimeSequence);
+            }
+            if (curEventTimeSequence != 0 && lastIncomingTimeMillis != timeMillisCache) {
+                lastIncomingTimeMillis = timeMillisCache;
                 // suspend current message if new split file or is needed for time
                 if (needNewSplitFile(lastIncomingTimeMillis) || time.isSlipMessageOnTime() && curTime != lastIncomingTimeMillis) {
                     composer.endMessage();
+                    // TODO Oops, we are making I/O under QD lock.
                     writeData();
                     updateCurTime();
                     composer.beginMessage(saveMessage);

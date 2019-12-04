@@ -14,7 +14,6 @@ package com.devexperts.rmi.test;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import com.devexperts.logging.Logging;
 import com.devexperts.rmi.*;
@@ -34,7 +33,6 @@ public class MiniStressTest {
 
     RMIEndpoint first;
     RMIEndpoint second;
-    final AtomicInteger counter = new AtomicInteger(0);
 
     static Map<Integer, Double> idx = new ConcurrentHashMap<>();
     private ExecutorService serverExecutor;
@@ -51,7 +49,6 @@ public class MiniStressTest {
         clientExecutor = Executors.newFixedThreadPool(1000, r -> new Thread(r, "miniStressTest-client-pool"));
         first.getServer().setDefaultExecutor(serverExecutor);
         second.getServer().setDefaultExecutor(clientExecutor);
-        counter.set(0);
         log.info(" ======================= // =====================");
     }
 
@@ -65,9 +62,8 @@ public class MiniStressTest {
         ThreadCleanCheck.after();
     }
 
-    void connect(int port) {
-        NTU.connect(first, ":" + NTU.port(port));
-        NTU.connect(second, NTU.LOCAL_HOST + ":" + NTU.port(port));
+    void connect() {
+        NTU.connectPair(first, second);
     }
 
     @SuppressWarnings("unchecked")
@@ -75,7 +71,7 @@ public class MiniStressTest {
     public void testStress() {
         first.getServer().export(new ExternalService());
         second.getServer().export(new ExternalService());
-        connect(12);
+        connect();
         int n = 400;
         RMIRequest<String>[] requests = new RMIRequest[2 * n];
         Random rnd = new Random();
@@ -128,7 +124,7 @@ public class MiniStressTest {
                 request.send();
                 try {
                     String r = request.getBlocking();
-                    result = result * Double.valueOf(r.substring(r.lastIndexOf('t') + 2));
+                    result *= Double.parseDouble(r.substring(r.lastIndexOf('t') + 2));
                 } catch (RMIException e) {
                     task.completeExceptionally(request.getException());
                 }

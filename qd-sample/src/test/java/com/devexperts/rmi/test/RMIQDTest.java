@@ -82,9 +82,9 @@ public class RMIQDTest {
 
     private void connect() {
         log.info("Connect");
-        NTU.connect(server, ":" + NTU.port(45));
+        int port = NTU.connectServer(server);
         // Set large heartbeat period to reproduce [QD-932] RMI: Potential delay of QD messages due to lost "more messages flag"
-        NTU.connect(client, NTU.LOCAL_HOST + ":" + NTU.port(45) + "[initialHeartbeatPeriod=30s]");
+        NTU.connect(client, NTU.localHost(port) + "[initialHeartbeatPeriod=30s]");
     }
 
     @Test

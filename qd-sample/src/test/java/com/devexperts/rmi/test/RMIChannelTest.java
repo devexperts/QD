@@ -105,23 +105,25 @@ public class RMIChannelTest {
         assertTrue(exceptions.isEmpty());
     }
 
-    private void connectDefault(int... ports) {
-        NTU.connect(server, ":" + NTU.port(ports[0]));
-        NTU.connect(client, NTU.LOCAL_HOST + ":" + NTU.port(ports[0]));
-        if (ports.length == 2) {
-            NTU.connect(remoteEndpoint, ":" + NTU.port(ports[1]));
-            NTU.connect(privateEndpoint, NTU.LOCAL_HOST + ":" + NTU.port(ports[1]));
-        }
+    private void connectDefault() {
+        NTU.connectPair(server, client);
+    }
+
+    private void connectWithForwarding() {
+        NTU.connectPair(server, client);
+        NTU.connectPair(remoteEndpoint, privateEndpoint);
     }
 
     // --------------------------------------------------
 
     private static final String MULTIPLICATIONS_SERVICE_NAME = "ManyMultiplications";
-    public static final String CLIENT_CHANNEL = "ClientChannel";
+    private static final String CLIENT_CHANNEL = "ClientChannel";
     private static final String CHANNEL_HANDLER = "Progress";
 
-    private static final RMIOperation<Void> INTERMEDIATE_RESULT_OPERATION = RMIOperation.valueOf(CLIENT_CHANNEL, Void.class, "intermediateResult", Long.class);
-    public static final RMIOperation<Void> MULTIPLICATION_PROGRESS_OPERATION = RMIOperation.valueOf(CHANNEL_HANDLER, Void.class, "progress", int.class);
+    private static final RMIOperation<Void> INTERMEDIATE_RESULT_OPERATION =
+        RMIOperation.valueOf(CLIENT_CHANNEL, Void.class, "intermediateResult", Long.class);
+    private static final RMIOperation<Void> MULTIPLICATION_PROGRESS_OPERATION =
+        RMIOperation.valueOf(CHANNEL_HANDLER, Void.class, "progress", int.class);
 
     private static RMIService<?> multiplications = new RMIService<Double>(MULTIPLICATIONS_SERVICE_NAME) {
         static final double HUNDRED = 100d;
@@ -184,7 +186,7 @@ public class RMIChannelTest {
 
     @Test
     public void testProgressCalculations() throws InterruptedException {
-        connectDefault(1);
+        connectDefault();
         server.getServer().export(multiplications);
         final CountDownLatch processChannelLatch = new CountDownLatch(20);
         final CountDownLatch processResultLatch = new CountDownLatch(1);
@@ -232,7 +234,7 @@ public class RMIChannelTest {
     @Test
     public void testCancelChannelTask() throws InterruptedException {
         ChannelHandler.update();
-        connectDefault(2);
+        connectDefault();
         ChannelTaskCancelCheckerImpl channelCancelChecker = new ChannelTaskCancelCheckerImpl();
         server.getServer().export(channelCancelChecker, ChannelTaskCancelChecker.class);
         CountDownLatch[] requestCancelListenerLatch = {new CountDownLatch(1)};
@@ -457,6 +459,7 @@ public class RMIChannelTest {
         }
     }
 
+    @SuppressWarnings("unused")
     private static interface ChannelTaskCancelChecker extends RMIChannelSupport<String> {
         String resultResponseClientCheck() throws InterruptedException;
         String failedResponseClientCheck() throws InterruptedException;
@@ -467,7 +470,6 @@ public class RMIChannelTest {
     }
 
     private static class ChannelTaskCancelCheckerImpl implements ChannelTaskCancelChecker {
-        static volatile Thread thread;
         static CountDownLatch latch = new CountDownLatch(1);
 
         @Override
@@ -545,7 +547,7 @@ public class RMIChannelTest {
 
     @Test
     public void testProgressCancel() throws InterruptedException {
-        connectDefault(3);
+        connectDefault();
         server.getServer().export(multiplications);
         final CountDownLatch processResultLatch = new CountDownLatch(1);
         final CountDownLatch processChannelLatch = new CountDownLatch(1);
@@ -596,7 +598,7 @@ public class RMIChannelTest {
 
     @Test
     public void testProgressDisconnect() throws InterruptedException {
-        connectDefault(5);
+        connectDefault();
         server.getServer().export(multiplications);
         final CountDownLatch processResult = new CountDownLatch(1);
         final CountDownLatch processChannelLatch = new CountDownLatch(1);
@@ -714,7 +716,7 @@ public class RMIChannelTest {
 
     @Test
     public void testIntermediateResultChannel() throws InterruptedException, RMIException {
-        connectDefault(7);
+        connectDefault();
         server.getServer().export(powerService);
         intermediateResultChannel();
     }
@@ -725,7 +727,7 @@ public class RMIChannelTest {
 
     @Test
     public void testChannelForward() throws RMIException, InterruptedException {
-        connectDefault(9, 11);
+        connectWithForwarding();
         remoteEndpoint.getServer().export(powerService);
         server.getServer().export(privateEndpoint.getClient().getService("*"));
         intermediateResultChannel();
@@ -797,7 +799,7 @@ public class RMIChannelTest {
 
     @Test
     public void testChannelOpenMethod() throws RMIException, InterruptedException {
-        connectDefault(13);
+        connectDefault();
         server.getServer().export(new ChannelServiceImpl(42), ChannelService.class);
 
         RMIRequest<Void> request = client.getClient().getPort(null).createRequest(
@@ -809,19 +811,19 @@ public class RMIChannelTest {
         channelRequest.send();
         Integer a = (Integer) channelRequest.getBlocking();
         assertEquals(42, (int) a);
-        assertEquals(request.getNonBlocking(), null);
+        assertNull(request.getNonBlocking());
         channelRequest = channel.createRequest(
             RMIOperation.valueOf(ChannelService.class, void.class, "finishChannel"));
         channelRequest.send();
-        assertEquals(channelRequest.getBlocking(), null);
-        assertEquals(request.getBlocking(), null);
+        assertNull(channelRequest.getBlocking());
+        assertNull(request.getBlocking());
     }
 
     // --------------------------------------------------
 
     @Test
-    public void testChannelSendBeforeRequest() throws RMIException, InterruptedException {
-        connectDefault(15);
+    public void testChannelSendBeforeRequest() throws RMIException {
+        connectDefault();
         server.getServer().export(new ChannelServiceImpl(42), ChannelService.class);
 
         RMIRequest<Void> request = client.getClient().getPort(null).createRequest(
@@ -830,16 +832,16 @@ public class RMIChannelTest {
         RMIRequest<?> channelRequest = channel.createRequest(
             RMIOperation.valueOf(ChannelService.class, int.class, "getValue"));
         channelRequest.send();
-        assertEquals(channelRequest.getNonBlocking(), null);
+        assertNull(channelRequest.getNonBlocking());
         request.send();
         Integer a = (Integer) channelRequest.getBlocking();
         assertEquals(42, (int) a);
-        assertEquals(request.getNonBlocking(), null);
+        assertNull(request.getNonBlocking());
         channelRequest = channel.createRequest(
             RMIOperation.valueOf(ChannelService.class, void.class, "finishChannel"));
         channelRequest.send();
-        assertEquals(channelRequest.getBlocking(), null);
-        assertEquals(request.getBlocking(), null);
+        assertNull(channelRequest.getBlocking());
+        assertNull(request.getBlocking());
     }
 
     @SuppressWarnings("unused")
@@ -892,7 +894,7 @@ public class RMIChannelTest {
 
     @Test
     public void testOpenChannelError() {
-        connectDefault(17);
+        connectDefault();
         server.getServer().export(new OpenChannelError());
 
         RMIRequest<Integer> request = client.getClient().getPort(null).createRequest(
@@ -901,7 +903,7 @@ public class RMIChannelTest {
         RMIRequest<Integer> channelRequest = channel.createRequest(
             RMIOperation.valueOf(OpenChannelError.NAME, int.class, "channelMethod"));
         channelRequest.send();
-        assertEquals(channelRequest.getNonBlocking(), null);
+        assertNull(channelRequest.getNonBlocking());
         request.send();
         try {
             request.getBlocking();
@@ -968,7 +970,7 @@ public class RMIChannelTest {
 
     @Test
     public void testOpenChannelForOneWayRequest() throws InterruptedException {
-        connectDefault(20);
+        connectDefault();
         isOpen = false;
         isStart = true;
         server.getServer().export(new ChannelOneWayServiceImpl(), ChannelService.class);
@@ -992,7 +994,7 @@ public class RMIChannelTest {
     @Ignore("this test fails consistently. fix it or drop it")
     @Test
     public void testChannelRequestCancel() throws InterruptedException {
-        connectDefault(22);
+        connectDefault();
         server.getServer().export(new ChannelRequestCancelCheckerImpl(), ChannelRequestCancelChecker.class);
         RMIOperation<Void> requestOperation = RMIOperation.valueOf(
             ChannelRequestCancelChecker.class, void.class, "process", boolean.class, boolean.class);

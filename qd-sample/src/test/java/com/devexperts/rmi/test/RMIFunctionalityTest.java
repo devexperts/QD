@@ -77,7 +77,7 @@ public class RMIFunctionalityTest {
             .withSide(RMIEndpoint.Side.CLIENT)
             .build();
         client.getClient().setRequestRunningTimeout(20000); // to make sure tests don't run forever
-        this.channelLogic = new ChannelLogic(type, client, server, null);
+        channelLogic = new ChannelLogic(type, client, server, null);
         switch (type) {
         case REGULAR:
             initPortForOneWaySanding = () ->
@@ -120,8 +120,7 @@ public class RMIFunctionalityTest {
     }
 
     private void connectDefault() {
-        int port = NTU.connectServer(server);
-        NTU.connect(client, NTU.localHost(port));
+        NTU.connectPair(server, client);
         try {
             channelLogic.initPorts();
         } catch (InterruptedException e) {
@@ -629,8 +628,7 @@ public class RMIFunctionalityTest {
         CompletingPing impl = new CompletingPing();
         NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(impl, RMICommonTest.Ping.class),
             channelLogic);
-        int port = NTU.connectServer(server);
-        NTU.connect(client, NTU.localHost(port));
+        NTU.connectPair(server, client);
         initPortForOneWaySanding.apply();
         RMIOperation<Void> operation;
         try {
@@ -720,7 +718,7 @@ public class RMIFunctionalityTest {
                 isLarge -> {
                     processingStarted.countDown();
                     String s = isLarge ? "large" : "small";
-                    log.info("generatring " + s + " response ...");
+                    log.info("generating " + s + " response ...");
                     RMITask.current().setCancelListener(
                         task -> log.info(s + " response completed! [" + task.getState() + "]"));
                     byte[] result = new byte[isLarge ? LARGE_SIZE : SMALL_SIZE];
@@ -768,7 +766,7 @@ public class RMIFunctionalityTest {
                 }, LargeRequestProcessor.class),
             channelLogic);
 
-        int speedLimit = LARGE_SIZE * MAX_CONCURRENT_MESSAGES / 2;
+        int speedLimit = LARGE_SIZE * MAX_CONCURRENT_MESSAGES;
         int port = NTU.connectServer(server, "shaped[outLimit=" + speedLimit + "]+");
         NTU.connect(client, "shaped[outLimit=" + speedLimit + "]+" + NTU.localHost(port));
         setSingleThreadExecutorForLargeMethods();
@@ -798,13 +796,11 @@ public class RMIFunctionalityTest {
             for (Iterator<RMIRequest<Integer>> it = requestsToCancel.iterator(); it.hasNext(); ) {
                 RMIRequest<Integer> request = it.next();
                 RMIRequestState state = request.getState();
-                if (state == RMIRequestState.SENT) {
-                    // FIXME: RMIRequestState.SENDING should be ok, but will fail test due to RMI cancellation problems
-                    // with in-transition requests. See QD-1136.
+                if (state == RMIRequestState.SENT || state == RMIRequestState.SENDING) {
                     log.info("Cancelling " + request.getParameters()[0]);
                     request.cancelWithConfirmation();
                     it.remove();
-                } else if (state != RMIRequestState.WAITING_TO_SEND && state != RMIRequestState.SENDING) {
+                } else if (state != RMIRequestState.WAITING_TO_SEND) {
                     fail("Unexpected state " + state + " for request " + request.getParameters()[0]);
                 }
             }
@@ -816,6 +812,7 @@ public class RMIFunctionalityTest {
                 request.getBlocking();
                 fail("Request " + request.getParameters()[0] + " succeeded");
             } catch (RMIException e) {
+                log.info("Cancelled " + request.getParameters()[0] + ": " + e.getType());
                 if (e.getType() != RMIExceptionType.CANCELLED_BEFORE_EXECUTION &&
                     e.getType() != RMIExceptionType.CANCELLED_DURING_EXECUTION)
                 {

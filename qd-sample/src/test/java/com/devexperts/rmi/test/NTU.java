@@ -42,8 +42,11 @@ public class NTU {
 
     private static final Logging log = Logging.getLogging(NTU.class);
 
+    private static final long DEFAULT_CONNECT_TIMEOUT = TimeUnit.MINUTES.toMillis(5);
+
     private NTU() {} // do not create
 
+    @Deprecated
     public static int port(int offset) {
         return PORT_00 + offset;
     }
@@ -68,12 +71,17 @@ public class NTU {
     public static int connectServer(RMIEndpoint endpoint, String prefix, String opts) {
         String name = UUID.randomUUID().toString();
         Promise<Integer> portPromise = ServerSocketTestHelper.createPortPromise(name);
-        String address = (prefix == null ? "" : prefix) + ":0[name=" + name +
-            (opts == null ? "" : "," + opts) + "]";
+        String address = (isEmpty(prefix) ? "" : prefix) + ":0[name=" + name +
+            (isEmpty(opts) ? "" : "," + opts) + "]";
         endpoint.connect(address);
         int localPort = portPromise.await(10_000, TimeUnit.MILLISECONDS);
         waitConnected(((RMIEndpointImpl) endpoint).getQdEndpoint());
         return localPort;
+    }
+
+    static void connectPair(RMIEndpoint server, RMIEndpoint client) {
+        int port = connectServer(server);
+        connect(client, localHost(port));
     }
 
     public static void connect(DXEndpoint endpoint, String address) {
@@ -100,9 +108,17 @@ public class NTU {
             log.info("Waiting for CONNECTED state on " + connector);
             connector.addMessageConnectorListener(c -> LockSupport.unpark(currentThread));
         });
-        while (serverConnectors.stream().anyMatch(connector -> connector.getState() != MessageConnectorState.CONNECTED)) {
+        long deadline = System.currentTimeMillis() + DEFAULT_CONNECT_TIMEOUT;
+        while (serverConnectors.stream().anyMatch(c -> c.getState() != MessageConnectorState.CONNECTED)) {
             // There's some evidence a plain "park" may hang here, so we park with timeout
             LockSupport.parkNanos(100_000_000);
+            if (System.currentTimeMillis() > deadline)
+                throw new RuntimeException("Failed to connect in " + DEFAULT_CONNECT_TIMEOUT + " millis");
         }
     }
+
+    private static boolean isEmpty(String s) {
+        return s == null || s.isEmpty();
+    }
+
 }

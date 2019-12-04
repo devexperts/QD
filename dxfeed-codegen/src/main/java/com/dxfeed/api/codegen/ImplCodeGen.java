@@ -246,10 +246,10 @@ public class ImplCodeGen {
             injectPutEventCode(
                 "if (index < 0)",
                 "\tthrow new IllegalArgumentException(\"Invalid index to publish\");",
-                "if ((event.getEventFlags() & OrderBase.SNAPSHOT_END) != 0 && index != 0)",
-                "\tthrow new IllegalArgumentException(\"SNAPSHOT_END event must have index == 0\");",
-                "if ((event.getEventFlags() & OrderBase.REMOVE_EVENT) == 0 && event.getOrderSide() == Side.UNDEFINED)",
-                "\tthrow new IllegalArgumentException(\"only REMOVE_EVENT event can have side == UNDEFINED\");"
+                "if ((event.getEventFlags() & (OrderBase.SNAPSHOT_END | OrderBase.SNAPSHOT_SNIP)) != 0 && index != 0)",
+                "\tthrow new IllegalArgumentException(\"SNAPSHOT_END and SNAPSHOT_SNIP orders must have index == 0\");",
+                "if (event.getOrderSide() == Side.UNDEFINED && event.hasSize())",
+                "\tthrow new IllegalArgumentException(\"only empty orders can have side == UNDEFINED\");"
             ).
             publishable();
 
@@ -282,10 +282,10 @@ public class ImplCodeGen {
             injectPutEventCode(
                 "if (index < 0)",
                 "\tthrow new IllegalArgumentException(\"Invalid index to publish\");",
-                "if ((event.getEventFlags() & OrderBase.SNAPSHOT_END) != 0 && index != 0)",
-                "\tthrow new IllegalArgumentException(\"SNAPSHOT_END event must have index == 0\");",
-                "if ((event.getEventFlags() & OrderBase.REMOVE_EVENT) == 0 && event.getOrderSide() == Side.UNDEFINED)",
-                "\tthrow new IllegalArgumentException(\"only REMOVE_EVENT event can have side == UNDEFINED\");"
+                "if ((event.getEventFlags() & (OrderBase.SNAPSHOT_END | OrderBase.SNAPSHOT_SNIP)) != 0 && index != 0)",
+                "\tthrow new IllegalArgumentException(\"SNAPSHOT_END and SNAPSHOT_SNIP orders must have index == 0\");",
+                "if (event.getOrderSide() == Side.UNDEFINED && event.hasSize())",
+                "\tthrow new IllegalArgumentException(\"only empty orders can have side == UNDEFINED\");"
             ).
             publishable();
 
@@ -313,10 +313,10 @@ public class ImplCodeGen {
             injectPutEventCode(
                 "if (index < 0)",
                 "\tthrow new IllegalArgumentException(\"Invalid index to publish\");",
-                "if ((event.getEventFlags() & OrderBase.SNAPSHOT_END) != 0 && index != 0)",
-                "\tthrow new IllegalArgumentException(\"SNAPSHOT_END event must have index == 0\");",
-                "if ((event.getEventFlags() & OrderBase.REMOVE_EVENT) == 0 && event.getOrderSide() == Side.UNDEFINED)",
-                "\tthrow new IllegalArgumentException(\"only REMOVE_EVENT event can have side == UNDEFINED\");"
+                "if ((event.getEventFlags() & (OrderBase.SNAPSHOT_END | OrderBase.SNAPSHOT_SNIP)) != 0 && index != 0)",
+                "\tthrow new IllegalArgumentException(\"SNAPSHOT_END and SNAPSHOT_SNIP orders must have index == 0\");",
+                "if (event.getOrderSide() == Side.UNDEFINED && event.hasSize())",
+                "\tthrow new IllegalArgumentException(\"only empty orders can have side == UNDEFINED\");"
             ).
             publishable();
 

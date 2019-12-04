@@ -33,8 +33,10 @@ import com.devexperts.util.SystemProperties;
 class MessageComposer {
     private static final Logging log = Logging.getLogging(MessageComposer.class);
 
-    private static final int MAX_CONCURRENT_RMI_MESSAGES = SystemProperties.getIntProperty("com.devexperts.rmi.maxConcurrentRMIMessages", 6);
-    private static final int DESCRIBE_AHEAD_LIMIT = SystemProperties.getIntProperty("com.devexperts.rmi.describeAheadLimit", 2);
+    private static final int MAX_CONCURRENT_RMI_MESSAGES =
+        SystemProperties.getIntProperty("com.devexperts.rmi.maxConcurrentRMIMessages", 6);
+    private static final int DESCRIBE_AHEAD_LIMIT =
+        SystemProperties.getIntProperty("com.devexperts.rmi.describeAheadLimit", 2);
 
     // ==================== fields ====================
 
@@ -95,49 +97,54 @@ class MessageComposer {
         }
     }
 
-    // @return <tt>true</tt> if the whole message was not processed because the visitor is full
-    //         and <tt>false</tt> if the message was successfully processed.
+    /**
+     * Process messages of specified type
+     *
+     * @return - {@code true} if not all messages was completely processed
+     * <br/> - {@code false} if all messages in the queue was successfully processed.
+     */
     synchronized boolean retrieveRMIMessages(MessageVisitor visitor, RMIQueueType type) {
-        ComposedMessageQueue queue;
-        queue = queues.get(type);
         if (type == RMIQueueType.ADVERTISE && !connection.side.hasServer())
             throw new AssertionError();
-        if (queue.size() == 0 || (supportsMessagePart && queue.size() < MAX_CONCURRENT_RMI_MESSAGES))
+        ComposedMessageQueue queue = queues.get(type);
+        boolean hasCapacity = queue.size() == 0 || (supportsMessagePart && queue.size() < MAX_CONCURRENT_RMI_MESSAGES);
+        if (hasCapacity && hasMoreMessages(type))
             enqueueMessage(type);
-        return retrieveMessageImpl(visitor, queue).visitorFull;
+        MessageQueueState queueState = retrieveMessageImpl(visitor, queue);
+        return queueState.hasMoreWork() || hasMoreMessages(type);
     }
 
     // ==================== private implementation ====================
 
     // @return <tt>VISITOR_FULL</tt> if the whole message was not processed because the visitor is full
     //         and <tt>NO_MORE_MESSAGES</tt> if the message was successfully processed.
-    private MassagesQueueState retrieveMessageImpl(MessageVisitor visitor, ComposedMessageQueue queue) {
+    private MessageQueueState retrieveMessageImpl(MessageVisitor visitor, ComposedMessageQueue queue) {
         ComposedMessage message;
         do {
             message = queue.remove();
             if (message == null)
-                return MassagesQueueState.NO_MORE_MESSAGES;  // no more messages
+                return MessageQueueState.NO_MORE_MESSAGES;  // no more messages
             //RMI_DESCRIBE_OPERATION and RMI_DESCRIBE_SUBJECT are sent before RMI_REQUEST,
             // but avoid starvation -- send just a few, "canSendMessage" will check if relevant ones were sent
             if (message.kind().isRequest()) {
                 for (int i = 0; i < DESCRIBE_AHEAD_LIMIT; i++) {
-                    MassagesQueueState state = retrieveMessageImpl(visitor, queues.get(RMIQueueType.DESCRIBE));
-                    if (state == MassagesQueueState.NO_MORE_MESSAGES)
+                    MessageQueueState state = retrieveMessageImpl(visitor, queues.get(RMIQueueType.DESCRIBE));
+                    if (state == MessageQueueState.NO_MORE_MESSAGES)
                         break;
-                    if (state == MassagesQueueState.VISITOR_FULL)
+                    if (state == MessageQueueState.VISITOR_FULL)
                         return state;
                 }
             }
         } while (!canSendMessage(message, queue));
 
         if (sendRetrievedMessage(visitor, message, queue))
-            return MassagesQueueState.VISITOR_FULL;
+            return MessageQueueState.VISITOR_FULL;
 
         if (message.isEmpty())
             messageSentCompletely(message);
         else
             queue.addLast(message);
-        return MassagesQueueState.NOT_ALL_SENT;
+        return MessageQueueState.NOT_ALL_SENT;
     }
 
     private void completeMessageImpl(ComposedMessageQueue queue, ComposedMessage message) {
@@ -159,10 +166,7 @@ class MessageComposer {
             queue.addFirst(message);
             return true; // visitor was full... retry it next time
         }
-        if (!message.startedTransmission() && message.kind().isRequest())
-            ((RMIRequestImpl<?>) message.getObject()).setSendingState(connection);
         message.chunkTransmitted();
-
         return false;
     }
 
@@ -170,21 +174,26 @@ class MessageComposer {
         RMIMessageKind type = message.kind();
         if (!type.isRequest())
             return true; // only for requests can abort or wait to be sent
-        if (message.startedTransmission())
-            return true; // always continue if started
         RMIRequestImpl<?> request = (RMIRequestImpl<?>) message.getObject();
         // check request timeout
-        if (request.getRequestMessage().getRequestType() == RMIRequestType.DEFAULT) {
+        if (!message.startedTransmission() && request.getRequestMessage().getRequestType() == RMIRequestType.DEFAULT) {
             if (!request.isNestedRequest() && System.currentTimeMillis() - request.getSendTime() >
                 connection.endpoint.getClient().getRequestSendingTimeout())
             {
                 request.setFailedState(RMIExceptionType.REQUEST_SENDING_TIMEOUT, null);
             }
-            if (request.getState() != RMIRequestState.WAITING_TO_SEND) {
+            if (request.getState() != RMIRequestState.SENDING) {
                 if (abortRequest(message))
                     return false;
             }
         }
+        // handle cancelled requests
+        if (request.getState() == RMIRequestState.CANCELLING || request.getState() == RMIRequestState.FAILED) {
+            if (abortRequest(message))
+                return false;
+        }
+        if (message.startedTransmission())
+            return true; // always continue if started
         // check that subject and operation were described
         if (subjects.hasOutgoingSubject(request.getMarshalledSubject()) ||
             operations.hasOutgoingOperation(request.getOperation()))
@@ -233,8 +242,8 @@ class MessageComposer {
         try {
             RMIRequestMessage<?> requestMessage = request.getRequestMessage();
             JVMId.WriteContext ctx = new JVMId.WriteContext();
-            ComposedMessage message = ComposedMessage.allocateComposedMessage(MessageType.RMI_REQUEST,
-                request.getKind(), request);
+            ComposedMessage message =
+                ComposedMessage.allocateComposedMessage(MessageType.RMI_REQUEST, request.getKind(), request);
             message.output().writeCompactLong(request.getId());
             message.output().writeCompactInt(message.kind().getId());
             if (message.kind().hasChannel())
@@ -251,10 +260,12 @@ class MessageComposer {
         }
     }
 
-    private void composeComboResponse(RMIResponseMessage responseMessage, long channelId, long requestId, RMIMessageKind kind) {
+    private void composeComboResponse(RMIResponseMessage responseMessage, long channelId, long requestId,
+        RMIMessageKind kind)
+    {
         try {
-            ComposedMessage message = ComposedMessage.allocateComposedMessage(
-                MessageType.RMI_RESPONSE, kind, responseMessage);
+            ComposedMessage message =
+                ComposedMessage.allocateComposedMessage(MessageType.RMI_RESPONSE, kind, responseMessage);
             message.output().writeCompactLong(requestId);
             message.output().writeCompactInt(kind.getId());
             if (kind.hasChannel())
@@ -345,7 +356,8 @@ class MessageComposer {
 
     private void composeOldResponse(RMITaskResponse taskResponse, MessageType messageType) {
         try {
-            RMIMessageKind kind = taskResponse.state == RMITaskState.SUCCEEDED ? RMIMessageKind.SUCCESS_RESPONSE : RMIMessageKind.ERROR_RESPONSE;
+            RMIMessageKind kind = taskResponse.state == RMITaskState.SUCCEEDED ? RMIMessageKind.SUCCESS_RESPONSE :
+                RMIMessageKind.ERROR_RESPONSE;
             ComposedMessage message = ComposedMessage.allocateComposedMessage(messageType, kind, taskResponse);
             message.output().writeCompactLong(taskResponse.requestId);
             message.output().writeMarshalled(taskResponse.responseMessage.getMarshalledResult());
@@ -362,17 +374,27 @@ class MessageComposer {
     private void enqueueMessage(RMIQueueType type) {
         switch (type) {
         case REQUEST:
-            if (connection.requestsManager.outgoingRequestSize() > 0 && canEnqueueRequest)
-                enqueueRequest();
+            enqueueRequest();
             break;
         case RESPONSE:
-            if (connection.tasksManager.completedTaskSize() > 0)
-                enqueueResponse();
+            enqueueResponse();
             break;
         case ADVERTISE:
-            if (connection.side.hasServer() && connection.serverDescriptorsManager.descriptorsSize() > 0)
-                enqueueAdvertise();
+            enqueueAdvertise();
             break;
+        }
+    }
+
+    private boolean hasMoreMessages(RMIQueueType type) {
+        switch (type) {
+        case REQUEST:
+            return  (canEnqueueRequest && connection.requestsManager.outgoingRequestSize() > 0);
+        case RESPONSE:
+            return  (connection.tasksManager.completedTaskSize() > 0);
+        case ADVERTISE:
+            return  (connection.side.hasServer() && connection.serverDescriptorsManager.descriptorsSize() > 0);
+        default:
+            return false;
         }
     }
 
@@ -384,7 +406,7 @@ class MessageComposer {
             log.trace("Compose request " + request + " at " + connection);
         if (request.isCancelRequest() && !supportsComboResponse)
             composeOldCancel(request);
-        if (request.getState() != RMIRequestState.WAITING_TO_SEND) {
+        if (!request.setSendingState(connection)) {
             request.setFailedState(RMIExceptionType.CANCELLED_BEFORE_EXECUTION, null);
             return;
         }
@@ -406,10 +428,12 @@ class MessageComposer {
             log.trace("Compose response " + taskResponse + " at " + connection);
         RMIResponseMessage message = taskResponse.responseMessage;
         RMIMessageKind kind = taskResponse.kind;
-        if (supportsComboResponse)
+        if (supportsComboResponse) {
             composeComboResponse(taskResponse.responseMessage, taskResponse.channelId, taskResponse.requestId, kind);
-        else
-            composeOldResponse(taskResponse, message.getType() == RMIResponseType.SUCCESS ? MessageType.RMI_RESULT : MessageType.RMI_ERROR);
+        } else {
+            composeOldResponse(taskResponse,
+                message.getType() == RMIResponseType.SUCCESS ? MessageType.RMI_RESULT : MessageType.RMI_ERROR);
+        }
     }
 
     private void enqueueAdvertise() {
@@ -421,15 +445,19 @@ class MessageComposer {
 
     // ==================== private inner/nested classes ====================
 
-    private enum MassagesQueueState {
+    private enum MessageQueueState {
         VISITOR_FULL(true),
         NO_MORE_MESSAGES(false),
         NOT_ALL_SENT(true);
 
-        private boolean visitorFull;
+        public boolean hasMoreWork() {
+            return hasMoreWork;
+        }
 
-        MassagesQueueState(boolean visitorFull) {
-            this.visitorFull = visitorFull;
+        private boolean hasMoreWork;
+
+        MessageQueueState(boolean hasMoreWork) {
+            this.hasMoreWork = hasMoreWork;
         }
     }
 
@@ -444,7 +472,8 @@ class MessageComposer {
                 @Override
                 protected boolean removeEldestEntry(Map.Entry<Marshalled<?>, Integer> eldest) {
                     int subjectLimit = connection.endpoint.side.hasClient() ?
-                        connection.endpoint.getClient().getStoredSubjectsLimit() : RMIClient.DEFAULT_STORED_SUBJECTS_LIMIT;
+                        connection.endpoint.getClient().getStoredSubjectsLimit() :
+                        RMIClient.DEFAULT_STORED_SUBJECTS_LIMIT;
                     boolean remove = size() > subjectLimit;
                     if (remove)
                         freeIds.add(eldest.getValue());
@@ -453,7 +482,6 @@ class MessageComposer {
             };
         }
 
-        @SuppressWarnings("unchecked")
         Integer getOrComposeSubject(RMIRequestImpl<?> request) {
             Marshalled<?> marshalledSubject = request.getMarshalledSubject();
             if (marshalledSubject == Marshalled.NULL)

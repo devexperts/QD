@@ -566,8 +566,11 @@ public class FileReader implements MessageReader {
                 return;
         }
         if (shallProcessMessage()) {
-            if (heartbeatPayload.hasTimeMillis()) // remember that we've processed this heartbeat timestamp
+            if (heartbeatPayload.hasTimeMillis()) {
+                // remember that we've processed this heartbeat timestamp
                 this.heartbeatPayload.setTimeMillis(heartbeatPayload.getTimeMillis());
+                parser.setEventTimeSequence(TimeSequenceUtil.getTimeSequenceFromTimeMillis(heartbeatPayload.getTimeMillis()));
+            }
             adapter.processHeartbeat(heartbeatPayload);
         }
     }
@@ -711,7 +714,8 @@ public class FileReader implements MessageReader {
 
     private void configureParser() {
         parser.setInput(input); // parse everything from input by default
-        parser.setReadEventTimeSequence(timestampsType == null || timestampsType == TimestampsType.FIELD); // when autodetect or explicitly set
+        parser.setReadEventTimeSequence(timestampsType != TimestampsType.NONE);
+        parser.setEventTimeSequence(0);
         parser.readAs(params.getReadAs());
         parser.setStats(stats);
         configureFieldReplacers();

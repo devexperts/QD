@@ -116,13 +116,15 @@ public class RMIAsynchronousFunctionalityTest {
         ThreadCleanCheck.after();
     }
 
-    private void connectDefault(boolean initPorts, int... ports) throws InterruptedException {
-        NTU.connect(server, ":" + NTU.port(ports[0]));
-        NTU.connect(client, NTU.LOCAL_HOST + ":" + NTU.port(ports[0]));
-        if (ports.length == 2) {
-            NTU.connect(remoteEndpoint, ":" + NTU.port(ports[1]));
-            NTU.connect(privateEndpoint, NTU.LOCAL_HOST + ":" + NTU.port(ports[1]));
-        }
+    private void connectDefault(boolean initPorts) throws InterruptedException {
+        NTU.connectPair(server, client);
+        if (initPorts)
+            channelLogic.initPorts();
+    }
+
+    private void connectWithForwarding(boolean initPorts) throws InterruptedException {
+        NTU.connectPair(server, client);
+        NTU.connectPair(remoteEndpoint, privateEndpoint);
         if (initPorts)
             channelLogic.initPorts();
     }
@@ -132,7 +134,7 @@ public class RMIAsynchronousFunctionalityTest {
         startTime = System.currentTimeMillis();
         RMIAsynchronousTest.CancellationCount service = RMIAsynchronousTest.CancellationCount.INSTANCE;
         NTU.exportServices(server.getServer(), service, channelLogic);
-        connectDefault(true, 63);
+        connectDefault(true);
         Thread.sleep(100);
         service.update();
         RMIAsynchronousTest.callForward(channelLogic.clientPort, service, startTime);
@@ -146,10 +148,11 @@ public class RMIAsynchronousFunctionalityTest {
         channelLogic.setForward(true);
         startTime = System.currentTimeMillis();
         server.getServer().export(privateEndpoint.getClient().getService("*"));
-        connectDefault(true, 66, 67);
+        connectWithForwarding(true);
         client.getClient().setRequestSendingTimeout(100);
 
-        RMIRequest<Void> req1 = channelLogic.clientPort.createRequest(RMIAsynchronousTest.CancellationCount.factCancellation, 2.2);
+        RMIRequest<Void> req1 =
+            channelLogic.clientPort.createRequest(RMIAsynchronousTest.CancellationCount.factCancellation, 2.2);
         req1.send();
         try {
             req1.getBlocking();
@@ -166,7 +169,8 @@ public class RMIAsynchronousFunctionalityTest {
     // --------------------------------------------------
 
     private static final String SERVICE_NAME = "infiniteLoop";
-    private static final RMIOperation<Void> DISCONNECT_OP = RMIOperation.valueOf(SERVICE_NAME, void.class, "DISCONNECT_OP", int.class);
+    private static final RMIOperation<Void> DISCONNECT_OP =
+        RMIOperation.valueOf(SERVICE_NAME, void.class, "DISCONNECT_OP", int.class);
 
 
     private RMIService<?> infiniteLoop = new RMIService<Object>(SERVICE_NAME) {
@@ -199,7 +203,7 @@ public class RMIAsynchronousFunctionalityTest {
             ", privateClient=" + privateEndpoint.getEndpointId() + ", remoteServer=" + remoteEndpoint.getEndpointId());
         server.getServer().export(privateEndpoint.getClient().getService("*"));
         NTU.exportServices(remoteEndpoint.getServer(), infiniteLoop, channelLogic);
-        connectDefault(true, 68, 69);
+        connectWithForwarding(true);
         log.info(" * * * ------------------------------------ * * * ");
         Thread.sleep(100);
 
@@ -217,9 +221,7 @@ public class RMIAsynchronousFunctionalityTest {
                 if (e.getType() != RMIExceptionType.DISCONNECTION)
                     fail(e.getMessage());
             }
-
         }
-
 
         server.disconnect();
         client.disconnect();
@@ -234,9 +236,11 @@ public class RMIAsynchronousFunctionalityTest {
     @Test
     public void testCurrentRMITask() throws InterruptedException {
         startTime = System.currentTimeMillis();
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation(new RMIAsynchronousTest.SummatorImpl(), RMICommonTest.Summator.class), channelLogic);
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation(new RMIAsynchronousTest.SummatorImpl(), RMICommonTest.Summator.class),
+            channelLogic);
         NTU.exportServices(server.getServer(), DifferentServices.SOME_SERVICE, channelLogic);
-        connectDefault(true, 70);
+        connectDefault(true);
 
         RMICommonTest.Summator summator = channelLogic.clientPort.getProxy(RMICommonTest.Summator.class);
         try {
@@ -294,7 +298,7 @@ public class RMIAsynchronousFunctionalityTest {
         startTime = System.currentTimeMillis();
         ResultAfterCancellationService service = new ResultAfterCancellationService();
         NTU.exportServices(server.getServer(), service, channelLogic);
-        connectDefault(true, 72);
+        connectDefault(true);
         RMIRequest<Long> req = channelLogic.clientPort.createRequest(ResultAfterCancellationService.OP);
         req.send();
         try {
@@ -318,7 +322,8 @@ public class RMIAsynchronousFunctionalityTest {
     private static class CalculatorWithWaitService extends RMIService<Double> {
 
         RMIService<Double> calculatorService = new DifferentServices.CalculatorService();
-        private static final RMIOperation<Void> ERROR = RMIOperation.valueOf(DifferentServices.CALCULATOR_SERVICE.getServiceName(), void.class, "ERROR");
+        private static final RMIOperation<Void> ERROR =
+            RMIOperation.valueOf(DifferentServices.CALCULATOR_SERVICE.getServiceName(), void.class, "ERROR");
         private static volatile CountDownLatch start = new CountDownLatch(1);
         private static volatile long taskDuration = 0;
 
@@ -362,7 +367,7 @@ public class RMIAsynchronousFunctionalityTest {
     public void testRequestPromise() throws InterruptedException {
         startTime = System.currentTimeMillis();
         NTU.exportServices(server.getServer(), new CalculatorWithWaitService(), channelLogic);
-        connectDefault(true, 76);
+        connectDefault(true);
         RMIRequest<Double> sum;
         PromiseHandlerTest promiseHandler;
         sum = channelLogic.clientPort.createRequest(DifferentServices.CalculatorService.PLUS, 35.6, 42.4);
@@ -530,8 +535,9 @@ public class RMIAsynchronousFunctionalityTest {
 
     @Test
     public void testReturnedPromise() throws InterruptedException {
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new SumWithPromiseImpl(), SumWithPromise.class), channelLogic);
-        connectDefault(true, 78);
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation<>(new SumWithPromiseImpl(), SumWithPromise.class), channelLogic);
+        connectDefault(true);
         SumWithPromise impl = channelLogic.clientPort.getProxy(SumWithPromise.class);
         assertEquals((int) impl.sum(100, 254).await(10, TimeUnit.SECONDS), 354);
 
@@ -556,10 +562,11 @@ public class RMIAsynchronousFunctionalityTest {
     public void testOneWaySending() throws InterruptedException {
         channelLogic.setForward(true);
         RMIFunctionalityTest.CompletingPing pingService = new RMIFunctionalityTest.CompletingPing();
-        NTU.exportServices(remoteEndpoint.getServer(), new RMIServiceImplementation<>(pingService, RMICommonTest.Ping.class), channelLogic);
+        NTU.exportServices(remoteEndpoint.getServer(),
+            new RMIServiceImplementation<>(pingService, RMICommonTest.Ping.class), channelLogic);
         server.getServer().export(privateEndpoint.getClient().getService("*"));
 
-        connectDefault(false, 93, 95);
+        connectWithForwarding(false);
         initPortForOneWaySanding.apply();
         RMIOperation<Void> operation;
         try {
@@ -568,7 +575,8 @@ public class RMIAsynchronousFunctionalityTest {
             fail(e.getMessage());
             return;
         }
-        RMIRequest<Void> request = channelLogic.clientPort.createRequest(new RMIRequestMessage<>(RMIRequestType.ONE_WAY, operation));
+        RMIRequest<Void> request =
+            channelLogic.clientPort.createRequest(new RMIRequestMessage<>(RMIRequestType.ONE_WAY, operation));
         request.send();
         pingService.waitForCompletion();
 

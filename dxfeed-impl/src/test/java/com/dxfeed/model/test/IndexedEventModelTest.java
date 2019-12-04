@@ -11,15 +11,21 @@
  */
 package com.dxfeed.model.test;
 
-import java.util.*;
-
 import com.devexperts.test.ThreadCleanCheck;
-import com.dxfeed.api.*;
+import com.dxfeed.api.DXEndpoint;
+import com.dxfeed.api.DXFeed;
+import com.dxfeed.api.DXPublisher;
 import com.dxfeed.event.IndexedEvent;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.Side;
 import com.dxfeed.model.IndexedEventModel;
 import junit.framework.TestCase;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
 
 /**
  * Unit test for {@link IndexedEventModel} class.
@@ -81,6 +87,164 @@ public class IndexedEventModelTest extends TestCase {
         process();
         checkChanged(true);
         checkSize(0);
+    }
+
+    public void testEventListIterator() {
+        checkSize(0);
+        assertFalse(indexedOrders.getEventsList().iterator().hasNext());
+
+        publish(1, 12.34, 0);
+        publish(2, 56.78, 0);
+        process();
+        checkChanged(true);
+        checkSize(2);
+        check(0, 1, 12.34);
+        check(1, 2, 56.78);
+
+        Iterator<Order> it = indexedOrders.getEventsList().iterator();
+        assertTrue(it.hasNext());
+        checkOrder(it.next(), 1, 12.34);
+        assertTrue(it.hasNext());
+        checkOrder(it.next(), 2, 56.78);
+        assertFalse(it.hasNext());
+
+        publish(1, 12.34, IndexedEvent.REMOVE_EVENT);
+        publish(2, 56.78, IndexedEvent.REMOVE_EVENT);
+        process();
+        checkChanged(true);
+        checkSize(0);
+        assertFalse(indexedOrders.getEventsList().iterator().hasNext());
+    }
+
+    public void testListIterator() {
+        checkSize(0);
+        assertFalse(indexedOrders.getEventsList().listIterator().hasNext());
+        assertFalse(indexedOrders.getEventsList().listIterator().hasPrevious());
+
+        publish(1, 12.34, 0);
+        publish(2, 56.78, 0);
+        process();
+        checkChanged(true);
+        checkSize(2);
+        check(0, 1, 12.34);
+        check(1, 2, 56.78);
+
+        // iterate from start to end
+        ListIterator<Order> it = indexedOrders.getEventsList().listIterator();
+        assertTrue(it.hasNext());
+        checkOrder(it.next(), 1, 12.34);
+        assertTrue(it.hasNext());
+        checkOrder(it.next(), 2, 56.78);
+        assertFalse(it.hasNext());
+        // ... and back to the start point
+        assertTrue(it.hasPrevious());
+        checkOrder(it.previous(), 2, 56.78);
+        assertTrue(it.hasPrevious());
+        checkOrder(it.previous(), 1, 12.34);
+        assertFalse(it.hasPrevious());
+
+        publish(1, 12.34, IndexedEvent.REMOVE_EVENT);
+        publish(2, 56.78, IndexedEvent.REMOVE_EVENT);
+        process();
+        checkChanged(true);
+        checkSize(0);
+        assertFalse(indexedOrders.getEventsList().listIterator().hasNext());
+        assertFalse(indexedOrders.getEventsList().listIterator().hasPrevious());
+    }
+
+    public void testListIteratorWithIndex() {
+        checkSize(0);
+        assertFalse(indexedOrders.getEventsList().listIterator(0).hasNext());
+        assertFalse(indexedOrders.getEventsList().listIterator(0).hasPrevious());
+
+        publish(1, 12.34, 0);
+        publish(2, 56.78, 0);
+        process();
+        checkChanged(true);
+        checkSize(2);
+        check(0, 1, 12.34);
+        check(1, 2, 56.78);
+
+        // iterate from start
+        ListIterator<Order> it = indexedOrders.getEventsList().listIterator(0);
+        assertTrue(it.hasNext());
+        checkOrder(it.next(), 1, 12.34);
+        // ... from middle
+        it = indexedOrders.getEventsList().listIterator(1);
+        assertTrue(it.hasNext());
+        assertTrue(it.hasPrevious());
+        checkOrder(it.next(), 2, 56.78);
+        assertFalse(it.hasNext());
+        // ...from end
+        it = indexedOrders.getEventsList().listIterator(2);
+        assertTrue(it.hasPrevious());
+        checkOrder(it.previous(), 2, 56.78);
+        /// ... from middle backwards
+        it = indexedOrders.getEventsList().listIterator(1);
+        assertTrue(it.hasPrevious());
+        checkOrder(it.previous(), 1, 12.34);
+        assertFalse(it.hasPrevious());
+
+        publish(1, 12.34, IndexedEvent.REMOVE_EVENT);
+        publish(2, 56.78, IndexedEvent.REMOVE_EVENT);
+        process();
+        checkChanged(true);
+        checkSize(0);
+        assertFalse(indexedOrders.getEventsList().listIterator(0).hasNext());
+        assertFalse(indexedOrders.getEventsList().listIterator(0).hasPrevious());
+    }
+
+    public void testCloseEmpty() {
+        checkSize(0);
+        indexedOrders.close();
+    }
+
+    public void testCloseEmptyAfterWork() {
+        checkSize(0);
+        // get a couple of orders
+        publish(1, 12.34, 0);
+        publish(2, 56.78, 0);
+        process();
+        checkChanged(true);
+        checkSize(2);
+        // ... then remove them
+        publish(1, 12.34, IndexedEvent.REMOVE_EVENT);
+        publish(2, 56.78, IndexedEvent.REMOVE_EVENT);
+        process();
+        checkChanged(true);
+        checkSize(0);
+
+        indexedOrders.close();
+    }
+
+    public void testCloseNonEmpty() {
+        checkSize(0);
+        // get a couple of orders
+        publish(1, 12.34, 0);
+        publish(2, 56.78, 0);
+        process();
+        checkChanged(true);
+        checkSize(2);
+
+        indexedOrders.close();
+    }
+
+    public void testCloseAbruptly() {
+        checkSize(0);
+        // get a couple of orders
+        publish(1, 12.34, 0);
+        process();
+
+        Iterator<Order> it = indexedOrders.getEventsList().iterator();
+
+        indexedOrders.close();
+
+        // emulate stale events processing
+        publish(2, 56.78, 0);
+        process();
+
+        checkOrder(it.next(), 1, 12.34);
+        assertFalse(it.hasNext());
     }
 
     // Add two orders snapshot
@@ -147,13 +311,18 @@ public class IndexedEventModelTest extends TestCase {
         int n = 100;
         for (int i = 0; i < n; i++) {
             int index = n - i - 1;
-            publish(index, index * 100.0, i == 0 ? IndexedEvent.SNAPSHOT_BEGIN : i == n - 1 ? IndexedEvent.SNAPSHOT_END : 0);
+            publish(
+                index,
+                index * 100.0,
+                i == 0 ? IndexedEvent.SNAPSHOT_BEGIN : i == n - 1 ? IndexedEvent.SNAPSHOT_END : 0
+            );
         }
         process();
         checkChanged(true);
         checkSize(n);
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < n; i++) {
             check(i, i, i * 100.0);
+        }
     }
 
     private void publish(int index, double price, int eventFlags) {
@@ -177,14 +346,19 @@ public class IndexedEventModelTest extends TestCase {
 
     private void check(int i, int index, double price) {
         Order order = indexedOrders.getEventsList().get(i);
+        checkOrder(order, index, price);
+    }
+
+    private void checkOrder(Order order, int index, double price) {
         assertEquals("symbol", SYMBOL, order.getEventSymbol());
         assertEquals("index", index, order.getIndex());
         assertEquals("price", price, order.getPrice());
     }
 
     private void process() {
-        for (Runnable runnable : executionQueue)
+        for (Runnable runnable : executionQueue) {
             runnable.run();
+        }
         executionQueue.clear();
     }
 }

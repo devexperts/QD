@@ -251,11 +251,11 @@ public class RMICustomBalancingViaMuxTest extends AbstractRMICustomBalancingTest
         disableDefaultBalancing();
         muxes = new MuxRoutingSide(1);
 
-        int[] serverPorts = Ports.findAvailablePort(3);
-        servers.connect(":" + serverPorts[0], ":" + serverPorts[1]);
-        muxes.connectClients("(" + NTU.LOCAL_HOST + ":" + serverPorts[0] + ")(" + NTU.LOCAL_HOST + ":" + serverPorts[1] + ")");
-        muxes.connectServers(":" + serverPorts[2] + "[advertise=none]");
-        clients.connect(NTU.LOCAL_HOST + ":" + serverPorts[2]);
+        int[] serverPorts = servers.connectAuto();
+        muxes.connectClients("(" + NTU.localHost(serverPorts[0]) + ")(" + NTU.localHost(serverPorts[1]) + ")");
+
+        int[] muxPorts = muxes.connectServersAuto("advertise=none");
+        clients.connect(NTU.localHost(muxPorts[0]));
 
         serviceImpl0 = new DifferentServices.CalculatorService();
         servers.export(0, serviceImpl0);

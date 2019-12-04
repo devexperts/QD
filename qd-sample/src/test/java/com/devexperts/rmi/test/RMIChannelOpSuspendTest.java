@@ -66,7 +66,7 @@ public class RMIChannelOpSuspendTest {
     }
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         ThreadCleanCheck.before();
         server = RMIEndpoint.createEndpoint(RMIEndpoint.Side.SERVER);
         client = RMIEndpoint.createEndpoint(RMIEndpoint.Side.CLIENT);
@@ -74,12 +74,11 @@ public class RMIChannelOpSuspendTest {
         server.getServer().setDefaultExecutor(executor);
         server.getServer().export(serviceImpl, Service.class);
         serviceProxy = client.getClient().getProxy(Service.class);
-        NTU.connect(server, ":" + NTU.port(39));
-        NTU.connect(client, NTU.LOCAL_HOST + ":" + NTU.port(39));
+        NTU.connectPair(server, client);
     }
 
     @Test
-    public void testChannelOpSuspend() throws InterruptedException {
+    public void testChannelOpSuspend() {
         Promise<String> goPromise = serviceProxy.go();
         RMIRequest<String> goRequest = RMIRequest.of(goPromise);
         ServiceChannel serviceChannelProxy = goRequest.getChannel().getProxy(ServiceChannel.class);
@@ -92,7 +91,7 @@ public class RMIChannelOpSuspendTest {
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         client.close();
         server.close();
         executor.shutdown();
@@ -118,8 +117,7 @@ public class RMIChannelOpSuspendTest {
         @Override
         public Promise<String> go() {
             log.info("ServiceImpl.go");
-            RMIContinuation<String> goContinuation = RMITask.current(String.class).suspend(RMITask::cancel);
-            serviceChannelImpl.goContinuation = goContinuation;
+            serviceChannelImpl.goContinuation = RMITask.current(String.class).suspend(RMITask::cancel);
             return null;
         }
     }

@@ -19,12 +19,15 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.devexperts.auth.AuthSession;
 import com.devexperts.auth.AuthToken;
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.qtp.MessageAdapterConnectionFactory;
 import com.devexperts.qd.qtp.auth.*;
+import com.devexperts.qd.qtp.socket.ServerSocketTestHelper;
 import com.devexperts.rmi.*;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
 import com.devexperts.rmi.test.NTU;
@@ -49,8 +52,6 @@ public class AuthorizationTest {
 
     private static final AuthToken BAD_USER = AuthToken.createBasicToken("Petr", "123456");
     private static final AuthToken GOOD_USER = AuthToken.createBasicToken("Ivan", "ivan");
-
-    private static final int AUTH_PORT = NTU.PORT_00 + 90;
 
     private DXPublisher publisher;
 
@@ -80,9 +81,6 @@ public class AuthorizationTest {
 
     private SimpleAuthServer serverAuth;
 
-    private volatile boolean toolOk = true;
-
-
     private CountDownLatch recordsLatch = new CountDownLatch(COUNT);
     private CountDownLatch receiveQuote = new CountDownLatch(1);
 
@@ -101,15 +99,13 @@ public class AuthorizationTest {
             .build();
     }
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         System.out.println(" -- 1 -- ");
         client.close();
         System.out.println(" -- 2 -- ");
         server.close();
         System.out.println(" -- 3 -- ");
-
         dxClientEndpoint.close();
         System.out.println(" -- 4 -- ");
         dxServerEndpoint.close();
@@ -118,17 +114,14 @@ public class AuthorizationTest {
             serverAuth.close();
         System.out.println(" -- 6 -- ");
         FILE.deleteOnExit();
-        assertTrue(toolOk);
         ThreadCleanCheck.after();
     }
 
     @Test
     public void testAuth() throws Exception {
-        String serverAddress = ":" + NTU.port(0) +
-            "[auth=" + GOOD_USER.getUser() + ":" + GOOD_USER.getPassword() + "]";
-        initServer(serverAddress);
-        String clientAddress = NTU.LOCAL_HOST + ":" + NTU.port(0) +
-            "[user=" + GOOD_USER.getUser() + ",password=" + GOOD_USER.getPassword() + "]";
+        String serverAddress = initServerSimple("auth=" + GOOD_USER.getUser() + ":" + GOOD_USER.getPassword());
+        String clientAddress =
+            serverAddress + "[user=" + GOOD_USER.getUser() + ",password=" + GOOD_USER.getPassword() + "]";
         initClient(clientAddress, "IBM");
         startUpdateQuotes(true, true, COUNT, new Quote("IBM"));
         if (!recordsLatch.await(10, TimeUnit.SECONDS)) {
@@ -139,11 +132,9 @@ public class AuthorizationTest {
 
     @Test
     public void testBadAuth() throws Exception {
-        String serverAddress = ":" + NTU.port(10) +
-            "[auth=" + GOOD_USER.getUser() + ":" + GOOD_USER.getPassword() + "]";
-        initServer(serverAddress);
-        String clientAddress = NTU.LOCAL_HOST + ":" + NTU.port(10) +
-            "[user=" + BAD_USER.getUser() + ",password=" + BAD_USER.getPassword() + "]";
+        String serverAddress = initServerSimple("auth=" + GOOD_USER.getUser() + ":" + GOOD_USER.getPassword());
+        String clientAddress =
+            serverAddress + "[user=" + BAD_USER.getUser() + ",password=" + BAD_USER.getPassword() + "]";
         initClient(clientAddress, "IBM");
         startUpdateQuotes(false, false, COUNT, new Quote("IBM"));
         Thread.sleep(2000);
@@ -152,20 +143,18 @@ public class AuthorizationTest {
 
     @Test
     public void testCustomAuth() throws InterruptedException {
-        serverAuth = new SimpleAuthServer(":" + AUTH_PORT, serverSubject, BAD_USER, GOOD_USER);
-        String serverAddress = ":" + NTU.port(20) +
-            "[auth=" + AuthFactory.PREFIX + ":" + NTU.LOCAL_HOST + ":" + AUTH_PORT + ";" + serverSubject + "]";
-        initServer(serverAddress);
-        String clientAddress = "(" + NTU.LOCAL_HOST + ":" + NTU.port(20) +
+        serverAuth = new SimpleAuthServer(serverSubject, BAD_USER, GOOD_USER);
+        String serverAddress = initServerSimple("auth=" + AuthFactory.PREFIX + ":" + serverAuth.getAddress() + ";" + serverSubject);
+        String clientAddress = "(" + serverAddress +
             "[login=" + LoginFactory.PREFIX + ":" + BAD_USER + ";" + GOOD_USER + ";" + ERROR_LOGIN_COUNT + "])" +
-            "(" + NTU.LOCAL_HOST + ":" + AUTH_PORT + ")";
+            "(" + serverAuth.getAddress() + ")";
         initClient(clientAddress, "IBM");
         startUpdateQuotes(true, true, COUNT, new Quote("IBM"));
         if (!recordsLatch.await(10, TimeUnit.SECONDS)) {
             log.info("" + recordsLatch.getCount());
             fail();
         }
-        assertEquals(serverAuth.getErrorLoginCount(), ERROR_LOGIN_COUNT);
+        assertEquals(ERROR_LOGIN_COUNT, serverAuth.getErrorLoginCount());
     }
 
     @Test
@@ -173,11 +162,20 @@ public class AuthorizationTest {
         receiveQuote = new CountDownLatch(2);
         recordsLatch = new CountDownLatch(20);
         Files.write(FILE.toPath(), Arrays.asList("user2:qwerty:*", "user3:vfr3we:TICKER"), StandardCharsets.UTF_8);
-        String serverAddress = "(:" + NTU.port(30) + "[auth=" + FILE_NAME + "])"
-            + "(:" + NTU.port(31) + "[auth=" + FILE_NAME + "])";
+        String name1 = UUID.randomUUID().toString();
+        String name2 = UUID.randomUUID().toString();
+        //noinspection deprecation
+        Promise<Integer> p1 = ServerSocketTestHelper.createPortPromise(name1);
+        //noinspection deprecation
+        Promise<Integer> p2 = ServerSocketTestHelper.createPortPromise(name2);
+        String serverAddress = "(:0[name=" + name1 + ",auth=" + FILE_NAME + "])" +
+            "(:0[name=" + name2 + ",auth=" + FILE_NAME + "])";
         initServer(serverAddress);
-        String clientAddress = "(" + NTU.LOCAL_HOST + ":" + NTU.port(30) + "[user=user1,password=123456])"
-            + "(" + NTU.LOCAL_HOST + ":" + NTU.port(31) + "[login=user3:vfr3we])";
+        int port1 = p1.await(10, TimeUnit.SECONDS);
+        int port2 = p2.await(10, TimeUnit.SECONDS);
+
+        String clientAddress = "(" + NTU.localHost(port1) + "[user=user1,password=123456])" +
+            "(" + NTU.localHost(port2) + "[login=user3:vfr3we])";
         initClient(clientAddress, "IBM", "YAHOO");
         startUpdateQuotes(true, true, 2 * COUNT, new Quote("IBM"), new Quote("YAHOO"));
         if (recordsLatch.await(20, TimeUnit.SECONDS)) {
@@ -189,8 +187,6 @@ public class AuthorizationTest {
 
     @Test
     public void testAll() throws Exception {
-        log.info("AUTH_PORT = " + AUTH_PORT);
-        log.info("DATA_PORT = " + NTU.PORT_00);
         globalUsersCount = 4;
         RMIEndpoint serverAuth = RMIEndpoint.newBuilder()
             .withName("AUTH SERVER")
@@ -205,28 +201,39 @@ public class AuthorizationTest {
             .withSide(RMIEndpoint.Side.CLIENT)
             .build();
         serverAuth.getServer().export(new FixedUsersAuthServiceImpl(globalUsersCount), FixedUsersAuthService.class);
-        NTU.connect(serverAuth, ":" + (AUTH_PORT + 1));
+
+        String authAddress = NTU.localHost(NTU.connectServer(serverAuth));
         log.info("first part");
-        Files.write(FILE.toPath(), Arrays.asList("user1:123456", "user2:qwerty:*", "user3:vfr3we:TICKER"), StandardCharsets.UTF_8);
-        String serverAddress = "(:" + NTU.port(40) +
-            "[auth=" + FixedUsersAuthRealmFactory.PREFIX + ":" + NTU.LOCAL_HOST + ":" + (AUTH_PORT + 1) + "])"
-            + "(:" + NTU.port(41) +
-            "[auth=" + FixedUsersAuthRealmFactory.PREFIX + ":" + NTU.LOCAL_HOST + ":" + (AUTH_PORT + 1) + "])"
-            + "(:" + NTU.port(42) +
-            "[auth=" + FixedUsersAuthRealmFactory.PREFIX + ":" + NTU.LOCAL_HOST + ":" + (AUTH_PORT + 1) + "])"
-            + "(:" + NTU.port(43) +
-            "[auth=" + FixedUsersAuthRealmFactory.PREFIX + ":" + NTU.LOCAL_HOST + ":" + (AUTH_PORT + 1) + "])"
-            + "(:" + NTU.port(44) + "[auth=" + FILE_NAME + "])"
-            + "(:" + NTU.port(45) + "[auth=" + FILE_NAME + "])";
+        Files.write(FILE.toPath(), Arrays.asList("user1:123456", "user2:qwerty:*", "user3:vfr3we:TICKER"),
+            StandardCharsets.UTF_8);
+
+        String[] names = Stream.generate(() -> UUID.randomUUID().toString()).limit(6).toArray(String[]::new);
+
+        List<Promise<Integer>> promises =
+            Arrays.stream(names).map(ServerSocketTestHelper::createPortPromise).collect(Collectors.toList());
+
+        String serverAddress =
+            "(:0[name=" + names[0] + ",auth=" + FixedUsersAuthRealmFactory.PREFIX + ":" + authAddress + "])" +
+            "(:0[name=" + names[1] + ",auth=" + FixedUsersAuthRealmFactory.PREFIX + ":" + authAddress + "])" +
+            "(:0[name=" + names[2] + ",auth=" + FixedUsersAuthRealmFactory.PREFIX + ":" + authAddress + "])" +
+            "(:0[name=" + names[3] + ",auth=" + FixedUsersAuthRealmFactory.PREFIX + ":" + authAddress + "])" +
+            "(:0[name=" + names[4] + ",auth=" + FILE_NAME + "])" +
+            "(:0[name=" + names[5] + ",auth=" + FILE_NAME + "])";
         initServer(serverAddress);
-        String clientAddress = "(" + NTU.LOCAL_HOST + ":" + NTU.port(40) + "[login=" + FixedUsersLoginHandlerFactory.PREFIX + "])"
-            + "(" + NTU.LOCAL_HOST + ":" + NTU.port(41) + "[login=" + FixedUsersLoginHandlerFactory.PREFIX + "])"
-            + "(" + NTU.LOCAL_HOST + ":" + NTU.port(42) + "[login=" + FixedUsersLoginHandlerFactory.PREFIX + "])"
-            + "(" + NTU.LOCAL_HOST + ":" + NTU.port(43) + "[login=" + FixedUsersLoginHandlerFactory.PREFIX + "])"
-            + "(" + NTU.LOCAL_HOST + ":" + (AUTH_PORT + 1) + ")";
-        NTU.connect(firstBasicClient, NTU.LOCAL_HOST + ":" + NTU.port(44) + "[user=user1,password=123456]");
+
+        int[] ports = promises.stream().mapToInt((p) -> p.await(10, TimeUnit.SECONDS)).toArray();
+
+        String clientAddress =
+            "(" + NTU.localHost(ports[0]) + "[login=" + FixedUsersLoginHandlerFactory.PREFIX + "])" +
+            "(" + NTU.localHost(ports[1]) + "[login=" + FixedUsersLoginHandlerFactory.PREFIX + "])" +
+            "(" + NTU.localHost(ports[2]) + "[login=" + FixedUsersLoginHandlerFactory.PREFIX + "])" +
+            "(" + NTU.localHost(ports[3]) + "[login=" + FixedUsersLoginHandlerFactory.PREFIX + "])" +
+            "(" + authAddress + ")";
+
+        NTU.connect(firstBasicClient, NTU.localHost(ports[4]) + "[user=user1,password=123456]");
         initClient(clientAddress);
-        NTU.connect(secondBasicClient, NTU.LOCAL_HOST + ":" + NTU.port(45) + "[login=user2:qwerty]");
+        NTU.connect(secondBasicClient, NTU.localHost(ports[5]) + "[login=user2:qwerty]");
+
         assertTrue(FixedUsersLoginHandler.usersLoginOk.await(10, TimeUnit.SECONDS));
         assertTrue(FixedUsersAuthRealm.usersLoginOk.await(10, TimeUnit.SECONDS));
         serverAuth.close();
@@ -394,7 +401,7 @@ public class AuthorizationTest {
         static final RMIOperation<Boolean> CHECK_USER =
             RMIOperation.valueOf(FixedUsersAuthService.class, boolean.class, "checkUserRegistration", AuthToken.class);
 
-        public static final int TOKEN_LENGTH = 16;
+        static final int TOKEN_LENGTH = 16;
         private final int maxCount;
         private int currentCount = 0;
         private final Set<AuthToken> tokens = new ConcurrentHashSet<>();
@@ -441,13 +448,11 @@ public class AuthorizationTest {
 
     @Test
     public void testCloseAuthContextOnRealm() throws InterruptedException {
-        String serverAddress = ":" + NTU.port(50) +
-            "[auth=" + CloseCountAuthRealmFactory.FACTORY_NAME + "]";
-        initServer(serverAddress);
-        String clientAddress = NTU.LOCAL_HOST + ":" + NTU.port(50) + "[user=Ivan,password=ivan]";
+        String serverAddress = initServerSimple("auth=" + CloseCountAuthRealmFactory.FACTORY_NAME);
+        String clientAddress = serverAddress + "[user=Ivan,password=ivan]";
         initClient(clientAddress, "IBM");
         DXEndpoint endpoint = DXEndpoint.create(DXEndpoint.Role.FEED);
-        NTU.connect(endpoint, NTU.LOCAL_HOST + ":" + NTU.port(50) + "[user=Ivan,password=ivan]");
+        NTU.connect(endpoint, serverAddress + "[user=Ivan,password=ivan]");
 
         assertTrue(CloseCountAuthRealm.firstStart.await(10, TimeUnit.SECONDS));
         assertTrue(CloseCountAuthRealm.secondStart.await(10, TimeUnit.SECONDS));
@@ -463,15 +468,25 @@ public class AuthorizationTest {
 
     @Test
     public void testCloseAuthContextOnLoginHandler() throws InterruptedException {
-        String clientAddress = "(:" + NTU.port(60) + "[login=" + CloseLoginHandlerFactory.FACTORY_NAME + "good])" +
-            "(:" + NTU.port(65) + "[login=" + CloseLoginHandlerFactory.FACTORY_NAME + "bad])";
+        String name60 = UUID.randomUUID().toString();
+        String name65 = UUID.randomUUID().toString();
+        Promise<Integer> p60 = ServerSocketTestHelper.createPortPromise(name60);
+        Promise<Integer> p65 = ServerSocketTestHelper.createPortPromise(name65);
+
+        String clientAddress =
+            "(:0[name=" + name60 + ",login=" + CloseLoginHandlerFactory.FACTORY_NAME + "good])" +
+            "(:0[name=" + name65 + ",login=" + CloseLoginHandlerFactory.FACTORY_NAME + "bad])";
         initClient(clientAddress, "IBM");
-        String serverAddress = NTU.LOCAL_HOST + ":" + NTU.port(60) + "[auth=user:password]";
+
+        int port60 = p60.await(10, TimeUnit.SECONDS);
+        int port65 = p65.await(10, TimeUnit.SECONDS);
+
+        String serverAddress = NTU.localHost(port60) + "[auth=user:password]";
         initServer(serverAddress);
         assertTrue(CloseLoginHandler.firstStart.await(10, TimeUnit.SECONDS));
         assertEquals(1, CloseLoginHandler.start.get());
         DXEndpoint endpoint = DXEndpoint.create(DXEndpoint.Role.PUBLISHER);
-        NTU.connect(endpoint, NTU.LOCAL_HOST + ":" + NTU.port(65) + "[auth=user:password]");
+        NTU.connect(endpoint, NTU.localHost(port65) + "[auth=user:password]");
         assertTrue(CloseLoginHandler.secondStart.await(10, TimeUnit.SECONDS));
         assertEquals(2, CloseLoginHandler.start.get());
         endpoint.close();
@@ -675,6 +690,14 @@ public class AuthorizationTest {
         log.info("--- initServer --- ");
         dxServerEndpoint = server.getDXEndpoint();
         publisher = dxServerEndpoint.getPublisher();
+    }
+
+    private String initServerSimple(String opts) {
+        int port = NTU.connectServer(server, null, opts);
+        log.info("--- initServer --- ");
+        dxServerEndpoint = server.getDXEndpoint();
+        publisher = dxServerEndpoint.getPublisher();
+        return NTU.localHost(port);
     }
 
     private void startUpdateQuotes(boolean waitSub, boolean updateQuote, int quoteUpdateCount, Quote... quotes)

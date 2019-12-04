@@ -30,5 +30,17 @@ buildNumber.properties
 .DS_Store?
 ._*
 
+# eclipse config
+.metadata
+local.properties
+.project
+.factorypath
+.classpath
+.settings/
+.cproject
+.loadpath
+.recommenders
+.buildpath
+
 # qd specific
 dxfeed-webservice/overlays

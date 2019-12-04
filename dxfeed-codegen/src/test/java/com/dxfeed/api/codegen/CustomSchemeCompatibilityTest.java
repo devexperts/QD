@@ -38,13 +38,13 @@ import static org.junit.Assert.assertNotNull;
 
 @RunWith(TraceRunner.class)
 public class CustomSchemeCompatibilityTest {
-    private static final int PUBLISHER_PORT = 7745;
-    private static final int MUX_PORT = 7746;
 
     private static final String QUOTE_SYMBOL = "Quote";
-    private static final CandleSymbol CANDLE_SYMBOL = CandleSymbol.valueOf("Candle", CandlePeriod.valueOf(1, CandleType.MINUTE), CandlePrice.BID);
+    private static final CandleSymbol CANDLE_SYMBOL =
+        CandleSymbol.valueOf("Candle", CandlePeriod.valueOf(1, CandleType.MINUTE), CandlePrice.BID);
     private static final String CUSTOM_SYMBOL = "Custom";
-    private static final IndexedEventSubscriptionSymbol<String> ORDER_SYMBOL = new IndexedEventSubscriptionSymbol<>("Order", IndexedEventSource.DEFAULT);
+    private static final IndexedEventSubscriptionSymbol<String> ORDER_SYMBOL =
+        new IndexedEventSubscriptionSymbol<>("Order", IndexedEventSource.DEFAULT);
 
     private static final String EVENT_FACTORY_IMPL = "com.dxfeed.api.codegen.event.EventFactoryImpl";
     private static final long TIME0 = System.currentTimeMillis() / 1000 * 1000;
@@ -57,10 +57,13 @@ public class CustomSchemeCompatibilityTest {
 
     @Test
     public void testCustomThroughDefault() throws Exception {
-        try (TestEndpoint publisherEndpoint = new TestEndpoint(DXFeedScheme.getInstance()).bind(PUBLISHER_PORT);
-		     TestEndpoint mux = new TestEndpoint(buildDefaultScheme()).bind(MUX_PORT).connect(PUBLISHER_PORT);
-		     TestEndpoint feedEndpoint = new TestEndpoint(DXFeedScheme.getInstance()).connect(MUX_PORT)) {
-            SchemeCompatibilityChecker checker = new SchemeCompatibilityChecker(publisherEndpoint.getPublisher(), feedEndpoint.getFeed());
+        try (TestEndpoint publisherEndpoint = new TestEndpoint(DXFeedScheme.getInstance()).bindAuto();
+             TestEndpoint mux =
+                 new TestEndpoint(buildDefaultScheme()).bindAuto().connect(publisherEndpoint.getServerPort());
+             TestEndpoint feedEndpoint = new TestEndpoint(DXFeedScheme.getInstance()).connect(mux.getServerPort()))
+        {
+            SchemeCompatibilityChecker checker =
+                new SchemeCompatibilityChecker(publisherEndpoint.getPublisher(), feedEndpoint.getFeed());
 
             checker.checkEventPublishing(BetterQuote.class, BetterQuote.class, QUOTE_SYMBOL,
                 i -> fillBetterQuoteFields(new BetterQuote(QUOTE_SYMBOL), i),
@@ -88,9 +91,12 @@ public class CustomSchemeCompatibilityTest {
 
     @Test
     public void testCustomToDefault() throws Exception {
-        try (TestEndpoint publisherEndpoint = new TestEndpoint(DXFeedScheme.getInstance()).bind(PUBLISHER_PORT);
-		     TestEndpoint feedEndpoint = new TestEndpoint(buildDefaultScheme()).connect(PUBLISHER_PORT)) {
-            SchemeCompatibilityChecker checker = new SchemeCompatibilityChecker(publisherEndpoint.getPublisher(), feedEndpoint.getFeed());
+        try (TestEndpoint publisherEndpoint = new TestEndpoint(DXFeedScheme.getInstance()).bindAuto();
+             TestEndpoint feedEndpoint =
+                 new TestEndpoint(buildDefaultScheme()).connect(publisherEndpoint.getServerPort()))
+        {
+            SchemeCompatibilityChecker checker
+                = new SchemeCompatibilityChecker(publisherEndpoint.getPublisher(), feedEndpoint.getFeed());
 
             checker.checkEventPublishing(Quote.class, BetterQuote.class, QUOTE_SYMBOL,
                 i -> fillBetterQuoteFields(new BetterQuote(QUOTE_SYMBOL), i),
@@ -108,9 +114,12 @@ public class CustomSchemeCompatibilityTest {
 
     @Test
     public void testDefaultToCustom() throws Exception {
-        try (TestEndpoint publisherEndpoint = new TestEndpoint(buildDefaultScheme()).bind(PUBLISHER_PORT);
-		     TestEndpoint feedEndpoint = new TestEndpoint(DXFeedScheme.getInstance()).connect(PUBLISHER_PORT)) {
-            SchemeCompatibilityChecker checker = new SchemeCompatibilityChecker(publisherEndpoint.getPublisher(), feedEndpoint.getFeed());
+        try (TestEndpoint publisherEndpoint = new TestEndpoint(buildDefaultScheme()).bindAuto();
+             TestEndpoint feedEndpoint =
+                 new TestEndpoint(DXFeedScheme.getInstance()).connect(publisherEndpoint.getServerPort()))
+        {
+            SchemeCompatibilityChecker checker
+                = new SchemeCompatibilityChecker(publisherEndpoint.getPublisher(), feedEndpoint.getFeed());
 
             checker.checkEventPublishing(BetterQuote.class, Quote.class, QUOTE_SYMBOL,
                 i -> fillQuoteFields(new Quote(QUOTE_SYMBOL), i),
@@ -137,9 +146,12 @@ public class CustomSchemeCompatibilityTest {
 
     @Test
     public void testCustomToCustom() throws Exception {
-        try (TestEndpoint publisherEndpoint = new TestEndpoint(DXFeedScheme.getInstance()).bind(PUBLISHER_PORT);
-		     TestEndpoint feedEndpoint = new TestEndpoint(DXFeedScheme.getInstance()).connect(PUBLISHER_PORT)) {
-            SchemeCompatibilityChecker checker = new SchemeCompatibilityChecker(publisherEndpoint.getPublisher(), feedEndpoint.getFeed());
+        try (TestEndpoint publisherEndpoint = new TestEndpoint(DXFeedScheme.getInstance()).bindAuto();
+             TestEndpoint feedEndpoint
+                 = new TestEndpoint(DXFeedScheme.getInstance()).connect(publisherEndpoint.getServerPort()))
+        {
+            SchemeCompatibilityChecker checker
+                = new SchemeCompatibilityChecker(publisherEndpoint.getPublisher(), feedEndpoint.getFeed());
             checkFullCompatibility(checker);
         }
     }
@@ -147,7 +159,8 @@ public class CustomSchemeCompatibilityTest {
     @Test
     public void testLocalHub() throws Exception {
         try (TestEndpoint endpoint = new TestEndpoint(DXFeedScheme.getInstance())) {
-            SchemeCompatibilityChecker checker = new SchemeCompatibilityChecker(endpoint.getPublisher(), endpoint.getFeed());
+            SchemeCompatibilityChecker checker
+                = new SchemeCompatibilityChecker(endpoint.getPublisher(), endpoint.getFeed());
             checkFullCompatibility(checker);
         }
     }
@@ -293,7 +306,9 @@ public class CustomSchemeCompatibilityTest {
         assertNotNull(actual);
         for (Method method : clazz.getMethods()) {
             String methodName = method.getName();
-            if (!methodName.equals("getClass") && methodName.matches("(get|is).*") && method.getParameterTypes().length == 0) {
+            if (!methodName.equals("getClass") && methodName.matches("(get|is).*") &&
+                method.getParameterTypes().length == 0)
+            {
                 try {
                     Object actualValue = method.invoke(actual);
                     Object expectedValue = method.invoke(expected);

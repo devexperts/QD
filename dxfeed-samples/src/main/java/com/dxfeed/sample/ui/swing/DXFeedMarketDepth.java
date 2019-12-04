@@ -11,20 +11,66 @@
  */
 package com.dxfeed.sample.ui.swing;
 
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.util.Collections;
-import java.util.List;
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-
-import com.dxfeed.api.*;
+import com.dxfeed.api.DXEndpoint;
+import com.dxfeed.api.DXFeed;
+import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.Profile;
 import com.dxfeed.model.ObservableListModel;
 import com.dxfeed.model.market.OrderBookModel;
 
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.util.Collections;
+import java.util.List;
+import java.util.Vector;
+import javax.swing.BorderFactory;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
+import javax.swing.table.DefaultTableModel;
+
 public class DXFeedMarketDepth {
+
+    static class BookTableModel extends DefaultTableModel {
+
+        BookTableModel() {
+            super();
+            addColumn("EX");
+            addColumn("MM");
+            addColumn("Price");
+            addColumn("Size");
+        }
+
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return false;
+        }
+
+        @SuppressWarnings("unchecked")
+        void updateOrders(List<Order> orders) {
+            // update model
+            Vector data = getDataVector();
+            data.clear();
+            for (Order order : orders) {
+                Vector row = new Vector(4);
+                row.add(order.getExchangeCode());
+                row.add(order.getMarketMaker());
+                row.add(order.getPrice());
+                row.add(order.getSizeAsDouble());
+                data.add(row);
+            }
+            fireTableDataChanged();
+        }
+    }
+
     private JTextField symbolText;
     private JTable bidTable;
     private JTable askTable;
@@ -34,8 +80,8 @@ public class DXFeedMarketDepth {
     private final OrderBookModel orderBook = new OrderBookModel();
     private final DXFeedSubscription<Profile> profileSub = new DXFeedSubscription<>(Profile.class);
 
-    private final DefaultTableModel bidModel = new DefaultTableModel();
-    private final DefaultTableModel askModel = new DefaultTableModel();
+    private final BookTableModel bidModel = new BookTableModel();
+    private final BookTableModel askModel = new BookTableModel();
 
     public static void main(String[] args) {
         DXEndpoint.getInstance().executor(new SwingExecutor(20)); // configure Swing executor for 50 fps
@@ -71,27 +117,9 @@ public class DXFeedMarketDepth {
         frame.setVisible(true);
     }
 
-    private void initTableModel(JTable table, final DefaultTableModel model, final ObservableListModel<Order> book) {
-        model.addColumn("EX");
-        model.addColumn("MM");
-        model.addColumn("Price");
-        model.addColumn("Size");
+    private void initTableModel(JTable table, final BookTableModel model, final ObservableListModel<Order> book) {
         table.setModel(model);
-
-        book.addListener(change -> rebuildTableModel(model, book));
-    }
-
-    private void rebuildTableModel(DefaultTableModel model, List<Order> orders) {
-        // update model
-        model.setRowCount(0);
-        for (Order order : orders) {
-            model.addRow(new Object[] {
-                order.getExchangeCode(),
-                order.getMarketMaker(),
-                order.getPrice(),
-                order.getSizeAsDouble()
-            });
-        }
+        book.addListener(change -> model.updateOrders(book));
     }
 
     private void symbolChanged(ActionEvent e) {
@@ -165,9 +193,9 @@ public class DXFeedMarketDepth {
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
         panel1.add(scrollPane1, gbc);
-
         bidTable = new JTable();
         scrollPane1.setViewportView(bidTable);
+
         JScrollPane scrollPane2 = new JScrollPane();
         gbc = new GridBagConstraints();
         gbc.gridx = 2;
@@ -176,9 +204,9 @@ public class DXFeedMarketDepth {
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
         panel1.add(scrollPane2, gbc);
-
         askTable = new JTable();
         scrollPane2.setViewportView(askTable);
+
         JPanel panel2 = new JPanel();
         panel2.setLayout(new GridBagLayout());
         gbc = new GridBagConstraints();

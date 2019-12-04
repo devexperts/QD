@@ -148,7 +148,8 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
                 registerChannel(connection);
             }
             if (state == RMIChannelState.CANCELLING) {
-                connection.requestsManager.addOutgoingRequest(preOpenOutgoingRequests.get(0));
+                if (preOpenOutgoingRequests != null && !preOpenOutgoingRequests.isEmpty())
+                    connection.requestsManager.addOutgoingRequest(preOpenOutgoingRequests.get(0));
                 preOpenOutgoingRequests = null;
                 this.preOpenIncomingRequests = null;
                 return;
@@ -206,11 +207,6 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
                 ((RMITaskImpl<?>) owner).cancelWithConfirmation();
             return;
         }
-        //for top-level request
-        RMIRequest<Void> cancelChannel = createRequest(new RMIRequestMessage<>(RMIRequestType.ONE_WAY,
-            cancel == RMICancelType.ABORT_RUNNING ? RMIRequestImpl.ABORT_CANCEL : RMIRequestImpl.CANCEL_WITH_CONFIRMATION,
-            0L));
-        cancelChannel.setListener(request -> this.close());
         switch (state) {
         case NEW:
             if (preOpenOutgoingRequests == null)
@@ -225,6 +221,11 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
         default:
             return;
         }
+        //for top-level request
+        RMIRequest<Void> cancelChannel = createRequest(new RMIRequestMessage<>(RMIRequestType.ONE_WAY,
+            cancel == RMICancelType.ABORT_RUNNING ? RMIRequestImpl.ABORT_CANCEL : RMIRequestImpl.CANCEL_WITH_CONFIRMATION,
+            0L));
+        cancelChannel.setListener(request -> this.close());
         state = RMIChannelState.CANCELLING;
         cancelChannel.send();
     }

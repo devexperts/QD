@@ -64,8 +64,8 @@ public class RMIRequestContinuationsTest {
             .withName("Client")
             .withSide(RMIEndpoint.Side.CLIENT)
             .build();
-        client.setRequestRunningTimeout(20000); // to make sure tests don't run forever
-        this.channelLogic = new ChannelLogic(type, client, server, null);
+        client.getClient().setRequestRunningTimeout(20000); // to make sure tests don't run forever
+        channelLogic = new ChannelLogic(type, client, server, null);
         switch (type) {
         case REGULAR:
             getTrueClientPort = (subject) -> {
@@ -129,14 +129,13 @@ public class RMIRequestContinuationsTest {
         assertTrue(exceptions.isEmpty());
     }
 
-    private void connectDefault(int port) throws InterruptedException {
-        NTU.connect(server, ":" + NTU.port(port));
-        NTU.connect(client, NTU.LOCAL_HOST + ":" + NTU.port(port));
+    private void connectDefault() throws InterruptedException {
+        NTU.connectPair(server, client);
         channelLogic.initPorts();
     }
 
     protected void setExecutor(int nThreads, String name) {
-        this.executorService = new TestThreadPool(nThreads, name, exceptions);
+        executorService = new TestThreadPool(nThreads, name, exceptions);
         if (channelLogic.type != TestType.SERVER_CHANNEL)
             server.getServer().setDefaultExecutor(executorService);
         else
@@ -145,23 +144,26 @@ public class RMIRequestContinuationsTest {
 
     @Test
     public void testTaskSuspended() throws InterruptedException {
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new SlowCancelServiceImpl(), SlowCancelService.class, SlowCancelService.NAME), channelLogic);
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation<>(new SlowCancelServiceImpl(), SlowCancelService.class, SlowCancelService.NAME),
+            channelLogic);
         setExecutor(1, "testTaskSuspended");
-        connectDefault(20);
+        connectDefault();
         client.getClient().setRequestRunningTimeout(TIMEOUT);
         client.getClient().setRequestSendingTimeout(TIMEOUT);
         RMIRequest<Double> request;
         ArrayList<RMIRequest<Double>> requests = new ArrayList<>();
 
         for (int i = 0; i < 3; i++) {
-            request = channelLogic.clientPort.createRequest(SlowCancelServiceImpl.getResultSlowly, 10, 20, i, 100L);
+            request = channelLogic.clientPort.createRequest(SlowCancelServiceImpl.GET_RESULT_SLOWLY, 10, 20, i, 100L);
             request.send();
             assertTrue(SlowCancelServiceImpl.startResultSlowly.await(10, TimeUnit.SECONDS));
             requests.add(request);
         }
 
         log.info("Requests sent");
-        final RMIRequest<Void> accelerateOperation = channelLogic.clientPort.createRequest(SlowCancelServiceImpl.accelerateOperation, 0);
+        final RMIRequest<Void> accelerateOperation =
+            channelLogic.clientPort.createRequest(SlowCancelServiceImpl.ACCELERATE_OPERATION, 0);
         final CountDownLatch accelerationCompleted = new CountDownLatch(1);
         accelerateOperation.setListener(request1 -> accelerationCompleted.countDown());
         accelerateOperation.send();
@@ -172,8 +174,8 @@ public class RMIRequestContinuationsTest {
         log.info("accelerateOperation = " + accelerateOperation);
 
         try {
-            assertEquals(requests.get(0).getBlocking(), (Double) 30.0);
-            assertEquals(requests.get(1).getNonBlocking(), null);
+            assertEquals((Double) 30.0, requests.get(0).getBlocking());
+            assertNull(requests.get(1).getNonBlocking());
         } catch (RMIException e) {
             fail(e.getType().toString());
         }
@@ -183,8 +185,10 @@ public class RMIRequestContinuationsTest {
     @Test
     public void testCancelContinuation() throws InterruptedException {
         setExecutor(1, "RMIReqContinuationTest-cancelContinuation-server");
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new SlowCancelServiceImpl(), SlowCancelService.class, SlowCancelService.NAME), channelLogic);
-        connectDefault(25);
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation<>(new SlowCancelServiceImpl(), SlowCancelService.class, SlowCancelService.NAME),
+            channelLogic);
+        connectDefault();
         client.getClient().setRequestRunningTimeout(TIMEOUT);
         client.getClient().setRequestSendingTimeout(TIMEOUT);
         RMIRequest<Double> request;
@@ -192,12 +196,12 @@ public class RMIRequestContinuationsTest {
         RMIRequest<Double> getTimeSuspend;
 
 
-        request = channelLogic.clientPort.createRequest(SlowCancelServiceImpl.getResultSlowly, 10, 20, 0, 1000L);
+        request = channelLogic.clientPort.createRequest(SlowCancelServiceImpl.GET_RESULT_SLOWLY, 10, 20, 0, 1000L);
         request.send();
         assertTrue(SlowCancelServiceImpl.startResultSlowly.await(10, TimeUnit.SECONDS));
         log.info("Requests sent");
         Thread.sleep(100);
-        closeOperation = channelLogic.clientPort.createRequest(SlowCancelServiceImpl.closeOperation, 0);
+        closeOperation = channelLogic.clientPort.createRequest(SlowCancelServiceImpl.CLOSE_OPERATION, 0);
         closeOperation.send();
         long startTime = System.currentTimeMillis();
         while (!closeOperation.isCompleted()) {
@@ -212,7 +216,7 @@ public class RMIRequestContinuationsTest {
         } catch (RMIException e) {
             assertEquals(e.getType(), RMIExceptionType.CANCELLED_DURING_EXECUTION);
         }
-        getTimeSuspend = channelLogic.clientPort.createRequest(SlowCancelServiceImpl.getTimeSuspend, 0);
+        getTimeSuspend = channelLogic.clientPort.createRequest(SlowCancelServiceImpl.GET_TIME_SUSPEND, 0);
         getTimeSuspend.send();
         try {
             log.info("getTimeSuspend = " + getTimeSuspend.getBlocking());
@@ -224,21 +228,20 @@ public class RMIRequestContinuationsTest {
     @Test
     public void testContinuationAndSecurity() throws InterruptedException {
         RMICommonTest.SomeSubject trueSubject = new RMICommonTest.SomeSubject("true");
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new SlowCancelServiceImpl(), SlowCancelService.class, SlowCancelService.NAME), channelLogic);
-        NTU.connect(server, ":" + NTU.port(30));
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation<>(new SlowCancelServiceImpl(), SlowCancelService.class, SlowCancelService.NAME),
+            channelLogic);
         server.setSecurityController(new RMICommonTest.SomeSecurityController(trueSubject));
-
         trueClient = RMIEndpoint.createEndpoint(RMIEndpoint.Side.CLIENT);
-        NTU.connect(trueClient, NTU.LOCAL_HOST + ":" + NTU.port(30));
+        NTU.connectPair(server, trueClient);
         RMIClientPort clientPort = getTrueClientPort.apply(trueSubject);
 
-
-        RMIRequest<Double> request = clientPort.createRequest(SlowCancelServiceImpl.getResultSlowly, 10, 20, 0, 100L);
+        RMIRequest<Double> request = clientPort.createRequest(SlowCancelServiceImpl.GET_RESULT_SLOWLY, 10, 20, 0, 100L);
         request.send();
 
         assertTrue(SlowCancelServiceImpl.startResultSlowly.await(10, TimeUnit.SECONDS));
         log.info("Requests sent");
-        RMIRequest<Void> accelerateOperation = clientPort.createRequest(SlowCancelServiceImpl.accelerateOperation, 0);
+        RMIRequest<Void> accelerateOperation = clientPort.createRequest(SlowCancelServiceImpl.ACCELERATE_OPERATION, 0);
         final CountDownLatch accelerationCompleted = new CountDownLatch(1);
         accelerateOperation.setListener(request1 -> accelerationCompleted.countDown());
         accelerateOperation.send();
@@ -266,10 +269,15 @@ public class RMIRequestContinuationsTest {
 
     private static class SlowCancelServiceImpl implements SlowCancelService {
 
-        static RMIOperation<Double> getTimeSuspend = RMIOperation.valueOf(NAME, double.class, "getTimeSuspend", int.class);
-        static RMIOperation<Double> getResultSlowly = RMIOperation.valueOf(NAME, double.class, "getResultSlowly", int.class, int.class, int.class, long.class);
-        static RMIOperation<Void> accelerateOperation = RMIOperation.valueOf(NAME, void.class, "accelerateOperation", int.class);
-        static RMIOperation<Void> closeOperation = RMIOperation.valueOf(NAME, void.class, "closeOperation", int.class);
+        static final RMIOperation<Double> GET_TIME_SUSPEND =
+            RMIOperation.valueOf(NAME, double.class, "getTimeSuspend", int.class);
+        static final RMIOperation<Double> GET_RESULT_SLOWLY =
+            RMIOperation.valueOf(NAME, double.class, "getResultSlowly", int.class, int.class, int.class, long.class);
+        static final RMIOperation<Void> ACCELERATE_OPERATION =
+            RMIOperation.valueOf(NAME, void.class, "accelerateOperation", int.class);
+        static final RMIOperation<Void> CLOSE_OPERATION =
+            RMIOperation.valueOf(NAME, void.class, "closeOperation", int.class);
+
         private static CountDownLatch startResultSlowly;
 
         private final ArrayList<Long> timersSuspend = new ArrayList<>(3);
@@ -322,7 +330,6 @@ public class RMIRequestContinuationsTest {
                     timersSuspend.add(index, System.currentTimeMillis() - timersSuspend.get(index));
             }
             continuation.resume(callable);
-            return;
         }
 
         @Override
@@ -367,8 +374,10 @@ public class RMIRequestContinuationsTest {
     public void testSuspendResume() throws InterruptedException {
         if (channelLogic.isChannel())
             return;
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new BadServiceImpl(), BadService.class, BadService.NAME), channelLogic);
-        connectDefault(35);
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation<>(new BadServiceImpl(), BadService.class, BadService.NAME),
+            channelLogic);
+        connectDefault();
         setExecutor(3, "RMIReqContinuationTest-suspendResume-server");
         client.getClient().setRequestRunningTimeout(TIMEOUT);
         client.getClient().setRequestSendingTimeout(TIMEOUT);
@@ -376,12 +385,12 @@ public class RMIRequestContinuationsTest {
         RMIRequest<Double> accelerate;
 
 
-        getWaitSquare = channelLogic.clientPort.createRequest(BadServiceImpl.getWaitSquare, 11.0);
+        getWaitSquare = channelLogic.clientPort.createRequest(BadServiceImpl.GET_WAIT_SQUARE, 11.0);
         getWaitSquare.send();
         if (!BadServiceImpl.START_GET_SQUARE.await(10, TimeUnit.SECONDS)) {
             fail();
         }
-        accelerate = channelLogic.clientPort.createRequest(BadServiceImpl.accelerate, 11.0);
+        accelerate = channelLogic.clientPort.createRequest(BadServiceImpl.ACCELERATE, 11.0);
         accelerate.send();
 
         try {
@@ -407,8 +416,10 @@ public class RMIRequestContinuationsTest {
 
     private static class BadServiceImpl implements BadService {
 
-        private static RMIOperation<Double> accelerate = RMIOperation.valueOf(NAME, double.class, "accelerate", double.class);
-        private static RMIOperation<Double> getWaitSquare = RMIOperation.valueOf(NAME, double.class, "getSquare", double.class);
+        private static final RMIOperation<Double> ACCELERATE =
+            RMIOperation.valueOf(NAME, double.class, "accelerate", double.class);
+        private static final RMIOperation<Double> GET_WAIT_SQUARE =
+            RMIOperation.valueOf(NAME, double.class, "getSquare", double.class);
         private static final CountDownLatch START_GET_SQUARE= new CountDownLatch(1);
 
         private final Object lock = new Object();

@@ -11,15 +11,25 @@
  */
 package com.dxfeed.model;
 
-import java.util.*;
-import java.util.concurrent.Executor;
-
-import com.dxfeed.api.*;
-import com.dxfeed.event.*;
+import com.dxfeed.api.DXEndpoint;
+import com.dxfeed.api.DXFeed;
+import com.dxfeed.api.DXFeedEventListener;
+import com.dxfeed.api.DXFeedSubscription;
+import com.dxfeed.event.IndexedEvent;
+import com.dxfeed.event.IndexedEventSource;
+import com.dxfeed.event.TimeSeriesEvent;
 import com.dxfeed.impl.AbstractIndexedList;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.concurrent.Executor;
+
 /**
- * Abstract model for a list of indexed events.
+ * <p>Abstract model for a list of indexed events.
  * This class handles all snapshot and transaction logic of {@link IndexedEvent} class and
  * arranges incoming events into a list ordered by their {@link IndexedEvent#getSource() source} {@link IndexedEventSource#id() id}
  * and {@link IndexedEvent#getIndex() index}. Note, that {@link TimeSeriesEvent} extends {@link IndexedEvent} in
@@ -50,7 +60,7 @@ import com.dxfeed.impl.AbstractIndexedList;
  * {@link DXFeedSubscription} class.
  *
  * <h3>Resource management and closed models</h3>
- *
+ * <p>
  * Attached model is a potential memory leak. If the pointer to attached model is lost, then there is no way to detach
  * this model from the feed and the model will not be reclaimed by the garbage collector as long as the corresponding
  * feed is still used. Detached model can be reclaimed by the garbage collector, but detaching model requires knowing
@@ -62,7 +72,7 @@ import com.dxfeed.impl.AbstractIndexedList;
  *
  * <h3><a name="threadsAndLocksSection">Threads and locks</a></h3>
  *
- * This class is <b>not</b> tread-safe and requires external synchronization.
+ * <p>This class is <b>not</b> tread-safe and requires external synchronization.
  * The only thread-safe methods are {@link #attach attach}, {@link #detach detach} and {@link #close close}.
  *
  * <p> You must query the state of {@link #attach(DXFeed) attached} model only from
@@ -132,7 +142,7 @@ public abstract class AbstractIndexedEventModel<E extends IndexedEvent<?>, N ext
      * Creates new model attached to the specified feed. It is not subscribed to any symbol.
      * Use {@link #setSymbol} to specify subscription symbol.
      *
-     * @param feed feed to attach to.
+     * @param feed      feed to attach to.
      * @param eventType the event type.
      * @throws NullPointerException if event type is null.
      */
@@ -176,6 +186,7 @@ public abstract class AbstractIndexedEventModel<E extends IndexedEvent<?>, N ext
     /**
      * Returns executor for processing event notifications on this model.
      * See <a href="#threadsAndLocksSection">Threads and locks</a> section of this class documentation.
+     *
      * @return executor for processing event notifications on this model,
      *         or {@code null} if default executor of the attached {@link DXFeed} is used.
      */
@@ -186,8 +197,9 @@ public abstract class AbstractIndexedEventModel<E extends IndexedEvent<?>, N ext
     /**
      * Changes executor for processing event notifications on this model.
      * See <a href="#threadsAndLocksSection">Threads and locks</a> section of this class documentation.
+     *
      * @param executor executor for processing event notifications on this model,
-     *         or {@code null} if default executor of the attached {@link DXFeed} is used.
+     *                 or {@code null} if default executor of the attached {@link DXFeed} is used.
      */
     public void setExecutor(Executor executor) {
         subscription.setExecutor(executor);
@@ -204,6 +216,7 @@ public abstract class AbstractIndexedEventModel<E extends IndexedEvent<?>, N ext
     /**
      * Returns model subscription symbol, or {@code null} is not subscribed
      * (this is a default value).
+     *
      * @return model subscription symbol.
      */
     public Object getSymbol() {
@@ -213,26 +226,30 @@ public abstract class AbstractIndexedEventModel<E extends IndexedEvent<?>, N ext
 
     /**
      * Changes symbol for this model to subscribe for.
+     *
      * @param symbol model subscription symbol, use {@code null} to unsubscribe.
      */
     public void setSymbol(Object symbol) {
         if (Objects.equals(this.symbol, symbol))
             return;
         if (this.symbol != null) {
-            for (int i = 0; i < nSources; i++)
+            for (int i = 0; i < nSources; i++) {
                 sources[i].clearImpl();
+            }
             notifyChanged(true);
         }
         this.symbol = symbol;
-        if (symbol != null)
+        if (symbol != null) {
             subscription.setSymbols(symbol);
-        else
+        } else {
             subscription.clear();
+        }
     }
 
     /**
      * Returns size limit of this model.
      * It is equal to {@link Integer#MAX_VALUE} by default (no limit).
+     *
      * @return size limit of this model.
      */
     public int getSizeLimit() {
@@ -242,6 +259,7 @@ public abstract class AbstractIndexedEventModel<E extends IndexedEvent<?>, N ext
     /**
      * Changes size limit of this model. When size limit is exceed, the
      * first entries from this model are dropped.
+     *
      * @param sizeLimit size limit of this model.
      * @throws IllegalArgumentException if {@code sizeLimit} is negative.
      */
@@ -257,18 +275,21 @@ public abstract class AbstractIndexedEventModel<E extends IndexedEvent<?>, N ext
     /**
      * Returns the number of elements in this model.
      * It is limited by {@link #getSizeLimit() sizeLimit} property.
+     *
      * @return the number of elements in this model.
      */
     protected int size() {
         // It is O(nSources) now. todo: make it O(log(nSources))
         int size = 0;
-        for (int i = 0; i < nSources; i++)
+        for (int i = 0; i < nSources; i++) {
             size += sources[i].size();
+        }
         return size;
     }
 
     /**
      * Returns the element at the specified position in this model.
+     *
      * @param index index of the element to return.
      * @return the element at the specified position in this model.
      * @throws IndexOutOfBoundsException if the index is out of range
@@ -291,6 +312,7 @@ public abstract class AbstractIndexedEventModel<E extends IndexedEvent<?>, N ext
 
     /**
      * Returns a list iterator over the elements in this model (in proper sequence).
+     *
      * @return a list iterator over the elements in this model (in proper sequence).
      */
     @SuppressWarnings("unchecked")
@@ -301,6 +323,7 @@ public abstract class AbstractIndexedEventModel<E extends IndexedEvent<?>, N ext
     /**
      * Returns a list iterator over the elements in this model (in proper
      * sequence), starting at the specified position in the model.
+     *
      * @param index index of the first element to be returned from the
      *              list iterator (by a call to {@link ListIterator#next next}).
      * @return a list iterator over the elements in this model (in proper
@@ -321,11 +344,14 @@ public abstract class AbstractIndexedEventModel<E extends IndexedEvent<?>, N ext
                 return (ListIterator<E>) new Itr(false, sourceIndex, localIndex, index);
             localIndex -= localSize;
         }
+        if (localIndex == 0)
+            return new Itr(false, nSources, 0, index);
         throw new IndexOutOfBoundsException();
     }
 
     /**
      * Returns a list iterator over the <b>entries</b> in this model (in proper sequence).
+     *
      * @return a list iterator over the <b>entries</b> in this model (in proper sequence).
      */
     @SuppressWarnings("unchecked")
@@ -372,8 +398,9 @@ public abstract class AbstractIndexedEventModel<E extends IndexedEvent<?>, N ext
             modelChanged(changedEntries);
         } finally {
             // cleanup internal state even if listeners crash
-            for (Entry<E> entry : changedEntries)
+            for (Entry<E> entry : changedEntries) {
                 entry.commitChange();
+            }
             changedEntries.clear();
             if (trimToSize)
                 changedEntries.trimToSize(); // Don't need memory we held for snapshot -- let GC do its work
@@ -387,12 +414,13 @@ public abstract class AbstractIndexedEventModel<E extends IndexedEvent<?>, N ext
             int m = (i + j) >> 1;
             Source mSource = sources[m];
             int mSourceId = mSource.sourceId;
-            if (sourceId < mSourceId)
+            if (sourceId < mSourceId) {
                 j = m;
-            else if (sourceId > mSourceId)
+            } else if (sourceId > mSourceId) {
                 i = m + 1;
-            else
+            } else {
                 return mSource;
+            }
         }
         if (nSources == sources.length)
             sources = Arrays.copyOf(sources, sources.length << 1);
@@ -435,8 +463,9 @@ public abstract class AbstractIndexedEventModel<E extends IndexedEvent<?>, N ext
         int size = size();
         int sourceIndex = 0;
         while (size > sizeLimit) {
-            while (sources[sourceIndex].isEmpty())
+            while (sources[sourceIndex].isEmpty()) {
                 sourceIndex++;
+            }
             sources[sourceIndex].removeImpl(0);
             size--;
         }
@@ -520,14 +549,15 @@ public abstract class AbstractIndexedEventModel<E extends IndexedEvent<?>, N ext
                 return; // nothing to do on remove on non-existing
             // insert new entry if not found
             N entry;
-            if (a >= 0) // found entry -- use
+            if (a >= 0) { // found entry -- use
                 entry = get(a);
-            else // not found -- insert new one
+            } else { // not found -- insert new one
                 insertImpl(-a - 1, entry = createEntry());
+            }
             makeChanged(entry);
-            if (remove)
+            if (remove) {
                 removeImpl(a); // remove existing entry ("removed" method will set null value)
-            else {
+            } else {
                 event.setEventFlags(0); // cleanup the flags in the stored event
                 entry.newValue = event;
             }

@@ -23,7 +23,7 @@ public class ConvertTapeFile {
     public static void main(String[] args) throws InterruptedException {
         // Determine input and output tapes and specify appropriate configuration parameters
         String inputAddress = args.length > 0 ? args[0] : "file:ConvertTapeFile.in[readAs=stream_data,speed=max]";
-        String outputAddress = args.length > 1 ? args[1] : "tape:ConvertTapeFile.out[format=text]";
+        String outputAddress = args.length > 1 ? args[1] : "tape:ConvertTapeFile.out[saveAs=stream_data,format=text]";
 
         // Create input endpoint configured for tape reading
         DXEndpoint inputEndpoint = DXEndpoint.newBuilder()

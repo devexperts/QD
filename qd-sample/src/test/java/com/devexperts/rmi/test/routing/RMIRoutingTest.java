@@ -98,13 +98,12 @@ public class RMIRoutingTest {
         log.info("servers = " + servers);
         log.info("muxs = " + muxs);
         log.info("clients = " + clients);
-        int port = 12;
 
         servers.export(0, DifferentServices.CALCULATOR_SERVICE);
-        servers.connect(":" + NTU.port(port + 4));
-        muxs.connectServers(":" + NTU.port(port), ":" + NTU.port(port + 2));
-        muxs.connectClients((NTU.LOCAL_HOST + ":" + NTU.port(port + 2)), (NTU.LOCAL_HOST + ":" + NTU.port(port + 4)));
-        clients.connect(NTU.LOCAL_HOST + ":" + NTU.port(port));
+        int serverPort = servers.connectAuto()[0];
+        int[] muxPorts = muxs.connectServersAuto();
+        muxs.connectClients((NTU.localHost(muxPorts[1])), (NTU.localHost(serverPort)));
+        clients.connect(NTU.localHost(muxPorts[0]));
 
 
         RMIRequest<Double> sum = clients.clients[0].getClient().createRequest(null, DifferentServices.CalculatorService.PLUS, 1.1, 2.1);
@@ -149,14 +148,13 @@ public class RMIRoutingTest {
             descriptors.stream()
                 .filter(descriptor -> !descriptor.isAvailable())
                 .forEach(descriptor -> advertiseLatch.countDown()));
-        int port = 32;
         servers.export(0, DifferentServices.CALCULATOR_SERVICE);
 
         log.info("---- connect ----");
-        servers.connect(":" + NTU.port(port + 2));
-        muxs.connectServers(":" + NTU.port(port), ":" + NTU.port(port + 1));
-        clients.connect(NTU.LOCAL_HOST + ":" + NTU.port(port));
-        muxs.connectClients(NTU.LOCAL_HOST + ":" + NTU.port(port + 1), NTU.LOCAL_HOST + ":" + NTU.port(port + 2));
+        int serverPort = servers.connectAuto()[0];
+        int[] muxPorts = muxs.connectServersAuto();
+        clients.connect(NTU.localHost(muxPorts[0]));
+        muxs.connectClients(NTU.localHost(muxPorts[1]), NTU.localHost(serverPort));
         log.info("---- connect ----");
 
         //ResultMessage
@@ -228,11 +226,10 @@ public class RMIRoutingTest {
             }
         });
 
-        int port = 59;
-        servers.connect(":" + NTU.port(port));
-        muxs.connectServers(":" + NTU.port(port + 1), ":" + NTU.port(port + 2));
-        clients.connect("(" + NTU.LOCAL_HOST + ":" + NTU.port(port + 1) + ")(" + NTU.LOCAL_HOST + ":" + NTU.port(port + 2) + ")");
-        muxs.connectClients(NTU.LOCAL_HOST + ":" + NTU.port(port) + "[weight=20]", NTU.LOCAL_HOST + ":" + NTU.port(port));
+        int serverPort = servers.connectAuto()[0];
+        int [] muxPorts = muxs.connectServersAuto();
+        clients.connect("(" + NTU.localHost(muxPorts[0]) + ")(" + NTU.localHost(muxPorts[1]) + ")");
+        muxs.connectClients(NTU.localHost(serverPort) + "[weight=20]", NTU.localHost(serverPort));
         servers.export(0, new DistanceService(30));
         assertTrue(start.await(10, TimeUnit.SECONDS));
         RMIOperation<Integer> op = RMIOperation.valueOf("DistanceService", int.class, "method");
@@ -260,12 +257,13 @@ public class RMIRoutingTest {
         RMICommonTest.SomeSubject trueSubject = new RMICommonTest.SomeSubject("true");
         RMICommonTest.SomeSubject falseSubject = new RMICommonTest.SomeSubject("false");
         servers.setSecurityController(new RMICommonTest.SomeSecurityController(trueSubject));
-        int port = 49;
-        servers.connect(":" + NTU.port(port));
-        muxs.connectServers(":" + NTU.port(port + 1));
-        client.connect(NTU.LOCAL_HOST + ":" + NTU.port(port + 1));
-        muxs.connectClients(NTU.LOCAL_HOST + ":" + NTU.port(port));
-        servers.export(new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class, "summator"));
+
+        int serverPort = servers.connectAuto()[0];
+        int muxPort = muxs.connectServersAuto()[0];
+        client.connect(NTU.localHost(muxPort));
+        muxs.connectClients(NTU.localHost(serverPort));
+        servers.export(
+            new RMIServiceImplementation<>(new RMICommonTest.SummatorImpl(), RMICommonTest.Summator.class, "summator"));
         client.setSecurityController(new RMICommonTest.SomeSecurityController(trueSubject));
         RMICommonTest.Summator summator = client.getClient().getProxy(RMICommonTest.Summator.class, "summator");
 
@@ -277,7 +275,7 @@ public class RMIRoutingTest {
         client.close();
 
         client = (RMIEndpointImpl) RMIEndpoint.createEndpoint(RMIEndpoint.Side.CLIENT);
-        client.connect(NTU.LOCAL_HOST + ":" + NTU.port(port + 1));
+        client.connect(NTU.localHost(muxPort));
 
         log.info("_____________________");
 
@@ -306,10 +304,10 @@ public class RMIRoutingTest {
         log.info("clients = " + clients);
 
         int port = 62;
-        servers.connect(":" + NTU.port(port));
-        muxs.connectServers(":" + NTU.port(port + 1));
-        clients.connect(NTU.LOCAL_HOST + ":" + NTU.port(port + 1));
-        muxs.connectClients(NTU.LOCAL_HOST + ":" + NTU.port(port));
+        int serverPort = servers.connectAuto()[0];
+        int muxPort = muxs.connectServersAuto()[0];
+        clients.connect(NTU.localHost(muxPort));
+        muxs.connectClients(NTU.localHost(serverPort));
 
         servers.export(0, new DistanceService(30));
 
@@ -325,9 +323,11 @@ public class RMIRoutingTest {
         log.info("----------------------------------------- **** -----------------------------------------");
         clients.disconnect();
         muxs.disconnect();
-        servers.connect(":" + NTU.port(port + 2));
-        muxs.connect(new String[][]{{":" + NTU.port(port + 3)},{NTU.LOCAL_HOST + ":" + NTU.port(port + 2)}});
-        clients.connect(NTU.LOCAL_HOST + ":" + NTU.port(port + 3));
+
+        int newServerPort = servers.connectAuto()[0];
+        int newMuxPort = muxs.connectServersAuto()[0];
+        muxs.connectClients(NTU.localHost(newServerPort));
+        clients.connect(NTU.localHost(newMuxPort));
         log.info("----------------------------------------- **** -----------------------------------------");
         dist = clients.clients[0].getClient().createRequest(null, op);
         dist.send();
@@ -373,11 +373,11 @@ public class RMIRoutingTest {
                 .forEach(descriptor -> unavailableLatch.countDown());
             log.info("Client received descriptors: " + descriptors);
         });
-        NTU.connect(remoteServer, ":" + NTU.port(port));
-        NTU.connect(muxServer, ":" + NTU.port(port + 1));
-        NTU.connect(muxClientOne, NTU.LOCAL_HOST + ":" + NTU.port(port));
-        NTU.connect(muxClientTwo, NTU.LOCAL_HOST + ":" + NTU.port(port));
-        NTU.connect(client, NTU.LOCAL_HOST + ":" + NTU.port(port + 1));
+        int remoteServerPort = NTU.connectServer(remoteServer);
+        int muxServerPort = NTU.connectServer(muxServer);
+        NTU.connect(muxClientOne, NTU.localHost(remoteServerPort));
+        NTU.connect(muxClientTwo, NTU.localHost(remoteServerPort));
+        NTU.connect(client, NTU.localHost(muxServerPort));
 
         remoteServer.getServer().export(DifferentServices.CALCULATOR_SERVICE);
         muxServer.getServer().export(muxClientOne.getClient().getService("*"));
@@ -425,12 +425,11 @@ public class RMIRoutingTest {
         log.info("muxs = " + muxs);
         log.info("clients = " + clients);
 
-        int port = 82;
         servers.export(0, new EchoRequestService());
-        servers.connect(":" + NTU.port(port));
-        muxs.connectServers(":" + NTU.port(port + 1), ":" + NTU.port(port + 2));
-        muxs.connectClients(NTU.LOCAL_HOST + ":" + NTU.port(port + 2), NTU.LOCAL_HOST + ":" + NTU.port(port));
-        clients.connect(NTU.LOCAL_HOST + ":" + NTU.port(port + 1));
+        int serverPort = servers.connectAuto()[0];
+        int[] muxPorts = muxs.connectServersAuto();
+        muxs.connectClients(NTU.localHost(muxPorts[1]), NTU.localHost(serverPort));
+        clients.connect(NTU.localHost(muxPorts[0]));
 
         RMIOperation<List> op = RMIOperation.valueOf("EchoRequestService", List.class, "method");
         RMIRequest<List> req = clients.clients[0].getClient().createRequest(null, op);
@@ -457,11 +456,10 @@ public class RMIRoutingTest {
         log.info("start");
         server = (RMIEndpointImpl) RMIEndpoint.createEndpoint(RMIEndpoint.Side.SERVER);
         client = (RMIEndpointImpl) RMIEndpoint.createEndpoint(RMIEndpoint.Side.CLIENT);
-        int port = 92;
         server.getServer().export(DifferentServices.CALCULATOR_SERVICE);
         server.getServer().export(new EchoRequestService());
-        NTU.connect(server, ":" + NTU.port(port) + "[services=CalculatorService,advertise=all]");
-        NTU.connect(client, NTU.LOCAL_HOST + ":" + NTU.port(port));
+        int port = NTU.connectServer(server, null, "services=CalculatorService,advertise=all");
+        NTU.connect(client, NTU.localHost(port));
         RMIRequest<Double> sum = client.getClient().createRequest(null, DifferentServices.CalculatorService.PLUS, 1.231, 2.123);
         assertRequest(sum, 3.354, Collections.singletonList(server),  -1);
         log.info("middle");
@@ -494,12 +492,12 @@ public class RMIRoutingTest {
 
         servers.export(0, new EchoRequestService());
 
-        int port = 102;
-        servers.connect(":" + NTU.port(port));
-        muxs.connectServers(":" + NTU.port(port + 1), ":" + NTU.port(port + 2));
-        clients.connect(NTU.LOCAL_HOST + ":" + NTU.port(port + 1));
-        muxs.connectClients("(" + NTU.LOCAL_HOST + ":" + NTU.port(port + 2) + ")(" + NTU.LOCAL_HOST + ":" + NTU.port(port) + ")",
-            NTU.LOCAL_HOST + ":" + NTU.port(port + 1));
+        int serverPort = servers.connectAuto()[0];
+        int[] muxPorts = muxs.connectServersAuto();
+        clients.connect(NTU.localHost(muxPorts[0]));
+        muxs.connectClients(
+            "(" + NTU.localHost(muxPorts[1]) + ")(" + NTU.localHost(serverPort) + ")",
+            NTU.localHost(muxPorts[0]));
 
         RMIOperation<List> op = RMIOperation.valueOf("EchoRequestService", List.class, "method");
         RMIRequest<List> req = clients.clients[0].getClient().createRequest(null, op);
@@ -530,7 +528,6 @@ public class RMIRoutingTest {
     public void testAdvertisementFilter_AllAdvertisement() throws InterruptedException {
         server = (RMIEndpointImpl) RMIEndpoint.createEndpoint(RMIEndpoint.Side.SERVER);
         client = (RMIEndpointImpl) RMIEndpoint.createEndpoint(RMIEndpoint.Side.CLIENT);
-        int port = 112;
         server.getServer().export(DifferentServices.CALCULATOR_SERVICE);
         CountDownLatch adReceived = new CountDownLatch(1);
         client.getClient().getService(DifferentServices.CALCULATOR_SERVICE.getServiceName())
@@ -538,8 +535,8 @@ public class RMIRoutingTest {
                 System.out.println("Advertisements received: " + ds);
                 adReceived.countDown();
             });
-        NTU.connect(server, ":" + NTU.port(port) + "[advertise=all]");
-        NTU.connect(client, NTU.LOCAL_HOST + ":" + NTU.port(port));
+        int port = NTU.connectServer(server, null, "advertise=all");
+        NTU.connect(client, NTU.localHost(port));
         RMIRequest<Double> sum = client.getClient().createRequest(null, DifferentServices.CalculatorService.PLUS,
             1.231, 2.123);
         assertRequest(sum, 3.354, Collections.singletonList(server),  -1);
@@ -552,7 +549,6 @@ public class RMIRoutingTest {
     public void testAdvertisementFilter_NoAdvertisement() throws InterruptedException {
         server = (RMIEndpointImpl) RMIEndpoint.createEndpoint(RMIEndpoint.Side.SERVER);
         client = (RMIEndpointImpl) RMIEndpoint.createEndpoint(RMIEndpoint.Side.CLIENT);
-        int port = 122;
         server.getServer().export(DifferentServices.CALCULATOR_SERVICE);
         AtomicBoolean adReceived = new AtomicBoolean();
         client.getClient().getService(DifferentServices.CALCULATOR_SERVICE.getServiceName())
@@ -560,8 +556,8 @@ public class RMIRoutingTest {
                 System.out.println("Advertisements received: " + ds);
                 adReceived.set(true);
             });
-        NTU.connect(server, ":" + NTU.port(port) + "[advertise=none]");
-        NTU.connect(client, NTU.LOCAL_HOST + ":" + NTU.port(port));
+        int port = NTU.connectServer(server, null, "advertise=none");
+        NTU.connect(client, NTU.localHost(port));
         RMIRequest<Double> sum = client.getClient().createRequest(null, DifferentServices.CalculatorService.PLUS,
             1.231, 2.123);
         assertRequest(sum, 3.354, Collections.singletonList(server),  -1);

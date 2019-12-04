@@ -11,14 +11,26 @@
  */
 package com.dxfeed.model.test;
 
-import java.util.*;
-
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.DXPublisher;
 import com.dxfeed.event.IndexedEvent;
-import com.dxfeed.event.market.*;
+import com.dxfeed.event.market.AnalyticOrder;
+import com.dxfeed.event.market.MarketEventSymbols;
+import com.dxfeed.event.market.Order;
+import com.dxfeed.event.market.OrderSource;
+import com.dxfeed.event.market.Quote;
+import com.dxfeed.event.market.Scope;
+import com.dxfeed.event.market.Side;
 import com.dxfeed.model.market.OrderBookModel;
 import junit.framework.TestCase;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
 /**
  * Unit test for {@link OrderBookModel} class.
@@ -56,6 +68,11 @@ public class OrderBookModelTest extends TestCase {
         model.getBuyOrders().addListener(change -> buyQueued++);
         sells = model.getSellOrders();
         model.getSellOrders().addListener(change -> sellQueued++);
+    }
+
+    @Override
+    protected void tearDown() throws Exception {
+        model.close();
     }
 
     public void testLotSize() throws Exception {
@@ -146,8 +163,9 @@ public class OrderBookModelTest extends TestCase {
     public void testChangeSymbol() {
         // publish 100 orders for one symbol
         int n = 100;
-        for (int i = 1; i <= n; i++)
+        for (int i = 1; i <= n; i++) {
             publisher.publishEvents(Collections.singletonList(orderBuy(i, i, Q, MMID)));
+        }
         assertNBuyChangesQueued(n);
         // change symbol
         symbol = "OTHER";
@@ -267,16 +285,18 @@ public class OrderBookModelTest extends TestCase {
             expectedSell += deltaSell;
             publisher.publishEvents(Collections.singletonList(order));
             switch (order.getOrderSide()) {
-            case BUY:
-                assertNBuyChangesQueued(deltaBuy != 0 || !same(order, old) && old.getOrderSide() == Side.BUY ? 1 : 0);
-                assertNSellChangesQueued(oneIfSell(old));
-                break;
-            case SELL:
-                assertNSellChangesQueued(deltaSell != 0 || !same(order, old) && old.getOrderSide() == Side.SELL ? 1 : 0);
-                assertNBuyChangesQueued(oneIfBuy(old));
-                break;
-            default:
-                fail();
+                case BUY:
+                    assertNBuyChangesQueued(
+                        deltaBuy != 0 || !same(order, old) && old.getOrderSide() == Side.BUY ? 1 : 0);
+                    assertNSellChangesQueued(oneIfSell(old));
+                    break;
+                case SELL:
+                    assertNSellChangesQueued(
+                        deltaSell != 0 || !same(order, old) && old.getOrderSide() == Side.SELL ? 1 : 0);
+                    assertNBuyChangesQueued(oneIfBuy(old));
+                    break;
+                default:
+                    fail();
             }
             assertEquals(expectedBuy, buys.size());
             assertEquals(expectedSell, sells.size());
@@ -297,7 +317,7 @@ public class OrderBookModelTest extends TestCase {
         Random rnd = new Random(1);
         int bookSize = 100;
         // book per source
-        Map<OrderSource,Order[]> books = new HashMap<>();
+        Map<OrderSource, Order[]> books = new HashMap<>();
         int expectedBuy = 0;
         int expectedSell = 0;
         List<OrderSource> sources = OrderSource.publishable(Order.class);
@@ -308,9 +328,7 @@ public class OrderBookModelTest extends TestCase {
                 rnd.nextBoolean() ? Side.BUY : Side.SELL, index, rnd.nextInt(10), (char) 0, null);
             OrderSource source = sources.get(rnd.nextInt(sources.size()));
             order.setSource(source);
-            Order[] book = books.get(source);
-            if (book == null)
-                books.put(source, book = new Order[bookSize]);
+            Order[] book = books.computeIfAbsent(source, k -> new Order[bookSize]);
             Order old = book[index];
             book[index] = order;
             int deltaBuy = oneIfBuy(order) - oneIfBuy(old);
@@ -319,16 +337,18 @@ public class OrderBookModelTest extends TestCase {
             expectedSell += deltaSell;
             publisher.publishEvents(Collections.singletonList(order));
             switch (order.getOrderSide()) {
-            case BUY:
-                assertNBuyChangesQueued(deltaBuy != 0 || !same(order, old) && old.getOrderSide() == Side.BUY ? 1 : 0);
-                assertNSellChangesQueued(oneIfSell(old));
-                break;
-            case SELL:
-                assertNSellChangesQueued(deltaSell != 0 || !same(order, old) && old.getOrderSide() == Side.SELL ? 1 : 0);
-                assertNBuyChangesQueued(oneIfBuy(old));
-                break;
-            default:
-                fail();
+                case BUY:
+                    assertNBuyChangesQueued(
+                        deltaBuy != 0 || !same(order, old) && old.getOrderSide() == Side.BUY ? 1 : 0);
+                    assertNSellChangesQueued(oneIfSell(old));
+                    break;
+                case SELL:
+                    assertNSellChangesQueued(
+                        deltaSell != 0 || !same(order, old) && old.getOrderSide() == Side.SELL ? 1 : 0);
+                    assertNBuyChangesQueued(oneIfBuy(old));
+                    break;
+                default:
+                    fail();
             }
             assertEquals(expectedBuy, buys.size());
             assertEquals(expectedSell, sells.size());
@@ -365,17 +385,17 @@ public class OrderBookModelTest extends TestCase {
             int index = rnd.nextInt(bookSize);
             String mmid = rnd.nextBoolean() ? MMID : MMID2;
             switch (rnd.nextInt(4)) {
-            case 0:
-                publisher.publishEvents(Collections.singletonList(compositeBuy(value)));
-                break;
-            case 1:
-                publisher.publishEvents(Collections.singletonList(regionalBuy(exchange, value)));
-                break;
-            case 2:
-                publisher.publishEvents(Collections.singletonList(aggregateBuy(index, value, exchange, mmid)));
-                break;
-            case 3:
-                publisher.publishEvents(Collections.singletonList(orderBuy(index, value, exchange, mmid)));
+                case 0:
+                    publisher.publishEvents(Collections.singletonList(compositeBuy(value)));
+                    break;
+                case 1:
+                    publisher.publishEvents(Collections.singletonList(regionalBuy(exchange, value)));
+                    break;
+                case 2:
+                    publisher.publishEvents(Collections.singletonList(aggregateBuy(index, value, exchange, mmid)));
+                    break;
+                case 3:
+                    publisher.publishEvents(Collections.singletonList(orderBuy(index, value, exchange, mmid)));
             }
         }
     }
@@ -423,7 +443,9 @@ public class OrderBookModelTest extends TestCase {
         return createAnalyticOrder(Scope.ORDER, Side.BUY, index, value, exchange, mmid);
     }
 
-    private AnalyticOrder createAnalyticOrder(Scope scope, Side side, long index, int value, char exchange, String mmid) {
+    private AnalyticOrder createAnalyticOrder(Scope scope, Side side, long index, int value, char exchange,
+        String mmid)
+    {
         AnalyticOrder analyticOrder = new AnalyticOrder();
         analyticOrder.setScope(scope);
         analyticOrder.setIndex(index);
@@ -443,7 +465,7 @@ public class OrderBookModelTest extends TestCase {
             order.getSize() == 0 : // order with zero size is the same as null (missing)
             // check just relevant attrs
             order.getScope() == old.getScope() &&
-                order.getOrderSide() == old.getOrderSide() &&
+            order.getOrderSide() == old.getOrderSide() &&
             order.getIndex() == old.getIndex() &&
             order.getSize() == old.getSize() &&
             order.getSource() == old.getSource();

@@ -53,6 +53,24 @@ class ServerRoutingSide {
         connect(servers, addresses);
     }
 
+    int[] connectAuto(String... opts) {
+        RMIEndpointImpl[] servers = this.servers;
+        return connectAuto(servers, opts);
+    }
+
+    int[] connectAuto() {
+        return connectAuto(new String[servers.length]);
+    }
+
+    static int[] connectAuto(RMIEndpointImpl[] servers, String[] opts) {
+        if (opts.length != servers.length)
+            throw new IllegalArgumentException();
+        int[] ports = new int[servers.length];
+        for (int i = 0; i < servers.length; i++)
+            ports[i] = NTU.connectServer(servers[i], null, opts[i]);
+        return ports;
+    }
+
     void disconnect() {
         disconnect(servers);
     }

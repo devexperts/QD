@@ -1,3 +1,12 @@
+
+QDS 3.281:
+
+* [QD-1209] EventTime is lost when reading tape files with MESSAGE time format
+* [QD-1208] TimeSeriesEventModel.close may throw UnsupportedOperationException
+* [QD-1203] AIOOBE in DXFeedMarketDepth sample
+* [QD-1136] RMIRequest.cancelOrAbort may miss notifying the server
+* [QD-1205] Network tests port allocation management
+
 QDS 3.280:
 
 * [QD-1202] dxFeed API: Add AnalyticOrder event
