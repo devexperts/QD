@@ -9,9 +9,15 @@
  * http://mozilla.org/MPL/2.0/.
  * !__
  */
-package com.devexperts.util;
+package com.devexperts.util.benchmark;
 
 import com.devexperts.logging.Logging;
+import com.devexperts.util.DayUtil;
+import com.devexperts.util.InvalidFormatException;
+import com.devexperts.util.MathUtil;
+import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimePeriod;
+import com.devexperts.util.TimeUtil;
 
 import java.text.DateFormat;
 import java.text.ParsePosition;
@@ -19,12 +25,58 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.TimeZone;
+import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.function.Supplier;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
+ * <p><b>WARNING</b> Provided class mimics "production" implementation of {@link com.devexperts.util.TimeFormat} class.
+ * It tries to replicate original behavior as close as possible but provides pluggable caching mechanics controlled by
+ * {@code "com.devexperts.util.timeformat.cache"} property.
+ * Please check that cache-unrelated parts are in sync with current "production" version.</p>
+ * <p><hr></p>
+ * <p/>
+ *
+ *
  * Utility class for parsing and formatting dates and times in ISO-compatible format.
  */
 public class TimeFormat {
+
+    private static final Logging LOG = Logging.getLogging(TimeFormat.class);
+
+    public static final String NO_CACHE = "NONE";
+    public static final String CACHE_SHARED_BIN_MASK = "SHARED_BIN_MASK";
+    public static final String CACHE_SHARED_REMAINDER = "SHARED_REMAINDER";
+    public static final String CACHE_SHARED_ARRAY_MASK = "SHARED_ARRAY_MASK";
+    public static final String CACHE_MILLIS_AND_MINUTES = "MILLIS_AND_MINUTES";
+
+
+    static final String DEFAULT_MODE = CACHE_MILLIS_AND_MINUTES;
+    static final Supplier<TimeFormat.TimeFormatCache> cacheFactory;
+    static final boolean useMinuteCache;
+
+    static {
+        String cmode = SystemProperties.getProperty("com.devexperts.util.timeformat.cache", DEFAULT_MODE);
+        useMinuteCache = CACHE_MILLIS_AND_MINUTES.equalsIgnoreCase(cmode);
+        if (NO_CACHE.equalsIgnoreCase(cmode)) {
+            cacheFactory = () -> null; // no cache by default
+        } else {
+            switch (cmode) {
+                case CACHE_SHARED_ARRAY_MASK:
+                case CACHE_MILLIS_AND_MINUTES:
+                    cacheFactory = SharedTimeFormatCacheArrayAndMask::new;
+                    break;
+                case CACHE_SHARED_BIN_MASK:
+                    cacheFactory = SharedTimeFormatCacheWithMask::new;
+                    break;
+                case CACHE_SHARED_REMAINDER:
+                    cacheFactory = SharedTimeFormatCacheWithRemainder::new;
+                    break;
+                default:
+                    throw new UnsupportedOperationException("Unsupported cache mode " + cmode);
+            }
+        }
+    }
 
     /**
      * An instance of TimeFormat that corresponds to default timezone as returned by
@@ -517,25 +569,30 @@ public class TimeFormat {
             return Long.toString(time);
 
         long key = format.withMillis ? time : MathUtil.div(time, 1000);
-        String cached = format.getCachedResult(key);
-        if (cached != null)
-            return cached;
+        if (format.cache != null) {
+            String cached = format.getCachedResult(key);
+            if (cached != null)
+                return cached;
+        }
 
-        long minute = MathUtil.div(time, TimeUtil.MINUTE);
-        char[] cachedMinute = format.getCachedMinute(minute);
-        if (cachedMinute != null) { // Fast path
-            // Minute cache is used only with offsets divisible by minutes, so offset value is not needed here
-            int secondsAndMillis = (int) (time - minute * TimeUtil.MINUTE);
-            char[] chars = cachedMinute.clone();
-            int offset = format.secondsPos;
-            offset = putNum2(chars, offset, secondsAndMillis / 1000);
-            if (format.withMillis) {
-                offset++; // skip '.'
-                putNum3(chars, offset, secondsAndMillis % 1000);
+        if (format.minutesCache != null) {
+            long minute = MathUtil.div(time, TimeUtil.MINUTE);
+            char[] cachedMinute = format.getCachedMinute(minute);
+            if (cachedMinute != null) { // Fast path
+                // Minute cache is used only with offsets divisible by minutes, so offset value is not needed here
+                int secondsAndMillis = (int) (time - minute * TimeUtil.MINUTE);
+                char[] chars = cachedMinute.clone();
+                int offset = format.secondsPos;
+                offset = putNum2(chars, offset, secondsAndMillis / 1000);
+                if (format.withMillis) {
+                    offset++; // skip '.'
+                    putNum3(chars, offset, secondsAndMillis % 1000);
+                }
+                String s = new String(chars);
+                if (format.cache != null)
+                    format.setCachedResult(key, s);
+                return s;
             }
-            String s = new String(chars);
-            format.setCachedResult(key, s);
-            return s;
         }
 
         int timeOffset = format.getTimeZone().getOffset(time);
@@ -580,9 +637,15 @@ public class TimeFormat {
         }
 
         String s = new String(chars, 0, offset);
-        format.setCachedResult(key, s);
-        if (timeOffset % TimeUtil.MINUTE == 0)
-            format.setCachedMinute(minute, (chars.length == offset) ? chars : Arrays.copyOf(chars, offset));
+        if (format.cache != null)
+            format.setCachedResult(key, s);
+
+        if (format.minutesCache != null) {
+            if (timeOffset % TimeUtil.MINUTE == 0) {
+                long minute = MathUtil.div(time, TimeUtil.MINUTE);
+                format.setCachedMinute(minute, (chars.length == offset) ? chars : Arrays.copyOf(chars, offset));
+            }
+        }
         return s;
     }
 
@@ -606,13 +669,8 @@ public class TimeFormat {
     }
 
     private static class Format {
-        private static final int CACHE_SIZE = 1 << 8; // shall be a power of 2
-        // never matches any cached result
-        private static final CacheEntry RESULT_STUB = new CacheEntry(Long.MIN_VALUE, null);
 
         private static final int MINUTES_CACHE_SIZE = 1 << 8; // shall be a power of 2
-        // never matches any valid minute entry
-        private static final MinuteCacheEntry MINUTE_STUB = new MinuteCacheEntry(Long.MIN_VALUE, null);
 
         final int standardLength;
         final int secondsPos;
@@ -621,7 +679,7 @@ public class TimeFormat {
         final boolean withMillis;
         final boolean withZone;
         final boolean withIso;
-        final CacheEntry[] cache; // cache of exact formatting results (key is a millis or second value)
+        final TimeFormat.TimeFormatCache cache; // cache of exact formatting results (key is a millis or second value)
         final MinuteCacheEntry[] minutesCache;
 
         Format(String format, int extraLength, int secondsPos,
@@ -634,9 +692,8 @@ public class TimeFormat {
             this.withMillis = withMillis;
             this.withZone = withZone;
             this.withIso = withIso;
-            cache = new CacheEntry[CACHE_SIZE];
-            minutesCache = new MinuteCacheEntry[MINUTES_CACHE_SIZE];
-            clearCache();
+            cache = cacheFactory.get();
+            minutesCache = TimeFormat.useMinuteCache ? new MinuteCacheEntry[MINUTES_CACHE_SIZE] : null;
         }
 
         DateFormat get() {
@@ -659,27 +716,24 @@ public class TimeFormat {
         }
 
         void clearCache() {
-            Arrays.fill(cache, RESULT_STUB);
-            Arrays.fill(minutesCache, MINUTE_STUB);
+            if (cache != null)
+                cache.clear();
+            if (minutesCache != null)
+                Arrays.fill(minutesCache, null);
         }
 
         public String getCachedResult(long key) {
-            int bucket = (int) key & (CACHE_SIZE - 1);
-            CacheEntry entry = cache[bucket];
-            if (entry.getKey() == key)
-                return entry.getValue();
-            return null;
+            return cache.get(key);
         }
 
         public void setCachedResult(long key, String value) {
-            int bucket = (int) key & (CACHE_SIZE - 1);
-            cache[bucket] = new CacheEntry(key, value);
+            cache.put(key, value);
         }
 
         public char[] getCachedMinute(long minute) {
             int bucket = (int) minute & (MINUTES_CACHE_SIZE - 1);
             MinuteCacheEntry cachedMinute = minutesCache[bucket];
-            if (cachedMinute.getMinute() == minute)
+            if (cachedMinute != null && cachedMinute.getMinute() == minute)
                 return cachedMinute.getTemplate();
             return null;
         }
@@ -740,6 +794,111 @@ public class TimeFormat {
         }
     }
 
+
+    static interface TimeFormatCache {
+        String get(long key);
+
+        void put(long key, String value);
+
+        // non-atomic, needed on timezone reset
+        void clear();
+    }
+
+    abstract static class AbstracrtTimeFormatCacheOnARA implements TimeFormat.TimeFormatCache {
+
+        protected final AtomicReferenceArray<TimeFormat.CacheEntry> cache;
+
+        protected AbstracrtTimeFormatCacheOnARA(int size) {
+            cache = new AtomicReferenceArray<>(size);
+        }
+
+        protected abstract int getBucket(long key);
+
+        @Override
+        public String get(long key) {
+            int bucket = getBucket(key);
+            TimeFormat.CacheEntry entry = cache.get(bucket);
+            if (entry != null && entry.key == key)
+                return entry.getValue();
+            return null;
+        }
+
+        @Override
+        public void put(long key, String value) {
+            int bucket = getBucket(key);
+            cache.lazySet(bucket, new TimeFormat.CacheEntry(key, value));
+        }
+
+        // non-atomic, needed on timezone reset
+        @Override
+        public void clear() {
+            AtomicReferenceArray<TimeFormat.CacheEntry> c = cache;
+            for (int i = 0; i < c.length(); i++) {
+                c.set(i, null);
+            }
+        }
+    }
+
+    static class SharedTimeFormatCacheWithMask extends TimeFormat.AbstracrtTimeFormatCacheOnARA {
+
+        public SharedTimeFormatCacheWithMask() {
+            super(256);
+        }
+
+        @Override
+        protected int getBucket(long key) {
+            return (int) key & (255);
+        }
+
+    }
+
+    static class SharedTimeFormatCacheWithRemainder extends TimeFormat.AbstracrtTimeFormatCacheOnARA {
+
+        public SharedTimeFormatCacheWithRemainder() {
+            super(239);
+        }
+
+        @Override
+        protected int getBucket(long key) {
+            return (int) MathUtil.rem(key, cache.length());
+        }
+
+    }
+
+    static class SharedTimeFormatCacheArrayAndMask implements TimeFormat.TimeFormatCache {
+
+        // never matches any cached result
+        private static final CacheEntry RESULT_STUB = new CacheEntry(Long.MIN_VALUE, null);
+        protected final TimeFormat.CacheEntry[] cache = new CacheEntry[256];
+
+        {
+            clear();
+        }
+
+        private int getBucket(long key) { return (int) key & 255; }
+
+        @Override
+        public String get(long key) {
+            int bucket = getBucket(key);
+            TimeFormat.CacheEntry entry = cache[bucket];
+            if (entry.key == key)
+                return entry.getValue();
+            return null;
+        }
+
+        @Override
+        public void put(long key, String value) {
+            int bucket = getBucket(key);
+            cache[bucket] = new TimeFormat.CacheEntry(key, value);
+        }
+
+        // non-atomic, needed on timezone reset
+        @Override
+        public void clear() {
+            Arrays.fill(cache, RESULT_STUB);
+        }
+    }
+
     @ThreadSafe
     static class CacheEntry {
         private final long key;
@@ -758,4 +917,5 @@ public class TimeFormat {
             return value;
         }
     }
+
 }

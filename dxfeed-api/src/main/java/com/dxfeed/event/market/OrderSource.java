@@ -240,6 +240,13 @@ public final class OrderSource extends IndexedEventSource {
     public static final OrderSource BI20 = new OrderSource("BI20", PUB_ORDER);
 
     /**
+     * ABE (abe.io) exchange.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource ABE = new OrderSource("ABE", PUB_ORDER);
+
+    /**
      * CME Globex.
      * {@link Order} and {@link AnalyticOrder} events are {@link #isPublishable(Class) publishable} on this
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
@@ -266,6 +273,13 @@ public final class OrderSource extends IndexedEventSource {
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
      */
     public static final OrderSource CFE = new OrderSource("CFE", PUB_ORDER);
+
+    /**
+     * Small Exchange.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource SMFE = new OrderSource("SMFE", PUB_ORDER);
 
     // ATTENTION: Every time a custom OrderSource constant is added run com.dxfeed.api.codegen.ImplCodeGen
     // and commit updated implementation classes.

@@ -9,10 +9,9 @@
  * http://mozilla.org/MPL/2.0/.
  * !__
  */
-package com.devexperts.util.test;
+package com.devexperts.util.benchmark;
 
 import com.devexperts.util.InvalidFormatException;
-import com.devexperts.util.TimeFormat;
 import com.devexperts.util.TimePeriod;
 import com.devexperts.util.TimeUtil;
 import junit.framework.TestCase;

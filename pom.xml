@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.281</version>
+    <version>3.282</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -75,6 +75,7 @@
         <module>dxfeed-viewer</module>
         <module>dxfeed-ondemand</module>
         <module>dxfeed-webservice-impl</module>
+        <module>dxlib-benchmark</module>
     </modules>
 
     <dependencies>
@@ -141,10 +142,11 @@
         <jackson.version>2.9.4</jackson.version>
         <jaxb.version>2.2.7</jaxb.version>
         <cometd.version>4.0.4</cometd.version>
+        <!-- slf4j: same version as used by cometd above -->
         <slf4j.version>1.7.26</slf4j.version>
         <aspectj.version>1.8.2</aspectj.version>
         <junit.version>4.12</junit.version>
-        <!-- same version as used by cometd above -->
+        <jmh.version>1.21</jmh.version>
     </properties>
 
     <profiles>

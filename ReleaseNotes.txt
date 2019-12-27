@@ -1,4 +1,11 @@
 
+QDS 3.282:
+
+* [QD-1213] TimeFormat performance optimization for serial times processing
+* [QD-1216] New order source for SmallEx exchange: SMFE
+* [QD-1212] New order source for ABE exchange: ABE
+* [QD-1211] [Schedule] Add holidays and short days for 2020
+
 QDS 3.281:
 
 * [QD-1209] EventTime is lost when reading tape files with MESSAGE time format
