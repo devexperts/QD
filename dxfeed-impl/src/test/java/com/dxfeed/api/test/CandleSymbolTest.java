@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,11 +11,16 @@
  */
 package com.dxfeed.api.test;
 
+import com.dxfeed.event.candle.CandleExchange;
+import com.dxfeed.event.candle.CandlePeriod;
+import com.dxfeed.event.candle.CandlePrice;
+import com.dxfeed.event.candle.CandleSession;
+import com.dxfeed.event.candle.CandleSymbol;
+import com.dxfeed.event.candle.CandleType;
+import junit.framework.TestCase;
+
 import java.util.HashSet;
 import java.util.Set;
-
-import com.dxfeed.event.candle.*;
-import junit.framework.TestCase;
 
 public class CandleSymbolTest extends TestCase {
     public void testCandlePeriods() {

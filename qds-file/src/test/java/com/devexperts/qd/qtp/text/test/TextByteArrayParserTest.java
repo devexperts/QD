@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -10,9 +10,6 @@
  * !__
  */
 package com.devexperts.qd.qtp.text.test;
-
-import java.lang.reflect.*;
-import java.nio.charset.StandardCharsets;
 
 import com.devexperts.io.ByteArrayInput;
 import com.devexperts.qd.DataIterator;
@@ -24,6 +21,11 @@ import com.devexperts.qd.qtp.text.TextQTPParser;
 import com.dxfeed.event.market.impl.ProfileMapping;
 import com.dxfeed.event.market.impl.TimeAndSaleMapping;
 import junit.framework.TestCase;
+
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.nio.charset.StandardCharsets;
 
 public class TextByteArrayParserTest extends TestCase {
     public void testParseWithNulls() {

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,10 +11,10 @@
  */
 package com.dxfeed.impl;
 
-import javax.xml.bind.annotation.adapters.XmlAdapter;
-
 import com.dxfeed.event.IndexedEventSource;
 import com.dxfeed.event.market.OrderSource;
+
+import javax.xml.bind.annotation.adapters.XmlAdapter;
 
 public class XmlSourceAdapter extends XmlAdapter<String, IndexedEventSource> {
     @Override

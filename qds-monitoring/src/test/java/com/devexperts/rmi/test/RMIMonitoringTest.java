@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -10,14 +10,6 @@
  * !__
  */
 package com.devexperts.rmi.test;
-
-import java.io.*;
-import java.lang.management.ManagementFactory;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
-import javax.management.ObjectName;
 
 import com.devexperts.logging.Logging;
 import com.devexperts.mars.common.MARSNode;
@@ -30,7 +22,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
-import javax.management.ObjectName;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -38,10 +29,14 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import javax.management.ObjectName;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class RMIMonitoringTest {
 

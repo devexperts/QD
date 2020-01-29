@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,13 +11,16 @@
  */
 package com.devexperts.mars.jvm;
 
+import com.devexperts.logging.Logging;
+
 import java.io.PrintStream;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 import java.text.SimpleDateFormat;
-import java.util.*;
-
-import com.devexperts.logging.Logging;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.Locale;
 
 class ThreadDumper extends Thread {
     private static final Comparator<ThreadInfo> THREAD_ID_COMPARATOR = new Comparator<ThreadInfo>() {

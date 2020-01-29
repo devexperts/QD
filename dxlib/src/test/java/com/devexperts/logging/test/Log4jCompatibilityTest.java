@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,13 +11,14 @@
  */
 package com.devexperts.logging.test;
 
-import java.io.*;
-import java.util.Properties;
-
 import com.devexperts.logging.LogFormatter;
 import com.devexperts.logging.Logging;
 import org.apache.log4j.Category;
 import org.apache.log4j.PropertyConfigurator;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Properties;
 
 /**
  * Tests that {@link com.devexperts.logging.DetailedLogLayout} works as layout with either Log4j version

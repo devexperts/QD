@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,27 @@
  */
 package com.devexperts.qd.test;
 
-import java.util.*;
-
-import com.devexperts.io.*;
+import com.devexperts.io.Chunk;
+import com.devexperts.io.ChunkList;
+import com.devexperts.io.ChunkPool;
+import com.devexperts.io.ChunkedInput;
+import com.devexperts.io.ChunkedOutput;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.ng.RecordBuffer;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.AbstractQTPComposer;
+import com.devexperts.qd.qtp.AbstractQTPParser;
+import com.devexperts.qd.qtp.BinaryQTPComposer;
+import com.devexperts.qd.qtp.BinaryQTPParser;
+import com.devexperts.qd.qtp.ByteArrayComposer;
+import com.devexperts.qd.qtp.ByteArrayParser;
+import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.qtp.text.TextQTPComposer;
 import com.devexperts.qd.qtp.text.TextQTPParser;
 import junit.framework.TestCase;
+
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.Random;
 
 public class ComposeParseTest extends TestCase {
     private static final int REPEAT = 1000;

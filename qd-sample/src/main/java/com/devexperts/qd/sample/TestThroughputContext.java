@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,17 +11,29 @@
  */
 package com.devexperts.qd.sample;
 
+import com.devexperts.qd.QDCollector;
+import com.devexperts.qd.SymbolCodec;
+import com.devexperts.qd.SymbolList;
+import com.devexperts.qd.qtp.AgentAdapter;
+import com.devexperts.qd.qtp.DistributorAdapter;
+import com.devexperts.qd.qtp.MessageConnector;
+import com.devexperts.qd.qtp.MessageConnectors;
+import com.devexperts.qd.stats.QDStats;
+import com.devexperts.qd.util.SymbolObjectMap;
+
 import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.Formatter;
+import java.util.List;
+import java.util.Locale;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import com.devexperts.qd.*;
-import com.devexperts.qd.qtp.*;
-import com.devexperts.qd.stats.QDStats;
-import com.devexperts.qd.util.SymbolObjectMap;
 
 class TestThroughputContext extends SymbolList {
     private final DateFormat DF = new SimpleDateFormat("yyyyMMdd HHmmss");

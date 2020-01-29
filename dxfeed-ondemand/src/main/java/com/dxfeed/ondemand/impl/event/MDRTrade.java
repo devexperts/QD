@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,13 +11,13 @@
  */
 package com.dxfeed.ondemand.impl.event;
 
-import java.io.IOException;
-
 import com.devexperts.io.ByteArrayInput;
 import com.devexperts.io.ByteArrayOutput;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.util.TimeSequenceUtil;
 import com.dxfeed.event.market.impl.TradeMapping;
+
+import java.io.IOException;
 
 public class MDRTrade extends MDREvent {
     private int lastTime;

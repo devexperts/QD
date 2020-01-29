@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,31 @@
  */
 package com.devexperts.qd.sample;
 
-import java.util.concurrent.atomic.AtomicLongArray;
-
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataIterator;
+import com.devexperts.qd.DataProvider;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDCollector;
+import com.devexperts.qd.QDContract;
+import com.devexperts.qd.QDDistributor;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.SubscriptionIterator;
+import com.devexperts.qd.SubscriptionListener;
+import com.devexperts.qd.SubscriptionProvider;
+import com.devexperts.qd.SubscriptionVisitor;
 import com.devexperts.qd.ng.RecordBuffer;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.AgentAdapter;
+import com.devexperts.qd.qtp.ChannelShaper;
+import com.devexperts.qd.qtp.MessageAdapter;
+import com.devexperts.qd.qtp.MessageConnectors;
+import com.devexperts.qd.qtp.MessageType;
+import com.devexperts.qd.qtp.MessageVisitor;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.tools.RandomRecordsProvider;
 import com.devexperts.qd.util.LegacyIteratorUtils;
 import com.devexperts.qd.util.SymbolObjectMap;
+
+import java.util.concurrent.atomic.AtomicLongArray;
 
 /**
  * This class models weighted data shaping in agent adapter.

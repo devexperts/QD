@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,10 +11,12 @@
  */
 package com.dxfeed.ipf.transform;
 
+import com.dxfeed.schedule.Day;
+import com.dxfeed.schedule.DayFilter;
+import com.dxfeed.schedule.Schedule;
+
 import java.io.IOException;
 import java.util.Date;
-
-import com.dxfeed.schedule.*;
 
 class FindTradingExpression extends Expression<Date> {
     private final Object parameter;

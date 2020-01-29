@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,10 +11,27 @@
  */
 package com.devexperts.qd.test;
 
-import com.devexperts.io.*;
-import com.devexperts.qd.*;
+import com.devexperts.io.ChunkList;
+import com.devexperts.io.ChunkedInput;
+import com.devexperts.io.ChunkedOutput;
+import com.devexperts.qd.DataProvider;
+import com.devexperts.qd.QDAgent;
+import com.devexperts.qd.QDCollector;
+import com.devexperts.qd.QDContract;
+import com.devexperts.qd.QDDistributor;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.SubscriptionBuffer;
+import com.devexperts.qd.SubscriptionProvider;
 import com.devexperts.qd.ng.RecordBuffer;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.AbstractMessageVisitor;
+import com.devexperts.qd.qtp.AbstractQTPComposer;
+import com.devexperts.qd.qtp.AbstractQTPParser;
+import com.devexperts.qd.qtp.AgentAdapter;
+import com.devexperts.qd.qtp.BinaryQTPComposer;
+import com.devexperts.qd.qtp.BinaryQTPParser;
+import com.devexperts.qd.qtp.DistributorAdapter;
+import com.devexperts.qd.qtp.MessageAdapter;
+import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.qtp.text.TextQTPComposer;
 import com.devexperts.qd.qtp.text.TextQTPParser;
 import com.devexperts.qd.stats.QDStats;

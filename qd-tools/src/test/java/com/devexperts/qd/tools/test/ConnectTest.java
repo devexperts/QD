@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,23 +11,40 @@
  */
 package com.devexperts.qd.tools.test;
 
-import java.io.*;
-import java.nio.file.*;
-import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
-import com.devexperts.qd.*;
-import com.devexperts.qd.kit.*;
-import com.devexperts.qd.ng.*;
-import com.devexperts.qd.qtp.*;
-import com.devexperts.qd.qtp.file.*;
+import com.devexperts.qd.DataIntField;
+import com.devexperts.qd.DataObjField;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDAgent;
+import com.devexperts.qd.QDCollector;
+import com.devexperts.qd.QDContract;
+import com.devexperts.qd.QDDistributor;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.SymbolCodec;
+import com.devexperts.qd.kit.CompactCharField;
+import com.devexperts.qd.kit.DecimalField;
+import com.devexperts.qd.kit.PlainIntField;
+import com.devexperts.qd.kit.RecordOnlyFilter;
+import com.devexperts.qd.kit.StringField;
+import com.devexperts.qd.kit.SymbolSetFilter;
+import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordMode;
+import com.devexperts.qd.ng.RecordProvider;
+import com.devexperts.qd.ng.RecordSource;
+import com.devexperts.qd.qtp.AgentAdapter;
+import com.devexperts.qd.qtp.DistributorAdapter;
+import com.devexperts.qd.qtp.MessageConnectors;
+import com.devexperts.qd.qtp.MessageType;
+import com.devexperts.qd.qtp.QDEndpoint;
+import com.devexperts.qd.qtp.file.FileFormat;
+import com.devexperts.qd.qtp.file.FileWriterImpl;
+import com.devexperts.qd.qtp.file.FileWriterParams;
+import com.devexperts.qd.qtp.file.TimestampsType;
 import com.devexperts.qd.qtp.socket.ServerSocketTestHelper;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.tools.AbstractTool;
 import com.devexperts.qd.tools.Tools;
-import com.devexperts.services.Services;
 import com.devexperts.test.ThreadCleanCheck;
 import com.dxfeed.promise.Promise;
 import junit.framework.TestCase;
@@ -37,6 +54,24 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+
+import java.io.BufferedReader;
+import java.io.Closeable;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.NavigableSet;
+import java.util.Random;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 @RunWith(Parameterized.class)
 public class ConnectTest extends TestCase {

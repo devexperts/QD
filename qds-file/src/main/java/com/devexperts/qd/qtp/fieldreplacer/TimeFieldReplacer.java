@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,19 @@
  */
 package com.devexperts.qd.qtp.fieldreplacer;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
-
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataIntField;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.SerialFieldType;
 import com.devexperts.qd.kit.RecordOnlyFilter;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.qtp.FieldReplacer;
 import com.devexperts.services.ServiceProvider;
 import com.devexperts.util.TimePeriod;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * This implementation of {@link FieldReplacer} provides an ability to replace {@link SerialFieldType#TIME time} fields

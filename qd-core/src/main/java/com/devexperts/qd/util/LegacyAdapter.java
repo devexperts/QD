@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,8 +11,23 @@
  */
 package com.devexperts.qd.util;
 
-import com.devexperts.qd.*;
-import com.devexperts.qd.ng.*;
+import com.devexperts.qd.DataListener;
+import com.devexperts.qd.DataProvider;
+import com.devexperts.qd.DataVisitor;
+import com.devexperts.qd.QDLog;
+import com.devexperts.qd.SubscriptionIterator;
+import com.devexperts.qd.SubscriptionListener;
+import com.devexperts.qd.SubscriptionProvider;
+import com.devexperts.qd.SubscriptionVisitor;
+import com.devexperts.qd.ng.AbstractRecordProvider;
+import com.devexperts.qd.ng.AbstractRecordSink;
+import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordListener;
+import com.devexperts.qd.ng.RecordMode;
+import com.devexperts.qd.ng.RecordProvider;
+import com.devexperts.qd.ng.RecordSink;
+import com.devexperts.qd.ng.RecordSource;
 
 /**
  * This class contains static methods to adapt legacy interface of {@link com.devexperts.qd} package to

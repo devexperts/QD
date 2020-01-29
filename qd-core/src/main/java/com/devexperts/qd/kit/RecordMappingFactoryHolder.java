@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,12 +11,14 @@
  */
 package com.devexperts.qd.kit;
 
-import java.util.*;
-
 import com.devexperts.qd.QDLog;
 import com.devexperts.qd.ng.RecordMapping;
 import com.devexperts.qd.ng.RecordMappingFactory;
 import com.devexperts.services.Services;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 
 class RecordMappingFactoryHolder {
     private static final List<RecordMappingFactory> RECORD_MAPPING_FACTORIES = new ArrayList<RecordMappingFactory>();

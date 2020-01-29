@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,17 @@
  */
 package com.devexperts.rmi.samples;
 
-import java.util.EnumSet;
-
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDContract;
 import com.devexperts.qd.qtp.AgentAdapter;
 import com.devexperts.qd.qtp.QDEndpoint;
-import com.devexperts.qd.sample.*;
+import com.devexperts.qd.sample.Sample;
+import com.devexperts.qd.sample.SampleGeneratorThread;
+import com.devexperts.qd.sample.SampleScheme;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
+
+import java.util.EnumSet;
 
 public class SampleServer {
 

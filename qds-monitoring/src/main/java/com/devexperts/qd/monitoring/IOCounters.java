@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -10,9 +10,6 @@
  * !__
  */
 package com.devexperts.qd.monitoring;
-
-import java.text.NumberFormat;
-import java.util.*;
 
 import com.devexperts.management.Management;
 import com.devexperts.mars.common.MARSMonitoredBean;
@@ -23,7 +20,23 @@ import com.devexperts.qd.stats.QDStats;
 import com.devexperts.util.JMXNameBuilder;
 import com.devexperts.util.LogUtil;
 
-import static com.devexperts.qd.monitoring.IOCounter.*;
+import java.text.NumberFormat;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import static com.devexperts.qd.monitoring.IOCounter.DATA_READ_LAGS;
+import static com.devexperts.qd.monitoring.IOCounter.DATA_READ_RECORDS;
+import static com.devexperts.qd.monitoring.IOCounter.DATA_WRITE_LAGS;
+import static com.devexperts.qd.monitoring.IOCounter.DATA_WRITE_RECORDS;
+import static com.devexperts.qd.monitoring.IOCounter.N_COUNTERS;
+import static com.devexperts.qd.monitoring.IOCounter.READ_BYTES;
+import static com.devexperts.qd.monitoring.IOCounter.READ_RTTS;
+import static com.devexperts.qd.monitoring.IOCounter.SUB_READ_RECORDS;
+import static com.devexperts.qd.monitoring.IOCounter.SUB_WRITE_RECORDS;
+import static com.devexperts.qd.monitoring.IOCounter.VALUES;
+import static com.devexperts.qd.monitoring.IOCounter.WRITE_BYTES;
+import static com.devexperts.qd.monitoring.IOCounter.WRITE_RTTS;
 
 /**
  * A collection of {@link IOCounter} instances of the same name that report the summary

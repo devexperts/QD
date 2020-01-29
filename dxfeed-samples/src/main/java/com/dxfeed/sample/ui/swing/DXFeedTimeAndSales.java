@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,30 @@
  */
 package com.dxfeed.sample.ui.swing;
 
-import java.awt.*;
-import java.util.*;
-import java.util.List;
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-
-import com.dxfeed.api.*;
+import com.dxfeed.api.DXEndpoint;
+import com.dxfeed.api.DXFeed;
+import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.event.market.Profile;
 import com.dxfeed.event.market.TimeAndSale;
 import com.dxfeed.model.IndexedEventModel;
+
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import javax.swing.BorderFactory;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
+import javax.swing.table.DefaultTableModel;
 
 public class DXFeedTimeAndSales {
     private static final int NUMBER_OF_PRESENT_TRADES = 30;

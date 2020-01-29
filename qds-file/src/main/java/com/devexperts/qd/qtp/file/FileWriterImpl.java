@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,18 +11,44 @@
  */
 package com.devexperts.qd.qtp.file;
 
-import java.io.*;
-import java.util.*;
-import javax.annotation.concurrent.GuardedBy;
-
-import com.devexperts.io.*;
+import com.devexperts.io.BufferedOutput;
+import com.devexperts.io.ChunkList;
+import com.devexperts.io.ChunkedOutput;
+import com.devexperts.io.StreamCompression;
 import com.devexperts.logging.Logging;
-import com.devexperts.qd.*;
-import com.devexperts.qd.ng.*;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.DataProvider;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.SubscriptionProvider;
+import com.devexperts.qd.ng.AbstractRecordProvider;
+import com.devexperts.qd.ng.AbstractRecordSink;
+import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordMode;
+import com.devexperts.qd.ng.RecordProvider;
+import com.devexperts.qd.ng.RecordSink;
+import com.devexperts.qd.qtp.AbstractMessageVisitor;
+import com.devexperts.qd.qtp.AbstractQTPComposer;
+import com.devexperts.qd.qtp.FileConstants;
+import com.devexperts.qd.qtp.HeartbeatPayload;
+import com.devexperts.qd.qtp.MessageDescriptor;
+import com.devexperts.qd.qtp.MessageType;
+import com.devexperts.qd.qtp.ProtocolDescriptor;
+import com.devexperts.qd.qtp.ProtocolOption;
 import com.devexperts.qd.util.QDConfig;
 import com.devexperts.qd.util.TimeSequenceUtil;
-import com.devexperts.util.*;
+import com.devexperts.util.InvalidFormatException;
+import com.devexperts.util.LogUtil;
+import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimePeriod;
+
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import javax.annotation.concurrent.GuardedBy;
 
 /**
  * Writes QTP messages to a tape file.

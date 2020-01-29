@@ -1,4 +1,18 @@
 
+QDS 3.283:
+
+* [QD-1219] Add logging of JMX console initialization errors
+* [QD-1222] dxFeed webservice: Close session upon web-socket queue overflow
+  - "maxQueue" servlet parameter in web.xml or "-Dcom.dxfeed.webservice.comet.DataService.maxQueue=<n>"
+  JVM parameter can be used to control the queue size at which to disconnect stale client (default = 100000)
+  (servlet parameter has priority over JVM parameter)
+* [QD-1215] Add reconnect functionality to endpoints
+* [QD-1223] New order source for FairX exchange: FAIR
+* [QD-1221] [Tools] Instruments: transforms for lists
+* [QD-1220] dxFeed API: Subscription leak when using filter with DXFeedTimeSeriesSubscription
+* [QD-1218] dxFeed webservice: Cannot unsubscribe in time series subscription
+* [QD-1217] Update year to 2020 in copyright and reformat import statements
+
 QDS 3.282:
 
 * [QD-1213] TimeFormat performance optimization for serial times processing

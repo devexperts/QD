@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,10 +11,10 @@
  */
 package com.dxfeed.webservice.comet;
 
+import com.devexperts.util.TimePeriod;
+
 import java.util.Comparator;
 import java.util.Objects;
-
-import com.devexperts.util.TimePeriod;
 
 class SessionStats implements Cloneable {
 
@@ -22,6 +22,7 @@ class SessionStats implements Cloneable {
     public volatile int numSessions;
     public volatile long createTime = -1;
     public volatile long lastActiveTime = -1;
+    public volatile long lastSendTime = -1;
 
     public volatile int maxQueueSize;
     public volatile int queueSize;
@@ -53,6 +54,8 @@ class SessionStats implements Cloneable {
             return Comparator.comparing((SessionStats stats) -> stats.createTime);
         case "inactivity":
             return Comparator.comparing((SessionStats stats) -> stats.lastActiveTime);
+        case "send_inactivity":
+            return Comparator.comparing((SessionStats stats) -> stats.lastSendTime);
         }
         throw new IllegalArgumentException("Unknown sort column: " + column);
     }
@@ -73,35 +76,28 @@ class SessionStats implements Cloneable {
 
     public void clear() {
         numSessions = 0;
-        createTime = lastActiveTime = 0;
+        createTime = 0;
+        lastActiveTime = 0;
 
-        maxQueueSize = queueSize = subSize = subTimeSeriesSize = 0;
-        writeEvents = write = writeMeta = 0;
-        readEvents = read = readMeta = 0;
+        maxQueueSize = 0;
+        queueSize = 0;
+        subSize = 0;
+        subTimeSeriesSize = 0;
+        writeEvents = 0;
+        write = 0;
+        writeMeta = 0;
+        readEvents = 0;
+        read = 0;
+        readMeta = 0;
     }
 
     @Override
     public SessionStats clone() {
-        SessionStats stats = new SessionStats();
-
-        stats.sessionId = sessionId;
-        stats.numSessions = numSessions;
-        stats.createTime = createTime;
-        stats.lastActiveTime = lastActiveTime;
-
-        stats.maxQueueSize = maxQueueSize;
-        stats.queueSize = queueSize;
-        stats.subSize = subSize;
-        stats.subTimeSeriesSize = subTimeSeriesSize;
-
-        stats.writeEvents = writeEvents;
-        stats.write = write;
-        stats.writeMeta = writeMeta;
-        stats.readEvents = readEvents;
-        stats.read = read;
-        stats.readMeta = readMeta;
-
-        return stats;
+        try {
+            return (SessionStats) super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new InternalError(e);
+        }
     }
 
     public void accumulate(SessionStats other, boolean up) {
@@ -118,6 +114,7 @@ class SessionStats implements Cloneable {
         numSessions += other.numSessions * sizeMultiplier;
         createTime += other.createTime * sizeMultiplier;
         lastActiveTime += other.lastActiveTime * sizeMultiplier;
+        lastSendTime += other.lastSendTime * sizeMultiplier;
 
         int multiplier = up ? 1 : -1;
         writeEvents += other.writeEvents * multiplier;
@@ -153,12 +150,16 @@ class SessionStats implements Cloneable {
         buff.append(String.format("\n%30s", sessionId));
         if (currentTime != 0) {
             long inactivity = currentTime - lastActiveTime;
-            buff.append(" ")
-                .append((inactivity > 10000) ? TimePeriod.valueOf(inactivity).toString() : Long.toString(inactivity))
-                .append("/")
-                .append(TimePeriod.valueOf(currentTime - createTime));
+            long send = currentTime - lastSendTime;
+            buff.append(" ").append(periodToString(inactivity))
+                .append("(").append(periodToString(send))
+                .append(")/").append(TimePeriod.valueOf(currentTime - createTime));
         }
         buff.append(" - ").append(getRated(period));
+    }
+
+    private static String periodToString(long time) {
+        return (time > 10000) ? TimePeriod.valueOf(time).toString() : Long.toString(time);
     }
 
     public static double getRated(long k, double period) {

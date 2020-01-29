@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,12 +11,14 @@
  */
 package com.dxfeed.viewer;
 
-import java.awt.*;
-import java.text.*;
+import com.devexperts.util.TimeFormat;
+
+import java.awt.Color;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.text.NumberFormat;
 import java.util.Locale;
 import java.util.TimeZone;
-
-import com.devexperts.util.TimeFormat;
 
 class ViewerCellValue implements Comparable<ViewerCellValue> {
     private static final NumberFormat PRICE_FORMAT = new DecimalFormat(".00########", new DecimalFormatSymbols(Locale.US));

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,17 +11,19 @@
  */
 package com.dxfeed.ipf;
 
+import com.devexperts.io.URLInputStream;
+import com.devexperts.io.UncloseableInputStream;
+import com.dxfeed.ipf.impl.InstrumentProfileParser;
+import com.dxfeed.ipf.live.InstrumentProfileConnection;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.zip.*;
-
-import com.devexperts.io.URLInputStream;
-import com.devexperts.io.UncloseableInputStream;
-import com.dxfeed.ipf.impl.InstrumentProfileParser;
-import com.dxfeed.ipf.live.InstrumentProfileConnection;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * Reads instrument profiles from the stream using Simple File Format.

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -10,10 +10,6 @@
  * !__
  */
 package com.dxfeed.webservice.comet;
-
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 import com.devexperts.annotation.Description;
 import com.devexperts.logging.Logging;
@@ -23,6 +19,10 @@ import com.devexperts.qd.QDLog;
 import com.devexperts.qd.monitoring.MonitoringEndpoint;
 import org.cometd.bayeux.server.BayeuxServer;
 import org.cometd.bayeux.server.ServerSession;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class CometDMonitoring implements CometDMonitoringMXBean {
 

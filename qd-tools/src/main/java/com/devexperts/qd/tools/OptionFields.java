@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,11 +11,11 @@
  */
 package com.devexperts.qd.tools;
 
-import java.util.StringTokenizer;
-
 import com.devexperts.qd.DataField;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.util.InvalidFormatException;
+
+import java.util.StringTokenizer;
 
 public class OptionFields extends OptionString {
     private String[] suffixes;

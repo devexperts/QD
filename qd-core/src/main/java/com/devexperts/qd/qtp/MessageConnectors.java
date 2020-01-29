@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,13 +11,11 @@
  */
 package com.devexperts.qd.qtp;
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
-
 import com.devexperts.connector.codec.CodecConnectionFactory;
 import com.devexperts.connector.codec.CodecFactory;
-import com.devexperts.connector.proto.*;
+import com.devexperts.connector.proto.ApplicationConnectionFactory;
+import com.devexperts.connector.proto.ConfigurationException;
+import com.devexperts.connector.proto.ConfigurationKey;
 import com.devexperts.qd.qtp.http.HttpConnector;
 import com.devexperts.qd.qtp.socket.ClientSocketConnector;
 import com.devexperts.qd.qtp.socket.ServerSocketConnector;
@@ -25,7 +23,30 @@ import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.QDConfig;
 import com.devexperts.services.Services;
 import com.devexperts.transport.stats.EndpointStats;
-import com.devexperts.util.*;
+import com.devexperts.util.InvalidFormatException;
+import com.devexperts.util.JMXNameBuilder;
+import com.devexperts.util.LogUtil;
+import com.devexperts.util.TypedKey;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.Socket;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Properties;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.StringTokenizer;
+import java.util.TreeMap;
 
 /**
  * Factory and utility classes to work with message connectors.

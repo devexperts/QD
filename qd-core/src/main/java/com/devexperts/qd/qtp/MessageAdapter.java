@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,17 +11,21 @@
  */
 package com.devexperts.qd.qtp;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
-
 import com.devexperts.auth.AuthSession;
 import com.devexperts.auth.AuthToken;
-import com.devexperts.connector.proto.*;
-import com.devexperts.qd.*;
+import com.devexperts.connector.proto.Configurable;
+import com.devexperts.connector.proto.ConfigurableObject;
+import com.devexperts.connector.proto.ConfigurationException;
+import com.devexperts.connector.proto.EndpointId;
+import com.devexperts.connector.proto.TransportConnection;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDCollector;
+import com.devexperts.qd.QDFilter;
+import com.devexperts.qd.QDHistory;
+import com.devexperts.qd.QDLog;
+import com.devexperts.qd.QDStream;
+import com.devexperts.qd.QDTicker;
+import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.qd.kit.FilterSyntaxException;
 import com.devexperts.qd.qtp.auth.QDAuthRealm;
@@ -29,6 +33,13 @@ import com.devexperts.qd.qtp.auth.QDLoginHandler;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TypedMap;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 
 /**
  * The <code>MessageAdapter</code> is a basic adapter of some entity to message API.

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,24 +11,50 @@
  */
 package com.devexperts.qd.qtp.file;
 
-import java.io.*;
-import java.net.URL;
-import java.net.URLConnection;
-import java.util.*;
-
-import com.devexperts.io.*;
+import com.devexperts.io.BufferedInput;
+import com.devexperts.io.BufferedInputPart;
+import com.devexperts.io.Chunk;
+import com.devexperts.io.ChunkedInput;
+import com.devexperts.io.StreamCompression;
+import com.devexperts.io.URLInputStream;
 import com.devexperts.logging.Logging;
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataIterator;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.SubscriptionIterator;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordSource;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.AbstractQTPParser;
+import com.devexperts.qd.qtp.FieldReplacer;
+import com.devexperts.qd.qtp.FileConstants;
+import com.devexperts.qd.qtp.HeartbeatPayload;
+import com.devexperts.qd.qtp.MessageConsumerAdapter;
+import com.devexperts.qd.qtp.MessageType;
+import com.devexperts.qd.qtp.ProtocolDescriptor;
+import com.devexperts.qd.qtp.RawDataConsumer;
 import com.devexperts.qd.qtp.fieldreplacer.FieldReplacerUtil;
 import com.devexperts.qd.qtp.http.HttpConnector;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.QDConfig;
 import com.devexperts.qd.util.TimeSequenceUtil;
 import com.devexperts.transport.stats.ConnectionStats;
-import com.devexperts.util.*;
+import com.devexperts.util.InvalidFormatException;
+import com.devexperts.util.LogUtil;
+import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimePeriod;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 public class FileReader implements MessageReader {
     private static final Logging log = Logging.getLogging(FileReader.class);

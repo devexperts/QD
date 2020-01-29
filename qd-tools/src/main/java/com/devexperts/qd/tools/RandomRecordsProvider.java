@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,13 +11,20 @@
  */
 package com.devexperts.qd.tools;
 
-import java.util.Random;
-
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataIntField;
+import com.devexperts.qd.DataObjField;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.SymbolList;
 import com.devexperts.qd.kit.DecimalField;
 import com.devexperts.qd.kit.StringField;
-import com.devexperts.qd.ng.*;
+import com.devexperts.qd.ng.AbstractRecordProvider;
+import com.devexperts.qd.ng.RecordListener;
+import com.devexperts.qd.ng.RecordMode;
+import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.util.Decimal;
+
+import java.util.Random;
 
 /**
  * Generates random number of records with random values.

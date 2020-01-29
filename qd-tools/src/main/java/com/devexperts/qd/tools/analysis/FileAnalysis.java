@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,21 +11,32 @@
  */
 package com.devexperts.qd.tools.analysis;
 
-import java.io.*;
-import java.io.FileWriter;
-import java.util.Locale;
-import java.util.Properties;
-
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDLog;
-import com.devexperts.qd.qtp.*;
-import com.devexperts.qd.qtp.file.*;
+import com.devexperts.qd.qtp.AbstractQTPParser;
+import com.devexperts.qd.qtp.MessageConsumerAdapter;
+import com.devexperts.qd.qtp.MessageType;
+import com.devexperts.qd.qtp.file.FileFormat;
 import com.devexperts.qd.qtp.file.FileReader;
-import com.devexperts.qd.tools.*;
+import com.devexperts.qd.qtp.file.FileReaderParams;
+import com.devexperts.qd.tools.AbstractTool;
+import com.devexperts.qd.tools.BadToolParametersException;
+import com.devexperts.qd.tools.Option;
+import com.devexperts.qd.tools.OptionString;
+import com.devexperts.qd.tools.ToolSummary;
+import com.devexperts.qd.tools.Tools;
 import com.devexperts.services.ServiceProvider;
 import com.devexperts.transport.stats.ConnectionStats;
 import com.devexperts.util.GlobListUtil;
 import com.devexperts.util.LogUtil;
+
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
+import java.util.Locale;
+import java.util.Properties;
 
 @ToolSummary(
     info = "Analyses binary file and distribution of various structures in it.",

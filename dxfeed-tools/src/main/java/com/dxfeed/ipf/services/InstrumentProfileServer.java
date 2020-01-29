@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,26 +11,43 @@
  */
 package com.dxfeed.ipf.services;
 
-import java.io.*;
-import java.net.HttpURLConnection;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import com.devexperts.connector.proto.*;
-import com.devexperts.io.*;
+import com.devexperts.connector.proto.ApplicationConnection;
+import com.devexperts.connector.proto.ApplicationConnectionFactory;
+import com.devexperts.connector.proto.TransportConnection;
+import com.devexperts.io.BufferedInput;
+import com.devexperts.io.BufferedOutput;
+import com.devexperts.io.ChunkList;
+import com.devexperts.io.ChunkedInput;
+import com.devexperts.io.ChunkedOutput;
+import com.devexperts.io.StreamCompression;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.MessageConnectors;
-import com.devexperts.util.*;
+import com.devexperts.util.InvalidFormatException;
+import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimeFormat;
+import com.devexperts.util.TimePeriod;
 import com.dxfeed.ipf.InstrumentProfile;
 import com.dxfeed.ipf.impl.InstrumentProfileComposer;
 import com.dxfeed.ipf.live.InstrumentProfileCollector;
 import com.dxfeed.ipf.live.InstrumentProfileUpdateListener;
 import com.dxfeed.ipf.transform.InstrumentProfileTransform;
 import com.dxfeed.ipf.transform.TransformContext;
+
+import java.io.Closeable;
+import java.io.EOFException;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class InstrumentProfileServer implements Closeable {
     // ===================== private static constants =====================

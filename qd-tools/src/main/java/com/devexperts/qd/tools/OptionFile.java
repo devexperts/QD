@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,11 +11,13 @@
  */
 package com.devexperts.qd.tools;
 
-import java.io.IOException;
-
-import com.devexperts.qd.*;
+import com.devexperts.qd.QDFilter;
+import com.devexperts.qd.QDHistory;
+import com.devexperts.qd.QDTicker;
 import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.qd.qtp.QDEndpoint;
+
+import java.io.IOException;
 
 public class OptionFile extends OptionString {
     private String spec = ""; // empty spec by default (CompositeFilters.valueOf throws NPE).

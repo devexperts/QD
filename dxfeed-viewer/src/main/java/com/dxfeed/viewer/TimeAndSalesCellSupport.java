@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,11 +11,14 @@
  */
 package com.dxfeed.viewer;
 
-import java.awt.*;
+import java.awt.Color;
 import java.util.TimeZone;
-import javax.swing.*;
+import javax.swing.SwingConstants;
 
-import static com.dxfeed.viewer.ViewerCellValue.*;
+import static com.dxfeed.viewer.ViewerCellValue.formatExchange;
+import static com.dxfeed.viewer.ViewerCellValue.formatPrice;
+import static com.dxfeed.viewer.ViewerCellValue.formatSize;
+import static com.dxfeed.viewer.ViewerCellValue.formatTime;
 
 class TimeAndSalesCellSupport {
     private static final Color DEFAULT_COLOR = new Color(0xC0C0C0);

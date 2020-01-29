@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,10 +11,6 @@
  */
 package com.devexperts.qd.impl.matrix.management;
 
-import java.util.EnumSet;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
-
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDContract;
@@ -22,6 +18,10 @@ import com.devexperts.qd.impl.matrix.Collector;
 import com.devexperts.services.Services;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimePeriod;
+
+import java.util.EnumSet;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 public class CollectorManagement {
     protected static final Logging log = Logging.getLogging(CollectorManagement.class);

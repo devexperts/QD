@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,11 +11,6 @@
  */
 package com.devexperts.qd.qtp.http;
 
-import java.io.IOException;
-import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.*;
-
 import com.devexperts.connector.proto.TransportConnection;
 import com.devexperts.qd.QDLog;
 import com.devexperts.qd.qtp.MessageAdapter;
@@ -23,6 +18,14 @@ import com.devexperts.qd.stats.QDStats;
 import com.devexperts.services.Services;
 import com.devexperts.util.JMXNameBuilder;
 import com.devexperts.util.TypedMap;
+
+import java.io.IOException;
+import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 public class QDServlet extends HttpServlet {
     private QDServletConfig config;

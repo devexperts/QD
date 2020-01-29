@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,7 +14,12 @@ package com.devexperts.util.test;
 import com.devexperts.util.WideDecimal;
 import junit.framework.TestCase;
 
-import static com.devexperts.util.WideDecimal.*;
+import static com.devexperts.util.WideDecimal.abs;
+import static com.devexperts.util.WideDecimal.compare;
+import static com.devexperts.util.WideDecimal.composeWide;
+import static com.devexperts.util.WideDecimal.neg;
+import static com.devexperts.util.WideDecimal.sum;
+import static com.devexperts.util.WideDecimal.toDouble;
 
 public class WideDecimalTest extends TestCase {
     private static final long MAX_SIGNIFICAND = Long.MAX_VALUE >> 8;

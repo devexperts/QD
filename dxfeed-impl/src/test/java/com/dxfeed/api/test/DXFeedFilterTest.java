@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,17 +11,33 @@
  */
 package com.dxfeed.api.test;
 
-import java.util.*;
-import java.util.concurrent.*;
-
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.QDContract;
+import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.test.ThreadCleanCheck;
-import com.dxfeed.api.*;
-import com.dxfeed.api.impl.*;
-import com.dxfeed.event.market.*;
+import com.dxfeed.api.DXEndpoint;
+import com.dxfeed.api.DXFeed;
+import com.dxfeed.api.DXFeedSubscription;
+import com.dxfeed.api.DXFeedTimeSeriesSubscription;
+import com.dxfeed.api.DXPublisher;
+import com.dxfeed.api.impl.DXEndpointImpl;
+import com.dxfeed.api.impl.DXFeedImpl;
+import com.dxfeed.api.impl.DXFeedScheme;
+import com.dxfeed.api.osub.TimeSeriesSubscriptionSymbol;
+import com.dxfeed.event.market.TimeAndSale;
+import com.dxfeed.event.market.Trade;
 import com.dxfeed.promise.Promise;
 import junit.framework.TestCase;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 
 public class DXFeedFilterTest extends TestCase {
 
@@ -124,7 +140,7 @@ public class DXFeedFilterTest extends TestCase {
         sub.addEventListener(trades::addAll);
         sub.addSymbols(SYMBOL);
 
-        // Initially - ticker is empty
+        // Initial state - ticker is empty
         assertEquals(0, feed.getLastEvent(new Trade(SYMBOL)).getSequence());
         assertEquals(0, trades.size());
 
@@ -133,14 +149,14 @@ public class DXFeedFilterTest extends TestCase {
         assertEquals(0, feed.getLastEvent(new Trade(SYMBOL)).getSequence());
         assertEquals(0, trades.size());
 
-        // Let symbol pass through filter
+        // Modify the filter to let symbol pass through
         filter = filter.addSymbol(SYMBOL);
         publisher.publishEvents(Collections.singletonList(createTrade(2)));
         assertEquals(2, feed.getLastEvent(new Trade(SYMBOL)).getSequence());
         assertEquals(2, trades.get(0).getSequence());
         assertEquals(1, trades.size());
 
-        // Filter out symbol - check last event removed from ticker
+        // Filter out symbol - check that last event was removed from the ticker
         filter = filter.removeSymbol(SYMBOL);
         assertEquals(0, feed.getLastEvent(new Trade(SYMBOL)).getSequence());
         assertEquals(1, trades.size());
@@ -151,10 +167,133 @@ public class DXFeedFilterTest extends TestCase {
         assertEquals(1, trades.size());
     }
 
+    @SuppressWarnings("deprecation")
+    public void testDynamicFilterTimeSeriesEvent() {
+        SimpleDynamicFilter filter = new SimpleDynamicFilter();
+        DXFeed feed = new DXFeedImpl(endpoint, filter);
+
+        // Keep subscription
+        List<TimeAndSale> tns = new ArrayList<>();
+        DXFeedSubscription<TimeAndSale> sub = feed.createSubscription(TimeAndSale.class);
+        sub.addEventListener(tns::addAll);
+        sub.addSymbols(new TimeSeriesSubscriptionSymbol<>(SYMBOL, 0));
+
+        // Initial state - no data
+        assertEquals(0, tns.size());
+
+        // Empty filter - nothing goes through
+        publisher.publishEvents(Collections.singletonList(createTns(1)));
+        assertEquals(0, tns.size());
+
+        // Modify the filter to let symbol pass through
+        filter = filter.addSymbol(SYMBOL);
+        publisher.publishEvents(Collections.singletonList(createTns(2)));
+        assertEquals(1, tns.size());
+        assertEquals(2, tns.get(0).getSequence());
+
+        // Filter out symbol - new events must be filtered out
+        filter = filter.removeSymbol(SYMBOL);
+        publisher.publishEvents(Collections.singletonList(createTns(3)));
+        assertEquals(1, tns.size());
+    }
+
+    @SuppressWarnings("deprecation")
+    public void testDynamicFilterTimeSeriesSubscription() {
+        SimpleDynamicFilter filter = new SimpleDynamicFilter();
+        DXFeed feed = new DXFeedImpl(endpoint, filter);
+
+        // Keep subscription
+        List<TimeAndSale> tns = new ArrayList<>();
+        DXFeedTimeSeriesSubscription<TimeAndSale> sub = feed.createTimeSeriesSubscription(TimeAndSale.class);
+        sub.setFromTime(0);
+        sub.addEventListener(tns::addAll);
+        sub.addSymbols(SYMBOL);
+
+        // Initial state - no data
+        assertEquals(0, tns.size());
+
+        // Empty filter - nothing goes through
+        publisher.publishEvents(Collections.singletonList(createTns(1)));
+        assertEquals(0, tns.size());
+        List<TimeAndSale> events = feed.getTimeSeriesIfSubscribed(TimeAndSale.class, SYMBOL, 0, Long.MAX_VALUE);
+        assertNull(events);
+
+        // Modify the filter to let symbol pass through
+        filter = filter.addSymbol(SYMBOL);
+        publisher.publishEvents(Collections.singletonList(createTns(2)));
+        assertEquals(1, tns.size());
+        assertEquals(2, tns.get(0).getSequence());
+        events = feed.getTimeSeriesIfSubscribed(TimeAndSale.class, SYMBOL, 0, Long.MAX_VALUE);
+        assertNotNull(events);
+        assertEquals(1, events.size());
+        assertEquals(2, events.get(0).getSequence());
+
+        // Filter out symbol - new events must be filtered out
+        filter = filter.removeSymbol(SYMBOL);
+        publisher.publishEvents(Collections.singletonList(createTns(3)));
+        assertEquals(1, tns.size());
+    }
+
+    @SuppressWarnings("deprecation")
+    public void testDynamicFilterTimeSeriesAgentLeak() {
+        SimpleDynamicFilter filter = new SimpleDynamicFilter();
+        filter = filter.addSymbol(SYMBOL);
+        DXFeed feed = new DXFeedImpl(endpoint, filter);
+
+        // Keep subscription
+        List<TimeAndSale> tns = new ArrayList<>();
+        DXFeedTimeSeriesSubscription<TimeAndSale> sub = feed.createTimeSeriesSubscription(TimeAndSale.class);
+        sub.setFromTime(0);
+        sub.addEventListener(tns::addAll);
+        sub.addSymbols(SYMBOL);
+
+        // Initial state - no data
+        assertEquals(0, tns.size());
+
+        publisher.publishEvents(Collections.singletonList(createTns(1)));
+        assertEquals(1, tns.size());
+        assertEquals(1, tns.get(0).getSequence());
+
+        // Update filter, e.g. by adding new symbol
+        filter = filter.addSymbol("HABA");
+
+        // Check that subscription is not corrupted
+        // (if broken it could deliver 2 events: one for HISTORY and one for STREAM)
+        publisher.publishEvents(Collections.singletonList(createTns(2)));
+        assertEquals(2, tns.size());
+        assertEquals(2, tns.get(1).getSequence());
+    }
+
+    public void testTimeSeriesSubscription() {
+        DXFeed feed = new DXFeedImpl(endpoint);
+        DXFeedTimeSeriesSubscription<TimeAndSale> sub = feed.createTimeSeriesSubscription(TimeAndSale.class);
+
+        sub.addSymbols("A");
+        TimeSeriesSubscriptionSymbol<String> symbol = new TimeSeriesSubscriptionSymbol<>("A", 0);
+
+        assertTrue(sub.getSymbols().contains("A"));
+        assertFalse(sub.getSymbols().contains(symbol));
+        assertFalse(sub.getDecoratedSymbols().contains("A"));
+        assertTrue(sub.getDecoratedSymbols().contains(symbol));
+
+        // Check that iterator and contains are consistent
+        DXFeedTimeSeriesSubscription<TimeAndSale> sub2 = feed.createTimeSeriesSubscription(TimeAndSale.class);
+        sub2.addSymbols("A");
+        assertEquals(sub.getSymbols(), sub2.getSymbols());
+        assertEquals(sub.getDecoratedSymbols(), sub2.getDecoratedSymbols());
+    }
+
     private static Trade createTrade(int sequence) {
         Trade trade = new Trade(SYMBOL);
         trade.setSequence(sequence);
         return trade;
+    }
+
+    private static TimeAndSale createTns(int sequence) {
+        TimeAndSale tns = new TimeAndSale(SYMBOL);
+        tns.setSequence(sequence);
+        tns.setTime(0);
+        return tns;
     }
 
     private static class SimpleDynamicFilter extends QDFilter {

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,22 @@
  */
 package com.devexperts.qd.qtp.socket;
 
-import java.io.IOException;
-import java.net.Socket;
-
-import com.devexperts.connector.proto.*;
+import com.devexperts.connector.proto.AbstractTransportConnection;
+import com.devexperts.connector.proto.ApplicationConnection;
+import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.io.ChunkPool;
 import com.devexperts.logging.Logging;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.AbstractMessageConnector;
+import com.devexperts.qd.qtp.MessageConnectorState;
+import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.transport.stats.ConnectionStats;
-import com.devexperts.util.*;
+import com.devexperts.util.JMXNameBuilder;
+import com.devexperts.util.LogUtil;
+import com.devexperts.util.SystemProperties;
+
+import java.io.IOException;
+import java.net.Socket;
 
 /**
  * The <code>SocketHandler</code> handles standard socket using blocking API.

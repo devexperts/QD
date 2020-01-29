@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,7 +16,25 @@ import com.devexperts.qd.QDContract;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordSink;
 
-import static com.devexperts.qd.impl.matrix.History.*;
+import static com.devexperts.qd.impl.matrix.History.ATTACHMENT;
+import static com.devexperts.qd.impl.matrix.History.KEY;
+import static com.devexperts.qd.impl.matrix.History.LAST_RECORD;
+import static com.devexperts.qd.impl.matrix.History.QUEUE_BIT;
+import static com.devexperts.qd.impl.matrix.History.RID;
+import static com.devexperts.qd.impl.matrix.History.SNAPSHOT_BEGIN;
+import static com.devexperts.qd.impl.matrix.History.SNAPSHOT_END;
+import static com.devexperts.qd.impl.matrix.History.SNAPSHOT_QUEUE;
+import static com.devexperts.qd.impl.matrix.History.SNAPSHOT_SNIP;
+import static com.devexperts.qd.impl.matrix.History.TIME_KNOWN;
+import static com.devexperts.qd.impl.matrix.History.TIME_SUB;
+import static com.devexperts.qd.impl.matrix.History.TX_DIRTY_LAST_RECORD_BIT;
+import static com.devexperts.qd.impl.matrix.History.TX_PENDING;
+import static com.devexperts.qd.impl.matrix.History.UPDATE_QUEUE;
+import static com.devexperts.qd.impl.matrix.History.isAgentSubProcessing;
+import static com.devexperts.qd.impl.matrix.History.isAgentSubSnip;
+import static com.devexperts.qd.impl.matrix.History.isAgentTxDirty;
+import static com.devexperts.qd.impl.matrix.History.makeAgentNonTxDirty;
+import static com.devexperts.qd.impl.matrix.History.makeAgentTxDirty;
 
 /**
  * Used by Ticker (snapshotQueue & updateQueue) and History (snapshotQueue only)

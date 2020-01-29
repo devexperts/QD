@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -10,10 +10,6 @@
  * !__
  */
 package com.dxfeed.event.market;
-
-import java.util.List;
-import javax.xml.bind.annotation.*;
-import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 import com.devexperts.util.TimeFormat;
 import com.devexperts.util.TimeUtil;
@@ -25,6 +21,13 @@ import com.dxfeed.impl.XmlSourceAdapter;
 import com.dxfeed.impl.XmlTimeAdapter;
 import com.dxfeed.model.AbstractIndexedEventModel;
 import com.dxfeed.model.market.OrderBookModel;
+
+import java.util.List;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlSchemaType;
+import javax.xml.bind.annotation.XmlTransient;
+import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 /**
  * Base class for common fields of {@link Order}, {@link AnalyticOrder} and {@link SpreadOrder} events.

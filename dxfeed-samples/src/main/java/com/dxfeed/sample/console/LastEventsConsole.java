@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,22 @@
  */
 package com.dxfeed.sample.console;
 
-import java.io.*;
+import com.dxfeed.api.DXEndpoint;
+import com.dxfeed.api.DXFeed;
+import com.dxfeed.event.market.MarketEventSymbols;
+import com.dxfeed.event.market.Profile;
+import com.dxfeed.event.market.Quote;
+import com.dxfeed.event.market.Summary;
+import com.dxfeed.event.market.Trade;
+import com.dxfeed.promise.Promise;
+import com.dxfeed.promise.Promises;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-import com.dxfeed.api.DXEndpoint;
-import com.dxfeed.api.DXFeed;
-import com.dxfeed.event.market.*;
-import com.dxfeed.promise.Promise;
-import com.dxfeed.promise.Promises;
 
 /**
  * This sample demonstrates a way to subscribe to the big world of symbols with dxFeed API, so that the events are

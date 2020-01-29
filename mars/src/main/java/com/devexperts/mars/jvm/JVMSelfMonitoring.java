@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,28 @@
  */
 package com.devexperts.mars.jvm;
 
-import java.lang.management.*;
-import java.net.InetAddress;
-import java.util.*;
-
 import com.devexperts.logging.Logging;
 import com.devexperts.management.Management;
-import com.devexperts.mars.common.*;
+import com.devexperts.mars.common.MARSEndpoint;
+import com.devexperts.mars.common.MARSNode;
+import com.devexperts.mars.common.MARSPlugin;
+import com.devexperts.mars.common.MARSScheduler;
 import com.devexperts.services.ServiceProvider;
-import com.devexperts.util.*;
+import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimeFormat;
+import com.devexperts.util.TimePeriod;
+import com.devexperts.util.TimeUtil;
+
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryUsage;
+import java.lang.management.RuntimeMXBean;
+import java.lang.management.ThreadMXBean;
+import java.net.InetAddress;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TimeZone;
 
 /**
  * Monitors vital JVM statistics and publishes them into MARS.

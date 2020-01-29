@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,18 +11,22 @@
  */
 package com.devexperts.rmi.test.auth;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.devexperts.auth.AuthSession;
 import com.devexperts.auth.AuthToken;
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.qtp.MessageAdapterConnectionFactory;
-import com.devexperts.qd.qtp.auth.*;
-import com.devexperts.rmi.*;
+import com.devexperts.qd.qtp.auth.BasicChannelShaperFactory;
+import com.devexperts.qd.qtp.auth.QDAuthRealm;
+import com.devexperts.qd.qtp.auth.QDAuthRealmFactory;
+import com.devexperts.rmi.RMIEndpoint;
+import com.devexperts.rmi.RMIRequest;
+import com.devexperts.rmi.RMIRequestState;
 import com.devexperts.services.ServiceProvider;
 import com.devexperts.util.TypedMap;
 import com.dxfeed.promise.Promise;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @ServiceProvider
 public class AuthFactory implements QDAuthRealmFactory {

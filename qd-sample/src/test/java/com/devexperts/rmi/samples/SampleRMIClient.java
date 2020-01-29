@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,11 +11,14 @@
  */
 package com.devexperts.rmi.samples;
 
-import java.util.Random;
-
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.QDLog;
-import com.devexperts.rmi.*;
+import com.devexperts.rmi.RMIEndpoint;
+import com.devexperts.rmi.RMIException;
+import com.devexperts.rmi.RMIOperation;
+import com.devexperts.rmi.RMIRequest;
+
+import java.util.Random;
 
 public class SampleRMIClient {
     private static RMIEndpoint client;

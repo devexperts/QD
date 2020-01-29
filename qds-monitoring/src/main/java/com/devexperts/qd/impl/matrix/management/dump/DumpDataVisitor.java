@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,19 @@
  */
 package com.devexperts.qd.impl.matrix.management.dump;
 
-import java.io.PrintStream;
-
 import com.devexperts.qd.DataField;
 import com.devexperts.qd.DataRecord;
-import com.devexperts.qd.impl.matrix.*;
+import com.devexperts.qd.impl.matrix.Collector;
+import com.devexperts.qd.impl.matrix.HistoryBuffer;
+import com.devexperts.qd.impl.matrix.HistoryBufferDebugSink;
 import com.devexperts.qd.kit.VoidIntField;
 import com.devexperts.qd.kit.VoidObjField;
-import com.devexperts.qd.ng.*;
+import com.devexperts.qd.ng.AbstractRecordSink;
+import com.devexperts.qd.ng.EventFlag;
+import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.qtp.BuiltinFields;
+
+import java.io.PrintStream;
 
 class DumpDataVisitor extends DumpVisitorBase implements CollectorVisitor {
     DumpDataVisitor(PrintStream out, String filterSymbol, String filterRecord) {

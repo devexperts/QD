@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,14 +11,27 @@
  */
 package com.devexperts.qd.tools;
 
-import java.io.Closeable;
-
-import com.devexperts.qd.*;
-import com.devexperts.qd.ng.*;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.DataProvider;
+import com.devexperts.qd.QDContract;
+import com.devexperts.qd.QDLog;
+import com.devexperts.qd.SubscriptionProvider;
+import com.devexperts.qd.SubscriptionVisitor;
+import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordMode;
+import com.devexperts.qd.ng.RecordProvider;
+import com.devexperts.qd.qtp.AbstractMessageVisitor;
+import com.devexperts.qd.qtp.MessageListener;
+import com.devexperts.qd.qtp.MessageProvider;
+import com.devexperts.qd.qtp.MessageType;
+import com.devexperts.qd.qtp.MessageVisitor;
+import com.devexperts.qd.qtp.OutputStreamMessageVisitor;
+import com.devexperts.qd.qtp.ProtocolOption;
+import com.devexperts.qd.qtp.QDEndpoint;
 import com.devexperts.qd.qtp.file.FileWriterImpl;
 import com.devexperts.qd.qtp.text.TextQTPComposer;
 import com.devexperts.util.InvalidFormatException;
+
+import java.io.Closeable;
 
 final class ConnectionProcessor extends Thread implements Closeable, ConnectorRecordsSymbols.Listener, MessageListener {
 

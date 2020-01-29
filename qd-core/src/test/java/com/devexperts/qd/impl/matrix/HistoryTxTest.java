@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,17 +11,38 @@
  */
 package com.devexperts.qd.impl.matrix;
 
-import com.devexperts.qd.*;
-import com.devexperts.qd.impl.matrix.History;
-import com.devexperts.qd.kit.*;
-import com.devexperts.qd.ng.*;
+import com.devexperts.qd.DataIntField;
+import com.devexperts.qd.DataObjField;
+import com.devexperts.qd.DataProvider;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.HistorySubscriptionFilter;
+import com.devexperts.qd.QDAgent;
+import com.devexperts.qd.QDDistributor;
+import com.devexperts.qd.QDErrorHandler;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.QDHistory;
+import com.devexperts.qd.SubscriptionProvider;
+import com.devexperts.qd.kit.CompactIntField;
+import com.devexperts.qd.kit.DefaultRecord;
+import com.devexperts.qd.kit.DefaultScheme;
+import com.devexperts.qd.kit.PentaCodec;
+import com.devexperts.qd.ng.AbstractRecordSink;
+import com.devexperts.qd.ng.EventFlag;
+import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordMode;
+import com.devexperts.qd.ng.RecordProvider;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.test.TraceRunner;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * A suite of small single-agent single-distributor tests of {@link QDHistory} snapshot,

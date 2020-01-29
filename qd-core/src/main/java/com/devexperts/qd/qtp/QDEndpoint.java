@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,22 +11,42 @@
  */
 package com.devexperts.qd.qtp;
 
-import java.io.Closeable;
-import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.connector.proto.EndpointId;
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDAgent;
+import com.devexperts.qd.QDCollector;
+import com.devexperts.qd.QDContract;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.QDHistory;
+import com.devexperts.qd.QDLog;
+import com.devexperts.qd.QDStream;
+import com.devexperts.qd.QDTicker;
 import com.devexperts.qd.kit.RecordOnlyFilter;
 import com.devexperts.qd.kit.SymbolSetFilter;
-import com.devexperts.qd.ng.*;
+import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordListener;
+import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.services.Service;
 import com.devexperts.services.Services;
 import com.devexperts.util.InvalidFormatException;
 import com.devexperts.util.TimeFormat;
+
+import java.io.Closeable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Named collection of QD collectors and network connections.
@@ -259,7 +279,7 @@ public class QDEndpoint implements Closeable {
      * @param collector which to be added to this endpoint
      * @return this endpoint
      */
-    public synchronized QDEndpoint addCollector(QDCollector collector) {
+    public QDEndpoint addCollector(QDCollector collector) {
         synchronized (lock) {
             if (collector.getScheme() != scheme)
                 throw new IllegalArgumentException("Different scheme in endpoint collector. " +
@@ -378,6 +398,15 @@ public class QDEndpoint implements Closeable {
             }
         }
         return this;
+    }
+
+    public final void restartActiveConnectors() {
+        synchronized (lock) {
+            for (MessageConnector connector : connectors) {
+                if (connector.isActive())
+                    connector.restart();
+            }
+        }
     }
 
     public final void awaitProcessed() throws InterruptedException {

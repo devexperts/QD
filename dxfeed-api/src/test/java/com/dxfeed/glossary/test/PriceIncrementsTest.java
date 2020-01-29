@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,12 +11,12 @@
  */
 package com.dxfeed.glossary.test;
 
+import com.dxfeed.glossary.PriceIncrements;
+import junit.framework.TestCase;
+
 import java.math.RoundingMode;
 import java.util.Arrays;
 import java.util.Random;
-
-import com.dxfeed.glossary.PriceIncrements;
-import junit.framework.TestCase;
 
 /**
  * Unit test for {@link PriceIncrements} class.

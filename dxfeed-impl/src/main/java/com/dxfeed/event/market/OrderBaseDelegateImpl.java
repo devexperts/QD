@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,13 +11,15 @@
  */
 package com.dxfeed.event.market;
 
-import java.util.EnumSet;
-
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.QDContract;
-import com.dxfeed.api.impl.*;
+import com.dxfeed.api.impl.EventDelegate;
+import com.dxfeed.api.impl.EventDelegateFlags;
+import com.dxfeed.api.impl.EventDelegateSet;
 import com.dxfeed.api.osub.IndexedEventSubscriptionSymbol;
 import com.dxfeed.event.IndexedEventSource;
+
+import java.util.EnumSet;
 
 public abstract class OrderBaseDelegateImpl<T extends OrderBase> extends MarketEventDelegateImpl<T> {
     protected OrderBaseDelegateImpl(DataRecord record, QDContract contract, EnumSet<EventDelegateFlags> flags) {

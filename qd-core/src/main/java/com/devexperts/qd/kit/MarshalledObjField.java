@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,11 +11,16 @@
  */
 package com.devexperts.qd.kit;
 
-import java.io.*;
-
-import com.devexperts.io.*;
+import com.devexperts.io.BufferedInput;
+import com.devexperts.io.BufferedOutput;
+import com.devexperts.io.IOUtil;
+import com.devexperts.io.Marshalled;
 import com.devexperts.qd.SerialFieldType;
 import com.devexperts.util.Base64;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 /**
  * The <code>MarshalledObjField</code> represents an object field with plain Java serialized form.

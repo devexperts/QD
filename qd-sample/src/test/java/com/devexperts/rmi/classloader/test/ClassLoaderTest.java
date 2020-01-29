@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,21 +11,27 @@
  */
 package com.devexperts.rmi.classloader.test;
 
-import java.io.File;
-import java.net.*;
-import java.util.Random;
-
 import com.devexperts.io.SerialClassContext;
 import com.devexperts.logging.Logging;
-import com.devexperts.rmi.*;
+import com.devexperts.rmi.RMIEndpoint;
+import com.devexperts.rmi.RMIException;
+import com.devexperts.rmi.RMIRequest;
 import com.devexperts.rmi.classloader.Function;
 import com.devexperts.rmi.samples.DifferentServices;
 import com.devexperts.rmi.task.RMIServiceImplementation;
 import com.devexperts.rmi.test.NTU;
 import com.devexperts.test.ThreadCleanCheck;
 import com.devexperts.test.TraceRunner;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.Random;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;

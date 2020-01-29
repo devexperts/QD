@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,22 @@
  */
 package com.devexperts.qd.impl.matrix.management.impl;
 
-import java.util.List;
-
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDContract;
 import com.devexperts.qd.impl.matrix.Collector;
 import com.devexperts.qd.impl.matrix.CollectorDebug;
 import com.devexperts.qd.impl.matrix.management.CollectorManagement;
 import com.devexperts.qd.impl.matrix.management.dump.DebugDumpImpl;
-import com.devexperts.qd.ng.*;
+import com.devexperts.qd.ng.AbstractRecordSink;
+import com.devexperts.qd.ng.EventFlag;
+import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.qtp.BuiltinFields;
 import com.devexperts.qd.qtp.MessageType;
+
+import java.util.List;
 
 public abstract class CollectorManagementImplBase extends CollectorManagement implements CollectorMXBean {
     private static final int REPORT_ROWS_LIMIT = 10_000; // to avoid accidental OOM

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,34 +11,53 @@
  */
 package com.dxfeed.webservice.rest;
 
-import java.io.EOFException;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.GuardedBy;
-import javax.servlet.*;
-import javax.servlet.http.*;
-
 import com.devexperts.annotation.Description;
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.QDFilter;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimePeriod;
-import com.dxfeed.api.*;
+import com.dxfeed.api.DXFeed;
+import com.dxfeed.api.DXFeedEventListener;
+import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.api.osub.IndexedEventSubscriptionSymbol;
 import com.dxfeed.api.osub.TimeSeriesSubscriptionSymbol;
-import com.dxfeed.event.*;
+import com.dxfeed.event.EventType;
+import com.dxfeed.event.IndexedEvent;
+import com.dxfeed.event.LastingEvent;
+import com.dxfeed.event.TimeSeriesEvent;
 import com.dxfeed.event.market.OrderSource;
-import com.dxfeed.promise.*;
+import com.dxfeed.promise.Promise;
+import com.dxfeed.promise.PromiseHandler;
+import com.dxfeed.promise.Promises;
 import com.dxfeed.webservice.DXFeedContext;
 import com.dxfeed.webservice.EventSymbolMap;
 
-import static com.dxfeed.webservice.rest.Secure.SecureRole.*;
+import java.io.EOFException;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import javax.annotation.Nonnull;
+import javax.annotation.concurrent.GuardedBy;
+import javax.servlet.AsyncContext;
+import javax.servlet.AsyncEvent;
+import javax.servlet.AsyncListener;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import static com.dxfeed.webservice.rest.Secure.SecureRole.AUTH_REQUEST;
+import static com.dxfeed.webservice.rest.Secure.SecureRole.AUTH_SESSION;
+import static com.dxfeed.webservice.rest.Secure.SecureRole.NONE;
 
 /**
  * @dgen.annotate method { name = "do.*"; access = public; }
@@ -372,7 +391,7 @@ public class EventsResource {
     }
 
     /**
-     * Removes subscription from the previously created event stream.
+     * Removes subscription from the previously created event stream (use same parameters as for subscription).
      *
      * @param session Session name.
      */
@@ -405,6 +424,8 @@ public class EventsResource {
                 sub = conn.createSubSync(et);
             if (sub == null)
                 continue; // just continue if removing from non-existent subscription
+
+            // If unsubscribing from time series subscription fromTime must be specified!
             if (TimeSeriesEvent.class.isAssignableFrom(et) && fromTime != null) {
                 long fromTimeL = fromTime.getTime();
                 for (String sym : symbolList) {

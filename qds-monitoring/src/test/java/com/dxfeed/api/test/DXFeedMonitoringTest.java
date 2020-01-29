@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,20 +11,23 @@
  */
 package com.dxfeed.api.test;
 
-import java.lang.management.ManagementFactory;
-import java.util.*;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
-import javax.management.ObjectName;
-
 import com.devexperts.mars.common.MARSNode;
 import com.devexperts.qd.monitoring.JMXEndpoint;
 import com.devexperts.qd.monitoring.MonitoringEndpoint;
 import com.devexperts.test.ThreadCleanCheck;
-import com.dxfeed.api.*;
+import com.dxfeed.api.DXEndpoint;
+import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.event.market.Trade;
 import junit.framework.TestCase;
+
+import java.lang.management.ManagementFactory;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
+import javax.management.ObjectName;
 
 public class DXFeedMonitoringTest extends TestCase {
 

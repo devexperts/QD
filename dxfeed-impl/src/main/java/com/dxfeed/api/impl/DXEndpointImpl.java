@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,28 +11,60 @@
  */
 package com.dxfeed.api.impl;
 
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executor;
-import javax.annotation.concurrent.GuardedBy;
-
 import com.devexperts.io.URLInputStream;
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDAgent;
+import com.devexperts.qd.QDCollector;
+import com.devexperts.qd.QDContract;
+import com.devexperts.qd.QDDistributor;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.QDLog;
+import com.devexperts.qd.SubscriptionFilter;
+import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.ng.RecordBuffer;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.AgentAdapter;
+import com.devexperts.qd.qtp.DistributorAdapter;
+import com.devexperts.qd.qtp.MessageAdapter;
+import com.devexperts.qd.qtp.MessageConnector;
+import com.devexperts.qd.qtp.MessageConnectorListener;
+import com.devexperts.qd.qtp.QDEndpoint;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
 import com.devexperts.rmi.impl.RMISupportingDXEndpoint;
 import com.devexperts.services.ServiceProvider;
 import com.devexperts.services.Services;
-import com.devexperts.util.*;
-import com.dxfeed.api.*;
+import com.devexperts.util.ExecutorProvider;
+import com.devexperts.util.IndexedSet;
+import com.devexperts.util.IndexerFunction;
+import com.devexperts.util.LogUtil;
+import com.devexperts.util.SystemProperties;
+import com.dxfeed.api.DXEndpoint;
+import com.dxfeed.api.DXFeed;
+import com.dxfeed.api.DXPublisher;
 import com.dxfeed.event.EventType;
+
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
+import javax.annotation.concurrent.GuardedBy;
 
 public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConnectorListener, RMISupportingDXEndpoint {
     private static final boolean TRACE_LOG = DXEndpointImpl.class.desiredAssertionStatus();
@@ -274,6 +306,15 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
     public DXEndpoint connect(String address) {
         connectImpl(address, true);
         return this;
+    }
+
+    @Override
+    public void reconnect() {
+        synchronized (lock) {
+            if (isClosed() || qdEndpoint.isClosed())
+                return;
+            qdEndpoint.restartActiveConnectors();
+        }
     }
 
     // Note "start == false" is used internally to initializeConnectorsForAddress (only) in ON_DEMAND_FEED role

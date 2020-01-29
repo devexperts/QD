@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,22 @@
  */
 package com.devexperts.qd.qtp.file.test;
 
-import java.io.File;
-import java.lang.reflect.Field;
-
 import com.devexperts.qd.DataScheme;
-import com.devexperts.qd.qtp.*;
-import com.devexperts.qd.qtp.file.*;
+import com.devexperts.qd.qtp.FileConstants;
+import com.devexperts.qd.qtp.HeartbeatPayload;
+import com.devexperts.qd.qtp.MessageType;
+import com.devexperts.qd.qtp.file.FileFormat;
+import com.devexperts.qd.qtp.file.FileWriterImpl;
+import com.devexperts.qd.qtp.file.FileWriterParams;
 import com.devexperts.qd.test.TestDataProvider;
 import com.devexperts.qd.test.TestDataScheme;
 import com.devexperts.util.TimePeriod;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Test;
+
+import java.io.File;
+import java.lang.reflect.Field;
 
 import static org.junit.Assert.assertEquals;
 

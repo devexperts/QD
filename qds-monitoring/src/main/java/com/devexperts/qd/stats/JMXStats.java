@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,31 @@
  */
 package com.devexperts.qd.stats;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import javax.management.*;
-
 import com.devexperts.management.Management;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDLog;
 import com.devexperts.util.IndexedSet;
 import com.devexperts.util.QuickSort;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import javax.management.Attribute;
+import javax.management.AttributeList;
+import javax.management.AttributeNotFoundException;
+import javax.management.DynamicMBean;
+import javax.management.InstanceAlreadyExistsException;
+import javax.management.MBeanAttributeInfo;
+import javax.management.MBeanInfo;
+import javax.management.MBeanRegistration;
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.management.ReflectionException;
 
 public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration {
     private static final String LONG_CLASS_NAME = long.class.getName();

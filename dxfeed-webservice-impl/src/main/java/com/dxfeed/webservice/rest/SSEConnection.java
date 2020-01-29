@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,24 @@
  */
 package com.dxfeed.webservice.rest;
 
-import java.io.*;
+import com.devexperts.logging.Logging;
+import com.devexperts.util.IndexedSet;
+import com.devexperts.util.SynchronizedIndexedSet;
+import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimePeriod;
+
+import java.io.FilterOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.concurrent.GuardedBy;
-import javax.servlet.*;
-
-import com.devexperts.logging.Logging;
-import com.devexperts.util.*;
+import javax.servlet.AsyncContext;
+import javax.servlet.AsyncEvent;
+import javax.servlet.AsyncListener;
+import javax.servlet.ServletResponse;
 
 /**
  * Basic connection class for Server-Sent Events.

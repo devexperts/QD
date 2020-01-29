@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,17 +11,26 @@
  */
 package com.dxfeed.webservice;
 
-import java.io.Serializable;
-import java.util.*;
-
 import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.event.candle.Candle;
 import com.dxfeed.event.candle.CandleSymbol;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Stores original symbols to use them in output events exactly as subscribed.
+ *
+ * <p>For example "AAA{=m}" and "AAA{=1m}" internally would be resolved into the same {@link CandleSymbol},
+ * but we need to return symbols as they were specified in subscription.
+ */
 public class EventSymbolMap implements Serializable {
     private static final long serialVersionUID = 0;
 
-    private final Map<CandleSymbol, String> candleSymbols = new HashMap<>();
+    private final Map<CandleSymbol, String> candleSymbols = new ConcurrentHashMap<>();
 
     public Object resolveEventSymbolMapping(Class<?> eventType, String eventSymbol) {
         if (!Candle.class.isAssignableFrom(eventType))

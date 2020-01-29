@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,17 +11,25 @@
  */
 package com.dxfeed.event.candle;
 
-import java.util.*;
-
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.QDContract;
+import com.devexperts.qd.SerialFieldType;
 import com.devexperts.qd.ng.RecordMapping;
 import com.devexperts.qd.ng.RecordMappingFactory;
 import com.devexperts.services.ServiceProvider;
 import com.devexperts.util.SystemProperties;
-import com.dxfeed.api.impl.*;
+import com.dxfeed.api.impl.EventDelegate;
+import com.dxfeed.api.impl.EventDelegateFactory;
+import com.dxfeed.api.impl.EventDelegateFlags;
+import com.dxfeed.api.impl.SchemeBuilder;
+import com.dxfeed.api.impl.SchemeFieldTime;
 import com.dxfeed.event.candle.impl.CandleMapping;
 import com.dxfeed.event.candle.impl.TradeHistoryMapping;
 import com.dxfeed.event.market.MarketEventSymbols;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.EnumSet;
 
 @ServiceProvider(order = -50)
 public final class CandleFactoryImpl extends EventDelegateFactory implements RecordMappingFactory {

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,15 +12,24 @@
 package com.devexperts.rmi.impl;
 
 
-import java.util.*;
+import com.devexperts.connector.proto.EndpointId;
+import com.devexperts.logging.Logging;
+import com.devexperts.rmi.task.RMIObservableServiceDescriptors;
+import com.devexperts.rmi.task.RMIService;
+import com.devexperts.rmi.task.RMIServiceDescriptor;
+import com.devexperts.rmi.task.RMIServiceDescriptorsListener;
+import com.devexperts.rmi.task.RMIServiceId;
+import com.devexperts.util.IndexedSet;
+import com.devexperts.util.IndexerFunction;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
-
-import com.devexperts.connector.proto.EndpointId;
-import com.devexperts.logging.Logging;
-import com.devexperts.rmi.task.*;
-import com.devexperts.util.*;
 
 public class ServiceRouter<T> implements RMIObservableServiceDescriptors {
 

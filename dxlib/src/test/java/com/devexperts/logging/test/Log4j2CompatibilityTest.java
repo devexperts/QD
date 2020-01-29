@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,10 +11,6 @@
  */
 package com.devexperts.logging.test;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Properties;
-
 import com.devexperts.logging.LogFormatter;
 import com.devexperts.logging.Logging;
 import org.apache.logging.log4j.LogManager;
@@ -22,7 +18,13 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
 import org.apache.logging.log4j.core.config.ConfigurationSource;
-import org.apache.logging.log4j.core.config.properties.*;
+import org.apache.logging.log4j.core.config.properties.PropertiesConfiguration;
+import org.apache.logging.log4j.core.config.properties.PropertiesConfigurationBuilder;
+import org.apache.logging.log4j.core.config.properties.PropertiesConfigurationFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Properties;
 
 /**
  * Tests that {@link com.devexperts.logging.DxFeedPatternLayout} works as layout with either Log4j2 version

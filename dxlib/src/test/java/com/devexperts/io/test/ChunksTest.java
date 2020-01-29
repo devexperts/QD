@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,12 +11,21 @@
  */
 package com.devexperts.io.test;
 
+import com.devexperts.io.ByteArrayInput;
+import com.devexperts.io.ByteArrayOutput;
+import com.devexperts.io.Chunk;
+import com.devexperts.io.ChunkList;
+import com.devexperts.io.ChunkedInput;
+import com.devexperts.io.ChunkedOutput;
+import junit.framework.TestCase;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.*;
-
-import com.devexperts.io.*;
-import junit.framework.TestCase;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Random;
 
 public class ChunksTest extends TestCase {
 

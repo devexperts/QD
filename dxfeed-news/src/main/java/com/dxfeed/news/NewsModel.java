@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,9 +11,13 @@
  */
 package com.dxfeed.news;
 
-import java.util.List;
-
-import com.devexperts.rmi.*;
+import com.devexperts.rmi.RMIClient;
+import com.devexperts.rmi.RMIEndpoint;
+import com.devexperts.rmi.RMIException;
+import com.devexperts.rmi.RMIOperation;
+import com.devexperts.rmi.RMIRequest;
+import com.devexperts.rmi.RMIRequestListener;
+import com.devexperts.rmi.RuntimeRMIException;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.impl.DXFeedImpl;
@@ -21,6 +25,8 @@ import com.dxfeed.model.ObservableListModel;
 import com.dxfeed.news.impl.NewsNotFoundException;
 import com.dxfeed.news.impl.RemoteNewsService;
 import com.dxfeed.promise.Promise;
+
+import java.util.List;
 
 /**
  * Model for convenient News management.

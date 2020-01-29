@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,14 +11,29 @@
  */
 package com.devexperts.util.test;
 
-import java.io.*;
-import java.util.*;
+import com.devexperts.util.IndexedMap;
+import com.devexperts.util.IndexedSet;
+import com.devexperts.util.Indexer;
+import com.devexperts.util.IndexerFunction;
+import com.devexperts.util.SynchronizedIndexedSet;
+import junit.framework.TestCase;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
-
-import com.devexperts.util.*;
-import junit.framework.TestCase;
 
 public class IndexedSetTest extends TestCase {
     private static final IndexerFunction<String, Integer> STRING_INTEGER_INDEXER =

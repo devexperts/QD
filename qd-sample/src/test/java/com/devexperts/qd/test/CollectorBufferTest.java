@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,27 @@
  */
 package com.devexperts.qd.test;
 
-import java.util.ArrayList;
-import java.util.Random;
-
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDAgent;
+import com.devexperts.qd.QDCollector;
+import com.devexperts.qd.QDDistributor;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.QDHistory;
+import com.devexperts.qd.SubscriptionBuffer;
+import com.devexperts.qd.SubscriptionIterator;
+import com.devexperts.qd.SubscriptionVisitor;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.SymbolObjectMap;
 import com.devexperts.qd.util.SymbolObjectVisitor;
-import junit.framework.*;
+import junit.framework.Test;
+import junit.framework.TestCase;
+import junit.framework.TestSuite;
+
+import java.util.ArrayList;
+import java.util.Random;
 
 /**
  * Test outgoing data buffering behaviour in Stream and History.

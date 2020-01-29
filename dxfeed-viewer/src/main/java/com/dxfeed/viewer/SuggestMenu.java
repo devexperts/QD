@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,19 +11,24 @@
  */
 package com.dxfeed.viewer;
 
-import java.awt.*;
+import com.dxfeed.ipf.InstrumentProfile;
+import com.dxfeed.ipf.InstrumentProfileReader;
+
+import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import javax.swing.*;
+import javax.swing.Action;
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
+import javax.swing.JTextField;
+import javax.swing.SwingWorker;
 import javax.swing.Timer;
-
-import com.dxfeed.ipf.InstrumentProfile;
-import com.dxfeed.ipf.InstrumentProfileReader;
 
 public class SuggestMenu extends JPopupMenu implements ActionListener {
     public static final int DEFAULT_SUGGEST_LIMIT = 10;

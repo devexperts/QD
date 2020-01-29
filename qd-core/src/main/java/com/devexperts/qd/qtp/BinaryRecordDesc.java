@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,18 +11,44 @@
  */
 package com.devexperts.qd.qtp;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-
-import com.devexperts.io.*;
-import com.devexperts.qd.*;
-import com.devexperts.qd.kit.*;
-import com.devexperts.qd.ng.*;
+import com.devexperts.io.BufferedInput;
+import com.devexperts.io.BufferedOutput;
+import com.devexperts.io.IOUtil;
+import com.devexperts.io.Marshaller;
+import com.devexperts.qd.DataField;
+import com.devexperts.qd.DataIntField;
+import com.devexperts.qd.DataObjField;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.SerialFieldType;
+import com.devexperts.qd.kit.ByteArrayField;
+import com.devexperts.qd.kit.MarshalledObjField;
+import com.devexperts.qd.kit.PlainObjField;
+import com.devexperts.qd.kit.StringField;
+import com.devexperts.qd.ng.EventFlag;
+import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.util.Decimal;
 import com.devexperts.qd.util.TimeSequenceUtil;
 import com.devexperts.util.WideDecimal;
 
-import static com.devexperts.qd.SerialFieldType.Bits.*;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_DECIMAL;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_INT;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_SEQUENCE;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_TIME;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_WIDE_DECIMAL;
+import static com.devexperts.qd.SerialFieldType.Bits.ID_BYTE;
+import static com.devexperts.qd.SerialFieldType.Bits.ID_BYTE_ARRAY;
+import static com.devexperts.qd.SerialFieldType.Bits.ID_COMPACT_INT;
+import static com.devexperts.qd.SerialFieldType.Bits.ID_INT;
+import static com.devexperts.qd.SerialFieldType.Bits.ID_SHORT;
+import static com.devexperts.qd.SerialFieldType.Bits.ID_UTF_CHAR;
+import static com.devexperts.qd.SerialFieldType.Bits.ID_UTF_CHAR_ARRAY;
+import static com.devexperts.qd.SerialFieldType.Bits.ID_VOID;
+import static com.devexperts.qd.SerialFieldType.Bits.REPRESENTATION_MASK;
+import static com.devexperts.qd.SerialFieldType.Bits.SERIAL_TYPE_MASK;
 
 public class BinaryRecordDesc {
     /*

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,10 +14,18 @@ package com.devexperts.qd.impl.matrix;
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.QDAgent;
-import com.devexperts.qd.ng.*;
+import com.devexperts.qd.ng.EventFlag;
+import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordMode;
+import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.stats.QDStats;
 
-import static com.devexperts.qd.impl.matrix.History.*;
+import static com.devexperts.qd.impl.matrix.History.REMOVE_EVENT;
+import static com.devexperts.qd.impl.matrix.History.SNAPSHOT_BEGIN;
+import static com.devexperts.qd.impl.matrix.History.SNAPSHOT_END;
+import static com.devexperts.qd.impl.matrix.History.SNAPSHOT_SNIP;
+import static com.devexperts.qd.impl.matrix.History.TX_PENDING;
 
 /**
  * The <code>HistoryBuffer</code> stores historic values for certain data record and symbol.

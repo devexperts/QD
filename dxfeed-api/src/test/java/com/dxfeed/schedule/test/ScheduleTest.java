@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -10,6 +10,13 @@
  * !__
  */
 package com.dxfeed.schedule.test;
+
+import com.dxfeed.schedule.DayFilter;
+import com.dxfeed.schedule.Schedule;
+import com.dxfeed.schedule.Session;
+import com.dxfeed.schedule.SessionFilter;
+import com.dxfeed.schedule.SessionType;
+import junit.framework.TestCase;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -23,10 +30,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.dxfeed.schedule.*;
-import junit.framework.TestCase;
-
-import static com.devexperts.util.TimeUtil.*;
+import static com.devexperts.util.TimeUtil.DAY;
+import static com.devexperts.util.TimeUtil.HOUR;
+import static com.devexperts.util.TimeUtil.MINUTE;
+import static com.devexperts.util.TimeUtil.SECOND;
 
 public class ScheduleTest extends TestCase {
     public void testParsing() {

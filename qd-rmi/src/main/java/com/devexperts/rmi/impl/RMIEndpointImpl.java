@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -34,14 +34,14 @@ import com.devexperts.util.SystemProperties;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.impl.ExtensibleDXEndpoint;
 
-import javax.annotation.concurrent.GuardedBy;
-import javax.net.ssl.TrustManager;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
+import javax.annotation.concurrent.GuardedBy;
+import javax.net.ssl.TrustManager;
 
 public final class RMIEndpointImpl extends RMIEndpoint {
     static final boolean RMI_TRACE_LOG = RMIEndpointImpl.class.desiredAssertionStatus();
@@ -146,6 +146,15 @@ public final class RMIEndpointImpl extends RMIEndpoint {
     // GuardedBy(lock)
     public void setConnectedAddressSync(String address) {
         this.address = address;
+    }
+
+    @Override
+    public void reconnect() {
+        synchronized (lock) {
+            if (qdEndpoint.isClosed())
+                return;
+            qdEndpoint.restartActiveConnectors();
+        }
     }
 
     @Override

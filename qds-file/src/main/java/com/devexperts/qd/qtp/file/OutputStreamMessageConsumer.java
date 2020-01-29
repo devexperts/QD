@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,14 +11,23 @@
  */
 package com.devexperts.qd.qtp.file;
 
-import java.io.IOException;
-import java.io.OutputStream;
-
 import com.devexperts.io.StreamOutput;
 import com.devexperts.qd.DataIterator;
 import com.devexperts.qd.QDContract;
-import com.devexperts.qd.ng.*;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.ng.AbstractRecordProvider;
+import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordMode;
+import com.devexperts.qd.ng.RecordSink;
+import com.devexperts.qd.ng.RecordSource;
+import com.devexperts.qd.qtp.AbstractQTPComposer;
+import com.devexperts.qd.qtp.HeartbeatPayload;
+import com.devexperts.qd.qtp.MessageConsumerAdapter;
+import com.devexperts.qd.qtp.MessageType;
+import com.devexperts.qd.qtp.ProtocolDescriptor;
+import com.devexperts.qd.qtp.RuntimeQTPException;
+
+import java.io.IOException;
+import java.io.OutputStream;
 
 /**
  * Writes messages from {@link MessageReader} to a specified {@link OutputStream} using a specified QTP composer.

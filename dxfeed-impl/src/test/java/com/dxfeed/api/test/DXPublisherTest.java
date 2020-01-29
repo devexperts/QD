@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,38 @@
  */
 package com.dxfeed.api.test;
 
-import java.util.*;
-
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.DXFeedSubscription;
-import com.dxfeed.api.osub.*;
-import com.dxfeed.event.candle.*;
-import com.dxfeed.event.market.*;
+import com.dxfeed.api.osub.IndexedEventSubscriptionSymbol;
+import com.dxfeed.api.osub.ObservableSubscriptionChangeListener;
+import com.dxfeed.api.osub.WildcardSymbol;
+import com.dxfeed.event.candle.Candle;
+import com.dxfeed.event.candle.CandlePeriod;
+import com.dxfeed.event.candle.CandlePrice;
+import com.dxfeed.event.candle.CandleSession;
+import com.dxfeed.event.candle.CandleSymbol;
+import com.dxfeed.event.candle.CandleType;
+import com.dxfeed.event.market.MarketEventSymbols;
+import com.dxfeed.event.market.Order;
+import com.dxfeed.event.market.OrderSource;
+import com.dxfeed.event.market.PriceType;
+import com.dxfeed.event.market.Profile;
+import com.dxfeed.event.market.Quote;
+import com.dxfeed.event.market.Scope;
+import com.dxfeed.event.market.Side;
+import com.dxfeed.event.market.Summary;
+import com.dxfeed.event.market.TimeAndSale;
+import com.dxfeed.event.market.TimeAndSaleType;
+import com.dxfeed.event.market.Trade;
 import com.dxfeed.event.option.Series;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Random;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;

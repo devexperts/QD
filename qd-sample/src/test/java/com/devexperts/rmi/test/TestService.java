@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,14 +11,19 @@
  */
 package com.devexperts.rmi.test;
 
+import com.devexperts.logging.Logging;
+import com.devexperts.rmi.RMIOperation;
+import com.devexperts.rmi.task.RMIChannel;
+import com.devexperts.rmi.task.RMIChannelSupport;
+import com.devexperts.rmi.task.RMILocalService;
+import com.devexperts.rmi.task.RMIService;
+import com.devexperts.rmi.task.RMITask;
+import com.devexperts.rmi.task.RMITaskCancelListener;
+
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
-import com.devexperts.logging.Logging;
-import com.devexperts.rmi.RMIOperation;
-import com.devexperts.rmi.task.*;
 
 public class TestService extends RMILocalService<Void> {
     private static final Logging log = Logging.getLogging(TestService.class);

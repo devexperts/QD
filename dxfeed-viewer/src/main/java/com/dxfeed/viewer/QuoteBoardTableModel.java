@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,14 +11,23 @@
  */
 package com.dxfeed.viewer;
 
-import java.util.*;
+import com.devexperts.util.IndexedSet;
+import com.devexperts.util.IndexerFunction;
+import com.dxfeed.event.market.MarketEvent;
+import com.dxfeed.event.market.Profile;
+import com.dxfeed.event.market.Quote;
+import com.dxfeed.event.market.Summary;
+import com.dxfeed.event.market.Trade;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.TimeZone;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableModel;
-
-import com.devexperts.util.IndexedSet;
-import com.devexperts.util.IndexerFunction;
-import com.dxfeed.event.market.*;
 
 class QuoteBoardTableModel implements TableModel {
     private final ArrayList<QuoteBoardTableRow> rows = new ArrayList<QuoteBoardTableRow>();

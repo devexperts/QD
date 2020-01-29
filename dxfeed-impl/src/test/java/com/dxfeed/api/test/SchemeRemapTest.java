@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,20 +11,40 @@
  */
 package com.dxfeed.api.test;
 
-import java.util.*;
-import java.util.concurrent.*;
-
-import com.devexperts.qd.*;
-import com.devexperts.qd.kit.*;
-import com.devexperts.qd.ng.*;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.DataIntField;
+import com.devexperts.qd.DataObjField;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDDistributor;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.QDTicker;
+import com.devexperts.qd.SerialFieldType;
+import com.devexperts.qd.kit.DecimalField;
+import com.devexperts.qd.kit.DefaultRecord;
+import com.devexperts.qd.kit.DefaultScheme;
+import com.devexperts.qd.kit.PentaCodec;
+import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordMode;
+import com.devexperts.qd.qtp.AgentAdapter;
+import com.devexperts.qd.qtp.MessageConnector;
+import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.Decimal;
 import com.devexperts.test.ThreadCleanCheck;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.DXFeedSubscription;
-import com.dxfeed.event.market.*;
+import com.dxfeed.event.market.MarketEvent;
+import com.dxfeed.event.market.Quote;
+import com.dxfeed.event.market.Trade;
 import junit.framework.TestCase;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Tests compatibility with a scheme with missing records and records with different ids.

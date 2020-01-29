@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,30 @@
  */
 package com.devexperts.qd.test;
 
-import java.io.*;
+import com.devexperts.logging.Logging;
+import com.devexperts.qd.DataIntField;
+import com.devexperts.qd.DataListener;
+import com.devexperts.qd.DataObjField;
+import com.devexperts.qd.DataProvider;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.DataVisitor;
+import com.devexperts.qd.QDAgent;
+import com.devexperts.qd.QDDistributor;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.QDTicker;
+import com.devexperts.qd.SubscriptionBuffer;
+import com.devexperts.qd.ng.RecordBuffer;
+import junit.framework.TestCase;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-
-import com.devexperts.logging.Logging;
-import com.devexperts.qd.*;
-import com.devexperts.qd.ng.RecordBuffer;
-import junit.framework.TestCase;
 
 public class LockTimeoutTest extends TestCase {
     private static final DataScheme SCHEME = new TestDataScheme(20091005);

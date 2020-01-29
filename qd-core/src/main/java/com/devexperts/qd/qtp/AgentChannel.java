@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,12 +11,30 @@
  */
 package com.devexperts.qd.qtp;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-
-import com.devexperts.qd.*;
+import com.devexperts.qd.QDAgent;
+import com.devexperts.qd.QDCollector;
+import com.devexperts.qd.QDContract;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.QDFilter;
+import com.devexperts.qd.QDStream;
+import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.kit.CompositeFilters;
-import com.devexperts.qd.ng.*;
+import com.devexperts.qd.ng.AbstractRecordProvider;
+import com.devexperts.qd.ng.AbstractRecordSink;
+import com.devexperts.qd.ng.EventFlag;
+import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordFilter;
+import com.devexperts.qd.ng.RecordListener;
+import com.devexperts.qd.ng.RecordMode;
+import com.devexperts.qd.ng.RecordProvider;
+import com.devexperts.qd.ng.RecordSink;
+import com.devexperts.qd.ng.RecordSource;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * Single channel of QD data within agent adapter.

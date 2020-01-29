@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,6 +14,8 @@ package com.dxfeed.api;
 import com.dxfeed.api.osub.ObservableSubscriptionChangeListener;
 import com.dxfeed.api.osub.TimeSeriesSubscriptionSymbol;
 import com.dxfeed.event.TimeSeriesEvent;
+
+import java.util.Objects;
 
 /**
  * Extends {@link DXFeedSubscription} to conveniently subscribe to time-series of
@@ -120,11 +122,14 @@ public class DXFeedTimeSeriesSubscription<E extends TimeSeriesEvent> extends DXF
      *
      * @param symbol the symbol to undecorate.
      * @throws NullPointerException if symbol is null.
-     * @throws ClassCastException if symbol is not instance of {@link TimeSeriesSubscriptionSymbol}.
-     * @return undecorated symbol.
+     * @return undecorated symbol or null if symbol is not an instance of {@link TimeSeriesSubscriptionSymbol}.
      */
     @Override
     protected Object undecorateSymbol(Object symbol) {
-        return ((TimeSeriesSubscriptionSymbol<?>) symbol).getEventSymbol();
+        Objects.requireNonNull(symbol);
+        if (symbol instanceof TimeSeriesSubscriptionSymbol) {
+            return ((TimeSeriesSubscriptionSymbol<?>) symbol).getEventSymbol();
+        }
+        return null;
     }
 }

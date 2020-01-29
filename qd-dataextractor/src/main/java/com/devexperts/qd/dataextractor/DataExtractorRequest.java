@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,23 +11,30 @@
  */
 package com.devexperts.qd.dataextractor;
 
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDContract;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.QDFilter;
+import com.devexperts.qd.kit.CompositeFilters;
+import com.devexperts.qd.kit.RecordOnlyFilter;
+import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.qtp.AbstractQTPComposer;
+import com.devexperts.qd.qtp.ProtocolDescriptor;
+import com.devexperts.qd.qtp.file.FileFormat;
+import com.devexperts.qd.qtp.file.FileReader;
+import com.devexperts.qd.qtp.file.FileReaderParams;
+import com.devexperts.qd.qtp.file.OutputStreamMessageConsumer;
+import com.devexperts.qd.qtp.file.TimestampsType;
+import com.devexperts.transport.stats.ConnectionStats;
+import com.devexperts.util.InvalidFormatException;
+import com.devexperts.util.TimeFormat;
+
 import java.io.IOException;
 import java.util.Date;
 import java.util.Locale;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import com.devexperts.qd.*;
-import com.devexperts.qd.kit.CompositeFilters;
-import com.devexperts.qd.kit.RecordOnlyFilter;
-import com.devexperts.qd.ng.RecordCursor;
-import com.devexperts.qd.qtp.AbstractQTPComposer;
-import com.devexperts.qd.qtp.ProtocolDescriptor;
-import com.devexperts.qd.qtp.file.*;
-import com.devexperts.transport.stats.ConnectionStats;
-import com.devexperts.util.InvalidFormatException;
-import com.devexperts.util.TimeFormat;
 
 public class DataExtractorRequest {
     private final DataScheme scheme = QDFactory.getDefaultScheme();

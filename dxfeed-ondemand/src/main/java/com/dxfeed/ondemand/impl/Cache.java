@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,31 @@
  */
 package com.dxfeed.ondemand.impl;
 
-import java.io.*;
-import java.util.*;
+import com.devexperts.io.BufferedInput;
+import com.devexperts.io.ByteArrayOutput;
+import com.devexperts.io.StreamInput;
+import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.util.IndexedSet;
+import com.devexperts.util.SynchronizedIndexedSet;
+import com.devexperts.util.TimeFormat;
+import com.devexperts.util.TimeUtil;
+
+import java.io.BufferedOutputStream;
+import java.io.EOFException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.locks.LockSupport;
-
-import com.devexperts.io.*;
-import com.devexperts.qd.ng.RecordBuffer;
-import com.devexperts.util.*;
 
 class Cache implements Runnable {
     private static final String FILE_CACHE_NAME = "mdrcache";

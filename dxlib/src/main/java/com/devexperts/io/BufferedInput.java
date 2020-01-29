@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,10 +11,16 @@
  */
 package com.devexperts.io;
 
-import java.io.*;
-import java.nio.ByteBuffer;
-
 import com.devexperts.util.ArrayUtil;
+
+import java.io.DataOutput;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInput;
+import java.io.OutputStream;
+import java.io.UTFDataFormatException;
+import java.nio.ByteBuffer;
 
 /**
  * An efficient buffered implementation of data input API.

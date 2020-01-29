@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,11 +11,16 @@
  */
 package com.devexperts.qd.test;
 
-import java.io.*;
-
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.kit.CompositeFilters;
 import junit.framework.TestCase;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
 
 public class BuiltinFiltersTest extends TestCase {
     private static final DataScheme SCHEME = QDFactory.getDefaultScheme();

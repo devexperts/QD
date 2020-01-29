@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,12 +11,24 @@
  */
 package com.dxfeed.ipf.transform;
 
+import com.devexperts.qd.util.QDConfig;
+import com.dxfeed.ipf.InstrumentProfile;
+import com.dxfeed.ipf.InstrumentProfileField;
+import com.dxfeed.ipf.InstrumentProfileReader;
+
 import java.io.IOException;
 import java.io.Reader;
-import java.util.*;
-
-import com.devexperts.qd.util.QDConfig;
-import com.dxfeed.ipf.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Compiles and executes instrument profile transform programs.
@@ -175,9 +187,10 @@ class Compiler {
         "switch", "case", "default",
         "retainFields",
         "delete", "primary", "rename", "cmeproduct", "fixopol", "osi",
-        "like", "notlike", "in", "notin",
+        "hasItem", "nothasItem", "like", "notlike", "in", "notin",
         "true", "false",
         "boolean", "date", "number", "string",
+        "addItem", "removeItem",
         "replaceAll", "replaceFirst",
         "sysdate", "bs", "bsopt", "fut", "futopt", "spread",
         "getDayOfWeek", "setDayOfWeek", "getDayOfMonth", "setDayOfMonth", "isTrading", "findTrading"
@@ -472,6 +485,10 @@ class Compiler {
         int token = nextToken();
         if (token == Tokenizer.TT_WORD) {
             // Read special subclasses of "RelationalExpression".
+            if (tokenizer.sval.equals("hasItem"))
+                return new HasItemExpression(expression, readAdditiveExpression());
+            if (tokenizer.sval.equals("nothasItem"))
+                return new NotExpression(new HasItemExpression(expression, readAdditiveExpression()));
             if (tokenizer.sval.equals("like"))
                 return new LikeExpression(expression, getString(null, readAdditiveExpression()));
             if (tokenizer.sval.equals("notlike"))
@@ -615,6 +632,10 @@ class Compiler {
             if (tokenizer.sval.equals("string"))
                 return new TypeCastExpression(this, String.class);
             // Here go custom hard-coded "functions". They perform their own parsing of parameters.
+            if (tokenizer.sval.equals("addItem"))
+                return new AddItemExpression(this);
+            if (tokenizer.sval.equals("removeItem"))
+                return new RemoveItemExpression(this);
             if (tokenizer.sval.equals("replaceAll"))
                 return new ReplaceExpression(this, true);
             if (tokenizer.sval.equals("replaceFirst"))

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -10,6 +10,9 @@
  * !__
  */
 package com.devexperts.qd.monitoring;
+
+import com.devexperts.management.Management;
+import com.devexperts.qd.QDLog;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -20,9 +23,6 @@ import java.util.Properties;
 import javax.management.remote.JMXServiceURL;
 import javax.management.remote.rmi.RMIConnectorServer;
 import javax.management.remote.rmi.RMIJRMPServerImpl;
-
-import com.devexperts.management.Management;
-import com.devexperts.qd.QDLog;
 
 /**
  * Separate class so that </code>RMIConnectorServer</code> class is loaded only when needed.

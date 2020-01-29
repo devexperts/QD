@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,20 +11,48 @@
  */
 package com.devexperts.qd.tools;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-
 import com.devexperts.io.ByteArrayInput;
-import com.devexperts.qd.*;
-import com.devexperts.qd.ng.*;
-import com.devexperts.qd.qtp.*;
-import com.devexperts.qd.qtp.file.*;
+import com.devexperts.qd.DataIterator;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDContract;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.QDFilter;
+import com.devexperts.qd.QDLog;
+import com.devexperts.qd.SubscriptionIterator;
+import com.devexperts.qd.ng.AbstractRecordProvider;
+import com.devexperts.qd.ng.AbstractRecordSink;
+import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordMode;
+import com.devexperts.qd.ng.RecordSink;
+import com.devexperts.qd.ng.RecordSource;
+import com.devexperts.qd.qtp.AbstractQTPParser;
+import com.devexperts.qd.qtp.HeartbeatPayload;
+import com.devexperts.qd.qtp.MessageAdapter;
+import com.devexperts.qd.qtp.MessageConnector;
+import com.devexperts.qd.qtp.MessageConnectors;
+import com.devexperts.qd.qtp.MessageConsumerAdapter;
+import com.devexperts.qd.qtp.MessageListener;
+import com.devexperts.qd.qtp.MessageType;
+import com.devexperts.qd.qtp.MessageVisitor;
+import com.devexperts.qd.qtp.OutputStreamMessageVisitor;
+import com.devexperts.qd.qtp.ProtocolDescriptor;
+import com.devexperts.qd.qtp.ProtocolOption;
+import com.devexperts.qd.qtp.QDEndpoint;
+import com.devexperts.qd.qtp.RawDataConsumer;
+import com.devexperts.qd.qtp.file.FileFormat;
 import com.devexperts.qd.qtp.file.FileWriterImpl;
 import com.devexperts.qd.qtp.text.TextQTPComposer;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.services.ServiceProvider;
 import com.devexperts.util.LogUtil;
+
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Connects to specified address(es) and dumps all received data and subscription information.

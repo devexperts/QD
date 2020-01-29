@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,9 +11,39 @@
  */
 package com.devexperts.qd;
 
-import com.devexperts.qd.kit.*;
+import com.devexperts.qd.kit.ByteArrayField;
+import com.devexperts.qd.kit.CompactCharField;
+import com.devexperts.qd.kit.CompactIntField;
+import com.devexperts.qd.kit.DateField;
+import com.devexperts.qd.kit.DecimalField;
+import com.devexperts.qd.kit.MarshalledObjField;
+import com.devexperts.qd.kit.PlainIntField;
+import com.devexperts.qd.kit.SequenceField;
+import com.devexperts.qd.kit.ShortStringField;
+import com.devexperts.qd.kit.StringField;
+import com.devexperts.qd.kit.TimeField;
+import com.devexperts.qd.kit.VoidIntField;
+import com.devexperts.qd.kit.WideDecimalField;
 
-import static com.devexperts.qd.SerialFieldType.Bits.*;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_CUSTOM_OBJECT;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_DATE;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_DECIMAL;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_SEQUENCE;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_SERIAL_OBJECT;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_SHORT_STRING;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_STRING;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_TIME;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_WIDE_DECIMAL;
+import static com.devexperts.qd.SerialFieldType.Bits.ID_BYTE;
+import static com.devexperts.qd.SerialFieldType.Bits.ID_BYTE_ARRAY;
+import static com.devexperts.qd.SerialFieldType.Bits.ID_COMPACT_INT;
+import static com.devexperts.qd.SerialFieldType.Bits.ID_INT;
+import static com.devexperts.qd.SerialFieldType.Bits.ID_SHORT;
+import static com.devexperts.qd.SerialFieldType.Bits.ID_UTF_CHAR;
+import static com.devexperts.qd.SerialFieldType.Bits.ID_UTF_CHAR_ARRAY;
+import static com.devexperts.qd.SerialFieldType.Bits.ID_VOID;
+import static com.devexperts.qd.SerialFieldType.Bits.REPRESENTATION_MASK;
+import static com.devexperts.qd.SerialFieldType.Bits.SERIAL_TYPE_MASK;
 
 /**
  * Describes serial type of {@link DataField data fields} that are transferred via QTP.

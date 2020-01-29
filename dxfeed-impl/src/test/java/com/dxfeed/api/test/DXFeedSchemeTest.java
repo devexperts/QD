@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,14 +11,36 @@
  */
 package com.dxfeed.api.test;
 
-import java.util.*;
-
-import com.devexperts.qd.*;
-import com.dxfeed.api.impl.*;
+import com.devexperts.qd.DataField;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.SerialFieldType;
+import com.dxfeed.api.impl.DXFeedScheme;
+import com.dxfeed.api.impl.EventDelegate;
+import com.dxfeed.api.impl.EventDelegateFactory;
+import com.dxfeed.api.impl.SchemeBuilder;
+import com.dxfeed.api.impl.SchemeFieldTime;
+import com.dxfeed.api.impl.SchemeProperties;
 import junit.framework.TestCase;
 
-import static com.devexperts.qd.SerialFieldType.*;
-import static com.dxfeed.api.impl.SchemeFieldTime.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Properties;
+
+import static com.devexperts.qd.SerialFieldType.COMPACT_INT;
+import static com.devexperts.qd.SerialFieldType.CUSTOM_OBJECT;
+import static com.devexperts.qd.SerialFieldType.DECIMAL;
+import static com.devexperts.qd.SerialFieldType.INT;
+import static com.devexperts.qd.SerialFieldType.SERIAL_OBJECT;
+import static com.devexperts.qd.SerialFieldType.SHORT_STRING;
+import static com.devexperts.qd.SerialFieldType.STRING;
+import static com.devexperts.qd.SerialFieldType.VOID;
+import static com.dxfeed.api.impl.SchemeFieldTime.COMMON_FIELD;
+import static com.dxfeed.api.impl.SchemeFieldTime.FIRST_TIME_INT_FIELD;
+import static com.dxfeed.api.impl.SchemeFieldTime.SECOND_TIME_INT_FIELD;
 
 public class DXFeedSchemeTest extends TestCase {
 

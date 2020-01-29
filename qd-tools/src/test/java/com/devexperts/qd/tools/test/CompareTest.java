@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,14 +11,14 @@
  */
 package com.devexperts.qd.tools.test;
 
-import java.util.Arrays;
-import java.util.Random;
-
 import com.devexperts.mars.common.MARSNode;
 import com.devexperts.qd.tools.Tools;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.event.market.Quote;
 import junit.framework.TestCase;
+
+import java.util.Arrays;
+import java.util.Random;
 
 public class CompareTest extends TestCase {
     private static final String SYMBOL = "IBM";

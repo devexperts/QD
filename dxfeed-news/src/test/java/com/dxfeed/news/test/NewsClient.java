@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,16 @@
  */
 package com.dxfeed.news.test;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-
-import javax.annotation.Nonnull;
-
 import com.devexperts.rmi.RMIEndpoint;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.model.ObservableListModelListener;
-import com.dxfeed.news.*;
+import com.dxfeed.news.NewsFilter;
+import com.dxfeed.news.NewsModel;
+import com.dxfeed.news.NewsSummary;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import javax.annotation.Nonnull;
 
 public class NewsClient {
     public static void main(String[] args) throws InterruptedException {

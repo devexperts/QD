@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,17 +11,29 @@
  */
 package com.devexperts.qd.qtp;
 
+import com.devexperts.connector.proto.ApplicationConnection;
+import com.devexperts.connector.proto.ApplicationConnectionFactory;
+import com.devexperts.connector.proto.Configurable;
+import com.devexperts.connector.proto.ConfigurationKey;
+import com.devexperts.connector.proto.TransportConnection;
+import com.devexperts.qd.qtp.auth.BasicAuthRealmFactory;
+import com.devexperts.qd.qtp.auth.BasicLoginHandler;
+import com.devexperts.qd.qtp.auth.BasicLoginHandlerFactory;
+import com.devexperts.qd.qtp.auth.QDAuthRealm;
+import com.devexperts.qd.qtp.auth.QDAuthRealmFactory;
+import com.devexperts.qd.qtp.auth.QDLoginHandler;
+import com.devexperts.qd.qtp.auth.QDLoginHandlerFactory;
+import com.devexperts.qd.qtp.socket.SocketMessageAdapterFactory;
+import com.devexperts.qd.stats.QDStats;
+import com.devexperts.services.Services;
+import com.devexperts.util.InvalidFormatException;
+import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimePeriod;
+
 import java.io.IOException;
 import java.net.Socket;
 import java.util.LinkedHashSet;
 import java.util.Set;
-
-import com.devexperts.connector.proto.*;
-import com.devexperts.qd.qtp.auth.*;
-import com.devexperts.qd.qtp.socket.SocketMessageAdapterFactory;
-import com.devexperts.qd.stats.QDStats;
-import com.devexperts.services.Services;
-import com.devexperts.util.*;
 
 /**
  * QTP Connection protocol implementation.

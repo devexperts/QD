@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,12 +11,38 @@
  */
 package com.devexperts.qd.qtp;
 
-import java.util.*;
-
 import com.devexperts.qd.QDContract;
 import com.devexperts.qd.ng.RecordMode;
 
-import static com.devexperts.qd.qtp.MessageConstants.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+
+import static com.devexperts.qd.qtp.MessageConstants.MAX_SUPPORTED_MESSAGE_TYPE;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_DESCRIBE_PROTOCOL;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_DESCRIBE_RECORDS;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_DESCRIBE_RESERVED;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_HEARTBEAT;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_HISTORY_ADD_SUBSCRIPTION;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_HISTORY_DATA;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_HISTORY_REMOVE_SUBSCRIPTION;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_PART;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_RAW_DATA;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_RMI_ADVERTISE_SERVICES;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_RMI_CANCEL;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_RMI_DESCRIBE_OPERATION;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_RMI_DESCRIBE_SUBJECT;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_RMI_ERROR;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_RMI_REQUEST;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_RMI_RESPONSE;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_RMI_RESULT;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_STREAM_ADD_SUBSCRIPTION;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_STREAM_DATA;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_STREAM_REMOVE_SUBSCRIPTION;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_TEXT_FORMAT;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_TICKER_ADD_SUBSCRIPTION;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_TICKER_DATA;
+import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_TICKER_REMOVE_SUBSCRIPTION;
 
 /**
  * Type of QTP message.

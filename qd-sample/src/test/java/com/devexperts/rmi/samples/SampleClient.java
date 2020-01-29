@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,21 +11,42 @@
  */
 package com.devexperts.rmi.samples;
 
-import java.awt.*;
-import java.io.IOException;
-import java.net.Socket;
-import java.util.*;
-import java.util.List;
-import javax.swing.*;
-
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataIterator;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDContract;
 import com.devexperts.qd.ng.RecordBuffer;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.DistributorAdapter;
+import com.devexperts.qd.qtp.MessageAdapter;
+import com.devexperts.qd.qtp.MessageType;
+import com.devexperts.qd.qtp.QDEndpoint;
 import com.devexperts.qd.qtp.socket.SocketMessageAdapterFactory;
-import com.devexperts.qd.sample.*;
+import com.devexperts.qd.sample.ActivatorCheckBox;
+import com.devexperts.qd.sample.GUIColumn;
+import com.devexperts.qd.sample.HistoryModel;
+import com.devexperts.qd.sample.Sample;
+import com.devexperts.qd.sample.SampleColumn;
+import com.devexperts.qd.sample.SampleScheme;
+import com.devexperts.qd.sample.StreamModel;
+import com.devexperts.qd.sample.TickerModel;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
+
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import java.io.IOException;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.List;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.SwingUtilities;
 
 public class SampleClient {
     public static void main(String[] args) {

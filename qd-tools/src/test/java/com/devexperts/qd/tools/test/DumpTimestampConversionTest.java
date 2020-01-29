@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,12 +11,11 @@
  */
 package com.devexperts.qd.tools.test;
 
-import java.io.*;
-import java.util.TimeZone;
-
 import com.devexperts.io.IOUtil;
 import com.devexperts.io.StreamInput;
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.qtp.HeartbeatPayload;
@@ -27,6 +26,13 @@ import com.devexperts.test.ThreadCleanCheck;
 import com.devexperts.util.TimeFormat;
 import com.dxfeed.event.market.impl.QuoteMapping;
 import junit.framework.TestCase;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.TimeZone;
 
 /**
  * Tests conversion of files between different text and binary formats with different timestamps via dump tool.

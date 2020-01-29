@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,20 @@
  */
 package com.devexperts.qd.impl.matrix.management.impl;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.List;
-
 import com.devexperts.io.BufferedOutput;
 import com.devexperts.io.StreamOutput;
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.QDLog;
+import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.impl.matrix.Collector;
 import com.devexperts.qd.impl.matrix.SubscriptionDumpVisitor;
 import com.devexperts.util.LogUtil;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.List;
 
 public class SubscriptionDumpImpl implements SubscriptionDumpVisitor {
     public static void makeDump(final String file, final DataScheme scheme, final List<Collector> list) {

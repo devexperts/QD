@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,16 @@
  */
 package com.devexperts.qd;
 
-import java.util.ArrayList;
-import java.util.concurrent.CopyOnWriteArrayList;
-import javax.annotation.concurrent.GuardedBy;
-
 import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.qd.kit.NotFilter;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordFilter;
 import com.devexperts.qd.spi.QDFilterFactory;
 import com.devexperts.qd.util.SymbolSet;
+
+import java.util.ArrayList;
+import java.util.concurrent.CopyOnWriteArrayList;
+import javax.annotation.concurrent.GuardedBy;
 
 /**
  * Filter for QD data and subscription. This class subsumes {@link SubscriptionFilter} and should be

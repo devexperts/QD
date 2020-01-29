@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,24 +11,46 @@
  */
 package com.devexperts.qd.tools;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.text.*;
-import java.util.*;
-
 import com.devexperts.io.ByteArrayInput;
 import com.devexperts.io.URLInputStream;
 import com.devexperts.mars.common.MARSEndpoint;
 import com.devexperts.qd.QDLog;
 import com.devexperts.services.ServiceProvider;
 import com.devexperts.util.LogUtil;
-import com.dxfeed.ipf.*;
+import com.dxfeed.ipf.InstrumentProfile;
+import com.dxfeed.ipf.InstrumentProfileField;
+import com.dxfeed.ipf.InstrumentProfileReader;
+import com.dxfeed.ipf.InstrumentProfileWriter;
 import com.dxfeed.ipf.live.InstrumentProfileCollector;
 import com.dxfeed.ipf.live.InstrumentProfileConnection;
 import com.dxfeed.ipf.services.InstrumentProfileServer;
 import com.dxfeed.ipf.tools.CMEParser;
 import com.dxfeed.ipf.tools.OCCParser;
-import com.dxfeed.ipf.transform.*;
+import com.dxfeed.ipf.transform.InstrumentProfileTransform;
+import com.dxfeed.ipf.transform.TransformCompilationException;
+import com.dxfeed.ipf.transform.TransformContext;
+
+import java.io.BufferedReader;
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.TreeSet;
 
 /**
  * Reads, transforms and writes instrument profiles.

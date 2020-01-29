@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -10,13 +10,6 @@
  * !__
  */
 package com.devexperts.qd.qtp.auth;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.stream.Collectors;
 
 import com.devexperts.auth.AuthSession;
 import com.devexperts.auth.AuthToken;
@@ -26,6 +19,16 @@ import com.devexperts.qd.util.QDConfig;
 import com.devexperts.util.InvalidFormatException;
 import com.devexperts.util.TypedMap;
 import com.dxfeed.promise.Promise;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Basic implementation for {@link QDAuthRealmFactory}. This class used when all other implementations

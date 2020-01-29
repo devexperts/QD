@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,18 +11,18 @@
  */
 package com.devexperts.qd.qtp.socket;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.locks.LockSupport;
-
 import com.devexperts.connector.proto.ApplicationConnection;
 import com.devexperts.io.Chunk;
 import com.devexperts.io.ChunkList;
 import com.devexperts.qd.qtp.QTPWorkerThread;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimePeriod;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.locks.LockSupport;
 
 /**
  * The <code>SocketWriter</code> writes standard socket using blocking API.

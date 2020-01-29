@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,12 +11,29 @@
  */
 package com.devexperts.qd.ng;
 
-import java.util.Arrays;
-
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataBuffer;
+import com.devexperts.qd.DataConsumer;
+import com.devexperts.qd.DataIntField;
+import com.devexperts.qd.DataIterator;
+import com.devexperts.qd.DataListener;
+import com.devexperts.qd.DataObjField;
+import com.devexperts.qd.DataProvider;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataVisitor;
+import com.devexperts.qd.SubscriptionBuffer;
+import com.devexperts.qd.SubscriptionConsumer;
+import com.devexperts.qd.SubscriptionFilter;
+import com.devexperts.qd.SubscriptionIterator;
+import com.devexperts.qd.SubscriptionListener;
+import com.devexperts.qd.SubscriptionProvider;
+import com.devexperts.qd.SubscriptionVisitor;
 import com.devexperts.qd.ng.RecordCursor.Owner;
 import com.devexperts.qd.util.DataIterators;
-import com.devexperts.util.*;
+import com.devexperts.util.ArrayUtil;
+import com.devexperts.util.SystemProperties;
+import com.devexperts.util.ThreadLocalPool;
+
+import java.util.Arrays;
 
 /**
  * Buffers int and obj values of data records. This class has two {@link RecordCursor cursors} of its own --

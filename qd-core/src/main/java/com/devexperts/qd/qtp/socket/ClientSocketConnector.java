@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,16 @@
  */
 package com.devexperts.qd.qtp.socket;
 
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-
 import com.devexperts.connector.codec.CodecConnectionFactory;
 import com.devexperts.connector.codec.CodecFactory;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDLog;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.AbstractMessageConnector;
+import com.devexperts.qd.qtp.MessageAdapter;
+import com.devexperts.qd.qtp.MessageConnector;
+import com.devexperts.qd.qtp.MessageConnectorState;
+import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.qtp.help.MessageConnectorProperty;
 import com.devexperts.qd.qtp.help.MessageConnectorSummary;
 import com.devexperts.qd.stats.QDStats;
@@ -29,6 +30,9 @@ import com.devexperts.transport.stats.ConnectionStats;
 import com.devexperts.transport.stats.EndpointStats;
 import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
+
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
 
 /**
  * The <code>ClientSocketConnector</code> handles standard client socket using blocking API.
@@ -273,7 +277,12 @@ public class ClientSocketConnector extends AbstractMessageConnector
 
     @Override
     protected synchronized Joinable stopImpl() {
-        socketSource = null; // forget all reconnection times. Next start immediately connects
+        return stopImpl(true);
+    }
+
+    private Joinable stopImpl(boolean fullStop) {
+        if (fullStop)
+            socketSource = null; // forget all reconnection times. Next start immediately connects
         SocketHandler handler = this.handler;
         this.handler = null; // Clear before actual close to avoid recursion.
         if (handler != null) {
@@ -281,6 +290,12 @@ public class ClientSocketConnector extends AbstractMessageConnector
             handler.close();
         }
         return handler;
+    }
+
+    @Override
+    protected synchronized void restartImpl() {
+        stopImpl(false);
+        start();
     }
 
     @Override

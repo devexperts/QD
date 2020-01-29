@@ -2,18 +2,22 @@
   !++
   QDS - Quick Data Signalling Library
   !-
-  Copyright (C) 2002 - 2019 Devexperts LLC
+  Copyright (C) 2002 - 2020 Devexperts LLC
   !-
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
   If a copy of the MPL was not distributed with this file, You can obtain one at
   http://mozilla.org/MPL/2.0/.
   !__
   --%>
-<%@ page import="java.util.Map" %>
 <%@ page import="com.devexperts.annotation.Description" %>
 <%@ page import="com.dxfeed.event.EventType" %>
 <%@ page import="com.dxfeed.webservice.DXFeedContext" %>
-<%@ page import="com.dxfeed.webservice.rest.*" %>
+<%@ page import="com.dxfeed.webservice.rest.EventsResource" %>
+<%@ page import="com.dxfeed.webservice.rest.Format" %>
+<%@ page import="com.dxfeed.webservice.rest.ParamInfo" %>
+<%@ page import="com.dxfeed.webservice.rest.ParamType" %>
+<%@ page import="com.dxfeed.webservice.rest.PathInfo" %>
+<%@ page import="java.util.Map" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <html>
 <head>

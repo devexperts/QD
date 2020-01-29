@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -10,13 +10,6 @@
  * !__
  */
 package com.dxfeed.ondemand.impl;
-
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
-import java.util.Date;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import javax.management.*;
 
 import com.devexperts.qd.QDLog;
 import com.devexperts.qd.qtp.MessageConnector;
@@ -27,6 +20,15 @@ import com.dxfeed.api.impl.DXEndpointImpl;
 import com.dxfeed.api.impl.DXFeedImpl;
 import com.dxfeed.ondemand.OnDemandService;
 import com.dxfeed.ondemand.impl.connector.OnDemandConnector;
+
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import javax.management.ListenerNotFoundException;
+import javax.management.Notification;
+import javax.management.NotificationListener;
 
 public final class OnDemandServiceImpl extends OnDemandService implements NotificationListener {
     // non-null after init, effectively final

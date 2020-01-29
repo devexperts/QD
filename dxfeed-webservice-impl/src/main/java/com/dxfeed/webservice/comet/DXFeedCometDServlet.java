@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,21 @@
  */
 package com.dxfeed.webservice.comet;
 
-import javax.servlet.ServletException;
-
 import com.devexperts.qd.monitoring.MonitoringEndpoint;
+import com.devexperts.util.SystemProperties;
 import org.cometd.annotation.AnnotationCometDServlet;
 import org.cometd.bayeux.server.BayeuxServer;
+import org.cometd.server.AbstractServerTransport;
+
+import javax.servlet.ServletException;
 
 public class DXFeedCometDServlet extends AnnotationCometDServlet {
 
     public static final String DEBUG_SESSIONS_PROPERTY = "debugSessions";
+    public static final String MAX_QUEUE_PROPERTY = AbstractServerTransport.MAX_QUEUE_OPTION;
+
+    private static final int DEFAULT_MAX_QUEUE_SIZE = SystemProperties.getIntProperty(
+        DataService.class, MAX_QUEUE_PROPERTY, 100_000, 1, 1_000_000);
 
     private CometDMonitoring monitoring;
 
@@ -33,9 +39,14 @@ public class DXFeedCometDServlet extends AnnotationCometDServlet {
         }
         boolean debug = false;
         if (getInitParameter(DEBUG_SESSIONS_PROPERTY) != null) {
-            debug = Boolean.valueOf(getInitParameter(DEBUG_SESSIONS_PROPERTY));
+            debug = Boolean.parseBoolean(getInitParameter(DEBUG_SESSIONS_PROPERTY));
         }
         BayeuxServer server = (BayeuxServer) getServletContext().getAttribute(BayeuxServer.ATTRIBUTE);
+
+        // Initialize max queue size: servlet init parameter has higher priority than system property
+        if (server.getOption(MAX_QUEUE_PROPERTY) == null) {
+            server.setOption(MAX_QUEUE_PROPERTY, DEFAULT_MAX_QUEUE_SIZE);
+        }
 
         monitoring = new CometDMonitoring();
         monitoring.init(name, server, debug);

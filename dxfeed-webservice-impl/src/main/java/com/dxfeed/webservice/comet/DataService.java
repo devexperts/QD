@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,18 +11,14 @@
  */
 package com.dxfeed.webservice.comet;
 
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
-import java.lang.reflect.Method;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import javax.annotation.*;
-
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.QDFilter;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimeFormat;
-import com.dxfeed.api.*;
+import com.dxfeed.api.DXEndpoint;
+import com.dxfeed.api.DXFeed;
+import com.dxfeed.api.DXFeedEventListener;
+import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.api.impl.DXEndpointImpl;
 import com.dxfeed.api.impl.DXFeedImpl;
 import com.dxfeed.api.osub.TimeSeriesSubscriptionSymbol;
@@ -31,11 +27,30 @@ import com.dxfeed.event.TimeSeriesEvent;
 import com.dxfeed.ondemand.OnDemandService;
 import com.dxfeed.webservice.DXFeedContext;
 import com.dxfeed.webservice.EventSymbolMap;
-import org.cometd.annotation.*;
+import org.cometd.annotation.Listener;
+import org.cometd.annotation.Service;
+import org.cometd.annotation.Session;
+import org.cometd.bayeux.Message;
 import org.cometd.bayeux.Promise;
 import org.cometd.bayeux.server.ServerMessage;
 import org.cometd.bayeux.server.ServerSession;
 import org.cometd.server.ServerSessionImpl;
+
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 
 @Service
 public class DataService {
@@ -161,8 +176,8 @@ public class DataService {
         return session;
     }
 
-    private class SessionState
-        implements ServerSession.RemoveListener, ServerSession.Extension, PropertyChangeListener
+    private class SessionState implements ServerSession.RemoveListener, ServerSession.DeQueueListener,
+        ServerSession.MaxQueueListener, ServerSession.Extension, PropertyChangeListener
     {
         private final ServerSession remote;
         private final ServerSessionImpl sessionImpl;
@@ -177,7 +192,6 @@ public class DataService {
         private DXFeedImpl onDemandFeed;
         private volatile boolean closed;
         private SessionStats stats = new SessionStats();
-        private SessionStats tmpStats = new SessionStats();
 
         @SuppressWarnings("deprecation")
         SessionState(@Nonnull ServerSession remote, @Nonnull QDFilter filter) {
@@ -192,7 +206,7 @@ public class DataService {
             stats.createTime = stats.lastActiveTime = System.currentTimeMillis();
 
             remote.setAttribute(CometDMonitoring.STATS_ATTR, stats);
-            remote.setAttribute(CometDMonitoring.TMP_STATS_ATTR, tmpStats);
+            remote.setAttribute(CometDMonitoring.TMP_STATS_ATTR, new SessionStats());
             remote.addExtension(this);
 
             deliverStateChange("replaySupported", sharedOnDemand.isReplaySupported());
@@ -244,11 +258,9 @@ public class DataService {
                     // Break list of events into smaller batches
                     List<T> eventsBatch = events.subList(i, Math.min(length, i + messageBatchSize));
 
-                    synchronized (SessionState.this) {
-                        // need to sync for potential candleSymbolMap updates
-                        remote.deliver(server, timeSeries ? TIME_SERIES_DATA_CHANNEL : DATA_CHANNEL,
-                            new DataMessage(sendScheme, eventType, eventsBatch, symbolMap), Promise.noop());
-                    }
+                    remote.deliver(server, timeSeries ? TIME_SERIES_DATA_CHANNEL : DATA_CHANNEL,
+                        new DataMessage(sendScheme, eventType, eventsBatch, symbolMap), Promise.noop());
+
                     sendScheme = false; // don't need to send afterwards
                 }
             }
@@ -283,7 +295,6 @@ public class DataService {
             timeSeriesSubscriptionsMap.clear();
         }
 
-        @SuppressWarnings({"unchecked"})
         private void processSub(boolean addSub, boolean timeSeries, Map<String, List<?>> subMap) {
             if (subMap == null)
                 return; // nothing to do
@@ -295,24 +306,12 @@ public class DataService {
                 if (timeSeries && !TimeSeriesEvent.class.isAssignableFrom(eventType))
                     continue; // ignore mismatching subscription
                 DXFeedSubscription<?> sub = getOrCreateSubscription(eventType, timeSeries);
-                // resolve symbols
-                List<Object> value = (List<Object>) entry.getValue();
-                List<Object> symbols = new ArrayList<>(value.size());
-                if (timeSeries && addSub) {
-                    for (Object obj : value) {
-                        Map<String,?> objMap = (Map<String, ?>) obj;
-                        String eventSymbol = (String) objMap.get("eventSymbol");
-                        Object fromTimeObj = objMap.get("fromTime");
-                        if (!(fromTimeObj instanceof Number))
-                            continue; // broken "fromTime" from JP API user -- ignore.
-                        long fromTime = ((Number) fromTimeObj).longValue();
-                        symbols.add(new TimeSeriesSubscriptionSymbol<>(
-                            symbolMap.resolveEventSymbolMapping(eventType, eventSymbol), fromTime));
-                    }
-                } else {
-                    for (Object obj : value)
-                        symbols.add(symbolMap.resolveEventSymbolMapping(eventType, (String) obj));
-                }
+                // Resolve symbols
+                List<Object> symbols = entry.getValue().stream()
+                    .map(o -> resolveSymbol(eventType, o, addSub, timeSeries))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
                 if (addSub) {
                     sub.addSymbols(symbols);
                 } else {
@@ -320,6 +319,41 @@ public class DataService {
                     symbolMap.cleanupEventSymbolMapping(eventType, getSubscriptions(timeSeries).get(eventType));
                 }
             }
+        }
+
+        // Can return null if JSON format is invalid
+        //TODO Proper error handling
+        private Object resolveSymbol(Class<?> eventType, Object value, boolean addSub, boolean timeSeries) {
+            String eventSymbol;
+            long fromTime;
+
+            if (timeSeries && addSub) {
+                // Subscription format for timeSeries is: { "eventSymbol" : "SYMBOL", "fromTime" : 1578000000000 }
+                if (!(value instanceof Map)) {
+                    return null;
+                }
+                Map<?,?> objMap = (Map<?, ?>) value;
+                Object eventSymbolObj = objMap.get("eventSymbol");
+                Object fromTimeObj = objMap.get("fromTime");
+
+                if (!(eventSymbolObj instanceof String) || !(fromTimeObj instanceof Number)) {
+                    return null;
+                }
+                eventSymbol = (String) eventSymbolObj;
+                fromTime = ((Number) fromTimeObj).longValue();
+            } else {
+                // Unsubscription format is: "AAA"
+                if (!(value instanceof String)) {
+                    return null;
+                }
+                eventSymbol = (String) value;
+                fromTime = 0;
+            }
+
+            // Resolve symbol
+            Object result = symbolMap.resolveEventSymbolMapping(eventType, eventSymbol);
+            // Time series must use special class for subscription
+            return (timeSeries) ? new TimeSeriesSubscriptionSymbol<>(result, fromTime) : result;
         }
 
         private Map<Class<?>, DXFeedSubscription<Object>> getSubscriptions(boolean timeSeries) {
@@ -456,6 +490,22 @@ public class DataService {
         public boolean sendMeta(ServerSession session, ServerMessage.Mutable message) {
             stats.writeMeta++;
             return true;
+        }
+
+        @Override
+        public boolean queueMaxed(ServerSession session, Queue<ServerMessage> queue, ServerSession sender,
+            Message message)
+        {
+            if (session.isConnected()) {
+                log.warn("session=" + remote.getId() + " closed due to outgoing queue overflow: " + queue.size());
+                session.disconnect();
+            }
+            return false;
+        }
+
+        @Override
+        public void deQueue(ServerSession session, Queue<ServerMessage> queue) {
+            stats.lastSendTime = System.currentTimeMillis();
         }
     }
 }

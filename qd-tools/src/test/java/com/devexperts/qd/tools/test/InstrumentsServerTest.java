@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,18 @@
  */
 package com.devexperts.qd.tools.test;
 
+import com.devexperts.qd.tools.Tools;
+import com.dxfeed.ipf.InstrumentProfile;
+import com.dxfeed.ipf.live.InstrumentProfileCollector;
+import com.dxfeed.ipf.live.InstrumentProfileConnection;
+import com.dxfeed.ipf.live.InstrumentProfileUpdateListener;
+import com.dxfeed.ipf.services.InstrumentProfileServer;
+import junit.framework.TestCase;
+
 import java.util.Iterator;
 import java.util.Random;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-
-import com.devexperts.qd.tools.Tools;
-import com.dxfeed.ipf.InstrumentProfile;
-import com.dxfeed.ipf.live.*;
-import com.dxfeed.ipf.services.InstrumentProfileServer;
-import junit.framework.TestCase;
 
 public class InstrumentsServerTest extends TestCase {
     private final int randomPortOffset = 10000 + new Random().nextInt(10000); // port randomization

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,20 +11,49 @@
  */
 package com.devexperts.qd.test;
 
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.locks.LockSupport;
-import javax.annotation.Nonnull;
-
 import com.devexperts.logging.Logging;
 import com.devexperts.logging.TraceLogging;
-import com.devexperts.qd.*;
-import com.devexperts.qd.kit.*;
-import com.devexperts.qd.ng.*;
+import com.devexperts.qd.DataIntField;
+import com.devexperts.qd.DataObjField;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.HistorySubscriptionFilter;
+import com.devexperts.qd.QDAgent;
+import com.devexperts.qd.QDDistributor;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.QDHistory;
+import com.devexperts.qd.kit.CompactIntField;
+import com.devexperts.qd.kit.DefaultRecord;
+import com.devexperts.qd.kit.DefaultScheme;
+import com.devexperts.qd.kit.PentaCodec;
+import com.devexperts.qd.ng.AbstractRecordSink;
+import com.devexperts.qd.ng.EventFlag;
+import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordListener;
+import com.devexperts.qd.ng.RecordMode;
+import com.devexperts.qd.ng.RecordProvider;
+import com.devexperts.qd.ng.RecordSink;
+import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.stats.QDStats;
 import junit.framework.Assert;
 import junit.framework.TestCase;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
+import javax.annotation.Nonnull;
 
 public class HistorySnapshotMTStressTest extends TestCase {
     private static final Logging log = Logging.getLogging(HistorySnapshotMTStressTest.class);

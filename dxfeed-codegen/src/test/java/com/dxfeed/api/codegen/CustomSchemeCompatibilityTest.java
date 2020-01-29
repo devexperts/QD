@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,35 @@
  */
 package com.dxfeed.api.codegen;
 
+import com.devexperts.qd.kit.DefaultScheme;
+import com.devexperts.qd.kit.PentaCodec;
+import com.devexperts.services.Services;
+import com.devexperts.test.TraceRunner;
+import com.dxfeed.api.codegen.event.BetterCandle;
+import com.dxfeed.api.codegen.event.BetterOrder;
+import com.dxfeed.api.codegen.event.BetterQuote;
+import com.dxfeed.api.codegen.event.CustomEvent;
+import com.dxfeed.api.codegen.event.CustomMarketEvent;
+import com.dxfeed.api.codegen.event.WrappedInt;
+import com.dxfeed.api.impl.DXFeedScheme;
+import com.dxfeed.api.impl.EventDelegateFactory;
+import com.dxfeed.api.impl.SchemeBuilder;
+import com.dxfeed.api.impl.SchemeProperties;
+import com.dxfeed.api.osub.IndexedEventSubscriptionSymbol;
+import com.dxfeed.event.IndexedEventSource;
+import com.dxfeed.event.candle.Candle;
+import com.dxfeed.event.candle.CandlePeriod;
+import com.dxfeed.event.candle.CandlePrice;
+import com.dxfeed.event.candle.CandleSymbol;
+import com.dxfeed.event.candle.CandleType;
+import com.dxfeed.event.market.Order;
+import com.dxfeed.event.market.Quote;
+import com.dxfeed.event.market.Scope;
+import com.dxfeed.event.market.Side;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
@@ -18,20 +47,6 @@ import java.time.Year;
 import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
-import com.devexperts.qd.kit.DefaultScheme;
-import com.devexperts.qd.kit.PentaCodec;
-import com.devexperts.services.Services;
-import com.devexperts.test.TraceRunner;
-import com.dxfeed.api.codegen.event.*;
-import com.dxfeed.api.impl.*;
-import com.dxfeed.api.osub.IndexedEventSubscriptionSymbol;
-import com.dxfeed.event.IndexedEventSource;
-import com.dxfeed.event.candle.*;
-import com.dxfeed.event.market.*;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;

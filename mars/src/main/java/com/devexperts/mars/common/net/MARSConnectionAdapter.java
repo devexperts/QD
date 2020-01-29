@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,13 +11,23 @@
  */
 package com.devexperts.mars.common.net;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-
 import com.devexperts.connector.ConnectionAdapter;
 import com.devexperts.connector.ConnectionAdapterListener;
-import com.devexperts.mars.common.*;
+import com.devexperts.mars.common.MARS;
+import com.devexperts.mars.common.MARSAgent;
+import com.devexperts.mars.common.MARSEvent;
+import com.devexperts.mars.common.MARSListener;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Adapts single network connection to {@link MARS} instance.

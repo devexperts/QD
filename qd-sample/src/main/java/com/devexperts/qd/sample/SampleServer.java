@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,20 @@
  */
 package com.devexperts.qd.sample;
 
+import com.devexperts.connector.proto.Configurable;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDContract;
+import com.devexperts.qd.QDLog;
+import com.devexperts.qd.qtp.AgentAdapter;
+import com.devexperts.qd.qtp.MessageAdapter;
+import com.devexperts.qd.qtp.MessageConnectors;
+import com.devexperts.qd.qtp.QDEndpoint;
+import com.devexperts.qd.qtp.socket.SocketMessageAdapterFactory;
+import com.devexperts.qd.stats.QDStats;
+
 import java.io.IOException;
 import java.net.Socket;
 import java.util.EnumSet;
-
-import com.devexperts.connector.proto.Configurable;
-import com.devexperts.qd.*;
-import com.devexperts.qd.qtp.*;
-import com.devexperts.qd.qtp.socket.SocketMessageAdapterFactory;
-import com.devexperts.qd.stats.QDStats;
 
 public class SampleServer {
     static final String AUTH_TOKEN_STRING = "SAMPLE";

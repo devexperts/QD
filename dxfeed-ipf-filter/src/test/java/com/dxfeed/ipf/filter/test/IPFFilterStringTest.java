@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,17 @@
  */
 package com.dxfeed.ipf.filter.test;
 
-import java.io.File;
-import java.io.IOException;
-
 import com.devexperts.qd.QDFactory;
 import com.devexperts.test.ThreadCleanCheck;
 import com.devexperts.test.TraceRunner;
 import com.dxfeed.ipf.filter.IPFSymbolFilter;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.File;
+import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;

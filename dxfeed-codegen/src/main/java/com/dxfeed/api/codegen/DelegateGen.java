@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,19 +11,30 @@
  */
 package com.dxfeed.api.codegen;
 
-import java.io.IOException;
-import java.util.*;
-import java.util.stream.Stream;
-
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.QDContract;
 import com.devexperts.qd.kit.AbstractDataField;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
-import com.dxfeed.api.impl.*;
-import com.dxfeed.event.*;
+import com.dxfeed.api.impl.EventDelegate;
+import com.dxfeed.api.impl.EventDelegateFlags;
+import com.dxfeed.api.impl.SchemeFieldTime;
+import com.dxfeed.event.IndexedEvent;
+import com.dxfeed.event.IndexedEventSource;
+import com.dxfeed.event.LastingEvent;
+import com.dxfeed.event.TimeSeriesEvent;
 
-import static com.dxfeed.api.impl.SchemeFieldTime.*;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
+
+import static com.dxfeed.api.impl.SchemeFieldTime.COMMON_FIELD;
+import static com.dxfeed.api.impl.SchemeFieldTime.FIRST_TIME_INT_FIELD;
+import static com.dxfeed.api.impl.SchemeFieldTime.SECOND_TIME_INT_FIELD;
 
 /**
  * Generates xxxDelegate classes for events.
@@ -47,7 +58,8 @@ class DelegateGen {
     private boolean publishable;
 
     DelegateGen(ClassName delegateName, CodeGenType eventClass, RecordDesc record,
-        FactoryImplGen factoryGen, MappingGen mappingGen, CodeGenEnvironment env) {
+        FactoryImplGen factoryGen, MappingGen mappingGen, CodeGenEnvironment env)
+    {
         this.className = delegateName;
         this.eventClass = eventClass;
         this.eventName = eventClass == null ? null : eventClass.getClassName().getSimpleName();
@@ -138,7 +150,8 @@ class DelegateGen {
     }
 
     DelegateGen map(String eventPropertyName, String fieldPropertyName, String fieldName, FieldType fieldType) {
-        String getterName = Stream.of("get" + eventPropertyName + "AsDouble", "get" + eventPropertyName, "is" + eventPropertyName)
+        String getterName =
+            Stream.of("get" + eventPropertyName + "AsDouble", "get" + eventPropertyName, "is" + eventPropertyName)
             .filter(name -> eventClass.getMethod(name) != null)
             .findFirst().orElse(null);
         // TODO search for appropriate setter below
@@ -165,7 +178,8 @@ class DelegateGen {
     }
 
     DelegateGen field(String fieldPropertyName, String fieldName, FieldType fieldType) {
-        FieldMapping fieldMapping = new FieldMapping(null, null, new RecordField(fieldPropertyName, eventName, fieldName, fieldType), null, null);
+        FieldMapping fieldMapping = new FieldMapping(
+            null, null, new RecordField(fieldPropertyName, eventName, fieldName, fieldType), null, null);
         fieldMappings.add(fieldMapping);
         factoryGen.addRecordField(record, fieldMapping.field);
         mappingGen.addRecordField(fieldMapping.field);
@@ -180,8 +194,9 @@ class DelegateGen {
         if (fieldMappings.isEmpty()) {
             record.phantomProperty = phantomProperty;
             mappingGen.phantom = true;
-        } else
+        } else {
             lastFieldMapping().field.phantomProperty = phantomProperty;
+        }
         return this;
     }
 
@@ -337,7 +352,8 @@ class DelegateGen {
         cg.addImport(new ClassName(QDContract.class));
         cg.addImport(new ClassName(EnumSet.class));
         cg.addImport(new ClassName(EventDelegateFlags.class));
-        cg.code("public " + className.getSimpleName() + "(DataRecord record, QDContract contract, EnumSet<EventDelegateFlags> flags) {");
+        cg.code("public " + className.getSimpleName() +
+            "(DataRecord record, QDContract contract, EnumSet<EventDelegateFlags> flags) {");
         cg.indent();
         cg.code("super(record, contract, flags);");
         cg.addImport(mappingGen.getClassName());
@@ -363,12 +379,14 @@ class DelegateGen {
         cg.code("@Override");
         cg.code("public " + eventName + " getEvent(" + eventName + " event, RecordCursor cursor) {");
         cg.indent();
-        if (innerDelegateClassName != null)
+        if (innerDelegateClassName != null) {
             cg.code("d.getEvent(event, cursor);");
-        else
+        } else {
             cg.code("super.getEvent(event, cursor);");
-        for (GetPutEventCodeGenerator codeGenerator : codeGenerators)
+        }
+        for (GetPutEventCodeGenerator codeGenerator : codeGenerators) {
             codeGenerator.generateGetEventCodePiece(cg);
+        }
         cg.code("return event;");
         cg.unindent();
         cg.code("}");
@@ -396,8 +414,9 @@ class DelegateGen {
         } else {
             cg.code("RecordCursor cursor = super.putEvent(event, buf);");
         }
-        for (GetPutEventCodeGenerator codeGenerator : codeGenerators)
+        for (GetPutEventCodeGenerator codeGenerator : codeGenerators) {
             codeGenerator.generatePutEventCodePiece(cg);
+        }
         cg.code("return cursor;");
         cg.unindent();
         cg.code("}");
@@ -470,8 +489,9 @@ class DelegateGen {
 
         @Override
         void generateGetEventCodePiece(ClassGen cg) {
-            for (String line : lines)
+            for (String line : lines) {
                 cg.code(mksubst(line));
+            }
         }
 
         @Override
@@ -526,7 +546,9 @@ class DelegateGen {
 
         boolean internal;
 
-        FieldMapping(String eventPropertyName, CodeGenType eventPropertyType, RecordField field, String getterName, String setterName) {
+        FieldMapping(String eventPropertyName, CodeGenType eventPropertyType, RecordField field, String getterName,
+            String setterName)
+        {
             this.eventPropertyName = eventPropertyName;
             this.eventPropertyType = eventPropertyType;
             this.field = field;

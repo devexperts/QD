@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,13 +11,19 @@
  */
 package com.dxfeed.viewer;
 
-import java.util.*;
-import javax.swing.*;
-
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.Scope;
 
-import static com.dxfeed.viewer.OrderCellSupport.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TimeZone;
+import javax.swing.SwingConstants;
+
+import static com.dxfeed.viewer.OrderCellSupport.exchangeValue;
+import static com.dxfeed.viewer.OrderCellSupport.priceValue;
+import static com.dxfeed.viewer.OrderCellSupport.sizeValue;
+import static com.dxfeed.viewer.OrderCellSupport.textValue;
+import static com.dxfeed.viewer.OrderCellSupport.timeValue;
 
 @SuppressWarnings({"UnusedDeclaration"})
 enum OrderTableColumn implements EventTableColumn<Order> {

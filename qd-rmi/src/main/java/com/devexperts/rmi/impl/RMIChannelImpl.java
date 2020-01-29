@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,26 @@
  */
 package com.devexperts.rmi.impl;
 
-import java.util.*;
-import java.util.concurrent.Executor;
-import javax.annotation.concurrent.GuardedBy;
-
 import com.devexperts.io.Marshalled;
-import com.devexperts.rmi.*;
-import com.devexperts.rmi.message.*;
-import com.devexperts.rmi.task.*;
+import com.devexperts.rmi.RMIExceptionType;
+import com.devexperts.rmi.RMIOperation;
+import com.devexperts.rmi.RMIRequest;
+import com.devexperts.rmi.message.RMICancelType;
+import com.devexperts.rmi.message.RMIRequestMessage;
+import com.devexperts.rmi.message.RMIRequestType;
+import com.devexperts.rmi.task.RMIChannel;
+import com.devexperts.rmi.task.RMIChannelState;
+import com.devexperts.rmi.task.RMIChannelType;
+import com.devexperts.rmi.task.RMIService;
+import com.devexperts.rmi.task.RMIServiceImplementation;
 import com.devexperts.util.IndexedSet;
 import com.devexperts.util.IndexerFunction;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Executor;
+import javax.annotation.concurrent.GuardedBy;
 
 class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
     static final IndexerFunction.LongKey<RMIChannelImpl> CHANNEL_INDEXER_BY_REQUEST_ID = value -> value.channelId;

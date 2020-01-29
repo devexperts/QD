@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,23 +11,54 @@
  */
 package com.dxfeed.api.impl;
 
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import javax.annotation.Nullable;
-
-import com.devexperts.qd.*;
+import com.devexperts.qd.QDAgent;
+import com.devexperts.qd.QDContract;
+import com.devexperts.qd.QDFilter;
+import com.devexperts.qd.QDHistory;
+import com.devexperts.qd.QDLog;
+import com.devexperts.qd.QDTicker;
 import com.devexperts.qd.kit.ArrayListAttachmentStrategy;
-import com.devexperts.qd.ng.*;
+import com.devexperts.qd.ng.AbstractRecordSink;
+import com.devexperts.qd.ng.EventFlag;
+import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordListener;
+import com.devexperts.qd.ng.RecordMode;
+import com.devexperts.qd.ng.RecordProvider;
+import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.util.RecordProcessor;
-import com.devexperts.util.*;
-import com.dxfeed.api.*;
-import com.dxfeed.api.osub.*;
-import com.dxfeed.event.*;
+import com.devexperts.util.IndexedSet;
+import com.devexperts.util.IndexerFunction;
+import com.devexperts.util.TimePeriod;
+import com.dxfeed.api.DXEndpoint;
+import com.dxfeed.api.DXFeed;
+import com.dxfeed.api.DXFeedSubscription;
+import com.dxfeed.api.osub.IndexedEventSubscriptionSymbol;
+import com.dxfeed.api.osub.ObservableSubscriptionChangeListener;
+import com.dxfeed.api.osub.TimeSeriesSubscriptionSymbol;
+import com.dxfeed.event.EventType;
+import com.dxfeed.event.IndexedEvent;
+import com.dxfeed.event.IndexedEventSource;
+import com.dxfeed.event.LastingEvent;
+import com.dxfeed.event.TimeSeriesEvent;
 import com.dxfeed.impl.AbstractIndexedList;
 import com.dxfeed.promise.Promise;
 import com.dxfeed.promise.PromiseHandler;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import javax.annotation.Nullable;
 
 public class DXFeedImpl extends DXFeed {
     private static boolean TRACE_LOG = DXFeedImpl.class.desiredAssertionStatus();
@@ -112,7 +143,7 @@ public class DXFeedImpl extends DXFeed {
 
     public void awaitTerminationAndCloseImpl() throws InterruptedException {
         // Async iteration
-        for (EventProcessor<?, ?> processor : eventProcessors.toArray(new EventProcessor[eventProcessors.size()])) {
+        for (EventProcessor<?, ?> processor : eventProcessors.toArray(new EventProcessor[0])) {
             if (processor == null)
                 break;
             processor.awaitTermination();
@@ -421,7 +452,7 @@ public class DXFeedImpl extends DXFeed {
 
         // check if symbol is accepted by filter
         if (!filter.getUpdatedFilter().accept(QDContract.HISTORY, delegate.getRecord(), cipher, qdSymbol))
-            return Collections.emptyList();
+            return null;
         // check subscription
         if (!history.isSubscribed(delegate.getRecord(), cipher, qdSymbol, fromQDTime))
             return null; // not subscribed
@@ -546,13 +577,17 @@ public class DXFeedImpl extends DXFeed {
 
     private void updateSubscriptionsOnFilterUpdate(QDFilter updatedFilter) {
         // Filter parameter is ignored since agents will always use latest filter version on subscription
-        for (EventProcessor<?, ?> processor : eventProcessors) {
-            Set<?> symbols = processor.subscription.getSymbols();
-            EnumMap<QDContract, RecordBuffer> sub = toSubscription(processor.subscription, symbols, true);
-            for (QDContract contract : sub.keySet()) {
-                RecordBuffer buffer = sub.get(contract);
-                processor.getOrCreateAgent(contract).setSubscription(buffer);
-                buffer.release();
+        for (EventProcessor<?, ?> processor : eventProcessors.toArray(new EventProcessor[0])) {
+            DXFeedSubscription<?> subscription = processor.subscription;
+            synchronized (subscription) {
+                // Need to take decorated symbols in order to not change contracts (e.g. HISTORY vs STREAM)
+                Set<?> symbols = subscription.getDecoratedSymbols();
+                EnumMap<QDContract, RecordBuffer> sub = toSubscription(subscription, symbols, true);
+                for (QDContract contract : sub.keySet()) {
+                    RecordBuffer buffer = sub.get(contract);
+                    processor.getOrCreateAgent(contract).setSubscription(buffer);
+                    buffer.release();
+                }
             }
         }
     }

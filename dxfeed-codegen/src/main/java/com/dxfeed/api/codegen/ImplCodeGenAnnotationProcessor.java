@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,19 +11,36 @@
  */
 package com.dxfeed.api.codegen;
 
-import java.util.*;
-import javax.annotation.processing.*;
-import javax.lang.model.SourceVersion;
-import javax.lang.model.element.*;
-import javax.lang.model.util.Elements;
-import javax.lang.model.util.Types;
-
-import com.dxfeed.annotation.*;
+import com.dxfeed.annotation.EventFieldMapping;
+import com.dxfeed.annotation.EventFieldType;
+import com.dxfeed.annotation.EventTypeMapping;
 import com.dxfeed.api.impl.EventDelegate;
 import com.dxfeed.event.EventType;
 import com.dxfeed.event.candle.Candle;
 import com.dxfeed.event.candle.CandleEventDelegateImpl;
-import com.dxfeed.event.market.*;
+import com.dxfeed.event.market.MarketEvent;
+import com.dxfeed.event.market.MarketEventDelegateImpl;
+import com.dxfeed.event.market.OrderBase;
+import com.dxfeed.event.market.OrderBaseDelegateImpl;
+import com.dxfeed.event.market.TradeBase;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.Filer;
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.SupportedAnnotationTypes;
+import javax.annotation.processing.SupportedSourceVersion;
+import javax.lang.model.SourceVersion;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
 
 import static com.dxfeed.api.codegen.CodeGenUtils.emptyToDefault;
 

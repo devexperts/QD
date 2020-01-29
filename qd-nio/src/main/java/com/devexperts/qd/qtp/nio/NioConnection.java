@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,11 @@
  */
 package com.devexperts.qd.qtp.nio;
 
-import java.io.IOException;
-import java.net.Socket;
-import java.nio.ByteBuffer;
-import java.nio.channels.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.devexperts.connector.proto.AbstractTransportConnection;
 import com.devexperts.connector.proto.ApplicationConnection;
-import com.devexperts.io.*;
+import com.devexperts.io.ChunkList;
+import com.devexperts.io.ChunkedInput;
+import com.devexperts.io.ChunkedOutput;
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.qtp.QTPConstants;
@@ -30,7 +25,21 @@ import com.devexperts.transport.stats.ConnectionStats;
 import com.devexperts.util.JMXNameBuilder;
 import com.devexperts.util.LogUtil;
 
-import static com.devexperts.qd.qtp.nio.NioFlags.*;
+import java.io.IOException;
+import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.channels.CancelledKeyException;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.SocketChannel;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.devexperts.qd.qtp.nio.NioFlags.RS_NOT_READY_FOR_MORE;
+import static com.devexperts.qd.qtp.nio.NioFlags.RS_NOT_SELECTABLE;
+import static com.devexperts.qd.qtp.nio.NioFlags.RS_PROCESSING;
+import static com.devexperts.qd.qtp.nio.NioFlags.WS_PROCESSING;
 
 /**
  * Class that represents a single two-way client socket connection.

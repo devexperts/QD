@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,12 +11,17 @@
  */
 package com.devexperts.qd.test;
 
-import java.util.Random;
-import java.util.Set;
-
-import com.devexperts.qd.*;
+import com.devexperts.qd.QDAgent;
+import com.devexperts.qd.QDDistributor;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.QDTicker;
+import com.devexperts.qd.SubscriptionBuffer;
+import com.devexperts.qd.SubscriptionContainer;
 import com.devexperts.qd.impl.matrix.MatrixFactory;
 import com.devexperts.qd.ng.RecordBuffer;
+
+import java.util.Random;
+import java.util.Set;
 
 /**
  * Basic tests of {@link QDTicker} functionality.

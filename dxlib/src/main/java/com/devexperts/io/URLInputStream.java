@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,12 +11,17 @@
  */
 package com.devexperts.io;
 
-import java.io.*;
-import java.net.*;
-import java.nio.charset.StandardCharsets;
-
 import com.devexperts.util.Base64;
 import com.devexperts.util.SystemProperties;
+
+import java.io.File;
+import java.io.FilterInputStream;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Convenient class that opens specified URL for reading.

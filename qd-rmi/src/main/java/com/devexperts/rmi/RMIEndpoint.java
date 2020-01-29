@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -29,8 +29,6 @@ import com.devexperts.services.Services;
 import com.devexperts.transport.stats.EndpointStats;
 import com.dxfeed.api.DXEndpoint;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
 import java.io.Closeable;
 import java.lang.reflect.Proxy;
 import java.util.Map;
@@ -38,6 +36,8 @@ import java.util.Properties;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
 
 /**
  * The endpoint of RMI framework.
@@ -205,6 +205,14 @@ public abstract class RMIEndpoint implements Closeable {
      * @param address address(es) to connect to.
      */
     public abstract void connect(String address);
+
+    /**
+     * Reconnects the endpoint.
+     *
+     * <p>Will drop and reestablish remote connections using the same address as specified in {@link #connect(String)}.
+     * Does nothing if endpoint was not previously connected or was disconnected with {@link #disconnect()}.
+     */
+    public abstract void reconnect();
 
     /**
      * Disconnects the endpoint.

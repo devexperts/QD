@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,14 +11,21 @@
  */
 package com.devexperts.qd.qtp.file;
 
-import java.io.*;
+import com.devexperts.io.BufferedOutput;
+import com.devexperts.io.Chunk;
+import com.devexperts.io.ChunkList;
+import com.devexperts.io.ChunkedOutput;
+import com.devexperts.qd.qtp.FileConstants;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.*;
-
-import com.devexperts.io.*;
-import com.devexperts.qd.qtp.FileConstants;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 class ParallelWriter implements Closeable {
     private static final Task CLOSE_THREAD_TASK = new Task();

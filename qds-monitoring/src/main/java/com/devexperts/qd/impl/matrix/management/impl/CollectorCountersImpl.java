@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,13 +11,20 @@
  */
 package com.devexperts.qd.impl.matrix.management.impl;
 
-import java.text.NumberFormat;
-import java.util.*;
-import java.util.concurrent.atomic.*;
-
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
-import com.devexperts.qd.impl.matrix.management.*;
+import com.devexperts.qd.impl.matrix.management.CollectorCounters;
+import com.devexperts.qd.impl.matrix.management.CollectorOperation;
+import com.devexperts.qd.impl.matrix.management.RecordCounters;
+
+import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongArray;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
  * Performance counters for collectors.

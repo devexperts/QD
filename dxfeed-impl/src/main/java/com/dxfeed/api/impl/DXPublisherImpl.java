@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,14 +11,14 @@
  */
 package com.dxfeed.api.impl;
 
-import java.util.*;
-import java.util.concurrent.Executor;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.QDContract;
+import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.kit.CompositeFilters;
-import com.devexperts.qd.ng.*;
+import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordMode;
+import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.util.SubscriptionProcessor;
 import com.devexperts.util.IndexedSet;
 import com.devexperts.util.IndexerFunction;
@@ -26,6 +26,17 @@ import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.api.DXPublisher;
 import com.dxfeed.api.osub.WildcardSymbol;
 import com.dxfeed.event.EventType;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.EnumMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Executor;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class DXPublisherImpl extends DXPublisher {
     private final DXEndpointImpl endpoint;

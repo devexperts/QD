@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,18 @@
  */
 package com.dxfeed.webservice.comet;
 
-import java.io.*;
-import java.text.ParseException;
-import java.util.List;
-
 import com.dxfeed.webservice.DXFeedJson;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.cometd.bayeux.Message;
 import org.cometd.bayeux.server.ServerMessage;
 import org.cometd.common.JSONContext;
 import org.cometd.server.ServerMessageImpl;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
+import java.text.ParseException;
+import java.util.List;
 
 public class DataJsonContext implements JSONContext.Server, JSONContext.Parser, JSONContext.Generator {
     private static final Class<ServerMessageImpl[]> VALUE_TYPE = ServerMessageImpl[].class;

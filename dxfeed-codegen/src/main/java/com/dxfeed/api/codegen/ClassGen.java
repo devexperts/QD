@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,8 +11,16 @@
  */
 package com.dxfeed.api.codegen;
 
-import java.io.*;
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
@@ -39,7 +47,9 @@ class ClassGen {
 
     private int indent = 1;
 
-    private ClassGen(ClassName className, List<String> preImports, Set<ClassName> importedClasses, List<String> header, List<String> footer) {
+    private ClassGen(ClassName className, List<String> preImports, Set<ClassName> importedClasses, List<String> header,
+        List<String> footer)
+    {
         this.className = className;
         this.preImports = preImports;
         this.importedClasses = importedClasses;
@@ -69,12 +79,15 @@ class ClassGen {
                 importedClasses.add(new ClassName(importMatcher.group(1)));
                 header.clear();
             } else {
-                if (importsStarted)
+                if (importsStarted) {
                     header.add(line);
-                else
+                } else {
                     preImports.add(line);
+                }
             }
         }
+        if (!importsStarted)
+            throw new IllegalArgumentException("Source file does not have any import statements");
         if (!lineIterator.hasNext())
             throw new IllegalArgumentException("Source file does not have BEGIN marker for generated code");
         while (lineIterator.hasNext()) {
@@ -98,7 +111,9 @@ class ClassGen {
                 return readTemplate(target, reader);
             }
         } else {
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(ClassGen.class.getResourceAsStream(templateName)))) {
+            try (BufferedReader reader =
+                new BufferedReader(new InputStreamReader(ClassGen.class.getResourceAsStream(templateName))))
+            {
                 return readTemplate(target, reader);
             }
         }
@@ -111,8 +126,11 @@ class ClassGen {
     }
 
     void addImport(ClassName className) {
-        if (importedClasses.contains(className) || importedClasses.contains(new ClassName(className.getPackageName(), "*")))
+        if (importedClasses.contains(className) ||
+            importedClasses.contains(new ClassName(className.getPackageName(), "*")))
+        {
             return;
+        }
         if (className.getPackageName().equals(this.className.getPackageName()))
             return;
         importedClasses.add(className);
@@ -136,8 +154,9 @@ class ClassGen {
         String[] split = line.split("\n");
         for (int i = 0; i < split.length; i++) {
             StringBuilder sb = new StringBuilder();
-            for (int j = 0; j < indent; j++)
+            for (int j = 0; j < indent; j++) {
                 sb.append("\t");
+            }
             if (i > 0)
                 sb.append("\t"); // continuation
             sb.append(split[i]);
@@ -150,16 +169,17 @@ class ClassGen {
     }
 
     private void processImports(List<String> lines) {
-        Predicate<ClassName> javaPackage = name -> name.getPackageName().startsWith("java.");
+        Predicate<ClassName> javaPackage =
+            name -> name.getPackageName().startsWith("java.") || name.getPackageName().startsWith("javax.");
         Function<ClassName, String> toImportString = name -> "import " + name + ";";
         importedClasses.stream()
-            .filter(javaPackage)
+            .filter(javaPackage.negate())
             .map(toImportString)
             .sorted().forEach(lines::add);
-        if (importedClasses.stream().anyMatch(javaPackage))
+        if (importedClasses.stream().anyMatch(javaPackage.negate()) && importedClasses.stream().anyMatch(javaPackage))
             lines.add("");
         importedClasses.stream()
-            .filter(javaPackage.negate())
+            .filter(javaPackage)
             .map(toImportString)
             .sorted().forEach(lines::add);
     }

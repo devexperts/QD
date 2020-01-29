@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -28,7 +28,7 @@ public interface CometDMonitoringMXBean {
 
     @Description("Dump sessions statistics averaged by total running time")
     public String dumpSessionsAverage(
-        @Description("Order by column (id, queue, read_mps, read, write_mps, write, time, inactivity)")
+        @Description("Order by column (id, queue, read_mps, read, write_mps, write, time, inactivity, send_inactivity)")
         String sortColumn,
         @Description("Limit number of sessions")
         int limit);
@@ -38,7 +38,7 @@ public interface CometDMonitoringMXBean {
 
     @Description("Dump sessions statistics (total values)")
     public String dumpSessionsTotal(
-        @Description("Order by column (id, queue, read_mps, read, write_mps, write, time, inactivity)")
+        @Description("Order by column (id, queue, read_mps, read, write_mps, write, time, inactivity, send_inactivity)")
         String sortColumn,
         @Description("Limit number of sessions")
         int limit);

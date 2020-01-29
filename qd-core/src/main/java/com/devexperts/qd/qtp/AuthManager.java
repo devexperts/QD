@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,22 @@
  */
 package com.devexperts.qd.qtp;
 
-import java.util.*;
-import javax.annotation.concurrent.GuardedBy;
-
-import com.devexperts.auth.*;
+import com.devexperts.auth.AuthSession;
+import com.devexperts.auth.AuthToken;
+import com.devexperts.auth.SessionCloseListener;
 import com.devexperts.connector.proto.TransportConnection;
 import com.devexperts.qd.QDLog;
 import com.devexperts.qd.qtp.auth.QDAuthRealm;
-import com.devexperts.util.*;
+import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimePeriod;
+import com.devexperts.util.TypedMap;
 import com.dxfeed.promise.Promise;
 import com.dxfeed.promise.PromiseHandler;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import javax.annotation.concurrent.GuardedBy;
 
 class AuthManager implements PromiseHandler<AuthSession> {
 

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,14 +11,26 @@
  */
 package com.devexperts.qd.qtp.http;
 
-import java.io.*;
-import javax.servlet.ServletException;
-import javax.servlet.http.*;
-
-import com.devexperts.io.*;
+import com.devexperts.io.Chunk;
+import com.devexperts.io.ChunkList;
+import com.devexperts.io.ChunkPool;
+import com.devexperts.io.ChunkedInput;
+import com.devexperts.io.ChunkedOutput;
 import com.devexperts.logging.Logging;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.BinaryQTPComposer;
+import com.devexperts.qd.qtp.BinaryQTPParser;
+import com.devexperts.qd.qtp.MessageAdapter;
 import com.devexperts.qd.stats.QDStats;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Serializable;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSessionBindingEvent;
+import javax.servlet.http.HttpSessionBindingListener;
 
 final class QDServletConnection
     implements HttpSessionBindingListener, MessageAdapter.CloseListener, Serializable

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,14 +11,16 @@
  */
 package com.dxfeed.ondemand;
 
+import com.devexperts.services.Services;
+import com.devexperts.util.TypedKey;
+import com.dxfeed.api.DXEndpoint;
+import com.dxfeed.api.DXFeed;
+import com.dxfeed.api.DXFeedSubscription;
+import com.dxfeed.api.impl.ExtensibleDXEndpoint;
+
 import java.beans.PropertyChangeListener;
 import java.util.Date;
 import java.util.concurrent.Executor;
-
-import com.devexperts.services.Services;
-import com.devexperts.util.TypedKey;
-import com.dxfeed.api.*;
-import com.dxfeed.api.impl.ExtensibleDXEndpoint;
 
 import static com.dxfeed.api.DXEndpoint.Role;
 

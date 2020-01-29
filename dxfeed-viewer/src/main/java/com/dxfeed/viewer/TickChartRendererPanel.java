@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,17 +11,29 @@
  */
 package com.dxfeed.viewer;
 
-import java.awt.*;
-import java.awt.geom.Rectangle2D;
-import java.awt.image.BufferedImage;
-import java.util.*;
-import java.util.List;
-import javax.swing.*;
-
 import com.devexperts.util.TimeFormat;
-import com.dxfeed.event.market.*;
+import com.dxfeed.event.market.Order;
+import com.dxfeed.event.market.Side;
+import com.dxfeed.event.market.TimeAndSale;
 import com.dxfeed.viewer.tickchart.VolumeAtPriceBar;
 import com.dxfeed.viewer.tickchart.VolumeAtPriceChart;
+
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.RenderingHints;
+import java.awt.Stroke;
+import java.awt.Toolkit;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import javax.swing.JPanel;
 
 public class TickChartRendererPanel extends JPanel {
     private static final Color COLOR_TICK_INVALID = Color.GRAY;

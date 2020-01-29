@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,17 @@
  */
 package com.dxfeed.ipf.live;
 
+import com.devexperts.io.StreamCompression;
+import com.devexperts.io.URLInputStream;
+import com.devexperts.logging.Logging;
+import com.devexperts.util.LogUtil;
+import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimeFormat;
+import com.devexperts.util.TimePeriod;
+import com.dxfeed.ipf.InstrumentProfile;
+import com.dxfeed.ipf.InstrumentProfileReader;
+import com.dxfeed.ipf.impl.InstrumentProfileParser;
+
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
@@ -18,18 +29,18 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URLConnection;
 import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import com.devexperts.io.StreamCompression;
-import com.devexperts.io.URLInputStream;
-import com.devexperts.logging.Logging;
-import com.devexperts.util.*;
-import com.dxfeed.ipf.InstrumentProfile;
-import com.dxfeed.ipf.InstrumentProfileReader;
-import com.dxfeed.ipf.impl.InstrumentProfileParser;
 
 /**
  * Connects to an instrument profile URL and reads instrument profiles using Simple File Format with support of

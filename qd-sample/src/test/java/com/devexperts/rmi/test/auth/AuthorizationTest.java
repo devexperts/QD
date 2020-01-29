@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,10 +11,53 @@
  */
 package com.devexperts.rmi.test.auth;
 
+import com.devexperts.auth.AuthSession;
+import com.devexperts.auth.AuthToken;
+import com.devexperts.logging.Logging;
+import com.devexperts.qd.qtp.MessageAdapterConnectionFactory;
+import com.devexperts.qd.qtp.auth.BasicChannelShaperFactory;
+import com.devexperts.qd.qtp.auth.QDAuthRealm;
+import com.devexperts.qd.qtp.auth.QDAuthRealmFactory;
+import com.devexperts.qd.qtp.auth.QDLoginHandler;
+import com.devexperts.qd.qtp.auth.QDLoginHandlerFactory;
+import com.devexperts.qd.qtp.socket.ServerSocketTestHelper;
+import com.devexperts.rmi.RMIEndpoint;
+import com.devexperts.rmi.RMIOperation;
+import com.devexperts.rmi.RMIRequest;
+import com.devexperts.rmi.RMIRequestState;
+import com.devexperts.rmi.impl.RMIEndpointImpl;
+import com.devexperts.rmi.test.NTU;
+import com.devexperts.test.ThreadCleanCheck;
+import com.devexperts.test.TraceRunner;
+import com.devexperts.util.Base64;
+import com.devexperts.util.InvalidFormatException;
+import com.devexperts.util.TypedMap;
+import com.dxfeed.api.DXEndpoint;
+import com.dxfeed.api.DXFeed;
+import com.dxfeed.api.DXFeedEventListener;
+import com.dxfeed.api.DXFeedSubscription;
+import com.dxfeed.api.DXPublisher;
+import com.dxfeed.api.impl.DXEndpointImpl;
+import com.dxfeed.event.market.MarketEvent;
+import com.dxfeed.event.market.Quote;
+import com.dxfeed.promise.Promise;
+import org.eclipse.jetty.util.ConcurrentHashSet;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -22,29 +65,9 @@ import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.devexperts.auth.AuthSession;
-import com.devexperts.auth.AuthToken;
-import com.devexperts.logging.Logging;
-import com.devexperts.qd.qtp.MessageAdapterConnectionFactory;
-import com.devexperts.qd.qtp.auth.*;
-import com.devexperts.qd.qtp.socket.ServerSocketTestHelper;
-import com.devexperts.rmi.*;
-import com.devexperts.rmi.impl.RMIEndpointImpl;
-import com.devexperts.rmi.test.NTU;
-import com.devexperts.test.ThreadCleanCheck;
-import com.devexperts.test.TraceRunner;
-import com.devexperts.util.Base64;
-import com.devexperts.util.*;
-import com.dxfeed.api.*;
-import com.dxfeed.api.impl.DXEndpointImpl;
-import com.dxfeed.event.market.MarketEvent;
-import com.dxfeed.event.market.Quote;
-import com.dxfeed.promise.Promise;
-import org.eclipse.jetty.util.ConcurrentHashSet;
-import org.junit.*;
-import org.junit.runner.RunWith;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @RunWith(TraceRunner.class)
 public class AuthorizationTest {

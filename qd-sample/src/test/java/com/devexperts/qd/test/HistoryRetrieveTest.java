@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,12 +11,25 @@
  */
 package com.devexperts.qd.test;
 
-import java.util.*;
-
-import com.devexperts.qd.*;
-import com.devexperts.qd.kit.*;
+import com.devexperts.qd.DataBuffer;
+import com.devexperts.qd.DataIntField;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDAgent;
+import com.devexperts.qd.QDDistributor;
+import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.QDHistory;
+import com.devexperts.qd.SubscriptionBuffer;
+import com.devexperts.qd.kit.CompactIntField;
+import com.devexperts.qd.kit.DefaultRecord;
+import com.devexperts.qd.kit.DefaultScheme;
+import com.devexperts.qd.kit.PentaCodec;
 import com.devexperts.qd.tools.RandomRecordsProvider;
 import junit.framework.TestCase;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 public class HistoryRetrieveTest extends TestCase {
     private static final int REPEAT = 100;

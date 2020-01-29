@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,21 +11,30 @@
  */
 package com.dxfeed.ipf.filter;
 
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.Future;
-
 import com.devexperts.io.URLInputStream;
 import com.devexperts.logging.Logging;
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDContract;
+import com.devexperts.qd.QDFilter;
+import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.kit.FilterSyntaxException;
 import com.devexperts.qd.util.QDConfig;
 import com.devexperts.qd.util.SymbolSet;
-import com.devexperts.util.*;
+import com.devexperts.util.LogUtil;
+import com.devexperts.util.TimeFormat;
+import com.devexperts.util.TimePeriod;
 import com.dxfeed.ipf.InstrumentProfile;
 import com.dxfeed.ipf.InstrumentProfileReader;
 import com.dxfeed.schedule.Schedule;
 import com.dxfeed.schedule.Session;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.Future;
 
 /**
  * Subscription filter that filters only based on symbol. It accepts all symbols,

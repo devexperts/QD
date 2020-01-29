@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,26 @@
  */
 package com.devexperts.qd.qtp;
 
-import java.io.IOException;
-import java.util.Arrays;
-
-import com.devexperts.io.*;
-import com.devexperts.qd.*;
+import com.devexperts.io.BufferedOutput;
+import com.devexperts.io.ChunkList;
+import com.devexperts.io.ChunkPool;
+import com.devexperts.io.ChunkedOutput;
+import com.devexperts.qd.DataField;
+import com.devexperts.qd.DataIntField;
+import com.devexperts.qd.DataObjField;
+import com.devexperts.qd.DataProvider;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.DataVisitor;
+import com.devexperts.qd.SubscriptionProvider;
+import com.devexperts.qd.SubscriptionVisitor;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.TimeSequenceUtil;
+
+import java.io.IOException;
+import java.util.Arrays;
 
 /**
  * Base class for classes that compose QTP messages data into a byte stream in some format.

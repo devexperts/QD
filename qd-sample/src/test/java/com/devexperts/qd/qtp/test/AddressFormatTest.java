@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,24 @@
  */
 package com.devexperts.qd.qtp.test;
 
-import java.lang.reflect.Field;
-import java.util.*;
-
 import com.devexperts.connector.codec.CodecConnectionFactory;
-import com.devexperts.connector.proto.*;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.connector.proto.ApplicationConnection;
+import com.devexperts.connector.proto.ApplicationConnectionFactory;
+import com.devexperts.connector.proto.ConfigurationException;
+import com.devexperts.connector.proto.ConfigurationKey;
+import com.devexperts.connector.proto.TransportConnection;
+import com.devexperts.qd.qtp.AddressSyntaxException;
+import com.devexperts.qd.qtp.MessageConnector;
+import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.qtp.nio.NioServerConnector;
 import com.devexperts.qd.qtp.socket.ClientSocketConnector;
 import com.devexperts.qd.qtp.socket.ServerSocketConnector;
 import junit.framework.TestCase;
+
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class AddressFormatTest extends TestCase {
 

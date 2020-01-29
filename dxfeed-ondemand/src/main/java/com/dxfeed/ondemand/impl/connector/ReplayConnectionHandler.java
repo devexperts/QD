@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,14 +11,23 @@
  */
 package com.dxfeed.ondemand.impl.connector;
 
-import java.util.Date;
-
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataProvider;
+import com.devexperts.qd.DataVisitor;
+import com.devexperts.qd.SubscriptionProvider;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordMode;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.AbstractConnectionHandler;
+import com.devexperts.qd.qtp.AbstractMessageVisitor;
+import com.devexperts.qd.qtp.MessageAdapter;
+import com.devexperts.qd.qtp.MessageConnectorState;
+import com.devexperts.qd.qtp.MessageConnectors;
+import com.devexperts.qd.qtp.MessageListener;
+import com.devexperts.qd.qtp.MessageProvider;
+import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.stats.QDStats;
 import com.dxfeed.ondemand.impl.MarketDataReplay;
+
+import java.util.Date;
 
 class ReplayConnectionHandler extends AbstractConnectionHandler<OnDemandConnector> {
     private final MessageProcessor messageProcessor = new MessageProcessor();

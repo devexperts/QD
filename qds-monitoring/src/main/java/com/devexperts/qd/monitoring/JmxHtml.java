@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,23 +11,34 @@
  */
 package com.devexperts.qd.monitoring;
 
+import com.devexperts.management.Management;
+import com.devexperts.qd.QDLog;
+import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimePeriod;
+import com.sun.jdmk.comm.AuthInfo;
+import com.sun.jdmk.comm.CommunicationException;
+import com.sun.jdmk.comm.HtmlAdaptorServer;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Field;
-import java.net.*;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.Properties;
-import java.util.StringTokenizer;
 import javax.net.ServerSocketFactory;
 import javax.net.ssl.SSLServerSocketFactory;
-
-import com.devexperts.management.Management;
-import com.devexperts.qd.QDLog;
-import com.sun.jdmk.comm.*;
 
 /**
  * Separate class so that <code>HtmlAdaptorServer</code> class is loaded only when needed.
  */
 class JmxHtml {
+
+    // server socket bind retry delay
+    static final long BIND_RETRY_DELAY =
+        TimePeriod.valueOf(SystemProperties.getProperty(JmxHtml.class, "bindRetryDelay", "10s")).getTime();
+
     static JmxConnector init(Properties props) {
         Integer port = Integer.decode(props.getProperty(JMXEndpoint.JMX_HTML_PORT_PROPERTY));
         InetAddress bindAddress = tryResolve(props.getProperty(JMXEndpoint.JMX_HTML_BIND_PROPERTY));
@@ -38,73 +49,110 @@ class JmxHtml {
             return null;
 
         String name = "com.devexperts.qd.monitoring:type=HtmlAdaptor,port=" + port;
-        HtmlAdaptorServer server = createHtmlAdaptor(bindAddress, ssl);
+        HtmlAdaptorServer server = new JmxHtmlAdaptorServer(bindAddress, ssl);
+        server.setPort(port);
         Connector connector = new Connector(port, name, server);
         if (!JmxConnectors.addConnector(connector))
             return null; // port is already taken
 
-        server.setPort(port);
-        if (auth != null && auth.length() > 0)
-            for (StringTokenizer st = new StringTokenizer(auth, ","); st.hasMoreTokens();) {
-                String[] info = st.nextToken().split(":", 2);
-                if (info.length != 2)
-                    QDLog.log.error(JMXEndpoint.JMX_HTML_AUTH_PROPERTY + " should contain comma-separated list of <login>:<password> pairs");
-                else
+        if (auth != null && auth.length() > 0) {
+            for (String token : auth.split(",")) {
+                String[] info = token.split(":", 2);
+                if (info.length != 2) {
+                    QDLog.log.error(JMXEndpoint.JMX_HTML_AUTH_PROPERTY +
+                        " should contain comma-separated list of <login>:<password> pairs");
+                } else {
                     server.addUserAuthenticationInfo(new AuthInfo(info[0], info[1]));
+                }
             }
+        }
 
         connector.setRegistration(Management.registerMBean(server, null, name));
         server.start();
-        QDLog.log.info("HTML management port is " + port + (ssl ? " [SSL]" : "") +
-            (bindAddress != null ? " bound to " + bindAddress : ""));
         return connector;
     }
 
     private static InetAddress tryResolve(String bind) {
-        if (bind != null && bind.length() > 0)
+        if (bind != null && bind.length() > 0) {
             try {
                 return InetAddress.getByName(bind);
             } catch (UnknownHostException e) {
                 QDLog.log.error("Could not resolve bind address, will use unbound socket", e);
             }
+        }
         return null;
     }
 
-    private static HtmlAdaptorServer createHtmlAdaptor(final InetAddress bindAddress, boolean ssl) {
-        HtmlAdaptorServer server = new HtmlAdaptorServer();
-        final ServerSocketFactory ssf = ssl ? SSLServerSocketFactory.getDefault() : null;
-        if (bindAddress != null || ssf != null)
+    static class JmxHtmlAdaptorServer extends HtmlAdaptorServer {
+
+        private final InetAddress bindAddress;
+        private final boolean ssl;
+        private Field serverSocketField;
+
+        JmxHtmlAdaptorServer(InetAddress bindAddress, boolean ssl) {
+            this.bindAddress = bindAddress;
+            this.ssl = ssl;
+
             try {
-                final Field field = HtmlAdaptorServer.class.getDeclaredField("sockListen");
+                Field field = HtmlAdaptorServer.class.getDeclaredField("sockListen");
                 field.setAccessible(true);
-                field.set(server, null); // Invoke now to truly test accessibility.
-                // All preparations are ok - override adaptor with our own.
-                server = new HtmlAdaptorServer() {
-                    @Override
-                    protected void doBind() throws CommunicationException, InterruptedException {
-                        try {
-                            field.set(this,
-                                ssf != null ? ssf.createServerSocket(getPort(), 2 * getMaxActiveClientCount(), bindAddress) :
-                                    new ServerSocket(getPort(), 2 * getMaxActiveClientCount(), bindAddress));
-                        } catch (SocketException e) {
-                            if (e.getMessage().equals("Interrupted system call"))
-                                throw new InterruptedException(e.toString());
-                            throw new CommunicationException(e);
-                        } catch (InterruptedIOException e) {
-                            throw new InterruptedException(e.toString());
-                        } catch (IOException e) {
-                            throw new CommunicationException(e);
-                        } catch (IllegalAccessException e) {
-                            super.doBind();
-                        }
-                    }
-                };
+                field.set(this, null); // Invoke now to truly test accessibility.
+                serverSocketField = field;
             } catch (NoSuchFieldException e) {
                 QDLog.log.error("Could not resolve socket field, will use default socket", e);
             } catch (IllegalAccessException e) {
                 QDLog.log.error("Could not access socket field, will use default socket", e);
             }
-        return server;
+        }
+
+        @Override
+        protected void doBind() throws CommunicationException, InterruptedException {
+            while (true) {
+                try {
+                    tryBind();
+                    QDLog.log.info("HTML management port is " + getPort() + (ssl ? " [SSL]" : "") +
+                        (bindAddress != null ? " bound to " + bindAddress : ""));
+                    return;
+                } catch (CommunicationException e) {
+                    QDLog.log.error("Failed to bind HTML management port", e);
+                    if (JmxHtml.BIND_RETRY_DELAY == 0)
+                        return;
+                    Thread.sleep(JmxHtml.BIND_RETRY_DELAY);
+                }
+            }
+        }
+
+        private void tryBind() throws InterruptedException {
+            if (serverSocketField == null) {
+                super.doBind();
+                return;
+            }
+            ServerSocket serverSocket;
+            try {
+                ServerSocketFactory ssf = ssl ? SSLServerSocketFactory.getDefault() : ServerSocketFactory.getDefault();
+                serverSocket = ssf.createServerSocket(getPort(), 2 * getMaxActiveClientCount(), bindAddress);
+            } catch (SocketException e) {
+                if (e.getMessage().equals("Interrupted system call"))
+                    throw new InterruptedException(e.toString());
+                throw new CommunicationException(e);
+            } catch (InterruptedIOException e) {
+                throw new InterruptedException(e.toString());
+            } catch (IOException e) {
+                throw new CommunicationException(e);
+            }
+            try {
+                serverSocketField.set(this, serverSocket);
+            } catch (IllegalAccessException e) {
+                // this should never happen
+                throw new CommunicationException(e, "Unexpected error");
+            }
+        }
+
+        @Override
+        protected void doError(Exception e) throws CommunicationException {
+            QDLog.log.error("HTML management adaptor initialization error", e);
+            super.doError(e);
+        }
     }
 
     private static class Connector extends JmxConnector {

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -10,14 +10,6 @@
  * !__
  */
 package com.devexperts.qd.impl.matrix.management.dump;
-
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.util.*;
-import java.util.regex.Pattern;
-import java.util.zip.DeflaterOutputStream;
 
 import com.devexperts.io.BufferedOutput;
 import com.devexperts.io.StreamOutput;
@@ -28,7 +20,35 @@ import com.devexperts.qd.impl.matrix.management.DebugDump;
 import com.devexperts.qd.impl.matrix.management.impl.Exec;
 import com.devexperts.util.LogUtil;
 
-import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.*;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+import java.util.regex.Pattern;
+import java.util.zip.DeflaterOutputStream;
+
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.BOOLEAN;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.BYTE;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.CHAR;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.DOUBLE;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.EXCEPTION;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.FIRST_CLASS_ID;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.FIRST_OBJECT_ID;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.FLOAT;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.INT;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.LONG;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.OWNER;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.REFERENCE;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.SHORT;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.STRING;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.SYSTEM_PROPERTIES;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.UNKNOWN;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.VERSION;
 
 public class DebugDumpImpl implements DebugDump {
     private static final Logging log = Logging.getLogging(DebugDumpImpl.class);

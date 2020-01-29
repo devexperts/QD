@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,8 +11,12 @@
  */
 package com.devexperts.qd.sample;
 
-import com.devexperts.rmi.*;
-import com.devexperts.rmi.task.*;
+import com.devexperts.rmi.RMIEndpoint;
+import com.devexperts.rmi.RMIExceptionType;
+import com.devexperts.rmi.RMIOperation;
+import com.devexperts.rmi.task.RMIService;
+import com.devexperts.rmi.task.RMITask;
+import com.devexperts.rmi.task.RMITaskCancelListener;
 import com.dxfeed.api.DXFeed;
 import com.dxfeed.event.market.Quote;
 import com.dxfeed.promise.Promise;

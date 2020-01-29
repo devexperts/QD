@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,11 +11,18 @@
  */
 package com.dxfeed.ipf.live.test;
 
-import java.util.*;
-
-import com.dxfeed.ipf.*;
+import com.dxfeed.ipf.InstrumentProfile;
+import com.dxfeed.ipf.InstrumentProfileField;
+import com.dxfeed.ipf.InstrumentProfileType;
 import com.dxfeed.ipf.live.InstrumentProfileCollector;
 import junit.framework.TestCase;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.Random;
+import java.util.Set;
 
 public class InstrumentProfileCollectorTest extends TestCase {
     InstrumentProfileCollector collector = new InstrumentProfileCollector();

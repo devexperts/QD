@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,17 @@
  */
 package com.devexperts.qd.qtp.blob;
 
-import java.io.EOFException;
-import java.io.IOException;
-
 import com.devexperts.io.BufferedInput;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.QDLog;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.AbstractQTPParser;
+import com.devexperts.qd.qtp.MessageConsumer;
+import com.devexperts.qd.qtp.MessageType;
+
+import java.io.EOFException;
+import java.io.IOException;
 
 /**
  * Parses QTP messages in blob format from byte stream.

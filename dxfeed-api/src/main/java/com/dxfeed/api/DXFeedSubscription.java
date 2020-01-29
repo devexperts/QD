@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,22 +11,41 @@
  */
 package com.dxfeed.api;
 
-import java.io.*;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.function.Function;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
 import com.devexperts.io.IOUtil;
 import com.devexperts.util.IndexedSet;
 import com.devexperts.util.IndexerFunction;
-import com.dxfeed.api.osub.*;
+import com.dxfeed.api.osub.ObservableSubscription;
+import com.dxfeed.api.osub.ObservableSubscriptionChangeListener;
+import com.dxfeed.api.osub.TimeSeriesSubscriptionSymbol;
+import com.dxfeed.api.osub.WildcardSymbol;
 import com.dxfeed.event.EventType;
 import com.dxfeed.event.LastingEvent;
 import com.dxfeed.event.candle.Candle;
 import com.dxfeed.event.candle.CandleSymbol;
 import com.dxfeed.event.market.MarketEvent;
+
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.AbstractSet;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Subscription for a set of symbols and event types.
@@ -232,6 +251,7 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
 
     // initialized on first use
     private transient Set<?> undecoratedSymbols;
+    private transient Set<?> decoratedSymbols;
 
     /**
      * Creates <i>detached</i> subscription for a single event type.
@@ -340,8 +360,22 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
      */
     public Set<?> getSymbols() {
         if (undecoratedSymbols == null)
-            undecoratedSymbols = new UndecoratedSymbols();
+            undecoratedSymbols = new SymbolView(true);
         return undecoratedSymbols;
+    }
+
+    /**
+     * Returns a set of decorated symbols (depending on the actual implementation class of {@link DXFeedSubscription}).
+     *
+     * <p>The resulting set cannot be modified. The contents of the resulting set
+     * are undefined if the set of symbols is changed after invocation of this method, but the resulting set is
+     * safe for concurrent reads from any threads. The resulting set maybe either a snapshot of the set of
+     * the subscribed symbols at the time of invocation or a weakly consistent view of the set.
+     */
+    public Set<?> getDecoratedSymbols() {
+        if (decoratedSymbols == null)
+            decoratedSymbols = new SymbolView(false);
+        return decoratedSymbols;
     }
 
     /**
@@ -810,13 +844,17 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
         changeListeners = simplifyListener(readCompactCollection(in), ChangeListeners::new);
     }
 
-    private class UndecoratedSymbols extends AbstractSet<Object> {
-        UndecoratedSymbols() {}
+    private class SymbolView extends AbstractSet<Object> {
+        private final boolean undecorate;
+
+        public SymbolView(boolean undecorate) {
+            this.undecorate = undecorate;
+        }
 
         @Nonnull
         @Override
         public Iterator<Object> iterator() {
-            return new UndecoratedIterator(symbols.concurrentIterator());
+            return new SymbolViewIterator(undecorate, symbols.concurrentIterator());
         }
 
         @Override
@@ -826,14 +864,17 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
 
         @Override
         public boolean contains(Object o) {
-            return symbols.containsKey(o);
+            // 'symbols' field always uses undecorating indexer
+            return undecorate ? symbols.containsKey(o) : symbols.containsValue(o);
         }
     }
 
-    private class UndecoratedIterator implements Iterator<Object> {
+    private class SymbolViewIterator implements Iterator<Object> {
+        private final boolean undecorate;
         private final Iterator<Object> it;
 
-        UndecoratedIterator(Iterator<Object> it) {
+        SymbolViewIterator(boolean undecorate, Iterator<Object> it) {
+            this.undecorate = undecorate;
             this.it = it;
         }
 
@@ -844,7 +885,8 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
 
         @Override
         public Object next() {
-            return undecorateSymbol(it.next());
+            Object next = it.next();
+            return undecorate ? undecorateSymbol(next) : next;
         }
 
         @Override

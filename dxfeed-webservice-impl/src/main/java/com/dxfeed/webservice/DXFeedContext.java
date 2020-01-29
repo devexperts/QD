@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,19 +11,25 @@
  */
 package com.dxfeed.webservice;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
-
 import com.devexperts.qd.QDFilter;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.impl.DXEndpointImpl;
 import com.dxfeed.api.impl.DXFeedImpl;
-import com.dxfeed.event.*;
+import com.dxfeed.event.EventType;
+import com.dxfeed.event.IndexedEvent;
+import com.dxfeed.event.LastingEvent;
+import com.dxfeed.event.TimeSeriesEvent;
 import com.dxfeed.event.candle.Candle;
 import com.dxfeed.event.market.MarketEvent;
+
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 
 /**
  * dxFeed instance that is shared among various web services.

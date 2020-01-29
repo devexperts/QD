@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,10 @@
  */
 package com.devexperts.rmi.test;
 
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.LockSupport;
-import java.util.stream.Collectors;
-
 import com.devexperts.logging.Logging;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.MessageConnector;
+import com.devexperts.qd.qtp.MessageConnectorState;
+import com.devexperts.qd.qtp.QDEndpoint;
 import com.devexperts.qd.qtp.socket.ServerSocketConnector;
 import com.devexperts.qd.qtp.socket.ServerSocketTestHelper;
 import com.devexperts.rmi.RMIEndpoint;
@@ -29,6 +24,13 @@ import com.devexperts.rmi.task.RMIService;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.impl.DXEndpointImpl;
 import com.dxfeed.promise.Promise;
+
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
+import java.util.stream.Collectors;
 
 /**
  * Networking utility methods for tests that run over network.

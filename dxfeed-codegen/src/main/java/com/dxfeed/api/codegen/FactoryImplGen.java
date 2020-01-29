@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,27 @@
  */
 package com.dxfeed.api.codegen;
 
-import java.io.IOException;
-import java.util.*;
-
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.QDContract;
+import com.devexperts.qd.SerialFieldType;
 import com.devexperts.qd.ng.RecordMapping;
 import com.devexperts.util.SystemProperties;
+import com.dxfeed.api.impl.EventDelegate;
 import com.dxfeed.api.impl.EventDelegateFlags;
+import com.dxfeed.api.impl.SchemeBuilder;
 import com.dxfeed.api.impl.SchemeFieldTime;
 import com.dxfeed.event.market.MarketEventSymbols;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Generates xxxEventDelegateFactory classes for event packages.
@@ -54,16 +66,18 @@ class FactoryImplGen {
     }
 
     private void generateBuildSchemeCode(ClassGen cg) {
+        cg.addImport(new ClassName(SchemeBuilder.class));
         cg.code("@Override");
         cg.code("public void buildScheme(SchemeBuilder builder) {");
         cg.indent();
         boolean first = true;
         for (Map.Entry<RecordDesc, Map<String, RecordField>> recordEntry : recordsFields.entrySet()) {
             RecordDesc record = recordEntry.getKey();
-            if (first)
+            if (first) {
                 first = false;
-            else
+            } else {
                 cg.newLine();
+            }
             if (record.phantomProperty != null) {
                 cg.addImport(new ClassName(SystemProperties.class));
                 cg.code("if (SystemProperties.getBooleanProperty(\"" + record.phantomProperty + "\", false)) {");
@@ -90,8 +104,9 @@ class FactoryImplGen {
                 generateFieldCode(cg, recordEntry.getValue(), "recordName", false);
                 cg.unindent();
                 cg.code("}");
-            } else // Simple single record
+            } else { // Simple single record
                 generateFieldCode(cg, recordEntry.getValue(), "\"" + record + "\"", false);
+            }
             if (record.phantomProperty != null) {
                 cg.unindent();
                 cg.code("}");
@@ -126,9 +141,14 @@ class FactoryImplGen {
                     (f.onlySuffixesDefault != null ?
                         ("suffix.matches(" +
                             (f.onlySuffixesProperty != null ?
-                                "SystemProperties.getProperty(\"" + f.onlySuffixesProperty + "\", \"" + f.onlySuffixesDefault + "\")" :
-                                "\"" + f.onlySuffixesDefault + "\"") +
-                            ")") : "") +
+                                "SystemProperties.getProperty(\"" + f.onlySuffixesProperty + "\", \"" +
+                                    f.onlySuffixesDefault + "\")" :
+                                "\"" + f.onlySuffixesDefault + "\""
+                            ) +
+                            ")"
+                        ) :
+                        ""
+                    ) +
                     (f.onlySuffixesDefault != null && f.exceptSuffixes != null ? " && " : "") +
                     (f.exceptSuffixes != null ? "!suffix.matches(\"" + f.exceptSuffixes + "\")" : "") +
                     ")");
@@ -139,12 +159,15 @@ class FactoryImplGen {
                 String typeExpr = "SerialFieldType." + field.serialType;
                 if (field.adaptiveDecimal || field.typeSelectors.length != 0) {
                     typeExpr = "select(" + typeExpr;
-                    for (String typeSelector : field.typeSelectors)
+                    for (String typeSelector : field.typeSelectors) {
                         typeExpr = typeExpr + ", \"" + typeSelector + "\"";
+                    }
                     typeExpr = typeExpr + ")";
                 }
                 if (f.voidSuffixes != null)
                     typeExpr = "suffix.matches(\"" + f.voidSuffixes + "\") ? SerialFieldType.VOID : " + typeExpr;
+                if (f.time != SchemeFieldTime.COMMON_FIELD)
+                    cg.addImport(new ClassName(SchemeFieldTime.class));
                 if (f.required) {
                     cg.code("builder.addRequiredField(" +
                         recordNameReference + ", \"" + field.getFullName(fieldName) + "\", " + typeExpr +
@@ -166,8 +189,13 @@ class FactoryImplGen {
     }
 
     private void generateCreateDelegatesCode(ClassGen cg, boolean streamOnly) {
+        cg.addImport(new ClassName(Collection.class));
+        cg.addImport(new ClassName(ArrayList.class));
+        cg.addImport(new ClassName(EventDelegate.class));
+        cg.addImport(new ClassName(DataRecord.class));
         cg.code("@Override");
-        cg.code("public Collection<EventDelegate<?>> create" + (streamOnly ? "StreamOnly" : "") + "Delegates(DataRecord record) {");
+        cg.code("public Collection<EventDelegate<?>> create" + (streamOnly ? "StreamOnly" : "") +
+            "Delegates(DataRecord record) {");
         cg.indent();
         cg.code("Collection<EventDelegate<?>> result = new ArrayList<>();");
         boolean elseIf = false;
@@ -179,7 +207,8 @@ class FactoryImplGen {
                 if (record.phantomProperty != null || !recordDelegates.containsKey(record))
                     continue;
                 if (!ifGenerated) {
-                    cg.code((elseIf ? "} else " : "") + "if (record.getMapping(" + mapping.getClassName().getSimpleName() + ".class) != null) {");
+                    cg.code((elseIf ? "} else " : "") +
+                        "if (record.getMapping(" + mapping.getClassName().getSimpleName() + ".class) != null) {");
                     cg.indent();
                     elseIf = true;
                     ifGenerated = true;
@@ -192,8 +221,9 @@ class FactoryImplGen {
                     Map<QDContract, EnumSet<EventDelegateFlags>> contractFlags = delegate.getContractFlags();
                     if (streamOnly) {
                         EnumSet<EventDelegateFlags> flagsUnion = EnumSet.noneOf(EventDelegateFlags.class);
-                        for (EnumSet<EventDelegateFlags> fs : contractFlags.values())
+                        for (EnumSet<EventDelegateFlags> fs : contractFlags.values()) {
                             flagsUnion.addAll(fs);
+                        }
                         contractFlags = new EnumMap<>(QDContract.class);
                         flagsUnion.remove(EventDelegateFlags.TIME_SERIES); // don't support TimeSeries in STREAM_FEED
                         contractFlags.put(QDContract.STREAM, flagsUnion);
@@ -264,33 +294,28 @@ class FactoryImplGen {
     }
 
     void addRecordField(RecordDesc record, RecordField field) {
-        Map<String, RecordField> recordFields = recordsFields.get(record);
-        if (recordFields == null)
-            recordsFields.put(record, recordFields = new LinkedHashMap<>());
+        Map<String, RecordField> recordFields = recordsFields.computeIfAbsent(record, k -> new LinkedHashMap<>());
         RecordField oldField = recordFields.get(field.fieldName);
-        if (oldField == null)
+        if (oldField == null) {
             recordFields.put(field.fieldName, field);
-        else if (field.fieldType != oldField.fieldType)
+        } else if (field.fieldType != oldField.fieldType) {
             throw new IllegalArgumentException("FieldType mismatches for field \"" + field + "\"");
+        }
         // todo: try to ensure that same fields cannot have different attribute values (timeness, isCompositeOnly, etc.)
     }
 
     void addRecordDelegate(RecordDesc record, DelegateGen delegate) {
-        List<DelegateGen> delegates = recordDelegates.get(record);
-        if (delegates == null)
-            recordDelegates.put(record, delegates = new ArrayList<>());
+        List<DelegateGen> delegates = recordDelegates.computeIfAbsent(record, k -> new ArrayList<>());
         delegates.add(delegate);
     }
 
     void addRecordMapping(RecordDesc record, MappingGen mapping) {
-        Set<RecordDesc> set = mappingRecords.get(mapping);
-        if (set == null)
-            mappingRecords.put(mapping, set = new LinkedHashSet<>());
+        Set<RecordDesc> set = mappingRecords.computeIfAbsent(mapping, k -> new LinkedHashSet<>());
         set.add(record);
     }
 
     void useMarketEventSymbolsToGetBaseRecordName() {
-        this.useMarketEventSymbol = true;
+        useMarketEventSymbol = true;
     }
 
     ClassName getClassName() {

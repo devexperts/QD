@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,20 +11,42 @@
  */
 package com.devexperts.qd.impl.matrix.management.dump;
 
-import java.io.*;
-import java.lang.reflect.*;
-import java.util.*;
+import com.devexperts.io.BufferedInput;
+import com.devexperts.io.StreamInput;
+import com.devexperts.qd.impl.matrix.Collector;
+import com.devexperts.qd.impl.matrix.CollectorDebug;
+import com.devexperts.qd.impl.matrix.FatalError;
+import com.devexperts.util.IndexedSet;
+import com.devexperts.util.UnsafeHolder;
+
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.InflaterInputStream;
 
-import com.devexperts.io.BufferedInput;
-import com.devexperts.io.StreamInput;
-import com.devexperts.qd.impl.matrix.*;
-import com.devexperts.util.IndexedSet;
-import com.devexperts.util.UnsafeHolder;
-
-import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.*;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.BOOLEAN;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.BYTE;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.CHAR;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.DOUBLE;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.EXCEPTION;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.FLOAT;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.INT;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.LONG;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.OWNER;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.REFERENCE;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.SHORT;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.STRING;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.SYSTEM_PROPERTIES;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.UNKNOWN;
+import static com.devexperts.qd.impl.matrix.management.dump.DebugDumpConst.VERSION;
 
 public class DebugDumpReader {
     private final IndexedSet<Integer, ObjectReader> classMap = IndexedSet.createInt(reader -> reader.classId);

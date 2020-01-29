@@ -10,11 +10,14 @@ A ? B : C                         // Conditional expressions
 (A || !B) && C || D               // Logical expressions
 A == B || C != D                  // Equality expressions
 A < B || C >= D                   // Relational expressions
+A hasItem B                       // "hasItem" expressions for list-base field (contains comma-separated items) (relational)
 A like "pattern"                  // "like" expressions (relational)
 A in (B, C, D)                    // "in" expressions (relational)
 A + (B - C)                       // Additive expressions
 A * (B / D) % E                   // Multiplicative expressions
 !A, +B, -C                        // Unary expressions
+addItem(A, B)                    // Adds item to list-base field (contains comma-separated items) (function)
+removeItem(A, B)			      // Removes item from list-base field (contains comma-separated items) (function)
 replaceAll(A, "pattern", B)       // Replacement expressions (functions)
 replaceFirst(A, "pattern", B)
 

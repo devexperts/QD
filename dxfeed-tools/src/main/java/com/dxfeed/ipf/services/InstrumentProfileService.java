@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,15 @@
  */
 package com.dxfeed.ipf.services;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-
 import com.devexperts.logging.Logging;
 import com.dxfeed.ipf.InstrumentProfile;
 import com.dxfeed.ipf.live.InstrumentProfileCollector;
 import com.dxfeed.ipf.transform.InstrumentProfileTransform;
 import com.dxfeed.ipf.transform.TransformCompilationException;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * A service that publishes instrument profiles over network.

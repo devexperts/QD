@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,26 @@
  */
 package com.devexperts.qd.sample;
 
-import java.io.*;
+import com.devexperts.io.BufferedOutput;
+import com.devexperts.io.ByteArrayOutput;
+import com.devexperts.io.IOUtil;
+import com.sun.management.GarbageCollectorMXBean;
+import com.sun.management.OperatingSystemMXBean;
+
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
-import java.util.*;
-
-import com.devexperts.io.*;
-import com.sun.management.GarbageCollectorMXBean;
-import com.sun.management.OperatingSystemMXBean;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Random;
 
 /**
  * Tests different methods to serialize a snapshot of in-memory data structure.

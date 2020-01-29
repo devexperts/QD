@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,31 @@
  */
 package com.devexperts.qd.impl.matrix;
 
-import com.devexperts.qd.*;
+import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataVisitor;
+import com.devexperts.qd.HistorySubscriptionFilter;
+import com.devexperts.qd.QDAgent;
+import com.devexperts.qd.QDHistory;
+import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.impl.matrix.management.CollectorOperation;
-import com.devexperts.qd.ng.*;
+import com.devexperts.qd.ng.EventFlag;
+import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordMode;
+import com.devexperts.qd.ng.RecordSink;
+import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.LegacyAdapter;
 import com.devexperts.util.SystemProperties;
 
-import static com.devexperts.qd.impl.matrix.Distribution.*;
+import static com.devexperts.qd.impl.matrix.Distribution.DEC_PENDING_COUNT_DIST_FLAG;
+import static com.devexperts.qd.impl.matrix.Distribution.ENABLED_SNAPSHOT_MODE_DIST_FLAG;
+import static com.devexperts.qd.impl.matrix.Distribution.HAD_SNAPSHOT_DIST_FLAG;
+import static com.devexperts.qd.impl.matrix.Distribution.TX_END_DIST_FLAG;
+import static com.devexperts.qd.impl.matrix.Distribution.TX_SWEEP_DIST_FLAG;
+import static com.devexperts.qd.impl.matrix.Distribution.UPDATED_RECORD_DIST_FLAG;
+import static com.devexperts.qd.impl.matrix.Distribution.UPDATED_SNIP_DIST_FLAG;
 
 /**
  * The <code>History</code> is a matrix-based implementation of {@link QDHistory}.

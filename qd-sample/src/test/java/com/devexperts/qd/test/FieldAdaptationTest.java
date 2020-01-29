@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,11 +13,18 @@ package com.devexperts.qd.test;
 
 import com.devexperts.io.ChunkedInput;
 import com.devexperts.io.ChunkedOutput;
-import com.devexperts.qd.*;
-import com.devexperts.qd.kit.*;
+import com.devexperts.qd.DataIntField;
+import com.devexperts.qd.DataIterator;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.kit.CompactIntField;
+import com.devexperts.qd.kit.DecimalField;
+import com.devexperts.qd.kit.DefaultRecord;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.BinaryQTPComposer;
+import com.devexperts.qd.qtp.BinaryQTPParser;
+import com.devexperts.qd.qtp.MessageConsumerAdapter;
+import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.util.Decimal;
 import junit.framework.TestCase;
 

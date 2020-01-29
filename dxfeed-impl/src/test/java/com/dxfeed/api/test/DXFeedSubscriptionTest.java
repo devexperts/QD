@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,22 @@
  */
 package com.dxfeed.api.test;
 
-import java.io.Serializable;
-import java.util.*;
-
 import com.devexperts.io.IOUtil;
-import com.dxfeed.api.*;
+import com.dxfeed.api.DXFeed;
+import com.dxfeed.api.DXFeedEventListener;
+import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.api.osub.ObservableSubscriptionChangeListener;
 import com.dxfeed.api.osub.TimeSeriesSubscriptionSymbol;
 import com.dxfeed.event.market.Quote;
 import com.dxfeed.event.market.TimeAndSale;
 import junit.framework.TestCase;
+
+import java.io.Serializable;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Set;
 
 public class DXFeedSubscriptionTest extends TestCase {
     private static int serialRecv;

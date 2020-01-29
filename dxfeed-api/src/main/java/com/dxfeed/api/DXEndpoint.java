@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,20 @@
  */
 package com.dxfeed.api;
 
-import java.beans.PropertyChangeListener;
-import java.util.*;
-import java.util.concurrent.Executor;
-
 import com.devexperts.services.Service;
 import com.devexperts.services.Services;
 import com.dxfeed.api.osub.WildcardSymbol;
 import com.dxfeed.event.EventType;
 import com.dxfeed.event.market.Quote;
 import com.dxfeed.ondemand.OnDemandService;
+
+import java.beans.PropertyChangeListener;
+import java.util.Date;
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.Executor;
 
 /**
  * Manages network connections to {@link DXFeed feed} or
@@ -626,7 +630,7 @@ public abstract class DXEndpoint implements AutoCloseable {
     public abstract DXEndpoint password(String password);
 
     /**
-     * Connects to the specified remove address. Previously established connections are closed if
+     * Connects to the specified remote address. Previously established connections are closed if
      * the new address is different from the old one.
      * This method does nothing if address does not change or if this endpoint is {@link State#CLOSED CLOSED}.
      * The endpoint {@link #getState() state} immediately becomes {@link State#CONNECTING CONNECTING} otherwise.
@@ -660,6 +664,22 @@ public abstract class DXEndpoint implements AutoCloseable {
      * @throws IllegalArgumentException if address string is malformed.
      */
     public abstract DXEndpoint connect(String address);
+
+    /**
+     * Terminates all established network connections and initiates connecting again with the same address.
+     *
+     * <p>The effect of the method is alike to invoking {@link #disconnect()} and {@link #connect(String)}
+     * with the current address, but internal resources used for connections may be reused by implementation.
+     * TCP connections with multiple target addresses will try switch to an alternative address, configured
+     * reconnect timeouts will apply.
+     *
+     * <p><b>Note:</b> The method will not connect endpoint that was not initially connected with
+     * {@link #connect(String)} method or was disconnected with {@link #disconnect()} method.
+     *
+     * <p>The method initiates a short-path way for reconnecting, so whether observers will have a chance to see
+     * an intermediate state {@link State#NOT_CONNECTED State.NOT_CONNECTED} depends on the implementation.
+     */
+    public abstract void reconnect();
 
     /**
      * Terminates all remote network connections.

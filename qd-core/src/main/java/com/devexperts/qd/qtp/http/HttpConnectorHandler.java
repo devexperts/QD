@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,17 +11,28 @@
  */
 package com.devexperts.qd.qtp.http;
 
-import java.io.*;
-import java.net.*;
-import java.nio.charset.StandardCharsets;
-
-import com.devexperts.connector.proto.*;
+import com.devexperts.connector.proto.AbstractTransportConnection;
+import com.devexperts.connector.proto.ApplicationConnection;
+import com.devexperts.connector.proto.TransportConnection;
 import com.devexperts.io.Chunk;
 import com.devexperts.io.ChunkList;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.AbstractConnectionHandler;
+import com.devexperts.qd.qtp.MessageConnectors;
+import com.devexperts.qd.qtp.ReconnectHelper;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.util.Base64;
 import com.devexperts.util.LogUtil;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 class HttpConnectorHandler extends AbstractConnectionHandler<HttpConnector> {
     // --- initial config parameters copied from connector ---

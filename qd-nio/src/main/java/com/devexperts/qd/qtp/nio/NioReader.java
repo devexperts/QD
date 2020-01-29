@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,19 +11,24 @@
  */
 package com.devexperts.qd.qtp.nio;
 
+import com.devexperts.io.ChunkedOutput;
+import com.devexperts.logging.Logging;
+import com.devexperts.util.LockFreePool;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.*;
+import java.nio.channels.CancelledKeyException;
+import java.nio.channels.ClosedSelectorException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
-import com.devexperts.io.ChunkedOutput;
-import com.devexperts.logging.Logging;
-import com.devexperts.util.LockFreePool;
-
-import static com.devexperts.qd.qtp.nio.NioFlags.*;
+import static com.devexperts.qd.qtp.nio.NioFlags.RS_NOT_READY_FOR_MORE;
+import static com.devexperts.qd.qtp.nio.NioFlags.RS_NOT_SELECTABLE;
+import static com.devexperts.qd.qtp.nio.NioFlags.RS_PROCESSING;
 
 class NioReader {
 

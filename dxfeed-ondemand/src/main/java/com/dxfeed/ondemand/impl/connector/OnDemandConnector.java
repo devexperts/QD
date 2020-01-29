@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,19 +11,32 @@
  */
 package com.dxfeed.ondemand.impl.connector;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.*;
-import javax.management.*;
-
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
-import com.devexperts.qd.qtp.*;
+import com.devexperts.qd.qtp.AbstractConnectionHandler;
+import com.devexperts.qd.qtp.AbstractMessageConnector;
+import com.devexperts.qd.qtp.MessageConnectorState;
+import com.devexperts.qd.qtp.ReconnectHelper;
 import com.devexperts.qd.qtp.help.MessageConnectorProperty;
 import com.devexperts.qd.qtp.help.MessageConnectorSummary;
-import com.devexperts.util.*;
+import com.devexperts.util.LogUtil;
+import com.devexperts.util.TimeFormat;
+import com.devexperts.util.TimePeriod;
 import com.dxfeed.api.impl.OnDemandConnectorMarker;
 import com.dxfeed.ondemand.impl.MarketDataReplay;
 import com.dxfeed.ondemand.impl.MarketDataToken;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Date;
+import javax.management.AttributeChangeNotification;
+import javax.management.ListenerNotFoundException;
+import javax.management.MBeanNotificationInfo;
+import javax.management.NotificationBroadcaster;
+import javax.management.NotificationBroadcasterSupport;
+import javax.management.NotificationFilter;
+import javax.management.NotificationListener;
 
 @MessageConnectorSummary(
     info = "On-demand historical data replay.",

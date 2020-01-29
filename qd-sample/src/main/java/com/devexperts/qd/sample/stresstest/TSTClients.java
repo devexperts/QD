@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2019 Devexperts LLC
+ * Copyright (C) 2002 - 2020 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,20 +11,24 @@
  */
 package com.devexperts.qd.sample.stresstest;
 
-import java.io.IOException;
-import java.security.*;
-import java.util.ArrayList;
-import java.util.Properties;
-import java.util.concurrent.TimeUnit;
-import javax.net.SocketFactory;
-import javax.net.ssl.*;
-
 import com.devexperts.io.URLInputStream;
 import com.devexperts.logging.Logging;
 import com.devexperts.mars.common.MARSScheduler;
 import com.devexperts.mars.jvm.CpuCounter;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimePeriod;
+
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
+import javax.net.SocketFactory;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
 
 import static com.devexperts.qd.sample.stresstest.TSTServer.loadProperties;
 
