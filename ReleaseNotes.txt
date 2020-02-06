@@ -1,4 +1,8 @@
 
+QDS 3.284:
+
+* [QD-1109] Sometimes getTimeSeriesPromise returns empty list
+
 QDS 3.283:
 
 * [QD-1219] Add logging of JMX console initialization errors

@@ -48,7 +48,7 @@ final class AgentIterator {
         if (agent != null) {
             SubMatrix sub = agent.sub;
             int nagent = sub.getInt(index + Collector.NEXT_AGENT);
-            agent = nagent > 0 ? agents[nagent] : null; // History uses -1 for StoreEverything without subscription
+            agent = nagent > 0 ? agents[nagent] : null; // beware of negative nagent in tsub
             index = sub.getInt(index + Collector.NEXT_INDEX);
         }
         return agent;

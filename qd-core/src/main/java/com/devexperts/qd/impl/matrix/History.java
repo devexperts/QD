@@ -28,6 +28,7 @@ import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.LegacyAdapter;
 import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimePeriod;
 
 import static com.devexperts.qd.impl.matrix.Distribution.DEC_PENDING_COUNT_DIST_FLAG;
 import static com.devexperts.qd.impl.matrix.Distribution.ENABLED_SNAPSHOT_MODE_DIST_FLAG;
@@ -46,6 +47,8 @@ public class History extends Collector implements QDHistory {
         History.class, "retrieveBatchSize", 100, 1, Integer.MAX_VALUE);
     static final int SNAPSHOT_BATCH_SIZE = SystemProperties.getIntProperty(
         History.class, "snapshotBatchSize", 10000, 1, Integer.MAX_VALUE);
+    static final long STATE_KEEP_TIME = TimePeriod.valueOf(SystemProperties.getProperty(
+        History.class, "stateKeepTime", "60s")).getTime();
 
     /*
      * Event flags.
@@ -176,7 +179,8 @@ public class History extends Collector implements QDHistory {
     @Override
     Agent createAgentInternal(int number, QDAgent.Builder builder, QDStats stats) {
         Agent agent = new Agent(this, number, builder, stats);
-        agent.sub = new SubMatrix(mapper, HISTORY_AGENT_STEP, builder.getAttachmentStrategy() == null ? 0 : 1,
+        agent.sub = new SubMatrix(mapper, HISTORY_AGENT_STEP,
+            builder.getAttachmentStrategy() == null ? AGENT_OBJ_STEP : AGENT_ATTACHMENT_OBJ_STEP,
             PREV_AGENT, 0, 0, Hashing.MAX_SHIFT, stats.create(QDStats.SType.AGENT_SUB));
         return agent;
     }
@@ -208,12 +212,47 @@ public class History extends Collector implements QDHistory {
         int tindex = total.sub.getIndex(key, rid, 0);
         if (tindex == 0)
             throw new IllegalStateException("Total entry missed");
-        return (HistoryBuffer) total.sub.getObj(tindex, 0);
+        return (HistoryBuffer) total.sub.getObj(tindex, HISTORY_BUFFER);
     }
 
     // SYNC: global+local
     HistoryBuffer getHB(Agent agent, int aindex) {
         return getHB(agent.sub.getInt(aindex + KEY), agent.sub.getInt(aindex + RID));
+    }
+
+    // SYNC: global+local
+    @Override
+    void prepareTotalSubForRehash() {
+        if (STATE_KEEP_TIME <= 0)
+            return;
+        /*
+         * We might have some expired HistoryBuffer held to keep their state. Here is the time and place
+         * to actually check and remove them. We do so by full scan and proper release and unmark as payload.
+         * As a result they will not be rehashed by ongoing rehash. Might produce matrix with capacity larger
+         * than expected - let it be.
+         */
+        long currentTime = System.currentTimeMillis();
+        SubMatrix tsub = total.sub;
+        for (int tindex = tsub.matrix.length; (tindex -= tsub.step) >= 0;) {
+            // save time by looking only into entries which might contain expired buffer
+            if (tsub.getInt(tindex + NEXT_AGENT) != NO_NEXT_AGENT_BUT_STORE_HB)
+                continue;
+            HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, HISTORY_BUFFER);
+            if (hb == null || hb.expirationTime > currentTime)
+                continue;
+            // the buffer is here and it is expired but we might need it because of storeEverything
+            int key = tsub.getInt(tindex + KEY);
+            int rid = tsub.getInt(tindex + RID);
+            if (shouldStoreEverything(records[rid], getCipher(key), getSymbol(key))) {
+                // it's storeEverything (but was not before) - mark it accordingly to not check again
+                hb.expirationTime = Long.MAX_VALUE;
+                continue;
+            }
+            // remove buffer with all due bookkeeping and state change
+            removeHistoryBufferAt(rid, tsub, tindex);
+            tsub.setInt(tindex + NEXT_AGENT, 0);
+            tsub.updateRemovedPayload(rid);
+        }
     }
 
     // This method can try to allocate a lot of memory for rehash and die due to OutOfMemoryError.
@@ -223,8 +262,9 @@ public class History extends Collector implements QDHistory {
         if (TRACE_LOG)
             log.trace("totalRecordAdded time=" + time);
         super.totalRecordAdded(key, rid, tsub, tindex, time);
-        HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, 0);
+        HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, HISTORY_BUFFER);
         if (hb != null && !shouldStoreEverything(records[rid], getCipher(key), getSymbol(key))) {
+            hb.expirationTime = Long.MAX_VALUE;
             // of any change in sub time - remove old records
             hb.removeOldRecords(time, statsStorage, rid);
             /*
@@ -249,15 +289,27 @@ public class History extends Collector implements QDHistory {
             tsub.setInt(tindex + NEXT_AGENT, NO_NEXT_AGENT_BUT_STORE_HB);
             return false;
         }
+        HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, HISTORY_BUFFER);
+        if (hb != null) {
+            if (STATE_KEEP_TIME > 0) {
+                // remove all data but keep state info for some time in case subscription is created anew
+                // also update snapshot times as if subscription changed to Long.MAX_VALUE (empty sub range)
+                hb.clearAllRecords(statsStorage, rid);
+                hb.expirationTime = System.currentTimeMillis() + STATE_KEEP_TIME;
+                // force total sub item to be kept as payload
+                tsub.setInt(tindex + NEXT_AGENT, NO_NEXT_AGENT_BUT_STORE_HB);
+                return false;
+            }
+        }
         removeHistoryBufferAt(rid, tsub, tindex);
         return true;
     }
 
     private void removeHistoryBufferAt(int rid, SubMatrix tsub, int tindex) {
-        HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, 0);
+        HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, HISTORY_BUFFER);
         if (hb != null) {
             statsStorage.updateRemoved(rid, hb.size());
-            tsub.setObj(tindex, 0, null); // Let GC clean up HistoryBuffer
+            tsub.setObj(tindex, HISTORY_BUFFER, null); // Let GC clean up HistoryBuffer
         }
     }
 
@@ -599,9 +651,10 @@ public class History extends Collector implements QDHistory {
             /*
              * Get or create history buffer.
              */
-            HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, 0);
+            HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, HISTORY_BUFFER);
             if (hb == null) { // no history buffer for this symbol+record yet -- create one
-                tsub.setObj(tindex, 0, hb = new HistoryBuffer(record, hasEventTimeSequence()));
+                hb = new HistoryBuffer(record, hasEventTimeSequence());
+                tsub.setObj(tindex, HISTORY_BUFFER, hb);
             }
 
             long timeTotal = tsub.getLong(tindex + TIME_TOTAL);
@@ -809,7 +862,7 @@ public class History extends Collector implements QDHistory {
 
     private int createDummyTotalSubEntry(SubMatrix tsub, int rid, int key) {
         int tindex = tsub.addIndexBegin(key, rid);
-        tsub.setInt(tindex + NEXT_AGENT, -1); // dummy next agent
+        tsub.setInt(tindex + NEXT_AGENT, NO_NEXT_AGENT_BUT_STORE_HB); // dummy next agent
         tsub.setLong(tindex + TIME_TOTAL, Long.MAX_VALUE); // dummy total sub time
         tsub.addIndexComplete(tindex, key, rid);
         tsub.updateAddedPayload(rid);
@@ -1237,7 +1290,7 @@ public class History extends Collector implements QDHistory {
         int rid = getRid(record);
         SubMatrix tsub = total.sub;
         int tindex = tsub.getIndex(key, rid, 0);
-        HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, 0);
+        HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, HISTORY_BUFFER);
         if (hb == null)
             return 0;
         return hb.getMinAvailableTime();
@@ -1261,7 +1314,7 @@ public class History extends Collector implements QDHistory {
         int rid = getRid(record);
         SubMatrix tsub = total.sub;
         int tindex = tsub.getIndex(key, rid, 0);
-        HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, 0);
+        HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, HISTORY_BUFFER);
         if (hb == null)
             return 0;
         return hb.getMaxAvailableTime();
@@ -1285,7 +1338,7 @@ public class History extends Collector implements QDHistory {
         int rid = getRid(record);
         SubMatrix tsub = total.sub;
         int tindex = tsub.getIndex(key, rid, 0);
-        HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, 0);
+        HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, HISTORY_BUFFER);
         if (hb == null)
             return 0;
         return hb.getAvailableCount(start_time, end_time);
@@ -1317,7 +1370,7 @@ public class History extends Collector implements QDHistory {
     {
         SubMatrix tsub = total.sub;
         int tindex = tsub.getIndex(getKey(cipher, symbol), getRid(record), 0);
-        HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, 0);
+        HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, HISTORY_BUFFER);
         return hb != null &&
             (startTime > endTime ?
                 hb.examineDataRangeRTL(record, cipher, symbol, startTime, endTime, sink, keeper, null) :
@@ -1334,7 +1387,7 @@ public class History extends Collector implements QDHistory {
         Object attachment = agent.hasAttachmentStrategy() ? asub.getObj(aindex, ATTACHMENT) : null;
         SubMatrix tsub = total.sub;
         int tindex = tsub.getIndex(key, rid, 0);
-        HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, 0);
+        HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, HISTORY_BUFFER);
         if (hb != null)
             hb.examineDataSnapshot(records[rid], getCipher(key), getSymbol(key), time, sink, keeper, attachment);
     }
@@ -1346,7 +1399,7 @@ public class History extends Collector implements QDHistory {
         // iterate over matrix
         for (int tindex = tsub.matrix.length; (tindex -= tsub.step) >= 0;)
             if (tsub.isPayload(tindex)) {
-                HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, 0);
+                HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, HISTORY_BUFFER);
                 if (hb == null)
                     continue;
                 int nExamined;
@@ -1377,7 +1430,7 @@ public class History extends Collector implements QDHistory {
     private int examineDataSnapshotGLocked(RecordSink sink, SubMatrix tsub, int tindex, HistoryBuffer hb) {
         // recheck under global lock that iterated entry is still good to examine
         // if anything looks suspicious from concurrency point of view -- skip it
-        if (hb != tsub.getObj(tindex, 0))
+        if (hb != tsub.getObj(tindex, HISTORY_BUFFER))
             return 0;
         int key = tsub.getInt(tindex + KEY);
         int rid = tsub.getInt(tindex + RID);
@@ -1442,7 +1495,7 @@ public class History extends Collector implements QDHistory {
     private int examineDataBySubscriptionGLocked(DataRecord record, int cipher, String symbol, long toTime, RecordSink sink) {
         SubMatrix tsub = total.sub;
         int tindex = tsub.getIndex(getKey(cipher, symbol), getRid(record), 0);
-        HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, 0);
+        HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, HISTORY_BUFFER);
         if (hb == null)
             return 0;
         if (hb.examineDataSnapshot(record, cipher, symbol, toTime, sink, keeper, null))

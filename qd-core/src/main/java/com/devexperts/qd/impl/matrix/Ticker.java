@@ -41,7 +41,8 @@ class Ticker extends Collector implements QDTicker {
     @Override
     Agent createAgentInternal(int number, QDAgent.Builder builder, QDStats stats) {
         Agent agent = new Agent(this, number, builder, stats);
-        agent.sub = new SubMatrix(mapper, TICKER_AGENT_STEP, builder.getAttachmentStrategy() == null ? 0 : 1,
+        agent.sub = new SubMatrix(mapper, TICKER_AGENT_STEP,
+            builder.getAttachmentStrategy() == null ? AGENT_OBJ_STEP : AGENT_ATTACHMENT_OBJ_STEP,
             PREV_AGENT, 0, 0, Hashing.MAX_SHIFT, stats.create(QDStats.SType.AGENT_SUB));
         return agent;
     }

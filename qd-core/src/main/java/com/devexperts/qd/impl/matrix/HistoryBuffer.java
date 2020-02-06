@@ -125,6 +125,15 @@ public final class HistoryBuffer {
      *       everSnapshotTime >= timeTotal
      */
 
+    /**
+     * This time is used when all subscription is removed and we need to keep empty HistoryBuffer for some time
+     * to remember it's state. In this case this time specifies when this buffer need to be completely released.
+     * There is no dedicated expiration checking and enforcing threads or tasks - expirationTime is only checked
+     * during rehash of total agent. As a result expired buffers might live longer than timeout and still be
+     * reactivated if not removed by rehash.
+     */
+    long expirationTime = Long.MAX_VALUE;
+
     // results of the last examineData here
     int nExamined;
     long examinedTime; // this is set when nExamined > 0
@@ -141,6 +150,10 @@ public final class HistoryBuffer {
         intStep = record.getIntFieldCount() + intOffset;
         objStep = record.getObjFieldCount() + objOffset;
 
+        allocInitial();
+    }
+
+    private void allocInitial() {
         mask = 15;
         intValues = intStep == 0 ? null : new int[intStep * (mask + 1)];
         objValues = objStep == 0 ? null : new Object[objStep * (mask + 1)];
@@ -702,6 +715,26 @@ public final class HistoryBuffer {
             removeToIndex((min + removeCount) & mask);
             stats.updateRemoved(rid, removeCount);
         }
+    }
+
+    /**
+     * Clears all records, trims memory and trims snapshot times to Long.MAX_VALUE.
+     * Effect is similar to {@link #removeOldRecords removeOldRecords(Long.MAX_VALUE, QDStats, int)}
+     * except memory footprint is trimmed.
+     *
+     * Used when all subscription is removed and we need to keep state of HistoryBuffer without any data.
+     * So we trim subscription time as if subscribed to "empty range" for proper state transition.
+     */
+    void clearAllRecords(QDStats stats, int rid) {
+        int removeCount = size();
+        min = 0;
+        max = 0;
+        allocInitial();
+        trimSnapshotTimes(Long.MAX_VALUE);
+        stats.updateRemoved(rid, removeCount);
+        assert validTimes();
+        if (Collector.TRACE_LOG)
+            log.trace("clearAllRecords " + this);
     }
 
     /**

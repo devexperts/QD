@@ -137,12 +137,19 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
      * 12                                              LAST_RECORD_X  / AgentBuffer, may have TX_DIRTY_LAST_RECORD_BIT
      *--------------------------------------------------------------------------------------------------------------*/
 
-    // For objects in total agent
+    // For objects in 'total' agents:
+    static final int HISTORY_BUFFER = 0;
+
+    // That's it for objects in 'total' agents
     static final int TOTAL_OBJ_STEP = 0;
     static final int TOTAL_HISTORY_OBJ_STEP = 1;
 
-    // For object attachments
+    // For objects in clients' agents:
     static final int ATTACHMENT = 0;
+
+    // That's it for objects in clients' agents
+    static final int AGENT_OBJ_STEP = 0;
+    static final int AGENT_ATTACHMENT_OBJ_STEP = 1;
 
     /*--------------------------------------------------------------------------------------------------------------*/
 
@@ -862,15 +869,19 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
     // This method can try to allocate a lot of memory for rehash and die due to OutOfMemoryError.
     // SYNC: global+local
     final void rehashAgent(Agent agent) {
+        if (agent == total) {
+            // total sub might contain expired items - let implementation to collect them and unmark payload flag
+            prepareTotalSubForRehash();
+            total.sub = total.sub.rehash(Hashing.MAX_SHIFT);
+            // nothing more to do for total agent
+            return;
+        }
         // Remember old queue head pointers in agent
         int oldSnapshotHead = agent.snapshotQueue == null ? 0 : agent.snapshotQueue.getHead();
         int oldUpdateHead = agent.updateQueue == null ? 0 : agent.updateQueue.getHead();
         // rehash matrix
         SubMatrix osub = agent.sub;
         agent.sub = osub.rehash(Hashing.MAX_SHIFT);
-        // nothing more to do for total agent
-        if (agent == total)
-            return;
         // Fix links: [PREV_AGENT].NEXT_INDEX must reference to new index.
         SubMatrix asub = agent.sub;
         for (int aindex = asub.matrix.length; (aindex -= asub.step) >= 0;) {
@@ -964,7 +975,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
             // Insert 'agent' into proper double-list right after 'total'.
             int nagent = tsub.getInt(tindex + NEXT_AGENT);
             int nindex = tsub.getInt(tindex + NEXT_INDEX);
-            asub.setInt(aindex + NEXT_AGENT, nagent < 0 ? 0 : nagent); // replace nagent == -1 in tsub with 0
+            asub.setInt(aindex + NEXT_AGENT, nagent > 0 ? nagent : 0); // beware of negative nagent in tsub
             asub.setInt(aindex + NEXT_INDEX, nindex);
             asub.setInt(aindex + PREV_AGENT, total.number);
             tsub.setInt(tindex + NEXT_AGENT, agent.number);
@@ -1060,6 +1071,11 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
 
     private int getHistoryTimeSubFlags(RecordCursor cur, long time) {
         return time == cur.getTime() ? 0 : History.SNIP_TIME_SUB_FLAG;
+    }
+
+    // is overridden by History to expire cached HistoryBuffer and unmark them as payload
+    // SYNC: global+local
+    void prepareTotalSubForRehash() {
     }
 
     // This method can try to allocate a lot of memory for rehash and die due to OutOfMemoryError.
@@ -1237,7 +1253,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
          * Potential word-tearing in getLong if subscription time is changed concurrently with this isSub
          * invocation, but we cannot really do anything about it.
          */
-        return asub.matrix[index + NEXT_AGENT] != 0 && (!hasTime || time >= asub.getLong(index + timeOffset));
+        return asub.matrix[index + NEXT_AGENT] > 0 && (!hasTime || time >= asub.getLong(index + timeOffset));
     }
 
     // SYNC: none
