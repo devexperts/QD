@@ -337,15 +337,16 @@ public abstract class CollectorManagementImplBase extends CollectorManagement im
     }
 
     @Override
-    public String reportCounters(String format) {
+    public String reportCounters(String format, Integer topSize) {
+        int top = topSize == null ? CollectorCountersImpl.TOP_N : topSize;
         ReportBuilder rb = new ReportBuilder(format);
         List<Collector> collectors = getCollectors();
         for (Collector collector : collectors) {
             CollectorCountersImpl counters = (CollectorCountersImpl) collector.getCountersSinceSnapshot();
-            counters.reportTo(rb, nameCollector(collector));
+            counters.reportTo(rb, nameCollector(collector), top);
         }
         if (collectors.size() > 1)
-            completeCountersSinceSnapshot().reportTo(rb, name);
+            completeCountersSinceSnapshot().reportTo(rb, name, top);
         return rb.toString();
     }
 

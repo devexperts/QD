@@ -115,6 +115,10 @@ class SubMatrix extends AbstractMatrix {
         setVolatileInt(index + KEY, key);
     }
 
+    boolean isSubscribed(int index) {
+        return isPayload(index);
+    }
+
     // SYNC: global or local
     boolean isPayload(int index) {
         return matrix[index + payloadOffset] != 0;

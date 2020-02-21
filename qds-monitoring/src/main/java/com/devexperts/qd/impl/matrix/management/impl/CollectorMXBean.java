@@ -115,8 +115,9 @@ public interface CollectorMXBean {
      * Reports performance counters since last reset
      *
      * @param format html (default) or csv
+     * @param topSize max size of TOP tables, 5 by default
      */
-    public String reportCounters(String format);
+    public String reportCounters(String format, Integer topSize);
 
     /**
      * Resets performance counters

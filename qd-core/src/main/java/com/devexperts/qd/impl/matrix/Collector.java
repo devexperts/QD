@@ -283,7 +283,13 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
         total.sub = new SubMatrix(mapper,
             hasTime ? TOTAL_HISTORY_AGENT_STEP : TOTAL_AGENT_STEP,
             hasTime ? TOTAL_HISTORY_OBJ_STEP : TOTAL_OBJ_STEP,
-            NEXT_AGENT, 0, 0, Hashing.MAX_SHIFT, unique_sub_stats);
+            NEXT_AGENT, 0, 0, Hashing.MAX_SHIFT, unique_sub_stats)
+        {
+            @Override
+            boolean isSubscribed(int index) {
+                return matrix[index + NEXT_AGENT] > 0;
+            }
+        };
 
         agents = new Agent[INITIAL_AGENTS_SIZE];
         agents[total.number] = total;
@@ -1253,7 +1259,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
          * Potential word-tearing in getLong if subscription time is changed concurrently with this isSub
          * invocation, but we cannot really do anything about it.
          */
-        return asub.matrix[index + NEXT_AGENT] > 0 && (!hasTime || time >= asub.getLong(index + timeOffset));
+        return asub.isSubscribed(index) && (!hasTime || time >= asub.getLong(index + timeOffset));
     }
 
     // SYNC: none
@@ -1263,19 +1269,14 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
     }
 
     // SYNC: none
-    boolean examineSub(Agent agent, RecordSink sink, int time_offset) {
-        return new SubSnapshot(agent, time_offset, QDFilter.ANYTHING).retrieveSubscription(sink);
-    }
-
-    // SYNC: none
     boolean examineSub(Agent agent, RecordSink sink) {
-        return examineSub(agent, sink, agent == total ? TIME_TOTAL : TIME_SUB);
+        return new SubSnapshot(agent, QDFilter.ANYTHING).retrieveSubscription(sink);
     }
 
     // SYNC: none
     @Override
     public boolean examineSubscription(RecordSink sink) {
-        return examineSub(total, sink, TIME_TOTAL);
+        return examineSub(total, sink);
     }
 
     // SYNC: none
@@ -1582,4 +1583,3 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
     // can be overriden in test code to deterministically do something between processing phases
     protected void onBetweenProcessPhases() {}
 }
-

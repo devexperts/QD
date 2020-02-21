@@ -14,16 +14,20 @@ package com.devexperts.qd.stats;
 import com.devexperts.management.Management;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDLog;
+import com.devexperts.qd.impl.matrix.management.impl.CollectorCountersImpl;
 import com.devexperts.util.IndexedSet;
 import com.devexperts.util.QuickSort;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLongArray;
 import javax.management.Attribute;
 import javax.management.AttributeList;
 import javax.management.AttributeNotFoundException;
@@ -31,6 +35,8 @@ import javax.management.DynamicMBean;
 import javax.management.InstanceAlreadyExistsException;
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
+import javax.management.MBeanOperationInfo;
+import javax.management.MBeanParameterInfo;
 import javax.management.MBeanRegistration;
 import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
@@ -103,7 +109,14 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
             SHOULD_REGISTER[f] = al[f].size() > BASIC_ATTRIBUTE_COUNT;
             MBEAN_INFO[f] = new MBeanInfo(JMXStats.class.getName(), "JMXStats",
                 al[f].toArray(new MBeanAttributeInfo[al[f].size()]),
-                null, null, null);
+                null,
+                new MBeanOperationInfo[]{
+                    new MBeanOperationInfo("reportCounters", "Reports performance counters", new MBeanParameterInfo[]{
+                        new MBeanParameterInfo("format", "java.lang.String", "html (default) or csv"),
+                        new MBeanParameterInfo("topSize", "java.lang.Integer", "max size of TOP tables, " + TOP_COUNT + " by default")
+                    }, "java.lang.String", MBeanOperationInfo.INFO)
+                },
+                null);
         }
     }
 
@@ -342,6 +355,17 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
         return null;
     }
 
+    private String reportCounters(String format, int topSize) {
+        Map<String, AtomicLongArray> counters = new LinkedHashMap<>();
+        for (MBeanAttributeInfo attr : getMBeanInfo().getAttributes()) {
+            if (attr.getType().equals(STRING_CLASS_NAME) && attr.getName().endsWith(TOP_ATTR_SUFFIX)) {
+                long[] v = new long[getRidCount()];
+                addValues(SValue.valueOf(attr.getName().substring(0, attr.getName().length() - TOP_ATTR_SUFFIX.length())), false, v);
+                counters.put(attr.getName(), new AtomicLongArray(v));
+            }
+        }
+        return CollectorCountersImpl.reportCounters(getScheme(), counters, format, topSize);
+    }
 
     private String findTop(long[] v) {
         if (v.length == 0)
@@ -407,6 +431,12 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
     }
 
     public Object invoke(String action, Object[] params, String[] signature) throws ReflectionException {
+        if (action.equalsIgnoreCase("reportCounters")) {
+            String format = (String) params[0];
+            Integer topSize = (Integer) params[1];
+            int top = topSize == null ? TOP_COUNT : topSize;
+            return reportCounters(format, top);
+        }
         throw new ReflectionException(new NoSuchMethodException(action));
     }
 

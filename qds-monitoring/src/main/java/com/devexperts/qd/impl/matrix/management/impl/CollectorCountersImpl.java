@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.atomic.AtomicReferenceArray;
@@ -34,7 +35,7 @@ public class CollectorCountersImpl extends CollectorCounters {
     private static final CollectorOperation[] OPS = CollectorOperation.values();
     private static final int N_OPS = OPS.length;
     private static final long UNKNOWN = -1;
-    private static final int TOP_N = 5;
+    static final int TOP_N = 5;
 
     private final DataScheme scheme;
     private long milliseconds;
@@ -254,12 +255,12 @@ public class CollectorCountersImpl extends CollectorCounters {
         String glockStr = fmtLockCountersGlobal(millis);
         if (glockStr.length() > 0)
             sb.append("; GLOCK[").append(glockStr).append("]");
-        fmtTopRpsTo(sb, "IN", distributionIncomingRecords, millis);
-        fmtTopRpsTo(sb, "OUT", distributionOutgoingRecords, millis);
+        fmtTopRpsTo(sb, "IN", distributionIncomingRecords, millis, TOP_N);
+        fmtTopRpsTo(sb, "OUT", distributionOutgoingRecords, millis, TOP_N);
         return sb.toString();
     }
 
-    public ReportBuilder reportTo(ReportBuilder rb, String name) {
+    public ReportBuilder reportTo(ReportBuilder rb, String name, int topSize) {
         long millis = getMilliseconds();
         rb.header(fmtHeader(millis) + (name == null ? "" : " on " + name), ReportBuilder.HEADER_LEVEL_COLLECTOR);
         rb.message(fmtDist());
@@ -275,14 +276,14 @@ public class CollectorCountersImpl extends CollectorCounters {
             counters.reportDataTo(rb, millis);
         }
         rb.endTable();
-        reportTopRpsTo(rb, "IN", distributionIncomingRecords, millis);
-        reportTopRpsTo(rb, "OUT", distributionOutgoingRecords, millis);
+        reportTopRpsTo(rb, "IN", distributionIncomingRecords, millis, topSize);
+        reportTopRpsTo(rb, "OUT", distributionOutgoingRecords, millis, topSize);
         return rb;
     }
 
     @Override
     public String textReport() {
-        return reportTo(new ReportBuilder(ReportBuilder.TEXT), null).toString();
+        return reportTo(new ReportBuilder(ReportBuilder.TEXT), null, TOP_N).toString();
     }
 
     private String fmtHeader(long millis) {
@@ -323,45 +324,61 @@ public class CollectorCountersImpl extends CollectorCounters {
         return sb.toString();
     }
 
-    private void fmtTopRpsTo(StringBuilder sb, String header, AtomicLongArray count, long millis) {
-        List<CountItem> list = buildTopNList(count);
+    private void fmtTopRpsTo(StringBuilder sb, String header, AtomicLongArray count, long millis, int topSize) {
+        List<CountItem> list = buildTopList(scheme, count, topSize);
         if (list.isEmpty())
             return;
         sb.append("; TOP_RPS_").append(header).append('[');
-        int n = Math.min(TOP_N, list.size());
-        for (int i = 0; i < n; i++) {
-            if (i > 0)
-                sb.append(' ');
-            CountItem item = list.get(i);
-            sb.append(item.record).append('=').append(fmt(item.count * 1000.0 / millis));
+        for (CountItem item : list) {
+            sb.append(item.record).append('=').append(fmt(item.count * 1000.0 / millis)).append(' ');
         }
-        sb.append(']');
+        sb.setCharAt(sb.length() - 1, ']');
     }
 
-    private void reportTopRpsTo(ReportBuilder rb, String header, AtomicLongArray count, long millis) {
-        List<CountItem> list = buildTopNList(count);
+    private void reportTopRpsTo(ReportBuilder rb, String header, AtomicLongArray count, long millis, int topSize) {
+        List<CountItem> list = buildTopList(scheme, count, topSize);
         if (list.isEmpty())
             return;
         rb.header("TOP RPS " + header, ReportBuilder.HEADER_LEVEL_SECTION);
         rb.beginTable().newRow().td("Record").td("RPS").endTR();
-        int n = Math.min(TOP_N, list.size());
-        for (int i = 0; i < n; i++) {
-            CountItem item = list.get(i);
+        for (CountItem item : list) {
             rb.newRow().td(item.record).td(fmt(item.count * 1000.0 / millis)).endTR();
         }
         rb.endTable();
     }
 
-    private List<CountItem> buildTopNList(AtomicLongArray count) {
-        List<CountItem> list = new ArrayList<CountItem>();
+    private static List<CountItem> buildTopList(DataScheme scheme, AtomicLongArray count, int topSize) {
+        List<CountItem> list = new ArrayList<>();
         for (int i = 0; i < count.length(); i++)
             if (count.get(i) != 0)
                 list.add(new CountItem(scheme.getRecord(i), count.get(i)));
         Collections.sort(list);
+        while (list.size() > topSize && !list.isEmpty())
+            list.remove(list.size() - 1);
         return list;
     }
 
     // ---------------------- static helpers ----------------------
+
+    /**
+     * A dirty hack to reuse package-private implementation from outside.
+     */
+    public static String reportCounters(DataScheme scheme, Map<String, AtomicLongArray> counters, String format, int topSize) {
+        ReportBuilder rb = new ReportBuilder(format);
+        for (String header : counters.keySet()) {
+            AtomicLongArray count = counters.get(header);
+            List<CountItem> list = buildTopList(scheme, count, topSize);
+            if (list.isEmpty())
+                continue;
+            rb.header(header, ReportBuilder.HEADER_LEVEL_SECTION);
+            rb.beginTable().newRow().td("Record").td("Count").endTR();
+            for (CountItem item : list) {
+                rb.newRow().td(item.record).td(item.count).endTR();
+            }
+            rb.endTable();
+        }
+        return rb.toString();
+    }
 
     private static final ThreadLocal<NumberFormat> NUMBER_FORMAT = new ThreadLocal<NumberFormat>();
 

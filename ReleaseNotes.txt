@@ -1,4 +1,9 @@
 
+QDS 3.285:
+
+* [QD-1229] Improve reportCounters JMX operation to provide top stats of specified size
+* [QD-1230] Keeping data or state in History collector leads to phantom subscription with Long.MAX_VALUE time in certain cases
+
 QDS 3.284:
 
 * [QD-1109] Sometimes getTimeSeriesPromise returns empty list

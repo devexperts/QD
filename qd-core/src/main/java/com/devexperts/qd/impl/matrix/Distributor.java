@@ -76,7 +76,7 @@ final class Distributor extends AbstractDistributor {
          */
         added_provider.init();
         removed_provider.init();
-        snapshot = new SubSnapshot(collector.total, Collector.TIME_TOTAL, filter);
+        snapshot = new SubSnapshot(collector.total, filter);
     }
 
     // SYNC: none

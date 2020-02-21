@@ -30,14 +30,15 @@ final class SubSnapshot {
     private int index; // current state
 
     /**
-     * Constructs snapshot. Must be called under a global lock of collector.
+     * Constructs snapshot for an agent, including total agent.
      */
     // SYNC: none
-    SubSnapshot(Agent agent, int timeOffset, QDFilter filter) {
-        this(agent.sub, timeOffset, agent.collector.getContract(),
-            filter, agent.collector);
+    SubSnapshot(Agent agent, QDFilter filter) {
+        this(agent.sub, agent == agent.collector.total ? Collector.TIME_TOTAL : Collector.TIME_SUB,
+            agent.collector.getContract(), filter, agent.collector);
     }
 
+    // SYNC: none
     SubSnapshot(SubMatrix sub, int timeOffset, QDContract contract, QDFilter filter, RecordsContainer records) {
         this.sub = sub;
         this.timeOffset = timeOffset;
@@ -65,7 +66,7 @@ final class SubSnapshot {
                during retrieval will be detected as payload here. If the index is in/out of
                payload during retrieval we don't really care what this check returns.
              */
-            if (!sub.isPayload(index))
+            if (!sub.isSubscribed(index))
                 continue;
             /*
                Volatile read of KEY guarantees that (key,rid,time) tuple will be
