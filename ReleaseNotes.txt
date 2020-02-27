@@ -1,4 +1,11 @@
 
+QDS 3.286:
+
+* [QD-1231] HistorySubscriptionFilter performance improvement
+* [QD-1228] Add connectOrder property to ClientSocketConnector
+  - defines order of considering specified server addresses on connect/reconnect.
+    Supported modes: shuffle (default), random, ordered, priority
+
 QDS 3.285:
 
 * [QD-1229] Improve reportCounters JMX operation to provide top stats of specified size

@@ -47,6 +47,14 @@ public interface MessageConnectorMBean {
     public void restart();
 
     /**
+     * Reconnects connector. Opposing to the {@link #restart} method, reconnect should try to follow specified
+     * reconnection policy (like choosing next node in cluster) if applicable.
+     *
+     * <p>Default behavior is just performing {@link #restart}.
+     */
+    public void reconnect();
+
+    /**
      * True when connector is active (started).
      *
      * @return true if connector is started (not stopped)

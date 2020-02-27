@@ -53,4 +53,9 @@ public interface ClientSocketConnectorMBean extends MessageConnectorMBean {
     public String getCurrentHost();
 
     public int getCurrentPort();
+
+
+    public ConnectOrder getConnectOrder();
+
+    public void setConnectOrder(ConnectOrder connectOrder);
 }

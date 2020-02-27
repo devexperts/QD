@@ -153,7 +153,7 @@ public final class RMIEndpointImpl extends RMIEndpoint {
         synchronized (lock) {
             if (qdEndpoint.isClosed())
                 return;
-            qdEndpoint.restartActiveConnectors();
+            qdEndpoint.reconnectActiveConnectors();
         }
     }
 

@@ -24,6 +24,8 @@ import com.dxfeed.event.option.impl.GreeksMapping;
 import com.dxfeed.event.option.impl.TheoPriceMapping;
 import com.dxfeed.event.option.impl.UnderlyingMapping;
 
+import java.util.Arrays;
+
 @ServiceProvider(order = 100)
 public class HistorySubscriptionFilterImpl implements HistorySubscriptionFilter {
 
@@ -41,6 +43,7 @@ public class HistorySubscriptionFilterImpl implements HistorySubscriptionFilter 
 
 
     private final SynchronizedIndexedSet<DataRecord, RecordLimit> maxRecordCounts = SynchronizedIndexedSet.create(RecordLimit::getRecord);
+    private volatile RecordLimit[] maxRecordCache = new RecordLimit[256];
 
     @Override
     public long getMinHistoryTime(DataRecord record, int cipher, String symbol) {
@@ -49,10 +52,25 @@ public class HistorySubscriptionFilterImpl implements HistorySubscriptionFilter 
 
     @Override
     public int getMaxRecordCount(DataRecord record, int cipher, String symbol) {
-        RecordLimit recordLimit = maxRecordCounts.getByKey(record);
-        if (recordLimit != null)
-            return recordLimit.limit;
+        // Cache is intentionally NOT synchronized in any way. Only minimal array visibility is provided.
+        // Concurrent threads independently compute same result and reach eventual consistency in a stable environment.
+        int id = record.getId();
+        RecordLimit[] cache = maxRecordCache; // Atomic volatile read.
+        if (id >= cache.length) {
+            cache = Arrays.copyOf(cache, Math.max(cache.length * 2, id + 1));
+            maxRecordCache = cache; // Atomic volatile write.
+        }
+        RecordLimit limit = cache[id];
+        if (limit == null || limit.getRecord() != record) {
+            limit = maxRecordCounts.getByKey(record);
+            if (limit == null)
+                limit = maxRecordCounts.putIfAbsentAndGet(createRecordLimit(record));
+            cache[id] = limit;
+        }
+        return limit.getLimit();
+    }
 
+    private RecordLimit createRecordLimit(DataRecord record) {
         int defaultMaxRecordCount;
         if (record.getMapping(CandleMapping.class) != null) {
             defaultMaxRecordCount = candleMaxRecordCount;
@@ -74,8 +92,7 @@ public class HistorySubscriptionFilterImpl implements HistorySubscriptionFilter 
         //event property >= category property >= old-fashioned property
         String propName = generatePropertyName(record);
         int maxRecordCount = SystemProperties.getIntProperty(HistorySubscriptionFilterImpl.class, propName, defaultMaxRecordCount);
-        maxRecordCounts.put(new RecordLimit(record, maxRecordCount));
-        return maxRecordCount;
+        return new RecordLimit(record, maxRecordCount);
     }
 
     @Override
@@ -94,13 +111,17 @@ public class HistorySubscriptionFilterImpl implements HistorySubscriptionFilter 
         private final DataRecord record;
         private final int limit;
 
-        private RecordLimit(DataRecord record, int limit) {
+        RecordLimit(DataRecord record, int limit) {
             this.record = record;
             this.limit = limit;
         }
 
         DataRecord getRecord() {
             return record;
+        }
+
+        public int getLimit() {
+            return limit;
         }
     }
 }

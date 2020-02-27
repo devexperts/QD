@@ -31,6 +31,7 @@ import com.devexperts.transport.stats.EndpointStats;
 import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
 
+import java.util.Objects;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 
@@ -54,6 +55,7 @@ public class ClientSocketConnector extends AbstractMessageConnector
 
     protected volatile SocketHandler handler;
     protected ClientSocketSource socketSource;
+    protected ConnectOrder connectOrder;
 
     /**
      * Creates new client socket connector.
@@ -155,6 +157,23 @@ public class ClientSocketConnector extends AbstractMessageConnector
         if (proxyPort != this.proxyPort) {
             log.info("Setting proxyPort=" + proxyPort);
             this.proxyPort = proxyPort;
+            reconfigure();
+        }
+    }
+
+    @Override
+    public ConnectOrder getConnectOrder() {
+        return connectOrder;
+    }
+
+    @Override
+    @MessageConnectorProperty(
+        "Order of considering specified server addresses during connect/reconnect: " +
+        "\"shuffle\" (default), \"random\", \"ordered\", \"priority\"")
+    public synchronized void setConnectOrder(ConnectOrder connectOrder) {
+        if (!Objects.equals(connectOrder, this.connectOrder)) {
+            log.info("Setting connectOrder=" + connectOrder);
+            this.connectOrder = connectOrder;
             reconfigure();
         }
     }
@@ -293,8 +312,8 @@ public class ClientSocketConnector extends AbstractMessageConnector
     }
 
     @Override
-    protected synchronized void restartImpl() {
-        stopImpl(false);
+    protected synchronized void restartImpl(boolean fullStop) {
+        stopImpl(fullStop);
         start();
     }
 

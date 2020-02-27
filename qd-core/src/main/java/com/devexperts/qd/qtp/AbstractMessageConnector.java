@@ -214,14 +214,30 @@ public abstract class AbstractMessageConnector implements MessageConnector {
     public synchronized void restart() {
         restarting = true;
         try {
-            restartImpl();
+            restartImpl(true);
         } finally {
             restarting = false;
             notifyMessageConnectorListeners();
         }
     }
 
-    protected void restartImpl() {
+    @Override
+    public synchronized void reconnect() {
+        restarting = true;
+        try {
+            restartImpl(false);
+        } finally {
+            restarting = false;
+            notifyMessageConnectorListeners();
+        }
+    }
+
+    /**
+     * Restart logic implementation; If <var>fullStop</var> is <code>false</code>, connection context
+     * (like last chosen address for multi-host connections) may be preserved.
+     * @param fullStop
+     */
+    protected void restartImpl(boolean fullStop) {
         stop();
         start();
     }

@@ -409,6 +409,15 @@ public class QDEndpoint implements Closeable {
         }
     }
 
+    public final void reconnectActiveConnectors() {
+        synchronized (lock) {
+            for (MessageConnector connector : connectors) {
+                if (connector.isActive())
+                    connector.reconnect();
+            }
+        }
+    }
+
     public final void awaitProcessed() throws InterruptedException {
         for (MessageConnector connector : connectors)
             connector.awaitProcessed();

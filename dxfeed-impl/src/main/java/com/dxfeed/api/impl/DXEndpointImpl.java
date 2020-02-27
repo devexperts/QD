@@ -313,7 +313,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
         synchronized (lock) {
             if (isClosed() || qdEndpoint.isClosed())
                 return;
-            qdEndpoint.restartActiveConnectors();
+            qdEndpoint.reconnectActiveConnectors();
         }
     }
 
