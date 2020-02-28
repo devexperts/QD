@@ -280,16 +280,10 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
         mapper.incMaxCounter(scheme.getRecordCount());
         QDStats unique_sub_stats = stats.create(QDStats.SType.UNIQUE_SUB);
         total = new Agent(this, TOTAL_AGENT_INDEX, agentBuilder(), unique_sub_stats);
-        total.sub = new SubMatrix(mapper,
+        total.sub = new TotalSubMatrix(mapper,
             hasTime ? TOTAL_HISTORY_AGENT_STEP : TOTAL_AGENT_STEP,
             hasTime ? TOTAL_HISTORY_OBJ_STEP : TOTAL_OBJ_STEP,
-            NEXT_AGENT, 0, 0, Hashing.MAX_SHIFT, unique_sub_stats)
-        {
-            @Override
-            boolean isSubscribed(int index) {
-                return matrix[index + NEXT_AGENT] > 0;
-            }
-        };
+            NEXT_AGENT, 0, 0, Hashing.MAX_SHIFT, unique_sub_stats);
 
         agents = new Agent[INITIAL_AGENTS_SIZE];
         agents[total.number] = total;
@@ -756,6 +750,12 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
 
     boolean shouldStoreEverything(DataRecord record, int cipher, String symbol) {
         return storeEverything && storeEverythingFilter.accept(contract, record, cipher, symbol);
+    }
+
+    boolean shouldStoreEverything(int key, int rid) {
+        // do not retrieve record, cipher and symbol if they are not needed
+        return storeEverything && (storeEverythingFilter == QDFilter.ANYTHING ||
+            storeEverythingFilter.accept(contract, records[rid], getCipher(key), getSymbol(key)));
     }
 
     // SYNC: none

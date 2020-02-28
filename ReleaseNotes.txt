@@ -1,4 +1,8 @@
 
+QDS 3.287:
+
+* [QD-1232] Keeping data or state in History collector leads to phantom subscription with Long.MAX_VALUE time after rehash
+
 QDS 3.286:
 
 * [QD-1231] HistorySubscriptionFilter performance improvement

@@ -36,24 +36,31 @@ import java.util.List;
 import java.util.Set;
 
 public class HistorySubscriptionTest extends TestCase {
-    private static final CandleSymbol CANDLE_SYMBOL =
-        CandleSymbol.valueOf("TEST", CandlePeriod.valueOf(1, CandleType.MINUTE));
-    private static final TimeSeriesSubscriptionSymbol<CandleSymbol> SUB_SYMBOL =
-        new TimeSeriesSubscriptionSymbol<>(CANDLE_SYMBOL, 0);
 
     public void testEmptySubscription() {
-        // tests [QD-1230] - absence of phantom subscription if not actually subscribed
+        // tests [QD-1230] and [QD-1232] - absence of phantom subscription if not actually subscribed
         QDFactory.getDefaultScheme();
         System.out.println();
-        int result = 0;
-        for (int mask = 0; mask < 16; mask++)
-            result += checkEmptySub((mask & 8) != 0, (mask & 4) != 0, (mask & 2) != 0, (mask & 1) != 0) ? 0 : 1;
-        assertEquals("tests failed: " + result, 0, result);
+        int tests = 0;
+        int failures = 0;
+        for (int mask = 0; mask < 16; mask++) {
+            for (int size = 1; size < 100; size *= 2) {
+                tests++;
+                if (!checkEmptySub((mask & 8) != 0, (mask & 4) != 0, (mask & 2) != 0, (mask & 1) != 0, size))
+                    failures++;
+            }
+        }
+        System.out.println((tests - failures) + " tests passed, " + failures + " tests failed");
+        assertEquals("tests failed: " + failures, 0, failures);
     }
 
-    private boolean checkEmptySub(boolean storeEverything, boolean getPromise, boolean subscribe, boolean publish) {
+    private static CandleSymbol symbol(int i) {
+        return CandleSymbol.valueOf("S" + i, CandlePeriod.valueOf(1, CandleType.MINUTE));
+    }
+
+    private boolean checkEmptySub(boolean storeEverything, boolean promise, boolean subscribe, boolean publish, int size) {
         System.out.println("testing storeEverything " + storeEverything +
-            ", getPromise " + getPromise + ", subscribe " + subscribe + ", publish " + publish);
+            ", promise " + promise + ", subscribe " + subscribe + ", publish " + publish + ", size " + size);
 
         DXEndpoint endpoint = DXEndpoint.newBuilder()
             .withRole(DXEndpoint.Role.LOCAL_HUB)
@@ -61,23 +68,36 @@ public class HistorySubscriptionTest extends TestCase {
             .build();
         endpoint.executor(Runnable::run);
 
-        Promise<List<Candle>> promise = getPromise && publish ?
-            endpoint.getFeed().getTimeSeriesPromise(Candle.class, CANDLE_SYMBOL, 0, 1000) :
-            Promise.completed(Collections.singletonList(new Candle(CANDLE_SYMBOL)));
+        List<Promise<List<Candle>>> promises = new ArrayList<>();
+        if (promise && publish) {
+            for (int i = 0; i < size; i++) {
+                promises.add(endpoint.getFeed().getTimeSeriesPromise(Candle.class, symbol(i), 0, 1000));
+            }
+        }
         ArrayList<Candle> events = new ArrayList<>();
         DXFeedSubscription<Candle> sub = new DXFeedSubscription<>(Candle.class);
         sub.addEventListener(events::addAll);
-        sub.setSymbols(SUB_SYMBOL);
-        if (subscribe)
-            sub.attach(endpoint.getFeed());
+        if (subscribe) {
+            List<TimeSeriesSubscriptionSymbol<CandleSymbol>> symbols = new ArrayList<>();
+            for (int i = 0; i < size; i++) {
+                symbols.add(new TimeSeriesSubscriptionSymbol<>(symbol(i), 0));
+            }
+            sub.setSymbols(symbols);
+        }
+        sub.attach(endpoint.getFeed());
         assertEquals("garbage events received", 0, events.size());
-        if (publish)
-            endpoint.getPublisher().publishEvents(Collections.singletonList(new Candle(CANDLE_SYMBOL)));
-        assertEquals("events received", subscribe && publish ? 1 : 0, events.size());
+        if (publish) {
+            List<Candle> candles = new ArrayList<>();
+            for (int i = 0; i < size; i++) {
+                candles.add(new Candle(symbol(i)));
+            }
+            endpoint.getPublisher().publishEvents(candles);
+        }
+        assertEquals("events received", subscribe && publish ? size : 0, events.size());
         sub.setSymbols();
         sub.close();
-        assertEquals("events received", subscribe && publish ? 1 : 0, events.size());
-        assertEquals("promise received", 1, promise.getResult().size());
+        assertEquals("events received", subscribe && publish ? size : 0, events.size());
+        promises.forEach(p -> assertEquals("promise completed", 1, p.getResult().size()));
 
         boolean result = assertEmptySub(endpoint);
         endpoint.close();

@@ -34,8 +34,8 @@ class SubMatrix extends AbstractMatrix {
     static final int KEY = 0;
     static final int RID = 1;
 
-    private final int payloadOffset;
-    private final QDStats stats;
+    protected final int payloadOffset;
+    protected final QDStats stats;
 
     // Specify 'mapper = null' to avoid automatic 'incCounter/decCounter'.
     // Specify 'payload_offset = 0' for automatic 'incPayload' by key presence.

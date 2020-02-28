@@ -243,7 +243,7 @@ public class History extends Collector implements QDHistory {
             // the buffer is here and it is expired but we might need it because of storeEverything
             int key = tsub.getInt(tindex + KEY);
             int rid = tsub.getInt(tindex + RID);
-            if (shouldStoreEverything(records[rid], getCipher(key), getSymbol(key))) {
+            if (shouldStoreEverything(key, rid)) {
                 // it's storeEverything (but was not before) - mark it accordingly to not check again
                 hb.expirationTime = Long.MAX_VALUE;
                 continue;
@@ -263,7 +263,7 @@ public class History extends Collector implements QDHistory {
             log.trace("totalRecordAdded time=" + time);
         super.totalRecordAdded(key, rid, tsub, tindex, time);
         HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, HISTORY_BUFFER);
-        if (hb != null && !shouldStoreEverything(records[rid], getCipher(key), getSymbol(key))) {
+        if (hb != null && !shouldStoreEverything(key, rid)) {
             hb.expirationTime = Long.MAX_VALUE;
             // of any change in sub time - remove old records
             hb.removeOldRecords(time, statsStorage, rid);
@@ -284,7 +284,7 @@ public class History extends Collector implements QDHistory {
         if (TRACE_LOG)
             log.trace("totalRecordRemoved");
         super.totalRecordRemoved(key, rid, tsub, tindex);
-        if (shouldStoreEverything(records[rid], getCipher(key), getSymbol(key))) {
+        if (shouldStoreEverything(key, rid)) {
             // force total sub item to be kept as payload
             tsub.setInt(tindex + NEXT_AGENT, NO_NEXT_AGENT_BUT_STORE_HB);
             return false;

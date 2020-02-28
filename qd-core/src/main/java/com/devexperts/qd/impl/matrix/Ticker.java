@@ -120,7 +120,7 @@ class Ticker extends Collector implements QDTicker {
     @Override
     boolean totalRecordRemoved(int key, int rid, SubMatrix tsub, int tindex) {
         super.totalRecordRemoved(key, rid, tsub, tindex);
-        if (!shouldStoreEverything(records[rid], getCipher(key), getSymbol(key)))
+        if (!shouldStoreEverything(key, rid))
             storage.removeRecord(key, rid);
         return true;
     }
