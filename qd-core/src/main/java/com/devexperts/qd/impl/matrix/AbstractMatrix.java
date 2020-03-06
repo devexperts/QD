@@ -31,7 +31,7 @@ abstract class AbstractMatrix {
     // Specify 'mapper = null' to avoid automatic 'incCounter/decCounter'.
     AbstractMatrix(Mapper mapper, int step, int obj_step, int capacity, int prev_magic, int max_shift) {
         this.mapper = mapper;
-        this.magic = Hashing.nextMagic(prev_magic);
+        this.magic = Hashing.nextMagic(prev_magic, capacity);
         this.shift = Math.min(max_shift, Hashing.getShift(capacity));
         this.step = step;
         if (step >= Integer.MAX_VALUE >> (32 - shift))

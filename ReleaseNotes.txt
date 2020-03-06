@@ -1,4 +1,8 @@
 
+QDS 3.288:
+
+* [QD-1227] QD Core: Prevent hash matrix performance degradation in worst cases
+
 QDS 3.287:
 
 * [QD-1232] Keeping data or state in History collector leads to phantom subscription with Long.MAX_VALUE time after rehash

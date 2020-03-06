@@ -34,6 +34,8 @@ class SubMatrix extends AbstractMatrix {
     static final int KEY = 0;
     static final int RID = 1;
 
+    private static final int MAGIC_RID = 0x5F3AC769; // Magic number used in hashing for rid.
+
     protected final int payloadOffset;
     protected final QDStats stats;
 
@@ -53,7 +55,7 @@ class SubMatrix extends AbstractMatrix {
 
     // SYNC: none
     int getVolatileIndex(int key, int rid, int miss_mask) {
-        int index = (((key + rid * Hashing.MAGIC_RID) * magic) >>> shift) * step;
+        int index = (((key + rid * MAGIC_RID) * magic) >>> shift) * step;
         int test_key;
         // Volatile read of key here, to get get a consistently initialized rid if this
         // method is invoked without synchronization concurrently with addIndex
@@ -70,7 +72,7 @@ class SubMatrix extends AbstractMatrix {
 
     // SYNC: global or local
     int getIndex(int key, int rid, int miss_mask) {
-        int index = (((key + rid * Hashing.MAGIC_RID) * magic) >>> shift) * step;
+        int index = (((key + rid * MAGIC_RID) * magic) >>> shift) * step;
         int test_key;
         while ((test_key = matrix[index + KEY]) != key || matrix[index + RID] != rid) {
             if (test_key == 0) {

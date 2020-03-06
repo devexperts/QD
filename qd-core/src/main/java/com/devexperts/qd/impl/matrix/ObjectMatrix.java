@@ -28,7 +28,7 @@ final class ObjectMatrix {
     private int overall_size;
 
     ObjectMatrix(int capacity, int prev_magic) {
-        magic = Hashing.nextMagic(prev_magic);
+        magic = Hashing.nextMagic(prev_magic, capacity);
         shift = Hashing.getShift(capacity);
         if (2 >= Integer.MAX_VALUE >> (32 - shift))
             throw new IllegalArgumentException("Capacity is too large.");

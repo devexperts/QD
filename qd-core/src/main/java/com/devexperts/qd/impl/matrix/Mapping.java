@@ -68,7 +68,7 @@ final class Mapping {
     // SYNC: global
     Mapping(Object owner, int capacity, int prev_magic) {
         this.owner = owner;
-        magic = Hashing.nextMagic(prev_magic);
+        magic = Hashing.nextMagic(prev_magic, capacity);
         shift = Hashing.getShift(capacity);
         int length = 1 << (32 - shift);
         keys = new int[length];
