@@ -37,6 +37,7 @@ import javax.xml.bind.annotation.XmlTransient;
  * <li>{@link #getSequence() sequence} - sequence of the last trade;
  * <li>{@link #getExchangeCode() exchangeCode} - exchange code of the last trade;
  * <li>{@link #getPrice() price} - price of the last trade;
+ * <li>{@link #getChange() change} - change of the last trade;
  * <li>{@link #getSize() size} - size of the last trade as integer number (rounded toward zero);
  * <li>{@link #getSizeAsDouble() sizeAsDouble} - size of the last trade as floating number with fractions;
  * <li>{@link #getDayVolume() dayVolume} - total extended trading hours volume traded for a day as integer number (rounded toward zero);

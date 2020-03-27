@@ -42,6 +42,8 @@ public final class ProfileDelegate extends MarketEventDelegateImpl<Profile> {
     @Override
     public Profile getEvent(Profile event, RecordCursor cursor) {
         super.getEvent(event, cursor);
+        event.setHigh52WeekPrice(m.getHighPrice52(cursor));
+        event.setLow52WeekPrice(m.getLowPrice52(cursor));
         event.setHighLimitPrice(m.getHighLimitPrice(cursor));
         event.setLowLimitPrice(m.getLowLimitPrice(cursor));
         event.setHaltStartTime(m.getHaltStartTimeMillis(cursor));
@@ -55,6 +57,8 @@ public final class ProfileDelegate extends MarketEventDelegateImpl<Profile> {
     @Override
     public RecordCursor putEvent(Profile event, RecordBuffer buf) {
         RecordCursor cursor = super.putEvent(event, buf);
+        m.setHighPrice52(cursor, event.getHigh52WeekPrice());
+        m.setLowPrice52(cursor, event.getLow52WeekPrice());
         m.setHighLimitPrice(cursor, event.getHighLimitPrice());
         m.setLowLimitPrice(cursor, event.getLowLimitPrice());
         m.setHaltStartTimeMillis(cursor, event.getHaltStartTime());

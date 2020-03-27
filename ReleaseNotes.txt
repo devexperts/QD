@@ -1,4 +1,8 @@
 
+QDS 3.289:
+
+* [QD-1233] dxFeed API: Extend Trade and Profile events to support additional fields from QD records
+
 QDS 3.288:
 
 * [QD-1227] QD Core: Prevent hash matrix performance degradation in worst cases

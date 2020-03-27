@@ -30,6 +30,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  * <li>{@link #getSequence() sequence} - sequence of the last trade;
  * <li>{@link #getExchangeCode() exchangeCode} - exchange code of the last trade;
  * <li>{@link #getPrice() price} - price of the last trade;
+ * <li>{@link #getChange() change} - change of the last trade;
  * <li>{@link #getSize() size} - size of the last trade as integer number (rounded toward zero);
  * <li>{@link #getSizeAsDouble() sizeAsDouble} - size of the last trade as floating number with fractions;
  * <li>{@link #getDayVolume() dayVolume} - total volume traded for a day as integer number (rounded toward zero);
@@ -49,9 +50,9 @@ import javax.xml.bind.annotation.XmlRootElement;
  *
  * <p>Trades that happen in <b>extended trading hours</b> (ETH, pre-market and post-market trading sessions),
  * which are typically defined for stocks and ETFs, do not update last trade {@link #getTime() time},
- * {@link #getExchangeCode() exchangeCode}, {@link #getPrice() price}, {@link #getSizeAsDouble() sizeAsDouble},
- * and {@link #getTickDirection() tickDirection} in the {@code Trade} event, but they do update
- * {@link #getDayVolumeAsDouble() dayVolumeAsDouble} and {@link #getDayTurnover() dayTurnover}.
+ * {@link #getExchangeCode() exchangeCode}, {@link #getPrice() price}, {@link #getChange() change},
+ * {@link #getSizeAsDouble() sizeAsDouble}, and {@link #getTickDirection() tickDirection} in the {@code Trade}
+ * event, but they do update {@link #getDayVolumeAsDouble() dayVolumeAsDouble} and {@link #getDayTurnover() dayTurnover}.
  *
  * <p>During extended trading hours a {@link TradeETH} event is generated on each trade with its
  * {@link TradeETH#isExtendedTradingHours() extendedTradingHours} property set to {@code true}.</p>

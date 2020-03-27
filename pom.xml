@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.288</version>
+    <version>3.289</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -582,7 +582,7 @@
             </snapshots>
             <id>bintray-devexperts</id>
             <name>bintray</name>
-            <url>http://dl.bintray.com/devexperts/Maven</url>
+            <url>https://dl.bintray.com/devexperts/Maven</url>
         </repository>
     </repositories>
 
@@ -593,7 +593,7 @@
             </snapshots>
             <id>bintray-devexperts</id>
             <name>bintray-plugins</name>
-            <url>http://dl.bintray.com/devexperts/Maven</url>
+            <url>https://dl.bintray.com/devexperts/Maven</url>
         </pluginRepository>
         <pluginRepository>
             <id>qd</id>

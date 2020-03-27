@@ -36,11 +36,10 @@ import javax.xml.bind.annotation.XmlType;
  * <li>{@link #getHaltStartTime() haltStartTime} - starting time of the trading halt interval;
  * <li>{@link #getHaltEndTime() haltEndTime} - ending time of the trading halt interval;
  * <li>{@link #getHighLimitPrice() highLimitPrice} - maximal (high) allowed price;
- * <li>{@link #getLowLimitPrice() lowLimitPrice} - minimal (low) allowed price.
+ * <li>{@link #getLowLimitPrice() lowLimitPrice} - minimal (low) allowed price;
+ * <li>{@link #getHigh52WeekPrice() high52WeekPrice} - maximal (high) price in last 52 weeks;
+ * <li>{@link #getLow52WeekPrice() low52WeekPrice} - minimal (low) price in last 52 weeks.
  * </ul>
- *
- * Bid corresponds to the best (maximal price) order to buy, while
- * ask corresponds to the best (minimal price) order to sell.
  *
  *
  * <h3>Implementation details</h3>
@@ -50,7 +49,8 @@ import javax.xml.bind.annotation.XmlType;
 @XmlRootElement(name = "Profile")
 @XmlType(propOrder = {
     "description", "shortSaleRestriction", "tradingStatus", "statusReason",
-    "haltStartTime", "haltEndTime", "highLimitPrice", "lowLimitPrice"
+    "haltStartTime", "haltEndTime", "highLimitPrice", "lowLimitPrice",
+    "high52WeekPrice", "low52WeekPrice",
 })
 public class Profile extends MarketEvent implements LastingEvent<String> {
     private static final long serialVersionUID = 0;
@@ -81,6 +81,8 @@ public class Profile extends MarketEvent implements LastingEvent<String> {
     private long haltEndTime;
     private double highLimitPrice = Double.NaN;
     private double lowLimitPrice = Double.NaN;
+    private double high52WeekPrice = Double.NaN;
+    private double low52WeekPrice = Double.NaN;
     private int flags;
 
     /**
@@ -267,6 +269,38 @@ public class Profile extends MarketEvent implements LastingEvent<String> {
     }
 
     /**
+     * Returns the maximal (high) price in last 52 weeks.
+     * @return the maximal (high) price in last 52 weeks.
+     */
+    public double getHigh52WeekPrice() {
+        return high52WeekPrice;
+    }
+
+    /**
+     * Changes the maximal (high) price in last 52 weeks.
+     * @param high52WeekPrice the maximal (high) price in last 52 weeks.
+     */
+    public void setHigh52WeekPrice(double high52WeekPrice) {
+        this.high52WeekPrice = high52WeekPrice;
+    }
+
+    /**
+     * Returns the minimal (low) price in last 52 weeks.
+     * @return the minimal (low) price in last 52 weeks.
+     */
+    public double getLow52WeekPrice() {
+        return low52WeekPrice;
+    }
+
+    /**
+     * Changes the minimal (low) price in last 52 weeks.
+     * @param low52WeekPrice the minimal (low) price in last 52 weeks.
+     */
+    public void setLow52WeekPrice(double low52WeekPrice) {
+        this.low52WeekPrice = low52WeekPrice;
+    }
+
+    /**
      * Returns string representation of this profile event.
      * @return string representation of this profile event.
      */
@@ -288,7 +322,9 @@ public class Profile extends MarketEvent implements LastingEvent<String> {
             ", haltStartTime=" + TimeFormat.DEFAULT.format(haltStartTime) +
             ", haltEndTime=" + TimeFormat.DEFAULT.format(haltEndTime) +
             ", highLimitPrice=" + highLimitPrice +
-            ", lowLimitPrice=" + lowLimitPrice;
+            ", lowLimitPrice=" + lowLimitPrice +
+            ", high52WeekPrice=" + high52WeekPrice +
+            ", low52WeekPrice=" + low52WeekPrice;
     }
 
     // ========================= protected access for delegate =========================

@@ -36,7 +36,7 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  * last trade price during ETH and accumulated volume during ETH.
  */
 @XmlType(propOrder = {
-    "time", "timeNanoPart", "sequence", "exchangeCode", "price", "sizeAsDouble",
+    "time", "timeNanoPart", "sequence", "exchangeCode", "price", "change", "sizeAsDouble",
     "dayVolumeAsDouble", "dayTurnover", "tickDirection", "extendedTradingHours"
 })
 public abstract class TradeBase extends MarketEvent implements LastingEvent<String> {
@@ -72,6 +72,7 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
     private int timeNanoPart;
     private char exchangeCode;
     private double price = Double.NaN;
+    private double change = Double.NaN;
     private double size = Double.NaN;
     private double dayVolume = Double.NaN;
     private double dayTurnover = Double.NaN;
@@ -339,6 +340,22 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
     }
 
     /**
+     * Returns change of the last trade.
+     * @return change of the last trade.
+     */
+    public double getChange() {
+        return change;
+    }
+
+    /**
+     * Changes change of the last trade.
+     * @param change price of the last trade.
+     */
+    public void setChange(double change) {
+        this.change = change;
+    }
+
+    /**
      * Returns string representation of this trade event.
      * @return string representation of this trade event.
      */
@@ -361,6 +378,7 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
             ", sequence=" + getSequence() +
             ", exchange=" + Util.encodeChar(exchangeCode) +
             ", price=" + price +
+            ", change=" + change +
             ", size=" + size +
             ", dayVolume=" + dayVolume +
             ", dayTurnover=" + dayTurnover +

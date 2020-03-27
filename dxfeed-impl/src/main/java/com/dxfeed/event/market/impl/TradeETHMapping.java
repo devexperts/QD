@@ -24,6 +24,7 @@ public class TradeETHMapping extends MarketEventMapping {
     private final int iExchangeCode;
     private final int iPrice;
     private final int iSize;
+    private final int iChange;
     private final int iDayVolume;
     private final int iDayTurnover;
     private final int iFlags;
@@ -36,6 +37,7 @@ public class TradeETHMapping extends MarketEventMapping {
         iExchangeCode = MappingUtil.findIntField(record, "ETHLast.Exchange", false);
         iPrice = findIntField("ETHLast.Price", true);
         iSize = findIntField("ETHLast.Size", true);
+        iChange = findIntField("ETHLast.Change", false);
         iDayVolume = findIntField("ETHVolume", false);
         iDayTurnover = findIntField("ETHDayTurnover", false);
         iFlags = MappingUtil.findIntField(record, "ETHLast.Flags", true);
@@ -45,6 +47,7 @@ public class TradeETHMapping extends MarketEventMapping {
         putNonDefaultPropertyName("ETHLast.Exchange", "ExchangeCode");
         putNonDefaultPropertyName("ETHLast.Price", "Price");
         putNonDefaultPropertyName("ETHLast.Size", "Size");
+        putNonDefaultPropertyName("ETHLast.Change", "Change");
         putNonDefaultPropertyName("ETHVolume", "DayVolume");
         putNonDefaultPropertyName("ETHDayTurnover", "DayTurnover");
         putNonDefaultPropertyName("ETHLast.Flags", "Flags");
@@ -322,6 +325,84 @@ public class TradeETHMapping extends MarketEventMapping {
 
     public void setSizeWideDecimal(RecordCursor cursor, long size) {
         setAsWideDecimal(cursor, iSize, size);
+    }
+
+    @Deprecated
+    public double getETHLastChange(RecordCursor cursor) {
+        if (iChange < 0)
+            return Double.NaN;
+        return getAsDouble(cursor, iChange);
+    }
+
+    @Deprecated
+    public void setETHLastChange(RecordCursor cursor, double _ETHLastChange) {
+        if (iChange < 0)
+            return;
+        setAsDouble(cursor, iChange, _ETHLastChange);
+    }
+
+    @Deprecated
+    public int getETHLastChangeDecimal(RecordCursor cursor) {
+        if (iChange < 0)
+            return 0;
+        return getAsTinyDecimal(cursor, iChange);
+    }
+
+    @Deprecated
+    public void setETHLastChangeDecimal(RecordCursor cursor, int _ETHLastChange) {
+        if (iChange < 0)
+            return;
+        setAsTinyDecimal(cursor, iChange, _ETHLastChange);
+    }
+
+    @Deprecated
+    public long getETHLastChangeWideDecimal(RecordCursor cursor) {
+        if (iChange < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iChange);
+    }
+
+    @Deprecated
+    public void setETHLastChangeWideDecimal(RecordCursor cursor, long _ETHLastChange) {
+        if (iChange < 0)
+            return;
+        setAsWideDecimal(cursor, iChange, _ETHLastChange);
+    }
+
+    public double getChange(RecordCursor cursor) {
+        if (iChange < 0)
+            return Double.NaN;
+        return getAsDouble(cursor, iChange);
+    }
+
+    public void setChange(RecordCursor cursor, double change) {
+        if (iChange < 0)
+            return;
+        setAsDouble(cursor, iChange, change);
+    }
+
+    public int getChangeDecimal(RecordCursor cursor) {
+        if (iChange < 0)
+            return 0;
+        return getAsTinyDecimal(cursor, iChange);
+    }
+
+    public void setChangeDecimal(RecordCursor cursor, int change) {
+        if (iChange < 0)
+            return;
+        setAsTinyDecimal(cursor, iChange, change);
+    }
+
+    public long getChangeWideDecimal(RecordCursor cursor) {
+        if (iChange < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iChange);
+    }
+
+    public void setChangeWideDecimal(RecordCursor cursor, long change) {
+        if (iChange < 0)
+            return;
+        setAsWideDecimal(cursor, iChange, change);
     }
 
     @Deprecated

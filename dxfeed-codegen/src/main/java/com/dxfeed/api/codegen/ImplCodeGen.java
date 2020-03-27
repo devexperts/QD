@@ -125,7 +125,7 @@ public class ImplCodeGen {
             map("Price", "Last.Price", FieldType.PRICE).
             map("Size", "Last.Size", FieldType.SIZE).
             field("Tick", "Last.Tick", FieldType.FLAGS).optional().
-            field("Change", "Last.Change", FieldType.PRICE).optional().
+            map("Change", "Last.Change", FieldType.PRICE).optional().
             map("DayVolume", "Volume", FieldType.VOLUME).optional().
             map("DayTurnover", "DayTurnover", FieldType.TURNOVER).optional().
             map("Flags", "Last.Flags", FieldType.FLAGS).optional().
@@ -155,6 +155,7 @@ public class ImplCodeGen {
             map("ExchangeCode", "ETHLast.Exchange", FieldType.CHAR).alt("recordExchange").compositeOnly().optional().
             map("Price", "ETHLast.Price", FieldType.PRICE).
             map("Size", "ETHLast.Size", FieldType.SIZE).
+            map("Change", "ETHLast.Change", FieldType.PRICE).optional().
             map("DayVolume", "ETHVolume", FieldType.VOLUME).optional().
             map("DayTurnover", "ETHDayTurnover", FieldType.TURNOVER).optional().
             map("Flags", "ETHLast.Flags", FieldType.FLAGS).
@@ -204,8 +205,8 @@ public class ImplCodeGen {
             field("DivFreq", FieldType.INT_DECIMAL).optional().
             field("ExdDivAmount", "ExdDiv.Amount", FieldType.DECIMAL_AS_DOUBLE).optional().
             field("ExdDivDate", "ExdDiv.Date", FieldType.DATE).optional().
-            field("HighPrice52", "52High.Price", FieldType.PRICE).optional().
-            field("LowPrice52", "52Low.Price", FieldType.PRICE).optional().
+            map("High52WeekPrice", "HighPrice52", "52High.Price", FieldType.PRICE).optional().
+            map("Low52WeekPrice", "LowPrice52", "52Low.Price", FieldType.PRICE).optional().
             field("Shares", FieldType.DECIMAL_AS_LONG).optional().
             field("FreeFloat", FieldType.DECIMAL_AS_LONG).optional().
             map("HighLimitPrice", "HighLimitPrice", FieldType.PRICE).optional().
