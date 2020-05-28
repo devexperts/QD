@@ -48,6 +48,8 @@ public final class SeriesDelegate extends EventDelegate<Series> {
         event.setTimeSequence((((long) m.getTimeSeconds(cursor)) << 32) | (m.getSequence(cursor) & 0xFFFFFFFFL));
         event.setExpiration(m.getExpiration(cursor));
         event.setVolatility(m.getVolatility(cursor));
+        event.setCallVolume(m.getCallVolume(cursor));
+        event.setPutVolume(m.getPutVolume(cursor));
         event.setPutCallRatio(m.getPutCallRatio(cursor));
         event.setForwardPrice(m.getForwardPrice(cursor));
         event.setDividend(m.getDividend(cursor));
@@ -65,6 +67,8 @@ public final class SeriesDelegate extends EventDelegate<Series> {
         m.setSequence(cursor, (int) event.getTimeSequence());
         m.setExpiration(cursor, event.getExpiration());
         m.setVolatility(cursor, event.getVolatility());
+        m.setCallVolume(cursor, event.getCallVolume());
+        m.setPutVolume(cursor, event.getPutVolume());
         m.setPutCallRatio(cursor, event.getPutCallRatio());
         m.setForwardPrice(cursor, event.getForwardPrice());
         m.setDividend(cursor, event.getDividend());

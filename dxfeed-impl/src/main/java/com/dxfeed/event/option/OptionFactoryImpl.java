@@ -60,6 +60,8 @@ public final class OptionFactoryImpl extends EventDelegateFactory implements Rec
         builder.addOptionalField("Underlying", "Volatility", select(SerialFieldType.DECIMAL), "Underlying", "Volatility", true);
         builder.addOptionalField("Underlying", "FrontVolatility", select(SerialFieldType.DECIMAL), "Underlying", "FrontVolatility", true);
         builder.addOptionalField("Underlying", "BackVolatility", select(SerialFieldType.DECIMAL), "Underlying", "BackVolatility", true);
+        builder.addOptionalField("Underlying", "CallVolume", select(SerialFieldType.DECIMAL), "Underlying", "CallVolume", true);
+        builder.addOptionalField("Underlying", "PutVolume", select(SerialFieldType.DECIMAL), "Underlying", "PutVolume", true);
         builder.addOptionalField("Underlying", "PutCallRatio", select(SerialFieldType.DECIMAL), "Underlying", "PutCallRatio", true);
 
         builder.addOptionalField("Series", "Void", SerialFieldType.VOID, "Series", "Void", true, SchemeFieldTime.FIRST_TIME_INT_FIELD);
@@ -68,6 +70,8 @@ public final class OptionFactoryImpl extends EventDelegateFactory implements Rec
         builder.addOptionalField("Series", "Sequence", SerialFieldType.SEQUENCE, "Series", "Sequence", true);
         builder.addRequiredField("Series", "Expiration", SerialFieldType.DATE);
         builder.addRequiredField("Series", "Volatility", select(SerialFieldType.DECIMAL));
+        builder.addOptionalField("Series", "CallVolume", select(SerialFieldType.DECIMAL), "Series", "CallVolume", true);
+        builder.addOptionalField("Series", "PutVolume", select(SerialFieldType.DECIMAL), "Series", "PutVolume", true);
         builder.addRequiredField("Series", "PutCallRatio", select(SerialFieldType.DECIMAL));
         builder.addRequiredField("Series", "ForwardPrice", select(SerialFieldType.DECIMAL));
         builder.addOptionalField("Series", "Dividend", select(SerialFieldType.DECIMAL), "Series", "Dividend", true);

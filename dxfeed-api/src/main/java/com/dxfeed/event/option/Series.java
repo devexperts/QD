@@ -53,7 +53,10 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  * <li>{@link #getSequence() sequence} - sequence of this series;
  * <li>{@link #getExpiration() expiration} - day id of expiration;
  * <li>{@link #getVolatility() volatility} - implied volatility index for this series based on VIX methodology;
- * <li>{@link #getPutCallRatio() putCallRatio} - ratio of put traded volume to call traded volume for a day;
+ * <li>{@link #getCallVolume() callVolume} - call options traded volume for a day;
+ * <li>{@link #getPutVolume() putVolume} - put options traded volume for a day;
+ * <li>{@link #getOptionVolume() optionVolume} - options traded volume  for a day;
+ * <li>{@link #getPutCallRatio() putCallRatio} - ratio of put options traded volume to call options traded volume for a day;
  * <li>{@link #getForwardPrice() forwardPrice} - implied forward price for this option series;
  * <li>{@link #getDividend() dividend} - implied simple dividend return of the corresponding option series;
  * <li>{@link #getInterest() interest} - implied simple interest return of the corresponding option series.
@@ -82,7 +85,7 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 @XmlRootElement(name = "Series")
 @XmlType(propOrder = {
     "eventFlags", "index", "time", "sequence",
-    "expiration", "volatility", "putCallRatio", "forwardPrice", "dividend", "interest"
+    "expiration", "volatility", "callVolume", "putVolume", "putCallRatio", "forwardPrice", "dividend", "interest"
 })
 public class Series extends MarketEvent implements IndexedEvent<String> {
     private static final long serialVersionUID = 1;
@@ -107,6 +110,8 @@ public class Series extends MarketEvent implements IndexedEvent<String> {
     private long timeSequence;
     private int expiration;
     private double volatility = Double.NaN;
+    private double callVolume = Double.NaN;
+    private double putVolume = Double.NaN;
     private double putCallRatio = Double.NaN;
     private double forwardPrice = Double.NaN;
     private double dividend = Double.NaN;
@@ -267,8 +272,32 @@ public class Series extends MarketEvent implements IndexedEvent<String> {
     }
 
     /**
-     * Returns ratio of put traded volume to call traded volume for a day.
-     * @return ratio of put traded volume to call traded volume for a day.
+     * Returns call options traded volume for a day.
+     * @return call options traded volume for a day.
+     */
+    public double getCallVolume() {
+        return callVolume;
+    }
+
+    /**
+     * Returns put options traded volume for a day.
+     * @return put options traded volume for a day.
+     */
+    public double getPutVolume() {
+        return putVolume;
+    }
+
+    /**
+     * Returns options traded volume for a day.
+     * @return options traded volume for a day.
+     */
+    public double getOptionVolume() {
+        return Double.isNaN(putVolume) ? callVolume : Double.isNaN(callVolume) ? putVolume : putVolume + callVolume;
+    }
+
+    /**
+     * Returns ratio of put options traded volume to call options traded volume for a day.
+     * @return ratio of put options traded volume to call options traded volume for a day.
      */
     public double getPutCallRatio() {
         return putCallRatio;
@@ -327,8 +356,24 @@ public class Series extends MarketEvent implements IndexedEvent<String> {
     }
 
     /**
-     * Changes ratio of put traded volume to call traded volume for a day.
-     * @param putCallRatio ratio of put traded volume to call traded volume for a day.
+     * Changes call options traded volume for a day.
+     * @param callVolume call options traded volume for a day.
+     */
+    public void setCallVolume(double callVolume) {
+        this.callVolume = callVolume;
+    }
+
+    /**
+     * Changes put options traded volume for a day.
+     * @param putVolume put options traded volume for a day.
+     */
+    public void setPutVolume(double putVolume) {
+        this.putVolume = putVolume;
+    }
+
+    /**
+     * Changes ratio of put options traded volume to call options traded volume for a day.
+     * @param putCallRatio ratio of put options traded volume to call options traded volume for a day.
      */
     public void setPutCallRatio(double putCallRatio) {
         this.putCallRatio = putCallRatio;
@@ -348,6 +393,8 @@ public class Series extends MarketEvent implements IndexedEvent<String> {
             ", sequence=" + getSequence() +
             ", expiration=" + DayUtil.getYearMonthDayByDayId(getExpiration()) +
             ", volatility=" + volatility +
+            ", callVolume=" + callVolume +
+            ", putVolume=" + putVolume +
             ", putCallRatio=" + putCallRatio +
             ", forwardPrice=" + forwardPrice +
             ", dividend=" + dividend +

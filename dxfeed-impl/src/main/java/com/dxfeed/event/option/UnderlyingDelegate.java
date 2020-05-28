@@ -48,6 +48,8 @@ public final class UnderlyingDelegate extends EventDelegate<Underlying> {
         event.setVolatility(m.getVolatility(cursor));
         event.setFrontVolatility(m.getFrontVolatility(cursor));
         event.setBackVolatility(m.getBackVolatility(cursor));
+        event.setCallVolume(m.getCallVolume(cursor));
+        event.setPutVolume(m.getPutVolume(cursor));
         event.setPutCallRatio(m.getPutCallRatio(cursor));
         return event;
     }
@@ -61,6 +63,8 @@ public final class UnderlyingDelegate extends EventDelegate<Underlying> {
         m.setVolatility(cursor, event.getVolatility());
         m.setFrontVolatility(cursor, event.getFrontVolatility());
         m.setBackVolatility(cursor, event.getBackVolatility());
+        m.setCallVolume(cursor, event.getCallVolume());
+        m.setPutVolume(cursor, event.getPutVolume());
         m.setPutCallRatio(cursor, event.getPutCallRatio());
         return cursor;
     }

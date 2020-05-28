@@ -24,6 +24,8 @@ public class UnderlyingMapping extends RecordMapping {
     private final int iVolatility;
     private final int iFrontVolatility;
     private final int iBackVolatility;
+    private final int iCallVolume;
+    private final int iPutVolume;
     private final int iPutCallRatio;
 
     public UnderlyingMapping(DataRecord record) {
@@ -33,6 +35,8 @@ public class UnderlyingMapping extends RecordMapping {
         iVolatility = findIntField("Volatility", false);
         iFrontVolatility = findIntField("FrontVolatility", false);
         iBackVolatility = findIntField("BackVolatility", false);
+        iCallVolume = findIntField("CallVolume", false);
+        iPutVolume = findIntField("PutVolume", false);
         iPutCallRatio = findIntField("PutCallRatio", false);
     }
 
@@ -178,6 +182,78 @@ public class UnderlyingMapping extends RecordMapping {
         if (iBackVolatility < 0)
             return;
         setAsWideDecimal(cursor, iBackVolatility, backVolatility);
+    }
+
+    public double getCallVolume(RecordCursor cursor) {
+        if (iCallVolume < 0)
+            return Double.NaN;
+        return getAsDouble(cursor, iCallVolume);
+    }
+
+    public void setCallVolume(RecordCursor cursor, double callVolume) {
+        if (iCallVolume < 0)
+            return;
+        setAsDouble(cursor, iCallVolume, callVolume);
+    }
+
+    public int getCallVolumeDecimal(RecordCursor cursor) {
+        if (iCallVolume < 0)
+            return 0;
+        return getAsTinyDecimal(cursor, iCallVolume);
+    }
+
+    public void setCallVolumeDecimal(RecordCursor cursor, int callVolume) {
+        if (iCallVolume < 0)
+            return;
+        setAsTinyDecimal(cursor, iCallVolume, callVolume);
+    }
+
+    public long getCallVolumeWideDecimal(RecordCursor cursor) {
+        if (iCallVolume < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iCallVolume);
+    }
+
+    public void setCallVolumeWideDecimal(RecordCursor cursor, long callVolume) {
+        if (iCallVolume < 0)
+            return;
+        setAsWideDecimal(cursor, iCallVolume, callVolume);
+    }
+
+    public double getPutVolume(RecordCursor cursor) {
+        if (iPutVolume < 0)
+            return Double.NaN;
+        return getAsDouble(cursor, iPutVolume);
+    }
+
+    public void setPutVolume(RecordCursor cursor, double putVolume) {
+        if (iPutVolume < 0)
+            return;
+        setAsDouble(cursor, iPutVolume, putVolume);
+    }
+
+    public int getPutVolumeDecimal(RecordCursor cursor) {
+        if (iPutVolume < 0)
+            return 0;
+        return getAsTinyDecimal(cursor, iPutVolume);
+    }
+
+    public void setPutVolumeDecimal(RecordCursor cursor, int putVolume) {
+        if (iPutVolume < 0)
+            return;
+        setAsTinyDecimal(cursor, iPutVolume, putVolume);
+    }
+
+    public long getPutVolumeWideDecimal(RecordCursor cursor) {
+        if (iPutVolume < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iPutVolume);
+    }
+
+    public void setPutVolumeWideDecimal(RecordCursor cursor, long putVolume) {
+        if (iPutVolume < 0)
+            return;
+        setAsWideDecimal(cursor, iPutVolume, putVolume);
     }
 
     public double getPutCallRatio(RecordCursor cursor) {

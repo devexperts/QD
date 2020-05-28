@@ -1,4 +1,9 @@
 
+QDS 3.290:
+
+* [QD-1238] Add getZoneId to Timing instances
+* [QD-1234] dxFeed API: Extend Underlying and Series events with putVolume and callVolume fields
+
 QDS 3.289:
 
 * [QD-1233] dxFeed API: Extend Trade and Profile events to support additional fields from QD records

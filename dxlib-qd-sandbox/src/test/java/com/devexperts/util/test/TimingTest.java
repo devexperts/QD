@@ -222,6 +222,14 @@ public class TimingTest extends TestCase {
         }
     }
 
+    public void testZoneId() {
+        for (TestInstance ti: TestInstance.values()) {
+            Timing timing = ti.timing;
+            TimeZone timezone = ti.timezone;
+            assertEquals(timezone.toZoneId(), timing.getZoneId());
+        }
+    }
+
     private static String explain(Timing.Day day) {
         return day + " [" + day.day_start + " - " + day.day_end + "]";
     }

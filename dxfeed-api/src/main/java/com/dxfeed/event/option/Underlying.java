@@ -47,7 +47,10 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  * <li>{@link #getVolatility() volatility} - 30-day implied volatility for this underlying based on VIX methodology;
  * <li>{@link #getFrontVolatility() frontVolatility} - front month implied volatility for this underlying based on VIX methodology;
  * <li>{@link #getBackVolatility() backVolatility} - 3back month implied volatility for this underlying based on VIX methodology;
- * <li>{@link #getPutCallRatio() putCallRatio} - ratio of put traded volume to call traded volume for a day.
+ * <li>{@link #getCallVolume() callVolume} - call options traded volume for a day;
+ * <li>{@link #getPutVolume() putVolume} - put options traded volume for a day;
+ * <li>{@link #getOptionVolume() optionVolume} - options traded volume  for a day;
+ * <li>{@link #getPutCallRatio() putCallRatio} - ratio of put options traded volume to call options traded volume for a day.
  * </ul>
  *
  * <h3><a name="eventFlagsSection">Event flags, transactions and snapshots</a></h3>
@@ -77,7 +80,8 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  */
 @XmlRootElement(name = "Underlying")
 @XmlType(propOrder = {
-    "eventFlags", "index", "time", "sequence", "volatility", "frontVolatility", "backVolatility", "putCallRatio"
+    "eventFlags", "index", "time", "sequence", "volatility", "frontVolatility", "backVolatility",
+    "callVolume", "putVolume", "putCallRatio"
 })
 public class Underlying extends MarketEvent implements TimeSeriesEvent<String>, LastingEvent<String> {
     private static final long serialVersionUID = 0;
@@ -106,6 +110,8 @@ public class Underlying extends MarketEvent implements TimeSeriesEvent<String>, 
     private double volatility = Double.NaN;
     private double frontVolatility = Double.NaN;
     private double backVolatility = Double.NaN;
+    private double callVolume = Double.NaN;
+    private double putVolume = Double.NaN;
     private double putCallRatio = Double.NaN;
 
     /**
@@ -259,16 +265,56 @@ public class Underlying extends MarketEvent implements TimeSeriesEvent<String>, 
     }
 
     /**
-     * Returns ratio of put traded volume to call traded volume for a day.
-     * @return ratio of put traded volume to call traded volume for a day.
+     * Returns call options traded volume for a day.
+     * @return call options traded volume for a day.
+     */
+    public double getCallVolume() {
+        return callVolume;
+    }
+
+    /**
+     * Changes call options traded volume for a day.
+     * @param callVolume call options traded volume for a day.
+     */
+    public void setCallVolume(double callVolume) {
+        this.callVolume = callVolume;
+    }
+
+    /**
+     * Returns put options traded volume for a day.
+     * @return put options traded volume for a day.
+     */
+    public double getPutVolume() {
+        return putVolume;
+    }
+
+    /**
+     * Changes put options traded volume for a day.
+     * @param putVolume put options traded volume for a day.
+     */
+    public void setPutVolume(double putVolume) {
+        this.putVolume = putVolume;
+    }
+
+    /**
+     * Returns options traded volume for a day.
+     * @return options traded volume for a day.
+     */
+    public double getOptionVolume() {
+        return Double.isNaN(putVolume) ? callVolume : Double.isNaN(callVolume) ? putVolume : putVolume + callVolume;
+    }
+
+    /**
+     * Returns ratio of put options traded volume to call options traded volume for a day.
+     * @return ratio of put options traded volume to call options traded volume for a day.
      */
     public double getPutCallRatio() {
         return putCallRatio;
     }
 
     /**
-     * Changes ratio of put traded volume to call traded volume for a day.
-     * @param putCallRatio ratio of put traded volume to call traded volume for a day.
+     * Changes ratio of put options traded volume to call options traded volume for a day.
+     * @param putCallRatio ratio of put options traded volume to call options traded volume for a day.
      */
     public void setPutCallRatio(double putCallRatio) {
         this.putCallRatio = putCallRatio;
@@ -294,6 +340,8 @@ public class Underlying extends MarketEvent implements TimeSeriesEvent<String>, 
             ", volatility=" + volatility +
             ", frontVolatility=" + frontVolatility +
             ", backVolatility=" + backVolatility +
+            ", callVolume=" + callVolume +
+            ", putVolume=" + putVolume +
             ", putCallRatio=" + putCallRatio;
     }
 }

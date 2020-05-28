@@ -509,6 +509,8 @@ public class ImplCodeGen {
             map("Volatility", FieldType.DECIMAL_AS_DOUBLE).optional().
             map("FrontVolatility", FieldType.DECIMAL_AS_DOUBLE).optional().
             map("BackVolatility", FieldType.DECIMAL_AS_DOUBLE).optional().
+            map("CallVolume", FieldType.DECIMAL_AS_DOUBLE).optional().
+            map("PutVolume", FieldType.DECIMAL_AS_DOUBLE).optional().
             map("PutCallRatio", FieldType.DECIMAL_AS_DOUBLE).optional().
             publishable();
 
@@ -524,6 +526,8 @@ public class ImplCodeGen {
             mapTimeAndSequence().optional().prevOptional().
             map("Expiration", "Expiration", FieldType.DATE).
             map("Volatility", FieldType.DECIMAL_AS_DOUBLE).
+            map("CallVolume", FieldType.DECIMAL_AS_DOUBLE).optional().
+            map("PutVolume", FieldType.DECIMAL_AS_DOUBLE).optional().
             map("PutCallRatio", FieldType.DECIMAL_AS_DOUBLE).
             map("ForwardPrice", FieldType.DECIMAL_AS_DOUBLE).
             map("Dividend", FieldType.DECIMAL_AS_DOUBLE).optional().

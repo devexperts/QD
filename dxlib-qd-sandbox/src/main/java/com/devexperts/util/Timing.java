@@ -11,6 +11,7 @@
  */
 package com.devexperts.util;
 
+import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
@@ -236,6 +237,18 @@ public class Timing {
     }
 
     /**
+     * Returns {@link ZoneId} corresponding to the timezone of this {@code Timing}.
+     */
+    public ZoneId getZoneId() {
+        ZoneId zId = zoneId;
+        if (zId == null) {
+            zId = time_zone.toZoneId();
+            zoneId = zId;
+        }
+        return zId;
+    }
+
+    /**
      * Returns <code>Day</code> record that corresponds to current moment of time.
      */
     public Day today() {
@@ -398,6 +411,7 @@ public class Timing {
     private final TimeZone time_zone; // TimeZone where Timing works.
     private final int raw_offset; // time_zone.getRawOffset()
     private final BusinessSchedule business_schedule;
+    private volatile ZoneId zoneId; // lazy initialized ZoneId of the time_zone
 
     private final Object lock = new Object();
     private final IndexedSet<Integer, Day> days_cache = IndexedSet.createInt(DAY_INDEXER);
