@@ -1,4 +1,8 @@
 
+QDS 3.291:
+
+* [QD-1239] New order sources glbx, ntv and xeur
+
 QDS 3.290:
 
 * [QD-1238] Add getZoneId to Timing instances

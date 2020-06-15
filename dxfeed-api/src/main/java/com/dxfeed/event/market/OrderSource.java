@@ -135,6 +135,13 @@ public final class OrderSource extends IndexedEventSource {
     public static final OrderSource NTV = new OrderSource("NTV", PUB_ORDER);
 
     /**
+     * NASDAQ Total View. Record for price level book.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource ntv = new OrderSource("ntv", PUB_ORDER);
+
+    /**
      * NASDAQ Futures Exchange.
      * {@link Order} events are {@link #isPublishable(Class) publishable} on this
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
@@ -261,6 +268,13 @@ public final class OrderSource extends IndexedEventSource {
     public static final OrderSource GLBX = new OrderSource("GLBX", PUB_ORDER | PUB_ANALYTIC_ORDER);
 
     /**
+     * CME Globex. Record for price level book.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource glbx = new OrderSource("glbx", PUB_ORDER);
+
+    /**
      * Eris Exchange group of companies.
      * {@link Order} events are {@link #isPublishable(Class) publishable} on this
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
@@ -273,6 +287,13 @@ public final class OrderSource extends IndexedEventSource {
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
      */
     public static final OrderSource XEUR = new OrderSource("XEUR", PUB_ORDER);
+
+    /**
+     * Eurex Exchange. Record for price level book.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource xeur = new OrderSource("xeur", PUB_ORDER);
 
     /**
      * CBOE Futures Exchange.
