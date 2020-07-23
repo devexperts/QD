@@ -23,11 +23,17 @@ public class AnalyticOrderMapping extends OrderBaseMapping {
     private final int iTime;
     private final int iSequence;
     private final int iTimeNanoPart;
+    private final int iActionTime;
+    private final int iOrderId;
+    private final int iAuxOrderId;
     private final int iPrice;
     private final int iSize;
     private final int iExecutedSize;
     private final int iCount;
     private final int iFlags;
+    private final int iTradeId;
+    private final int iTradePrice;
+    private final int iTradeSize;
     private final int iMarketMaker;
     private final int iIcebergPeakSize;
     private final int iIcebergHiddenSize;
@@ -40,11 +46,17 @@ public class AnalyticOrderMapping extends OrderBaseMapping {
         iTime = MappingUtil.findIntField(record, "Time", true);
         iSequence = MappingUtil.findIntField(record, "Sequence", true);
         iTimeNanoPart = MappingUtil.findIntField(record, "TimeNanoPart", false);
+        iActionTime = MappingUtil.findIntField(record, "ActionTime", false);
+        iOrderId = MappingUtil.findIntField(record, "OrderId", false);
+        iAuxOrderId = MappingUtil.findIntField(record, "AuxOrderId", false);
         iPrice = findIntField("Price", true);
         iSize = findIntField("Size", true);
         iExecutedSize = findIntField("ExecutedSize", false);
         iCount = findIntField("Count", false);
         iFlags = MappingUtil.findIntField(record, "Flags", true);
+        iTradeId = MappingUtil.findIntField(record, "TradeId", false);
+        iTradePrice = findIntField("TradePrice", false);
+        iTradeSize = findIntField("TradeSize", false);
         iMarketMaker = MappingUtil.findIntField(record, "MMID", false);
         iIcebergPeakSize = findIntField("IcebergPeakSize", false);
         iIcebergHiddenSize = findIntField("IcebergHiddenSize", false);
@@ -95,6 +107,54 @@ public class AnalyticOrderMapping extends OrderBaseMapping {
         if (iTimeNanoPart < 0)
             return;
         setInt(cursor, iTimeNanoPart, timeNanoPart);
+    }
+
+    public long getActionTimeMillis(RecordCursor cursor) {
+        if (iActionTime < 0)
+            return 0;
+        return getLong(cursor, iActionTime);
+    }
+
+    public void setActionTimeMillis(RecordCursor cursor, long actionTime) {
+        if (iActionTime < 0)
+            return;
+        setLong(cursor, iActionTime, actionTime);
+    }
+
+    public int getActionTimeSeconds(RecordCursor cursor) {
+        if (iActionTime < 0)
+            return 0;
+        return TimeUtil.getSecondsFromTime(getLong(cursor, iActionTime));
+    }
+
+    public void setActionTimeSeconds(RecordCursor cursor, int actionTime) {
+        if (iActionTime < 0)
+            return;
+        setLong(cursor, iActionTime, actionTime * 1000L);
+    }
+
+    public long getOrderId(RecordCursor cursor) {
+        if (iOrderId < 0)
+            return 0;
+        return getLong(cursor, iOrderId);
+    }
+
+    public void setOrderId(RecordCursor cursor, long orderId) {
+        if (iOrderId < 0)
+            return;
+        setLong(cursor, iOrderId, orderId);
+    }
+
+    public long getAuxOrderId(RecordCursor cursor) {
+        if (iAuxOrderId < 0)
+            return 0;
+        return getLong(cursor, iAuxOrderId);
+    }
+
+    public void setAuxOrderId(RecordCursor cursor, long auxOrderId) {
+        if (iAuxOrderId < 0)
+            return;
+        setLong(cursor, iAuxOrderId, auxOrderId);
     }
 
     public double getPrice(RecordCursor cursor) {
@@ -263,6 +323,90 @@ public class AnalyticOrderMapping extends OrderBaseMapping {
 
     public void setFlags(RecordCursor cursor, int flags) {
         setInt(cursor, iFlags, flags);
+    }
+
+    public long getTradeId(RecordCursor cursor) {
+        if (iTradeId < 0)
+            return 0;
+        return getLong(cursor, iTradeId);
+    }
+
+    public void setTradeId(RecordCursor cursor, long tradeId) {
+        if (iTradeId < 0)
+            return;
+        setLong(cursor, iTradeId, tradeId);
+    }
+
+    public double getTradePrice(RecordCursor cursor) {
+        if (iTradePrice < 0)
+            return Double.NaN;
+        return getAsDouble(cursor, iTradePrice);
+    }
+
+    public void setTradePrice(RecordCursor cursor, double tradePrice) {
+        if (iTradePrice < 0)
+            return;
+        setAsDouble(cursor, iTradePrice, tradePrice);
+    }
+
+    public int getTradePriceDecimal(RecordCursor cursor) {
+        if (iTradePrice < 0)
+            return 0;
+        return getAsTinyDecimal(cursor, iTradePrice);
+    }
+
+    public void setTradePriceDecimal(RecordCursor cursor, int tradePrice) {
+        if (iTradePrice < 0)
+            return;
+        setAsTinyDecimal(cursor, iTradePrice, tradePrice);
+    }
+
+    public long getTradePriceWideDecimal(RecordCursor cursor) {
+        if (iTradePrice < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iTradePrice);
+    }
+
+    public void setTradePriceWideDecimal(RecordCursor cursor, long tradePrice) {
+        if (iTradePrice < 0)
+            return;
+        setAsWideDecimal(cursor, iTradePrice, tradePrice);
+    }
+
+    public double getTradeSize(RecordCursor cursor) {
+        if (iTradeSize < 0)
+            return Double.NaN;
+        return getAsDouble(cursor, iTradeSize);
+    }
+
+    public void setTradeSize(RecordCursor cursor, double tradeSize) {
+        if (iTradeSize < 0)
+            return;
+        setAsDouble(cursor, iTradeSize, tradeSize);
+    }
+
+    public int getTradeSizeDecimal(RecordCursor cursor) {
+        if (iTradeSize < 0)
+            return 0;
+        return getAsTinyDecimal(cursor, iTradeSize);
+    }
+
+    public void setTradeSizeDecimal(RecordCursor cursor, int tradeSize) {
+        if (iTradeSize < 0)
+            return;
+        setAsTinyDecimal(cursor, iTradeSize, tradeSize);
+    }
+
+    public long getTradeSizeWideDecimal(RecordCursor cursor) {
+        if (iTradeSize < 0)
+            return 0;
+        return getAsWideDecimal(cursor, iTradeSize);
+    }
+
+    public void setTradeSizeWideDecimal(RecordCursor cursor, long tradeSize) {
+        if (iTradeSize < 0)
+            return;
+        setAsWideDecimal(cursor, iTradeSize, tradeSize);
     }
 
     @Deprecated

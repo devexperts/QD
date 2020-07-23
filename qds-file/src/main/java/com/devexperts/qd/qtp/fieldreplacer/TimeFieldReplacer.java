@@ -47,7 +47,7 @@ import java.util.function.Consumer;
  * <ul>
  *     <li> <b>current time</b>: replaces time with current. See {@link System#currentTimeMillis()}.
  *          Configuration format: {@code "current"};</li>
- *     <li> <b>increase/decrese time</b>: increases or decreases time on specified delta.
+ *     <li> <b>increase/decrease time</b>: increases or decreases time on specified delta.
  *          Configuration format: {@code "+<time>"} or {@code "-<time>"};</li>
  *     <li> <b>specified time</b>: replaces time with specified.
  *          Configuration format: {@code "<time>"}.</li>

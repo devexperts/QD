@@ -236,8 +236,12 @@ public class ImplCodeGenAnnotationProcessor extends AbstractProcessor {
         case DATE: return FieldType.DATE;
         case DECIMAL: return FieldType.DECIMAL_AS_DOUBLE;
         case INT: return FieldType.INT;
+        case LONG: return FieldType.LONG;
         case SHORT_STRING: return FieldType.SHORT_STRING;
-        case TIME: return FieldType.TIME;
+        //noinspection deprecation
+        case TIME: return FieldType.TIME_SECONDS;
+        case TIME_SECONDS: return FieldType.TIME_SECONDS;
+        case TIME_MILLIS: return FieldType.TIME_MILLIS;
         case STRING: return FieldType.STRING;
         case MARSHALLED: return FieldType.MARSHALLED;
         }

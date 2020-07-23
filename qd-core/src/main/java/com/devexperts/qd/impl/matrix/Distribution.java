@@ -65,10 +65,10 @@ final class Distribution {
     static final int UPDATED_SNIP_DIST_FLAG = 1 << 30;
 
     /**
-     * Set when this event turned on "snapshotBegin" flag in the history buffer (need to reset KNOWN_TIME).
-     * Implies that {@code (eventFlags & SNAPSHOT_BEGIN) != 0}.
+     * Set when this event turned on "snapshotBegin" flag in the history buffer or forced snapshot retransmit.
+     * Need to reset KNOWN_TIME in agent. Implies that {@code (eventFlags & SNAPSHOT_BEGIN) != 0}.
      */
-    static final int ENABLED_SNAPSHOT_MODE_DIST_FLAG = 1 << 29;
+    static final int SEND_SNAPSHOT_DIST_FLAG = 1 << 29;
 
     /**
      * Set when record was updated in HB (includes remove of an existing one).

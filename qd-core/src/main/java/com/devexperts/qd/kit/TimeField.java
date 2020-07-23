@@ -14,14 +14,18 @@ package com.devexperts.qd.kit;
 import com.devexperts.qd.SerialFieldType;
 import com.devexperts.util.TimeFormat;
 
+/**
+ * @deprecated Use {@link TimeSecondsField} instead.
+ */
+@Deprecated()
 public class TimeField extends CompactIntField {
     public TimeField(int index, String name) {
-        super(index, name, SerialFieldType.TIME.forNamedField(name));
+        this(index, name, SerialFieldType.TIME_SECONDS.forNamedField(name));
     }
 
     public TimeField(int index, String name, SerialFieldType serialType) {
         super(index, name, serialType);
-        if (!serialType.hasSameRepresentationAs(SerialFieldType.TIME))
+        if (!serialType.hasSameRepresentationAs(SerialFieldType.TIME_SECONDS))
             throw new IllegalArgumentException("Invalid serialType: " + serialType);
     }
 

@@ -31,6 +31,7 @@ public abstract class EventDelegateFactory {
         return recordName;
     }
 
+    //TODO rename to selectDecimal
     protected SerialFieldType select(SerialFieldType type, String... typeSelectors) {
         if ("true".equalsIgnoreCase(System.getProperty("dxscheme.wide")))
             type = SerialFieldType.WIDE_DECIMAL;
@@ -45,4 +46,6 @@ public abstract class EventDelegateFactory {
         }
         return type;
     }
+
+    //FIXME implement selectTime
 }

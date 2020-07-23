@@ -16,7 +16,7 @@ import com.devexperts.util.DayUtil;
 
 public class DateField extends CompactIntField {
     public DateField(int index, String name) {
-        super(index, name, SerialFieldType.DATE.forNamedField(name));
+        this(index, name, SerialFieldType.DATE.forNamedField(name));
     }
 
     public DateField(int index, String name, SerialFieldType serialType) {

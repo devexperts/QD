@@ -11,6 +11,8 @@
  */
 package com.dxfeed.api.codegen.event;
 
+import com.dxfeed.annotation.EventFieldMapping;
+import com.dxfeed.annotation.EventFieldType;
 import com.dxfeed.annotation.EventTypeMapping;
 import com.dxfeed.event.market.Quote;
 
@@ -77,6 +79,7 @@ public class BetterQuote extends Quote {
         this.betterInt = betterInt;
     }
 
+    @EventFieldMapping(type = EventFieldType.LONG)
     public long getBetterLong() {
         return betterLong;
     }

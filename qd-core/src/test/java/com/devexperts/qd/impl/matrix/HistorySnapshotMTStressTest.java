@@ -9,7 +9,7 @@
  * http://mozilla.org/MPL/2.0/.
  * !__
  */
-package com.devexperts.qd.test;
+package com.devexperts.qd.impl.matrix;
 
 import com.devexperts.logging.Logging;
 import com.devexperts.logging.TraceLogging;
@@ -21,11 +21,11 @@ import com.devexperts.qd.HistorySubscriptionFilter;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDFactory;
-import com.devexperts.qd.QDHistory;
 import com.devexperts.qd.kit.CompactIntField;
 import com.devexperts.qd.kit.DefaultRecord;
 import com.devexperts.qd.kit.DefaultScheme;
 import com.devexperts.qd.kit.PentaCodec;
+import com.devexperts.qd.kit.RecordOnlyFilter;
 import com.devexperts.qd.ng.AbstractRecordSink;
 import com.devexperts.qd.ng.EventFlag;
 import com.devexperts.qd.ng.RecordBuffer;
@@ -38,9 +38,13 @@ import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.stats.QDStats;
 import junit.framework.Assert;
-import junit.framework.TestCase;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -55,7 +59,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import javax.annotation.Nonnull;
 
-public class HistorySnapshotMTStressTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+@RunWith(Parameterized.class)
+public class HistorySnapshotMTStressTest {
     private static final Logging log = Logging.getLogging(HistorySnapshotMTStressTest.class);
 
     private static final int N_SECS = 5; // "production" mode -- just run for 5 seconds
@@ -89,26 +98,57 @@ public class HistorySnapshotMTStressTest extends TestCase {
     private static final PentaCodec CODEC = PentaCodec.INSTANCE;
     private static final DataScheme SCHEME = new DefaultScheme(CODEC, RECORD);
 
+    private final boolean unconflated;
+
     private volatile boolean stopped;
 
-    private final HSF hsf = new HSF();
-    private final QDHistory history = QDFactory.getDefaultFactory().createHistory(SCHEME, QDStats.VOID, hsf);
-    private final DistributorThread distributorThread = new DistributorThread(history.distributorBuilder().build());
-    private final String[] symbols = new String[N_SYMBOLS]; // all have zero ciphers
+    private DistributorThread distributorThread;
+    private String[] symbols; // all have zero ciphers
 
-    private volatile BlockingQueue<Throwable> uncaughtException = new ArrayBlockingQueue<>(1);
-    private final List<Throwable> stackTraces = new ArrayList<>();
+    private volatile BlockingQueue<Throwable> uncaughtException;
+    private List<Throwable> stackTraces;
 
-    private final List<Thread> threads = new ArrayList<>();
-    private final List<AgentThread> agents = new ArrayList<>();
+    private List<Thread> threads;
+    private List<AgentThread> agents;
 
-    @Override
-    protected void setUp() throws Exception {
+    @Parameterized.Parameters(name = "unconflated={0}")
+    public static Iterable<Object[]> data() {
+        return Arrays.asList(new Object[][] {
+            { false },
+            { true },
+        });
+    }
+
+    public HistorySnapshotMTStressTest(boolean unconflated) {
+        this.unconflated = unconflated;
+    }
+
+    @Before
+    public void setUp() throws Exception {
+        History history = new History(QDFactory.getDefaultFactory().historyBuilder()
+            .withScheme(SCHEME).withStats(QDStats.VOID).withHistoryFilter(new HSF()),
+            new RecordOnlyFilter(SCHEME) {
+                @Override
+                public boolean acceptRecord(DataRecord record) {
+                    return !unconflated;
+                }
+            });
+        distributorThread = new DistributorThread(history.distributorBuilder().build());
+        stopped = false;
+
         TraceLogging.restart();
+        symbols = new String[N_SYMBOLS];
         for (int i = 0; i < N_SYMBOLS; i++) {
             symbols[i] = "SYMBOL_" + i;
-            Assert.assertEquals(0, CODEC.encode(symbols[i]));
+            assertEquals(0, CODEC.encode(symbols[i]));
         }
+
+        uncaughtException = new ArrayBlockingQueue<>(1);
+        stackTraces = new ArrayList<>();
+
+        threads = new ArrayList<>();
+        agents = new ArrayList<>();
+
         threads.add(distributorThread);
         for (int i = 0; i < N_AGENTS; i++) {
             AgentThread agent = new AgentThread(i, history.agentBuilder()
@@ -124,6 +164,7 @@ public class HistorySnapshotMTStressTest extends TestCase {
         }
     }
 
+    @Test
     public void testStress() throws InterruptedException {
         for (Thread thread : threads) {
             thread.start();

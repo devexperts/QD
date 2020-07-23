@@ -119,22 +119,26 @@ class FactoryImplGen {
     private void generateFieldCode(ClassGen cg, Map<String, RecordField> fields, String recordNameReference,
         boolean isRegional)
     {
-        String phantomProperty = null;
+        String conditionalProperty = null;
+        boolean isPhantom = false;
         for (Map.Entry<String, RecordField> fieldEntry : fields.entrySet()) {
             String fieldName = fieldEntry.getKey();
             RecordField f = fieldEntry.getValue();
             if (isRegional && f.isCompositeOnly)
                 continue;
-            if (phantomProperty != null && !phantomProperty.equals(f.phantomProperty)) {
+            if (conditionalProperty != null &&
+                (!conditionalProperty.equals(f.conditionalProperty) || isPhantom != f.isPhantom))
+            {
                 cg.unindent();
                 cg.code("}");
-                phantomProperty = null;
+                conditionalProperty = null;
             }
-            if (f.phantomProperty != null && !f.phantomProperty.equals(phantomProperty)) {
+            if (f.conditionalProperty != null && !f.conditionalProperty.equals(conditionalProperty)) {
                 cg.addImport(new ClassName(SystemProperties.class));
-                cg.code("if (SystemProperties.getBooleanProperty(\"" + f.phantomProperty + "\", false)) {");
+                cg.code("if (SystemProperties.getBooleanProperty(\"" + f.conditionalProperty + "\", false)) {");
                 cg.indent();
-                phantomProperty = f.phantomProperty;
+                conditionalProperty = f.conditionalProperty;
+                isPhantom = f.isPhantom;
             }
             if (f.onlySuffixesDefault != null || f.exceptSuffixes != null) {
                 cg.code("if (" +
@@ -182,7 +186,7 @@ class FactoryImplGen {
             if (f.onlySuffixesDefault != null || f.exceptSuffixes != null)
                 cg.unindent();
         }
-        if (phantomProperty != null) {
+        if (conditionalProperty != null) {
             cg.unindent();
             cg.code("}");
         }

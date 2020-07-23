@@ -532,13 +532,17 @@ public final class HistoryBuffer {
 
     // (0) Is invoked from processRecordSource when SNAPSHOT_BEGIN/MODE flag is set
     // Returns true when EVER_SNAPSHOT_MODE_FLAG is just set
-    boolean snapshotMode() {
+    boolean enterSnapshotModeFirstTime() {
         assert validTimes();
         if (wasEverSnapshotMode())
             return false;
-        // pretend as if we've see the actual SNAPSHOT_BEGIN (even if not).
+        // pretend as if we have seen the actual SNAPSHOT_BEGIN (even if not).
         flags |= EVER_SNAPSHOT_MODE_FLAG | SNAPSHOT_BEGIN_SEEN_FLAG;
         return true;
+    }
+
+    void enterSnapshotModeForUnconflated() {
+        flags |= EVER_SNAPSHOT_MODE_FLAG | SNAPSHOT_BEGIN_SEEN_FLAG;
     }
 
     // (1) Is invoked from processRecordSource with the value of TX_PENDING flag
@@ -568,13 +572,9 @@ public final class HistoryBuffer {
     void snapshotBegin() {
         snapshotTime = Long.MAX_VALUE;
         assert validTimes();
-        if (!wasSnapshotBeginSeen()) {
-            // set snapshot begin flag first time we see it
-            flags |= SNAPSHOT_BEGIN_SEEN_FLAG;
-        } else {
-            // we already have snapshot -- reset snapshot end flag
-            flags &= ~SNAPSHOT_END_SEEN_FLAG;
-        }
+
+        flags |= SNAPSHOT_BEGIN_SEEN_FLAG;
+        flags &= ~SNAPSHOT_END_SEEN_FLAG;
     }
 
     // (3) Is invoked from processRecordSource when SNAPSHOT_SNIP flag is set

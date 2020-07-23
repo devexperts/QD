@@ -1,3 +1,17 @@
+QDS 3.292:
+
+* [QD-1251] New order source for cboe C2 options
+* [QD-1241] dxFeed API: Extend Order event for Full Order Book
+  - JVM parameter "-Ddxscheme.fob=true" will add Full Order Book fields to Order record
+  - List of Order sources that support Full Order Book can be customized by
+    "-Dcom.dxfeed.event.market.impl.Order.fob.suffixes" parameter (default value="|#NTV")
+* [QD-1244] QDS: Add support for long and timestamp fields in QD schema
+  - Added support for long values and time in millis to com.dxfeed.annotation.EventFieldType
+    (to enable long use @EventFieldMapping(type = EventFieldType.LONG) annotation)
+  - Changed ordering of constants in com.dxfeed.annotation.EventFieldType
+* [QD-1235] QD Core: Disable conflation for Order events
+  - JVM parameter "-Dcom.devexperts.qd.impl.matrix.History.conflateFilter" manages which records are conflated;
+    if "-Ddxscheme.fob=true" is specified, then default value is "!:Order*", else it is "*"
 
 QDS 3.291:
 

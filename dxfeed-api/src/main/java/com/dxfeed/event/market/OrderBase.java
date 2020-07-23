@@ -85,8 +85,9 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  * Use the source code of {@link AbstractIndexedEventModel} for clarification on transactions and snapshot logic.
  */
 @XmlType(propOrder = {
-    "eventFlags", "index", "time", "timeNanoPart", "sequence", "source",
-    "price", "sizeAsDouble", "executedSize", "count", "exchangeCode", "orderSide", "scope"
+    "eventFlags", "index", "time", "timeNanoPart", "sequence", "source", "action", "actionTime",
+    "orderId", "auxOrderId", "price", "sizeAsDouble", "executedSize", "count", "exchangeCode", "orderSide", "scope",
+    "tradeId", "tradePrice", "tradeSize"
 })
 public class OrderBase extends MarketEvent implements IndexedEvent<String> {
     private static final long serialVersionUID = 3;
@@ -148,11 +149,15 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
 
     /*
      * Flags property has several significant bits that are packed into an integer in the following way:
-     *   31..11   10...4    3    2    1    0
-     * +--------+--------+----+----+----+----+
-     * |        |Exchange|  Side   |  Scope  |
-     * +--------+--------+----+----+----+----+
+     *   31..15   14..11    10..4    3    2    1    0
+     * +--------+--------+--------+----+----+----+----+
+     * |        | Action |Exchange|  Side   |  Scope  |
+     * +--------+--------+--------+----+----+----+----+
      */
+
+    // ACTION values are taken from OrderAction enum.
+    static final int ACTION_MASK = 0x0f;
+    static final int ACTION_SHIFT = 11;
 
     // EXCHANGE values are ASCII chars in [0, 127].
     static final int EXCHANGE_MASK = 0x7f;
@@ -197,11 +202,20 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
     private long index;
     private long timeSequence;
     private int timeNanoPart;
+
+    private long actionTime;
+    private long orderId;
+    private long auxOrderId;
+
     private double price = Double.NaN;
     private double size = Double.NaN;
     private double executedSize = Double.NaN;
     private long count;
     private int flags;
+
+    private long tradeId;
+    private double tradePrice = Double.NaN;
+    private double tradeSize = Double.NaN;
 
     /**
      * Creates new order with default values.
@@ -378,11 +392,88 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
     /**
      * Changes time of this order.
      * Time is measured in nanoseconds between the current time and midnight, January 1, 1970 UTC.
-     * @param timeNanos time of this order in nanoseconds..
+     * @param timeNanos time of this order in nanoseconds.
      */
     public void setTimeNanos(long timeNanos) {
         setTime(TimeNanosUtil.getMillisFromNanos(timeNanos));
         timeNanoPart = TimeNanosUtil.getNanoPartFromNanos(timeNanos);
+    }
+
+    /**
+     * Returns order action if available, otherwise - {@link OrderAction#UNDEFINED}.
+     * <p>This field is a part of the <a href="Order.html#fobSection">FOB</a> support.
+     * @return order action or {@link OrderAction#UNDEFINED}.
+     */
+    @XmlElement
+    public OrderAction getAction() {
+        return OrderAction.valueOf(Util.getBits(flags, ACTION_MASK, ACTION_SHIFT));
+    }
+
+    /**
+     * Changes action of this order.
+     * @param action side of this order.
+     */
+    public void setAction(OrderAction action) {
+        flags = Util.setBits(flags, ACTION_MASK, ACTION_SHIFT, action.getCode());
+    }
+
+    /**
+     * Returns time of the last {@link #getAction() action}.
+     * <p>This field is a part of the <a href="Order.html#fobSection">FOB</a> support.
+     * @return time of the last order action.
+     */
+    @XmlJavaTypeAdapter(type=long.class, value=XmlTimeAdapter.class)
+    public long getActionTime() {
+        return actionTime;
+    }
+
+    /**
+     * Changes time of the last action
+     * @param actionTime last order action time.
+     */
+    public void setActionTime(long actionTime) {
+        this.actionTime = actionTime;
+    }
+
+    /**
+     * Returns order ID if available. Some actions ({@link OrderAction#TRADE},
+     * {@link OrderAction#BUST}) have no order ID since they are not related to any order in Order book.
+     * <p>This field is a part of the <a href="Order.html#fobSection">FOB</a> support.
+     * @return order ID or 0 if not available.
+     */
+    public long getOrderId() {
+        return orderId;
+    }
+
+    /**
+     * Changes order ID.
+     * @param orderId order ID.
+     */
+    public void setOrderId(long orderId) {
+        this.orderId = orderId;
+    }
+
+    /**
+     * Returns auxiliary order ID if available:
+     * <ul>
+     * <li>in {@link OrderAction#NEW} - ID of the order replaced by this new order</li>
+     * <li>in {@link OrderAction#DELETE} - ID of the order that replaces this deleted order</li>
+     * <li>in {@link OrderAction#PARTIAL} - ID of the aggressor order</li>
+     * <li>in {@link OrderAction#EXECUTE} - ID of the aggressor order</li>
+     * </ul>
+     * <p>This field is a part of the <a href="Order.html#fobSection">FOB</a> support.
+     * @return auxiliary order ID or 0 if not available.
+     */
+    public long getAuxOrderId() {
+        return auxOrderId;
+    }
+
+    /**
+     * Changes auxiliary order ID.
+     * @param auxOrderId auxiliary order ID.
+     */
+    public void setAuxOrderId(long auxOrderId) {
+        this.auxOrderId = auxOrderId;
     }
 
     /**
@@ -475,6 +566,57 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
      */
     public void setCount(long count) {
         this.count = count;
+    }
+
+    /**
+     * Returns trade (order execution) ID for events containing trade-related action.
+     * <p>This field is a part of the <a href="Order.html#fobSection">FOB</a> support.
+     * @return trade ID or 0 if not available.
+     */
+    public long getTradeId() {
+        return tradeId;
+    }
+
+    /**
+     * Changes trade ID.
+     * @param tradeId trade ID.
+     */
+    public void setTradeId(long tradeId) {
+        this.tradeId = tradeId;
+    }
+
+    /**
+     * Returns trade price for events containing trade-related action.
+     * <p>This field is a part of the <a href="Order.html#fobSection">FOB</a> support.
+     * @return trade price of this action.
+     */
+    public double getTradePrice() {
+        return tradePrice;
+    }
+
+    /**
+     * Changes trade price.
+     * @param tradePrice trade price.
+     */
+    public void setTradePrice(double tradePrice) {
+        this.tradePrice = tradePrice;
+    }
+
+    /**
+     * Returns trade size for events containing trade-related action.
+     * <p>This field is a part of the <a href="Order.html#fobSection">FOB</a> support.
+     * @return trade size.
+     */
+    public double getTradeSize() {
+        return tradeSize;
+    }
+
+    /**
+     * Changes trade size.
+     * @param tradeSize trade size.
+     */
+    public void setTradeSize(double tradeSize) {
+        this.tradeSize = tradeSize;
     }
 
     /**
@@ -594,13 +736,20 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
             ", time=" + TimeFormat.DEFAULT.withMillis().format(getTime()) +
             ", sequence=" + getSequence() +
             ", timeNanoPart=" + timeNanoPart +
+            ", action=" + getAction() +
+            ", actionTime=" + TimeFormat.DEFAULT.withMillis().format(actionTime) +
+            ", orderId=" + orderId +
+            ", auxOrderId=" + auxOrderId +
             ", price=" + price +
             ", size=" + size +
             ", executedSize=" + executedSize +
             ", count=" + count +
             ", exchange=" + Util.encodeChar(getExchangeCode()) +
             ", side=" + getOrderSide() +
-            ", scope=" + getScope();
+            ", scope=" + getScope() +
+            ", tradeId=" + tradeId +
+            ", tradePrice=" + tradePrice +
+            ", tradeSize=" + tradeSize;
     }
 
     // ========================= package private access for delegate =========================

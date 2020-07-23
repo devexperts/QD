@@ -48,11 +48,13 @@ public final class OrderSource extends IndexedEventSource {
     private static final int TYPE_ORDER = 0;
     private static final int TYPE_ANALYTIC_ORDER = 1;
     private static final int TYPE_SPREAD_ORDER = 2;
-    private static final int N_TYPES = 3;
+    private static final int FLAG_FULL_ORDER_BOOK = 3;
+    private static final int N_TYPES = 4;
 
     private static final int PUB_ORDER = 1 << TYPE_ORDER;
     private static final int PUB_ANALYTIC_ORDER = 1 << TYPE_ANALYTIC_ORDER;
     private static final int PUB_SPREAD_ORDER = 1 << TYPE_SPREAD_ORDER;
+    private static final int FULL_ORDER_BOOK = 1 << FLAG_FULL_ORDER_BOOK;
 
     @SuppressWarnings("unchecked")
     private static final List<OrderSource>[] PUBLISHABLE_LISTS = new List[N_TYPES];
@@ -117,10 +119,11 @@ public final class OrderSource extends IndexedEventSource {
 
     /**
      * Default source for publishing custom order books.
-     * {@link Order}, {@link AnalyticOrder} and {@link SpreadOrder} events are {@link #isPublishable(Class) publishable} on this
-     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     * {@link Order}, {@link AnalyticOrder} and {@link SpreadOrder} events are {@link #isPublishable(Class) publishable}
+     * on this source and the corresponding subscription can be observed via {@link DXPublisher}.
      */
-    public static final OrderSource DEFAULT = new OrderSource(0, "DEFAULT", PUB_ORDER | PUB_ANALYTIC_ORDER | PUB_SPREAD_ORDER);
+    public static final OrderSource DEFAULT = new OrderSource(0, "DEFAULT",
+        PUB_ORDER | PUB_ANALYTIC_ORDER | PUB_SPREAD_ORDER | FLAG_FULL_ORDER_BOOK);
 
     // ======== BEGIN: Custom OrderSource definitions ========
 
@@ -132,7 +135,7 @@ public final class OrderSource extends IndexedEventSource {
      * {@link Order} events are {@link #isPublishable(Class) publishable} on this
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
      */
-    public static final OrderSource NTV = new OrderSource("NTV", PUB_ORDER);
+    public static final OrderSource NTV = new OrderSource("NTV", PUB_ORDER | FULL_ORDER_BOOK);
 
     /**
      * NASDAQ Total View. Record for price level book.
@@ -303,6 +306,13 @@ public final class OrderSource extends IndexedEventSource {
     public static final OrderSource CFE = new OrderSource("CFE", PUB_ORDER);
 
     /**
+     * CBOE Options C2 Exchange.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource C2OX = new OrderSource("C2OX", PUB_ORDER);
+
+    /**
      * Small Exchange.
      * {@link Order} events are {@link #isPublishable(Class) publishable} on this
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
@@ -369,6 +379,15 @@ public final class OrderSource extends IndexedEventSource {
         return PUBLISHABLE_VIEWS[getEventTypeId(eventType)];
     }
 
+    /**
+     * Returns a list of publishable order sources that support Full Order Book.
+     *
+     * @return a list of publishable order sources that support Full Order Book.
+     */
+    public static List<OrderSource> fullOrderBook() {
+        return PUBLISHABLE_VIEWS[FLAG_FULL_ORDER_BOOK];
+    }
+
     // ========================= private instance fields =========================
 
     private final int pubFlags;
@@ -398,6 +417,10 @@ public final class OrderSource extends IndexedEventSource {
             throw new IllegalArgumentException("duplicate id");
         if (!SOURCES_BY_NAME.add(this))
             throw new IllegalArgumentException("duplicate name");
+
+        // Flag FULL_ORDER_BOOK requires that source must be publishable
+        if ((pubFlags & FULL_ORDER_BOOK) != 0 && (pubFlags & (PUB_ORDER | PUB_ANALYTIC_ORDER | PUB_SPREAD_ORDER)) == 0)
+            throw new IllegalArgumentException("unpublishable full order book order");
 
         CACHE_SIZE = Math.max(CACHE_SIZE, SOURCES_BY_ID.size() * 4);
 
@@ -429,6 +452,15 @@ public final class OrderSource extends IndexedEventSource {
      */
     public boolean isPublishable(Class<? extends OrderBase> eventType) {
         return (pubFlags & (1 << getEventTypeId(eventType))) != 0;
+    }
+
+    /**
+     * Returns {@code true} if this source supports Full Order Book.
+     *
+     * @return {@code true} if this source supports Full Order Book.
+     */
+    public boolean isFullOrderBook() {
+        return (pubFlags & FULL_ORDER_BOOK) != 0;
     }
 
     // ========================= private helper methods =========================

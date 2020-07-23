@@ -17,6 +17,7 @@ import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.SerialFieldType;
 import com.devexperts.qd.kit.AbstractDataField;
 import com.devexperts.qd.util.Decimal;
+import com.devexperts.util.TimeUtil;
 import com.devexperts.util.WideDecimal;
 
 import java.util.HashMap;
@@ -75,20 +76,28 @@ public abstract class RecordMapping {
         return record;
     }
 
-    protected final int getInt(RecordCursor cursor, int int_field_index) {
-        return cursor.getIntMappedImpl(record, int_field_index);
+    protected final int getInt(RecordCursor cursor, int intFieldIndex) {
+        return cursor.getIntMappedImpl(record, intFieldIndex);
     }
 
-    protected final Object getObj(RecordCursor cursor, int obj_field_index) {
-        return cursor.getObjMappedImpl(record, obj_field_index);
+    protected final long getLong(RecordCursor cursor, int intFieldIndex) {
+        return cursor.getLongMappedImpl(record, intFieldIndex);
     }
 
-    protected final void setInt(RecordCursor cursor, int int_field_index, int value) {
-        cursor.setIntMappedImpl(record, int_field_index, value);
+    protected final Object getObj(RecordCursor cursor, int objFieldIndex) {
+        return cursor.getObjMappedImpl(record, objFieldIndex);
     }
 
-    protected final void setObj(RecordCursor cursor, int obj_field_index, Object value) {
-        cursor.setObjMappedImpl(record, obj_field_index, value);
+    protected final void setInt(RecordCursor cursor, int intFieldIndex, int value) {
+        cursor.setIntMappedImpl(record, intFieldIndex, value);
+    }
+
+    protected final void setLong(RecordCursor cursor, int intFieldIndex, long value) {
+        cursor.setLongMappedImpl(record, intFieldIndex, value);
+    }
+
+    protected final void setObj(RecordCursor cursor, int objFieldIndex, Object value) {
+        cursor.setObjMappedImpl(record, objFieldIndex, value);
     }
 
     protected final int findIntField(String localName, boolean required) {
@@ -100,10 +109,14 @@ public abstract class RecordMapping {
         return Integer.MIN_VALUE;
     }
 
+    // Integer, Long and Decimal field converters
+
     protected final int getAsInt(RecordCursor cursor, int fieldId) {
         switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
         case SerialFieldType.Bits.FLAG_INT:
             return cursor.getIntMappedImpl(record, fieldId >> 8);
+        case SerialFieldType.Bits.FLAG_LONG:
+            return (int) cursor.getLongMappedImpl(record, fieldId >> 8);
         case SerialFieldType.Bits.FLAG_DECIMAL:
             return (int) Decimal.toDouble(cursor.getIntMappedImpl(record, fieldId >> 8));
         case SerialFieldType.Bits.FLAG_WIDE_DECIMAL:
@@ -117,6 +130,8 @@ public abstract class RecordMapping {
         switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
         case SerialFieldType.Bits.FLAG_INT:
             return cursor.getIntMappedImpl(record, fieldId >> 8);
+        case SerialFieldType.Bits.FLAG_LONG:
+            return cursor.getLongMappedImpl(record, fieldId >> 8);
         case SerialFieldType.Bits.FLAG_DECIMAL:
             return (long) Decimal.toDouble(cursor.getIntMappedImpl(record, fieldId >> 8));
         case SerialFieldType.Bits.FLAG_WIDE_DECIMAL:
@@ -130,6 +145,8 @@ public abstract class RecordMapping {
         switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
         case SerialFieldType.Bits.FLAG_INT:
             return cursor.getIntMappedImpl(record, fieldId >> 8);
+        case SerialFieldType.Bits.FLAG_LONG:
+            return cursor.getLongMappedImpl(record, fieldId >> 8);
         case SerialFieldType.Bits.FLAG_DECIMAL:
             return Decimal.toDouble(cursor.getIntMappedImpl(record, fieldId >> 8));
         case SerialFieldType.Bits.FLAG_WIDE_DECIMAL:
@@ -143,6 +160,8 @@ public abstract class RecordMapping {
         switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
         case SerialFieldType.Bits.FLAG_INT:
             return Decimal.composeDecimal(cursor.getIntMappedImpl(record, fieldId >> 8), 0);
+        case SerialFieldType.Bits.FLAG_LONG:
+            return Decimal.composeDecimal(cursor.getLongMappedImpl(record, fieldId >> 8), 0);
         case SerialFieldType.Bits.FLAG_DECIMAL:
             return cursor.getIntMappedImpl(record, fieldId >> 8);
         case SerialFieldType.Bits.FLAG_WIDE_DECIMAL:
@@ -156,6 +175,8 @@ public abstract class RecordMapping {
         switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
         case SerialFieldType.Bits.FLAG_INT:
             return WideDecimal.composeWide(cursor.getIntMappedImpl(record, fieldId >> 8), 0);
+        case SerialFieldType.Bits.FLAG_LONG:
+            return WideDecimal.composeWide(cursor.getLongMappedImpl(record, fieldId >> 8), 0);
         case SerialFieldType.Bits.FLAG_DECIMAL:
             return Decimal.tinyToWide(cursor.getIntMappedImpl(record, fieldId >> 8));
         case SerialFieldType.Bits.FLAG_WIDE_DECIMAL:
@@ -169,6 +190,9 @@ public abstract class RecordMapping {
         switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
         case SerialFieldType.Bits.FLAG_INT:
             cursor.setIntMappedImpl(record, fieldId >> 8, value);
+            break;
+        case SerialFieldType.Bits.FLAG_LONG:
+            cursor.setLongMappedImpl(record, fieldId >> 8, value);
             break;
         case SerialFieldType.Bits.FLAG_DECIMAL:
             cursor.setIntMappedImpl(record, fieldId >> 8, Decimal.composeDecimal(value, 0));
@@ -186,6 +210,9 @@ public abstract class RecordMapping {
         case SerialFieldType.Bits.FLAG_INT:
             cursor.setIntMappedImpl(record, fieldId >> 8, (int) value);
             break;
+        case SerialFieldType.Bits.FLAG_LONG:
+            cursor.setLongMappedImpl(record, fieldId >> 8, value);
+            break;
         case SerialFieldType.Bits.FLAG_DECIMAL:
             cursor.setIntMappedImpl(record, fieldId >> 8, Decimal.composeDecimal(value, 0));
             break;
@@ -201,6 +228,9 @@ public abstract class RecordMapping {
         switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
         case SerialFieldType.Bits.FLAG_INT:
             cursor.setIntMappedImpl(record, fieldId >> 8, (int) value);
+            break;
+        case SerialFieldType.Bits.FLAG_LONG:
+            cursor.setLongMappedImpl(record, fieldId >> 8, (long) value);
             break;
         case SerialFieldType.Bits.FLAG_DECIMAL:
             cursor.setIntMappedImpl(record, fieldId >> 8, Decimal.compose(value));
@@ -218,6 +248,9 @@ public abstract class RecordMapping {
         case SerialFieldType.Bits.FLAG_INT:
             cursor.setIntMappedImpl(record, fieldId >> 8, (int) Decimal.toDouble(value));
             break;
+        case SerialFieldType.Bits.FLAG_LONG:
+            cursor.setLongMappedImpl(record, fieldId >> 8, (long) Decimal.toDouble(value));
+            break;
         case SerialFieldType.Bits.FLAG_DECIMAL:
             cursor.setIntMappedImpl(record, fieldId >> 8, value);
             break;
@@ -234,10 +267,63 @@ public abstract class RecordMapping {
         case SerialFieldType.Bits.FLAG_INT:
             cursor.setIntMappedImpl(record, fieldId >> 8, (int) WideDecimal.toLong(value));
             break;
+        case SerialFieldType.Bits.FLAG_LONG:
+            cursor.setLongMappedImpl(record, fieldId >> 8, WideDecimal.toLong(value));
+            break;
         case SerialFieldType.Bits.FLAG_DECIMAL:
             cursor.setIntMappedImpl(record, fieldId >> 8, Decimal.wideToTiny(value));
             break;
         case SerialFieldType.Bits.FLAG_WIDE_DECIMAL:
+            cursor.setLongMappedImpl(record, fieldId >> 8, value);
+            break;
+        default:
+            throw new IllegalArgumentException();
+        }
+    }
+
+    // Time field converters
+
+    protected final int getAsTimeSeconds(RecordCursor cursor, int fieldId) {
+        switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
+        case SerialFieldType.Bits.FLAG_TIME_SECONDS:
+            return cursor.getIntMappedImpl(record, fieldId >> 8);
+        case SerialFieldType.Bits.FLAG_TIME_MILLIS:
+            return TimeUtil.getSecondsFromTime(cursor.getLongMappedImpl(record, fieldId >> 8));
+        default:
+            throw new IllegalArgumentException();
+        }
+    }
+
+    protected final void setAsTimeSeconds(RecordCursor cursor, int fieldId, int value) {
+        switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
+        case SerialFieldType.Bits.FLAG_TIME_SECONDS:
+            cursor.setIntMappedImpl(record, fieldId >> 8, value);
+            break;
+        case SerialFieldType.Bits.FLAG_TIME_MILLIS:
+            cursor.setLongMappedImpl(record, fieldId >> 8, value * 1000L);
+            break;
+        default:
+            throw new IllegalArgumentException();
+        }
+    }
+
+    protected final long getAsTimeMillis(RecordCursor cursor, int fieldId) {
+        switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
+        case SerialFieldType.Bits.FLAG_TIME_SECONDS:
+            return cursor.getIntMappedImpl(record, fieldId >> 8) * 1000L;
+        case SerialFieldType.Bits.FLAG_TIME_MILLIS:
+            return cursor.getLongMappedImpl(record, fieldId >> 8);
+        default:
+            throw new IllegalArgumentException();
+        }
+    }
+
+    protected final void setAsTimeMillis(RecordCursor cursor, int fieldId, long value) {
+        switch (fieldId & SerialFieldType.Bits.REPRESENTATION_MASK) {
+        case SerialFieldType.Bits.FLAG_TIME_SECONDS:
+            cursor.setIntMappedImpl(record, fieldId >> 8, TimeUtil.getSecondsFromTime(value));
+            break;
+        case SerialFieldType.Bits.FLAG_TIME_MILLIS:
             cursor.setLongMappedImpl(record, fieldId >> 8, value);
             break;
         default:

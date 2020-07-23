@@ -45,7 +45,7 @@ public class HistoryAddRemoveSnapshotTest extends TestCase {
     private static final PentaCodec CODEC = PentaCodec.INSTANCE;
     private static final DataScheme SCHEME = new DefaultScheme(CODEC, RECORD);
 
-    private final QDHistory history = QDFactory.getDefaultFactory().createHistory(SCHEME);
+    private final QDHistory history = QDFactory.getDefaultFactory().historyBuilder().withScheme(SCHEME).build();
     private final QDDistributor distributor = history.distributorBuilder().build();
     private QDAgent agent = history.agentBuilder().build();
 

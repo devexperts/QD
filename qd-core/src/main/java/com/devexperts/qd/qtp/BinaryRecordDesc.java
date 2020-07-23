@@ -29,6 +29,7 @@ import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.util.Decimal;
 import com.devexperts.qd.util.TimeSequenceUtil;
+import com.devexperts.util.TimeUtil;
 import com.devexperts.util.WideDecimal;
 
 import java.io.IOException;
@@ -36,8 +37,10 @@ import java.nio.charset.StandardCharsets;
 
 import static com.devexperts.qd.SerialFieldType.Bits.FLAG_DECIMAL;
 import static com.devexperts.qd.SerialFieldType.Bits.FLAG_INT;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_LONG;
 import static com.devexperts.qd.SerialFieldType.Bits.FLAG_SEQUENCE;
-import static com.devexperts.qd.SerialFieldType.Bits.FLAG_TIME;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_TIME_MILLIS;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_TIME_SECONDS;
 import static com.devexperts.qd.SerialFieldType.Bits.FLAG_WIDE_DECIMAL;
 import static com.devexperts.qd.SerialFieldType.Bits.ID_BYTE;
 import static com.devexperts.qd.SerialFieldType.Bits.ID_BYTE_ARRAY;
@@ -54,19 +57,18 @@ public class BinaryRecordDesc {
     /*
      * DESC integer bits layout
      *
-     *    4 bits  4 bits       24 bits
+     *    6 bits  4 bits       22 bits
      *   +-------+-------+-----------------+
      *   |  FLD  |  SER  |      index      |
      *   +-------+-------+-----------------+
-     * 32        28      24     .....    0
+     *   32      26      22      ...       0
      *
      *  FLD   -- defines the general operation and flips between fast/slow path
      *  SER   -- defines serialization format in stream.
      *  index -- the index of this field in record.
-     *
      */
 
-    protected static final int SER_SHIFT = 24;
+    protected static final int SER_SHIFT = 22;
     protected static final int SER_MASK = 0xf; // after shift
 
     protected static final int SER_OTHER = 0; // never appears in desc array, used for special DESC_VOID and DESC_INVALID
@@ -86,25 +88,38 @@ public class BinaryRecordDesc {
     protected static final int SER_MARSHALLED = 9;
     protected static final int SER_PLAIN_OBJECT = 10; // deprecated, but still supported
 
-    protected static final int FLD_SHIFT = 28;
+    protected static final int FLD_SHIFT = 26;
 
     protected static final int FLD_SKIP = 0; // just skip the field that was read (never used for Write)
     protected static final int FLD_INT = 1; // regular int field (w/o conversion)
     protected static final int FLD_LONG = 2; // regular long field (w/o conversion)
     protected static final int FLD_OBJ = 3; // regular obj field
+    // Int
     protected static final int FLD_DECIMAL_TO_INT = 4; // conversion decimal->int
     protected static final int FLD_INT_TO_DECIMAL = 5; // conversion int->decimal
     protected static final int FLD_WIDE_DECIMAL_TO_INT = 6; // conversion WideDecimal->int
     protected static final int FLD_INT_TO_WIDE_DECIMAL = 7; // conversion int->WideDecimal
+    // Decimal
     protected static final int FLD_WIDE_DECIMAL_TO_DECIMAL = 8; // conversion WideDecimal->decimal
     protected static final int FLD_DECIMAL_TO_WIDE_DECIMAL = 9; // conversion decimal->WideDecimal
     protected static final int FLD_DECIMAL_TO_SHARES = 10; // conversion decimal->decimal shares (/1000)
     protected static final int FLD_SHARES_TO_DECIMAL = 11; // conversion decimal shares->decimal (*1000)
     protected static final int FLD_WIDE_DECIMAL_TO_SHARES = 12; // conversion WideDecimal->decimal shares (/1000)
     protected static final int FLD_SHARES_TO_WIDE_DECIMAL = 13; // conversion decimal shares->WideDecimal (*1000)
+    // Special
     protected static final int FLD_EVENT_TIME = 14; // RecordCursor.get/setEventTime (does not have index)
     protected static final int FLD_EVENT_SEQUENCE = 15; // RecordCursor.get/setEventSequence (does not have index)
-    // Note: FLD_VALUE of 16 can't be used unless FLD_SHIFT is changed
+    // Long
+    protected static final int FLD_DECIMAL_TO_LONG = 16;
+    protected static final int FLD_LONG_TO_DECIMAL = 17;
+    protected static final int FLD_WIDE_DECIMAL_TO_LONG = 18;
+    protected static final int FLD_LONG_TO_WIDE_DECIMAL = 19;
+    // Time
+    protected static final int FLD_TIME_MILLIS_TO_TIME_SECONDS = 20;
+    protected static final int FLD_TIME_SECONDS_TO_TIME_MILLIS = 21;
+    protected static final int FLD_TIME_MILLIS_TO_EVENT_TIME_SEQUENCE = 22; //TODO
+    protected static final int FLD_EVENT_TIME_SEQUENCE_TO_TIME_MILLIS = 23; //TODO
+    // Note: FLD_VALUE of 64 can't be used unless FLD_SHIFT is changed
 
     protected static final int FLAG_SHARES = -1; // denotes decimal shares which are expressed in thousands
 
@@ -156,7 +171,7 @@ public class BinaryRecordDesc {
         int nDesc = 0;
         if (eventTimeSequence) {
             names[nDesc] = BuiltinFields.EVENT_TIME_FIELD_NAME;
-            types[nDesc] = SerialFieldType.TIME.getId();
+            types[nDesc] = SerialFieldType.TIME_SECONDS.getId();
             descs[nDesc++] = DESC_EVENT_TIME;
             names[nDesc] = BuiltinFields.EVENT_SEQUENCE_FIELD_NAME;
             types[nDesc] = SerialFieldType.SEQUENCE.getId();
@@ -216,7 +231,7 @@ public class BinaryRecordDesc {
         int i = 0;
         if (eventTimeSequence && nFld >= 1 &&
             names[0].equals(BuiltinFields.EVENT_TIME_FIELD_NAME) &&
-            types[0] == (ID_COMPACT_INT | FLAG_TIME))
+            types[0] == (ID_COMPACT_INT | FLAG_TIME_SECONDS))
         {
             i++;
             descs[nDesc++] = DESC_EVENT_TIME;
@@ -377,12 +392,14 @@ public class BinaryRecordDesc {
                 setIntValue(cur, d & INDEX_MASK, (int) Decimal.toDouble((int) iVal), msg);
                 break;
             case FLD_INT_TO_DECIMAL:
+            case FLD_LONG_TO_DECIMAL:
                 setIntValue(cur, d & INDEX_MASK, Decimal.composeDecimal(iVal, 0), msg);
                 break;
             case FLD_WIDE_DECIMAL_TO_INT:
                 setIntValue(cur, d & INDEX_MASK, (int) WideDecimal.toLong(iVal), msg);
                 break;
             case FLD_INT_TO_WIDE_DECIMAL:
+            case FLD_LONG_TO_WIDE_DECIMAL:
                 setLongValue(cur, d & INDEX_MASK, WideDecimal.composeWide(iVal, 0), msg);
                 break;
             case FLD_WIDE_DECIMAL_TO_DECIMAL:
@@ -393,7 +410,6 @@ public class BinaryRecordDesc {
                 break;
             case FLD_SHARES_TO_DECIMAL:
                 setIntValue(cur, d & INDEX_MASK, Decimal.compose(Decimal.toDouble((int) iVal) * 1000.0), msg);
-                iVal = Decimal.compose(Decimal.toDouble(cur.getInt(d & INDEX_MASK)) / 1000.0);
                 break;
             case FLD_SHARES_TO_WIDE_DECIMAL:
                 setLongValue(cur, d & INDEX_MASK, WideDecimal.composeWide(Decimal.toDouble((int) iVal) * 1000.0), msg);
@@ -403,6 +419,18 @@ public class BinaryRecordDesc {
                 break;
             case FLD_EVENT_SEQUENCE:
                 cur.setEventSequence((int) iVal);
+                break;
+            case FLD_DECIMAL_TO_LONG:
+                setLongValue(cur, d & INDEX_MASK, (long) Decimal.toDouble((int) iVal), msg);
+                break;
+            case FLD_WIDE_DECIMAL_TO_LONG:
+                setLongValue(cur, d & INDEX_MASK, WideDecimal.toLong(iVal), msg);
+                break;
+            case FLD_TIME_MILLIS_TO_TIME_SECONDS:
+                setIntValue(cur, d & INDEX_MASK, TimeUtil.getSecondsFromTime(iVal), msg);
+                break;
+            case FLD_TIME_SECONDS_TO_TIME_MILLIS:
+                setLongValue(cur, d & INDEX_MASK, iVal * 1000L, msg);
                 break;
             default:
                 throw new AssertionError();
@@ -459,12 +487,14 @@ public class BinaryRecordDesc {
                 oVal = cur.getObj(d & INDEX_MASK);
                 break;
             case FLD_DECIMAL_TO_INT:
+            case FLD_DECIMAL_TO_LONG:
                 iVal = (long) Decimal.toDouble(cur.getInt(d & INDEX_MASK));
                 break;
             case FLD_INT_TO_DECIMAL:
                 iVal = Decimal.composeDecimal(cur.getInt(d & INDEX_MASK), 0);
                 break;
             case FLD_WIDE_DECIMAL_TO_INT:
+            case FLD_WIDE_DECIMAL_TO_LONG:
                 iVal = WideDecimal.toLong(cur.getLong(d & INDEX_MASK));
                 break;
             case FLD_INT_TO_WIDE_DECIMAL:
@@ -487,6 +517,18 @@ public class BinaryRecordDesc {
                 break;
             case FLD_EVENT_SEQUENCE:
                 iVal = TimeSequenceUtil.getSequenceFromTimeSequence(eventTimeSequence);
+                break;
+            case FLD_LONG_TO_DECIMAL:
+                iVal = Decimal.composeDecimal(cur.getLong(d & INDEX_MASK), 0);
+                break;
+            case FLD_LONG_TO_WIDE_DECIMAL:
+                iVal = WideDecimal.composeWide(cur.getLong(d & INDEX_MASK), 0);
+                break;
+            case FLD_TIME_MILLIS_TO_TIME_SECONDS:
+                iVal = TimeUtil.getSecondsFromTime(cur.getLong(d & INDEX_MASK));
+                break;
+            case FLD_TIME_SECONDS_TO_TIME_MILLIS:
+                iVal = cur.getInt(d & INDEX_MASK) * 1000L;
                 break;
             default:
                 throw new AssertionError();
@@ -621,8 +663,13 @@ public class BinaryRecordDesc {
     }
 
     private static int getIntConverterType(int from, int to) {
+        // Most fields will not need conversion
         if (from == to)
             return FLD_INT;
+        // Specify conversion
+        //TODO
+        // This code is repetitive and error-prone
+        // Refactor into either sparse matrix or (from+to) encoded integer
         if (from == FLAG_DECIMAL && to == FLAG_INT)
             return FLD_DECIMAL_TO_INT;
         if (from == FLAG_INT && to == FLAG_DECIMAL)
@@ -643,6 +690,18 @@ public class BinaryRecordDesc {
             return FLD_WIDE_DECIMAL_TO_SHARES;
         if (from == FLAG_SHARES && to == FLAG_WIDE_DECIMAL)
             return FLD_SHARES_TO_WIDE_DECIMAL;
+        if (from == FLAG_DECIMAL && to == FLAG_LONG)
+            return FLD_DECIMAL_TO_LONG;
+        if (from == FLAG_LONG && to == FLAG_DECIMAL)
+            return FLD_LONG_TO_DECIMAL;
+        if (from == FLAG_WIDE_DECIMAL && to == FLAG_LONG)
+            return FLD_WIDE_DECIMAL_TO_LONG;
+        if (from == FLAG_LONG && to == FLAG_WIDE_DECIMAL)
+            return FLD_LONG_TO_WIDE_DECIMAL;
+        if (from == FLAG_TIME_MILLIS && to == FLAG_TIME_SECONDS)
+            return FLD_TIME_MILLIS_TO_TIME_SECONDS;
+        if (from == FLAG_TIME_SECONDS && to == FLAG_TIME_MILLIS)
+            return FLD_TIME_SECONDS_TO_TIME_MILLIS;
         return FLD_SKIP;
     }
 }

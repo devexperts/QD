@@ -36,7 +36,10 @@ class RecordField {
     String onlySuffixesDefault;
     String exceptSuffixes;
     String voidSuffixes;
-    String phantomProperty;
+    // Represents either phantom or conditional property
+    String conditionalProperty;
+    // Flag indicating phantom property
+    boolean isPhantom;
 
     RecordField(String propertyName, String eventName, String fieldName, FieldType fieldType) {
         this.propertyName = propertyName;
@@ -146,6 +149,6 @@ class RecordField {
     }
 
     boolean isActive() {
-        return phantomProperty == null && fieldType.accesses.size() > 0;
+        return !isPhantom && fieldType.accesses.size() > 0;
     }
 }

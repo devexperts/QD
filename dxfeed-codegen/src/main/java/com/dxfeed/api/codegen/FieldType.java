@@ -30,8 +30,15 @@ enum FieldType {
         .addAccess(Access.createWithAccessPattern("", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
         .setMapper(new DecimalMapper(int.class))
     ),
-    TIME(new Builder()
-        .addField(new Field(false, SerialFieldType.TIME))
+    TIME_MILLIS(new Builder()
+        .addField(new Field(false, SerialFieldType.TIME_MILLIS))
+        .addAccess(Access.createWithAccessPattern("Millis", "long", "0", "getLong(cursor, %s)", "setLong(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Seconds", "int", "0", "TimeUtil.getSecondsFromTime(getLong(cursor, %s))", "setLong(cursor, %s, %s * 1000L)"))
+        .addImport(new ClassName(TimeUtil.class))
+        .setMapper(new DefaultMapper("Millis", long.class))
+    ),
+    TIME_SECONDS(new Builder()
+        .addField(new Field(false, SerialFieldType.TIME_SECONDS))
         .addAccess(Access.createWithAccessPattern("Millis", "long", "0", "getInt(cursor, %s) * 1000L", "setInt(cursor, %s, TimeUtil.getSecondsFromTime(%s))"))
         .addAccess(Access.createWithAccessPattern("Seconds", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
         .addImport(new ClassName(TimeUtil.class))
@@ -56,6 +63,11 @@ enum FieldType {
         .addField(new Field(false, SerialFieldType.COMPACT_INT))
         .addAccess(Access.createWithAccessPattern("", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
         .setMapper(new DefaultMapper(int.class))
+    ),
+    LONG(new Builder()
+        .addField(new Field(false, SerialFieldType.LONG))
+        .addAccess(Access.createWithAccessPattern("", "long", "0", "getLong(cursor, %s)", "setLong(cursor, %s, %s)"))
+        .setMapper(new DefaultMapper(long.class))
     ),
     INT(new Builder()
         .addField(new Field(false, SerialFieldType.COMPACT_INT))
@@ -202,6 +214,8 @@ enum FieldType {
         final boolean isObject;
         final SerialFieldType serialType;
         final boolean adaptiveDecimal;
+        //FIXME
+        //final boolean adaptiveTime; // no selectors
         final String[] typeSelectors;
         final String suffix;
 

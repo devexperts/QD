@@ -25,11 +25,21 @@ public enum EventFieldType {
      */
     TRANSIENT,
 
+    /** @deprecated Use {@link #TIME_SECONDS} instead. */
+    @Deprecated
+    TIME,
+
     /**
      * This type can be used for {@code long} properties that store time in milliseconds since Java Epoch.
      * It will be mapped to a QD field that keeps <b>seconds</b> since Java Epoch (milliseconds will be lost).
      */
-    TIME,
+    TIME_SECONDS,
+
+    /**
+     * This type can be used for {@code long} properties that store time in milliseconds since Java Epoch.
+     * It will be mapped to a time millis QD field.
+     */
+    TIME_MILLIS,
 
     /**
      * This type can be used for {@code int} properties that store number of days since Java Epoch.
@@ -41,6 +51,13 @@ public enum EventFieldType {
      * It will be mapped to an integer QD field.
      */
     INT,
+
+    /**
+     * This type can be used for {@code long} properties.
+     * By default primitive longs are mapped to {@link #DECIMAL} - use this type with {@link EventFieldMapping}
+     * annotation to map to a long QD field.
+     */
+    LONG,
 
     /**
      * This type can be used for all primitive properties.
@@ -70,5 +87,5 @@ public enum EventFieldType {
      * This type can be used for all reference properties.
      * It will be mapped to a serial object QD field.
      */
-    MARSHALLED
+    MARSHALLED,
 }

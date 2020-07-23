@@ -125,6 +125,7 @@ class ConnectionQTPComposer extends BinaryQTPComposer {
     }
 
     boolean wideDecimalSupported = true;
+    //FIXME preciseTimeSupported
 
     @Override
     protected boolean isWideDecimalSupported() {

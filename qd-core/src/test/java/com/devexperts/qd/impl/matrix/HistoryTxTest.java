@@ -27,20 +27,29 @@ import com.devexperts.qd.kit.CompactIntField;
 import com.devexperts.qd.kit.DefaultRecord;
 import com.devexperts.qd.kit.DefaultScheme;
 import com.devexperts.qd.kit.PentaCodec;
+import com.devexperts.qd.kit.RecordOnlyFilter;
+import com.devexperts.qd.ng.AbstractRecordProvider;
 import com.devexperts.qd.ng.AbstractRecordSink;
 import com.devexperts.qd.ng.EventFlag;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordListener;
 import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.ng.RecordProvider;
+import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.stats.QDStats;
-import com.devexperts.test.TraceRunner;
+import com.devexperts.test.TraceRunnerWithParametersFactory;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -48,7 +57,8 @@ import static org.junit.Assert.fail;
  * A suite of small single-agent single-distributor tests of {@link QDHistory} snapshot,
  * update, and transaction logic.
  */
-@RunWith(TraceRunner.class)
+@RunWith(Parameterized.class)
+@Parameterized.UseParametersRunnerFactory(TraceRunnerWithParametersFactory.class)
 public class HistoryTxTest {
     private static final int TX_PENDING = EventFlag.TX_PENDING.flag();
     private static final int REMOVE_EVENT = EventFlag.REMOVE_EVENT.flag();
@@ -68,25 +78,46 @@ public class HistoryTxTest {
     private static final int CIPHER = CODEC.encode("TST");
     private static final DataScheme SCHEME = new DefaultScheme(CODEC, RECORD);
 
-    private final HistoryImpl history = new HistoryImpl(QDFactory.getDefaultFactory().historyBuilder()
-        .withScheme(SCHEME)
-        .withStats(QDStats.VOID)
-        .withHistoryFilter(new HSF()));
+    @Parameterized.Parameters(name= "blocking={0}, unconflated={1}")
+    public static Iterable<Object[]> data() {
+        return Arrays.asList(new Object[][] {
+            { false, false }, { true, false },
+            { false, true }, { true, true },
+        });
+    }
 
-    private final QDDistributor distributor = history.distributorBuilder().build();
+    private final boolean blocking;
+    private final boolean unconflated;
+
+    private HistoryImpl history;
+    private QDDistributor distributor;
     private QDAgent agent;
     private QDAgent agent2;
     private boolean available;
 
-    RecordProvider provider; // HistoryTxBlockingTest overrides it
+    RecordProvider provider;
+    // Blocking mode related fields
+    RecordProvider blockingProvider;
+    RecordListener blockingListener;
+
     RecordBuffer retrieveBuf = new RecordBuffer(RecordMode.FLAGGED_DATA);
     RecordBuffer distributeBuf = new RecordBuffer(RecordMode.FLAGGED_DATA);
     boolean distributeBatch;
-    boolean blocking; // HistoryTxBlockingTest sets to true
     Runnable betweenProcessPhases;
+
+    public HistoryTxTest(boolean blocking, boolean unconflated) {
+        this.blocking = blocking;
+        this.unconflated = unconflated;
+    }
 
     @Before
     public void setUp() throws Exception {
+        history = new HistoryImpl(QDFactory.getDefaultFactory().historyBuilder()
+            .withScheme(SCHEME)
+            .withStats(QDStats.VOID)
+            .withHistoryFilter(new HSF()));
+        distributor = history.distributorBuilder().build();
+
         history.setErrorHandler(new QDErrorHandler() {
             @Override
             public void handleDataError(DataProvider provider, Throwable t) {
@@ -118,7 +149,7 @@ public class HistoryTxTest {
         // ---
         // History snapshot supporting agent just receives fresh snapshot and also removes legacy data.
         if (blocking) {
-            // in blocking mode all them are TX_PENDING (starts retrieval from non-complete HB)
+            // in blocking mode all of them are TX_PENDING (starts retrieval from non-complete HB)
             expectMore(3, 13, TX_PENDING | SNAPSHOT_BEGIN); // now there is a snapshot(!)
             expectMore(1, 14, TX_PENDING);
             expectJust(0, 0, SNAPSHOT_END | REMOVE_EVENT);
@@ -316,7 +347,11 @@ public class HistoryTxTest {
         // update snapshot
         distribute(4, 13, SNAPSHOT_BEGIN);
         // ---
-        expectJust(4, 13, TX_PENDING);
+        if (unconflated) {
+            expectJust(4, 13, TX_PENDING | SNAPSHOT_BEGIN);
+        } else {
+            expectJust(4, 13, TX_PENDING);
+        }
         // ---
         distribute(3, 14, 0);
         // ---
@@ -325,7 +360,12 @@ public class HistoryTxTest {
         distribute(2, 11, 0);
         distribute(1, 12, 0);
         // ---
-        expectNothing();
+        if (unconflated) {
+            expectMore(2, 11, TX_PENDING);
+            expectJust(1, 12, TX_PENDING);
+        } else {
+            expectNothing();
+        }
         // ---
         distribute(0, 0, SNAPSHOT_END | REMOVE_EVENT);
         expectJust(0, 0, SNAPSHOT_END | REMOVE_EVENT); // gets augmented with snapshot end (it goes to the sub time)
@@ -350,10 +390,15 @@ public class HistoryTxTest {
         distribute(1, 13, SNAPSHOT_BEGIN);
         distribute(0, 0, REMOVE_EVENT | SNAPSHOT_END);
         // ---
-        expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
-        expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
-        expectMore(2, 0, REMOVE_EVENT | TX_PENDING);
-        expectJust(0, 0, REMOVE_EVENT);
+        if (unconflated) {
+            expectMore(1, 13, (blocking ? TX_PENDING : 0) | SNAPSHOT_BEGIN);
+            expectJust(0, 0, REMOVE_EVENT | SNAPSHOT_END);
+        } else {
+            expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
+            expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
+            expectMore(2, 0, REMOVE_EVENT | TX_PENDING);
+            expectJust(0, 0, REMOVE_EVENT);
+        }
     }
 
     @Test
@@ -403,12 +448,20 @@ public class HistoryTxTest {
         // send snapshot with only 1 items left (confirm it), but don't end it
         distribute(1, 13, SNAPSHOT_BEGIN);
         // ---
-        expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
-        expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
-        expectJust(2, 0, REMOVE_EVENT | TX_PENDING);
+        if (unconflated) {
+            expectJust(1, 13, TX_PENDING | SNAPSHOT_BEGIN);
+        } else {
+            expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
+            expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
+            expectJust(2, 0, REMOVE_EVENT | TX_PENDING);
+        }
         // ---
         distribute(0, 0, REMOVE_EVENT | SNAPSHOT_END);
-        expectJust(0, 0, REMOVE_EVENT);
+        if (unconflated) {
+            expectJust(0, 0, REMOVE_EVENT | SNAPSHOT_END);
+        } else {
+            expectJust(0, 0, REMOVE_EVENT);
+        }
     }
 
     @Test
@@ -453,12 +506,16 @@ public class HistoryTxTest {
         // send snapshot with only 1 items left (confirm it), but outside of sub (!)
         distribute(1, 13, SNAPSHOT_BEGIN); // also implicit snapshot end for timeSub=2
         // ---
-        expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
-        expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
-        if (blocking) {
+        if (unconflated) {
+            expectJust(2, 0, REMOVE_EVENT | SNAPSHOT_BEGIN | SNAPSHOT_END);
+        } else if (blocking) {
+            expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
+            expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
             expectMore(2, 0, REMOVE_EVENT | TX_PENDING);
             expectJust(Long.MAX_VALUE, 0, REMOVE_EVENT);
         } else {
+            expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
+            expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
             expectJust(2, 0, REMOVE_EVENT);
         }
         // ---
@@ -481,11 +538,14 @@ public class HistoryTxTest {
         // send snapshot with only 1 items left (confirm it), but outside of sub (!)
         distribute(1, 13, SNAPSHOT_BEGIN);
         // ---
-        expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
-        if (blocking) {
+        if (unconflated) {
+            expectJust(2, 0, REMOVE_EVENT | SNAPSHOT_BEGIN | SNAPSHOT_END);
+        } else if (blocking) {
+            expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
             expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
             expectJust(Long.MAX_VALUE, 0, REMOVE_EVENT);
         } else {
+            expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
             expectJust(3, 0, REMOVE_EVENT); // end if TX was optimized to the last buffered event
         }
         // ---
@@ -511,13 +571,21 @@ public class HistoryTxTest {
         // send snapshot with only 1 items left (update it!)
         distribute(1, 15, SNAPSHOT_BEGIN);
         // ---
-        expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
-        expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
-        expectMore(2, 0, REMOVE_EVENT | TX_PENDING);
-        expectJust(1, 15, TX_PENDING);
+        if (unconflated) {
+            expectJust(1, 15, SNAPSHOT_BEGIN | TX_PENDING);
+        } else {
+            expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
+            expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
+            expectMore(2, 0, REMOVE_EVENT | TX_PENDING);
+            expectJust(1, 15, TX_PENDING);
+        }
         // ---
         distribute(0, 0, REMOVE_EVENT | SNAPSHOT_END);
-        expectJust(0, 0, REMOVE_EVENT);
+        if (unconflated) {
+            expectJust(0, 0, SNAPSHOT_END | REMOVE_EVENT);
+        } else {
+            expectJust(0, 0, REMOVE_EVENT);
+        }
     }
 
     @Test
@@ -536,12 +604,16 @@ public class HistoryTxTest {
         // send snapshot with only 1 items left (update it!)
         distribute(1, 15, SNAPSHOT_BEGIN);
         // ---
-        expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
-        expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
-        if (blocking) {
+        if (unconflated) {
+            expectJust(2, 0, REMOVE_EVENT | SNAPSHOT_BEGIN | SNAPSHOT_END);
+        } else if (blocking) {
+            expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
+            expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
             expectMore(2, 0, REMOVE_EVENT | TX_PENDING);
             expectJust(Long.MAX_VALUE, 0, REMOVE_EVENT);
         } else {
+            expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
+            expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
             expectJust(2, 0, REMOVE_EVENT);
         }
         // ---
@@ -553,26 +625,40 @@ public class HistoryTxTest {
     public void testSnapshotInsert() {
         createAgent(0, true);
         // send snapshot (3 even items)
-        distribute(4, 10, SNAPSHOT_BEGIN);
-        distribute(2, 11, 0);
-        distribute(0, 12, SNAPSHOT_END);
+        distribute(6, 10, SNAPSHOT_BEGIN);
+        distribute(4, 11, 0);
+        distribute(2, 12, 0);
+        distribute(0, 13, SNAPSHOT_END);
         // ---
-        expectMore(4, 10, SNAPSHOT_BEGIN);
-        expectMore(2, 11, 0);
-        expectJust(0, 12, SNAPSHOT_END);
+        expectMore(6, 10, SNAPSHOT_BEGIN);
+        expectMore(4, 11, 0);
+        expectMore(2, 12, 0);
+        expectJust(0, 13, SNAPSHOT_END);
         // send snapshot with 5 items (add two more)
-        distribute(4, 10, SNAPSHOT_BEGIN);
-        distribute(3, 13, 0);
-        distribute(2, 11, 0);
-        distribute(1, 14, 0);
-        distribute(0, 12, SNAPSHOT_END);
+        distribute(6, 10, SNAPSHOT_BEGIN);
+        distribute(4, 11, 0);
+        distribute(3, 14, 0);
+        distribute(2, 12, 0);
+        distribute(1, 15, 0);
+        distribute(0, 13, SNAPSHOT_END);
         // ---
-        expectMore(3, 13, TX_PENDING);
-        if (blocking) { // cannot optimize tx end in blocking mode (just one record in buffer)
-            expectMore(1, 14, TX_PENDING); // still pending
-            expectJust(0, 12, 0); // explicit TX_END
-        } else
-            expectJust(1, 14, 0); // optimized end of transaction
+        if (unconflated) {
+            // Snapshot repeats previously retrieved data
+            expectMore(6, 10, SNAPSHOT_BEGIN);
+            expectMore(4, 11, 0);
+            // In blocking mode updated event cause TX_PENDING flag to be set
+            expectMore(3, 14, blocking ? TX_PENDING : 0);
+            expectMore(2, 12, blocking ? TX_PENDING : 0);
+            expectMore(1, 15, blocking ? TX_PENDING : 0);
+            expectJust(0, 13, SNAPSHOT_END); // explicit TX_END
+        } else if (blocking) { // cannot optimize tx end in blocking mode (just one record in buffer)
+            expectMore(3, 14, TX_PENDING);
+            expectMore(1, 15, TX_PENDING); // still pending
+            expectJust(0, 13, 0); // explicit TX_END
+        } else {
+            expectMore(3, 14, TX_PENDING);
+            expectJust(1, 15, 0); // optimized end of transaction
+        }
     }
 
     @Test
@@ -585,6 +671,7 @@ public class HistoryTxTest {
         // ---
         expectMore(4, 10, SNAPSHOT_BEGIN);
         expectJust(2, 11, SNAPSHOT_END);
+
         // send snapshot with 5 items (add two more)
         distribute(4, 10, SNAPSHOT_BEGIN);
         distribute(3, 13, 0);
@@ -592,11 +679,16 @@ public class HistoryTxTest {
         distribute(1, 14, 0);
         distribute(0, 12, SNAPSHOT_END);
         // ---
-        if (blocking) { // cannot optimize tx end in blocking mode (just one record in buffer)
+        if (unconflated) {
+            expectMore(4, 10, SNAPSHOT_BEGIN);
+            expectMore(3, 13, blocking ? TX_PENDING : 0);
+            expectJust(2, 11, SNAPSHOT_END);
+        } else if (blocking) { // cannot optimize tx end in blocking mode (just one record in buffer)
             expectMore(3, 13, TX_PENDING); // still pending
             expectJust(2, 11, 0); // this event delivered to end tx, even though it is not updated and outside sub
-        } else
+        } else {
             expectJust(3, 13, 0); // optimized TX_END here, because that item at time=2 did not update
+        }
     }
 
     @Test
@@ -616,7 +708,12 @@ public class HistoryTxTest {
         distribute(1, 14, 0);
         distribute(0, 12, SNAPSHOT_END);
         // ---
-        expectJust(3, 13, 0); // only one items updates in sub range (no TX)
+        if (unconflated) {
+            expectMore(4, 10, SNAPSHOT_BEGIN);
+            expectJust(3, 13, SNAPSHOT_END);
+        } else {
+            expectJust(3, 13, 0); // only one items updates in sub range (no TX)
+        }
     }
 
     @Test
@@ -637,8 +734,15 @@ public class HistoryTxTest {
         distribute(1, 14, 0);
         distribute(0, 12, SNAPSHOT_END);
         // ---
-        expectMore(3, 13, TX_PENDING);
-        expectJust(1, 14, 0);
+        if (unconflated) {
+            expectMore(4, 10, SNAPSHOT_BEGIN);
+            expectMore(3, 13, blocking ? TX_PENDING : 0);
+            expectMore(2, 11, blocking ? TX_PENDING : 0);
+            expectJust(1, 14, SNAPSHOT_END);
+        } else {
+            expectMore(3, 13, TX_PENDING);
+            expectJust(1, 14, 0);
+        }
     }
 
     @Test
@@ -659,11 +763,17 @@ public class HistoryTxTest {
         distribute(2, 14, 0); // new, no sub
         distribute(0, 12, SNAPSHOT_END); // confirm, no sub
         // ---
-        if (blocking) { // cannot optimize tx end in blocking mode (just one record in buffer)
+        if (unconflated) {
+            expectMore(8, 10, SNAPSHOT_BEGIN);
+            expectMore(6, 13, blocking ? TX_PENDING : 0);
+            expectMore(4, 11, blocking ? TX_PENDING : 0);
+            expectJust(3, 0, SNAPSHOT_END | REMOVE_EVENT);
+        } else if (blocking) { // cannot optimize tx end in blocking mode (just one record in buffer)
             expectMore(6, 13, TX_PENDING); // still pending
             expectJust(Long.MAX_VALUE, 0, REMOVE_EVENT); // this event ends tx even though it is below sub
-        } else
+        } else {
             expectJust(6, 13, 0); // optimized tx end
+        }
     }
 
     @Test
@@ -684,12 +794,20 @@ public class HistoryTxTest {
         distribute(2, 14, 0); // new
         distribute(0, 12, SNAPSHOT_END); // confirm, no sub
         // ---
-        expectMore(6, 13, TX_PENDING);
-        if (blocking) { // cannot optimize tx end in blocking mode (just one record in buffer)
+        if (unconflated) {
+            expectMore(8, 10, SNAPSHOT_BEGIN);
+            expectMore(6, 13, blocking ? TX_PENDING : 0);
+            expectMore(4, 11, blocking ? TX_PENDING : 0);
+            expectMore(2, 14, blocking ? TX_PENDING : 0);
+            expectJust(1, 0, SNAPSHOT_END | REMOVE_EVENT);
+        } else if (blocking) { // cannot optimize tx end in blocking mode (just one record in buffer)
+            expectMore(6, 13, TX_PENDING);
             expectMore(2, 14, TX_PENDING); // still pending
             expectJust(Long.MAX_VALUE, 0, REMOVE_EVENT); // tx end, even though it is below sub AND did not update anything
-        } else
+        } else {
+            expectMore(6, 13, TX_PENDING);
             expectJust(2, 14, 0); // optimized tx end
+        }
     }
 
     @Test
@@ -736,7 +854,12 @@ public class HistoryTxTest {
         distribute(4, 13, TX_PENDING);
         distribute(4, 14, 0);
         //--
-        expectJust(4, 14, 0);
+        if (unconflated) {
+            expectMore(4, 13, TX_PENDING);
+            expectJust(4, 14, 0);
+        } else {
+            expectJust(4, 14, 0);
+        }
     }
 
     @Test
@@ -1032,13 +1155,17 @@ public class HistoryTxTest {
         // update snapshot (drop all items)
         distribute(0, 0, SNAPSHOT_BEGIN | REMOVE_EVENT | SNAPSHOT_END);
         // --
-        expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
-        expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
-        if (blocking) {
+        if (unconflated) {
+            expectJust(2, 0, SNAPSHOT_BEGIN | REMOVE_EVENT | SNAPSHOT_END);
+        } else if (blocking) {
+            expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
+            expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
             // will be split into two events
             expectMore(2, 0, REMOVE_EVENT | TX_PENDING);
             expectJust(Long.MAX_VALUE, 0, REMOVE_EVENT);
         } else {
+            expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
+            expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
             // tx end will collapse into one event
             expectJust(2, 0, REMOVE_EVENT); // no more dirty at this item
         }
@@ -1058,12 +1185,16 @@ public class HistoryTxTest {
         // update snapshot (drop all items)
         distribute(0, 0, SNAPSHOT_BEGIN | REMOVE_EVENT | SNAPSHOT_END);
         // --
-        expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
-        if (blocking) { // cannot optimize tx end in blocking mode (just one record in buffer)
+        if (unconflated) {
+            expectJust(2, 0, SNAPSHOT_BEGIN | REMOVE_EVENT | SNAPSHOT_END);
+        } else if (blocking) { // cannot optimize tx end in blocking mode (just one record in buffer)
+            expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
             expectMore(3, 0, REMOVE_EVENT | TX_PENDING); // still pending
             expectJust(Long.MAX_VALUE, 0, REMOVE_EVENT); // event to end tx
-        } else
+        } else {
+            expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
             expectJust(3, 0, REMOVE_EVENT); // optimized tx end here
+        }
     }
 
     @Test
@@ -1093,12 +1224,30 @@ public class HistoryTxTest {
         history.forceRebase(agent);
         distribute(0, 0, SNAPSHOT_END | REMOVE_EVENT); // virtual snapshot end
         // now retrieve updates
-        expectMore(2, 14, TX_PENDING); // this was in TX
-        if (blocking) { // cannot optimize tx end in blocking mode (just one record in buffer)
+        if (unconflated && blocking) {
+            expectMore(2, 14, TX_PENDING);
+            expectMore(1, 15, 0);
+            expectMore(4, 10, SNAPSHOT_BEGIN);
+            expectMore(3, 11, 0);
+            expectMore(2, 14, 0);
+            expectMore(1, 16, TX_PENDING);
+            expectJust(0, 0, SNAPSHOT_END | REMOVE_EVENT);
+        } else if (unconflated) {
+            expectMore(4, 10, SNAPSHOT_BEGIN);
+            expectMore(3, 11, 0);
+            expectMore(2, 14, 0);
+            expectMore(1, 16, 0);
+            expectMore(0, 0, SNAPSHOT_END | REMOVE_EVENT);
+            // tricky case, where "available" is true, but nothing retrieves, because events were unlinked
+            expectNothingRetrieves();
+        } else if (blocking) { // cannot optimize tx end in blocking mode (just one record in buffer)
+            expectMore(2, 14, TX_PENDING); // this was in TX
             expectMore(1, 16, TX_PENDING); // still pending
             expectJust(0, 0, REMOVE_EVENT); // explicit remove event to end tx
-        } else
+        } else {
+            expectMore(2, 14, TX_PENDING); // this was in TX
             expectJust(1, 16, 0); // and this in TX (conflated to a single update and optimized to end tx)
+        }
     }
 
     @Test
@@ -1131,22 +1280,39 @@ public class HistoryTxTest {
         // and one more update separately on the last updated time
         distribute(2, 17, 0);
         // ---
-        expectMore(3, 17, TX_PENDING);  // update this
-        if (blocking) { // cannot optimize tx end in blocking mode (just one record in buffer)
-            expectMore(2, 16, TX_PENDING);  // pending
-            expectMore(0, 0, REMOVE_EVENT); // explicit tx end with remove event
-            expectJust(2, 17, 0);  // one more update
-        } else
-            expectJust(2, 17, 0);  // and this ends transaction (optimization and conflation)
-        // do transaction that if finished by remove event
-        distribute(2, 18, TX_PENDING);
-        distribute(0, 0, REMOVE_EVENT);
-        // ---
-        if (blocking) { // cannot optimize tx end in blocking mode (just one record in buffer)
-            expectMore(2, 18, TX_PENDING); // pending
-            expectJust(0, 0, REMOVE_EVENT); // delivered tx end
-        } else
-            expectJust(2, 18, 0); // optimized end of transaction
+        if (unconflated && blocking) {
+            expectMore(4, 10, SNAPSHOT_BEGIN);
+            expectMore(3, 17, TX_PENDING);
+            expectMore(2, 16, TX_PENDING);
+            expectMore(1, 15, TX_PENDING);
+            expectMore(0, 0, REMOVE_EVENT | SNAPSHOT_END);
+            expectJust(2, 17, 0);
+        } else if (unconflated) {
+            expectMore(4, 10, SNAPSHOT_BEGIN);
+            expectMore(3, 17, 0);
+            expectMore(2, 17, 0);
+            expectMore(1, 15, 0);
+            expectJust(0, 0, REMOVE_EVENT | SNAPSHOT_END);
+        } else {
+            expectMore(3, 17, TX_PENDING);  // update this
+            if (blocking) { // cannot optimize tx end in blocking mode (just one record in buffer)
+                expectMore(2, 16, TX_PENDING);  // pending
+                expectMore(0, 0, REMOVE_EVENT); // explicit tx end with remove event
+                expectJust(2, 17, 0);  // one more update
+            } else {
+                expectJust(2, 17, 0);  // and this ends transaction (optimization and conflation)
+            }
+            // do transaction that if finished by remove event
+            distribute(2, 18, TX_PENDING);
+            distribute(0, 0, REMOVE_EVENT);
+            // ---
+            if (blocking) { // cannot optimize tx end in blocking mode (just one record in buffer)
+                expectMore(2, 18, TX_PENDING); // pending
+                expectJust(0, 0, REMOVE_EVENT); // delivered tx end
+            } else {
+                expectJust(2, 18, 0); // optimized end of transaction
+            }
+        }
     }
 
     @Test
@@ -1183,8 +1349,16 @@ public class HistoryTxTest {
         distribute(1, 13, 0);
         distribute(0, 0, SNAPSHOT_END | REMOVE_EVENT); // virtual snapshot end
         // ---
-        expectMore(1, 13, 0);
-        expectJust(0, 0, SNAPSHOT_END | REMOVE_EVENT); // virtual snapshot end
+        if (unconflated) {
+            expectMore(4, 10, SNAPSHOT_BEGIN);
+            expectMore(3, 11, 0);
+            expectMore(2, 12, 0);
+            expectMore(1, 13, 0);
+            expectJust(0, 0, SNAPSHOT_END | REMOVE_EVENT); // virtual snapshot end
+        } else {
+            expectMore(1, 13, 0);
+            expectJust(0, 0, SNAPSHOT_END | REMOVE_EVENT); // virtual snapshot end
+        }
     }
 
     @Test
@@ -1343,6 +1517,9 @@ public class HistoryTxTest {
     // test that HB resize and buffer refilter logic all works correctly
     @Test
     public void testBigSnapshot() {
+        if (unconflated)
+            return;
+
         createAgent(0, true);
         // submit big snapshot
         int n = 100;
@@ -1598,59 +1775,78 @@ public class HistoryTxTest {
         distribute(2, 11, 0);
         distribute(1, 13, 0);
         // ---
-        expectJust(1, 13, TX_PENDING);
+        if (unconflated) {
+            // Snapshot is not yet completed - TX_PENDING flag is set (similar to examineAll() below)
+            expectMore(3, 10, (blocking ? 0 : TX_PENDING) | SNAPSHOT_BEGIN);
+            expectMore(2, 11, (blocking ? 0 : TX_PENDING));
+            expectJust(1, 13, TX_PENDING);
+        } else {
+            expectJust(1, 13, TX_PENDING);
+        }
+
         // now examine all data
         examineAll();
         expectMore(3, 10, TX_PENDING | SNAPSHOT_BEGIN);
         expectMore(2, 11, TX_PENDING);
         expectMore(1, 13, TX_PENDING);
         expectJust(0, 0, TX_PENDING | REMOVE_EVENT | SNAPSHOT_END);
+
         // now examine by subscription
         examineBySubscription(0);
         expectMore(3, 10, TX_PENDING | SNAPSHOT_BEGIN);
         expectMore(2, 11, TX_PENDING);
         expectMore(1, 13, TX_PENDING);
         expectJust(0, 0, TX_PENDING | REMOVE_EVENT | SNAPSHOT_END);
+
         // now examine by subscription (time 2)
         examineBySubscription(2);
         expectMore(3, 10, TX_PENDING | SNAPSHOT_BEGIN);
         expectJust(2, 11, TX_PENDING | SNAPSHOT_END);
+
         // now examine data range 0->0
         examineRange(0, 0);
         expectJust(0, 0, REMOVE_EVENT | TX_PENDING);
+
         // now examine data range LTR (all)
         examineRange(0, Long.MAX_VALUE);
         expectMore(0, 0, REMOVE_EVENT | TX_PENDING);
         expectMore(1, 13, TX_PENDING);
         expectMore(2, 11, TX_PENDING);
         expectJust(3, 10, TX_PENDING);
+
         // now examine data range LTR 1->2
         examineRange(1, 2);
         expectMore(1, 13, TX_PENDING);
         expectJust(2, 11, TX_PENDING);
+
         // now examine data range LTR 2->3
         examineRange(2, 3);
         expectMore(2, 11, TX_PENDING);
         expectJust(3, 10, TX_PENDING);
+
         // now examine data range RTL (all)
         examineRange(Long.MAX_VALUE, 0);
         expectMore(3, 10, TX_PENDING);
         expectMore(2, 11, TX_PENDING);
         expectMore(1, 13, TX_PENDING);
         expectJust(0, 0, REMOVE_EVENT | TX_PENDING);
+
         // now examine data range RTL 2->1
         examineRange(2, 1);
         expectMore(2, 11, TX_PENDING);
         expectJust(1, 13, TX_PENDING);
+
         // now examine data range RTL 2->0
         examineRange(2, 0);
         expectMore(2, 11, TX_PENDING);
         expectMore(1, 13, TX_PENDING);
         expectJust(0, 0, REMOVE_EVENT | TX_PENDING);
+
         // now examine data range RTL 3->2
         examineRange(3, 2);
         expectMore(3, 10, TX_PENDING);
         expectJust(2, 11, TX_PENDING);
+
         // close agent and examine what was there
         closeAgentAndExamine();
         expectMore(3, 10, TX_PENDING | SNAPSHOT_BEGIN);
@@ -1672,23 +1868,41 @@ public class HistoryTxTest {
         expectMore(2, 11, 0);
         expectMore(1, 12, 0);
         expectJust(0, 0, REMOVE_EVENT | SNAPSHOT_END);
+
         // resend previous snapshot, but snip
         distribute(3, 10, SNAPSHOT_BEGIN);
         distribute(2, 11, 0);
         distribute(1, 12, SNAPSHOT_SNIP);
         // ---
-        expectJust(1, 12, SNAPSHOT_SNIP);
+        if (unconflated) {
+            expectMore(3, 10, SNAPSHOT_BEGIN);
+            expectMore(2, 11, 0);
+            expectJust(1, 12, SNAPSHOT_SNIP);
+        } else {
+            expectJust(1, 12, SNAPSHOT_SNIP);
+        }
+
         // snip even more
         distribute(3, 10, SNAPSHOT_BEGIN | SNAPSHOT_SNIP);
         // ---
-        expectJust(3, 10, SNAPSHOT_SNIP);
+        if (unconflated) {
+            expectJust(3, 10, SNAPSHOT_BEGIN | SNAPSHOT_SNIP);
+        } else {
+            expectJust(3, 10, SNAPSHOT_SNIP);
+        }
         // then increase snapshot again (send more data after snip)
         distribute(3, 10, SNAPSHOT_BEGIN);
         distribute(2, 11, 0);
         distribute(1, 12, SNAPSHOT_SNIP); // should be treated as snapshot_end (terminate snapshot update tx)
         // ---
-        expectMore(2, 11, 0); // extending previous snapshot (no tx needed)
-        expectJust(1, 12, SNAPSHOT_SNIP); // snapshot snip makes it consistent
+        if (unconflated) {
+            expectMore(3, 10, (blocking ? SNAPSHOT_SNIP : 0) | SNAPSHOT_BEGIN);
+            expectMore(2, 11, 0);
+            expectJust(1, 12, SNAPSHOT_SNIP);
+        } else {
+            expectMore(2, 11, 0); // extending previous snapshot (no tx needed)
+            expectJust(1, 12, SNAPSHOT_SNIP); // snapshot snip makes it consistent
+        }
         // increase snapshot to sub time (no longer snip)
         distribute(0, 13, SNAPSHOT_END);
         // ---
@@ -1885,17 +2099,24 @@ public class HistoryTxTest {
         distribute(2, 14, 0);
         distribute(1, 15, 0);
         distribute(0, 0, REMOVE_EVENT | SNAPSHOT_END);
-        // it must be received from local buffer as transactional update to the current snapshot
-        expectMore(6, 0, REMOVE_EVENT | TX_PENDING);
-        expectMore(5, 0, REMOVE_EVENT | TX_PENDING);
-        expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
-        expectMore(3, 13, TX_PENDING);
-        expectMore(2, 14, TX_PENDING);
-        if (blocking) {
-            expectMore(1, 15, TX_PENDING);
-            expectJust(0, 0, REMOVE_EVENT);
+        if (unconflated) {
+            expectMore(3, 13, (blocking ? TX_PENDING : 0) | SNAPSHOT_BEGIN);
+            expectMore(2, 14, (blocking ? TX_PENDING : 0));
+            expectMore(1, 15, (blocking ? TX_PENDING : 0));
+            expectJust(0, 0, REMOVE_EVENT | SNAPSHOT_END);
         } else {
-            expectJust(1, 15, 0); // last event ends transaction when non-blocking retrieve (from HB)
+            // it must be received from local buffer as transactional update to the current snapshot
+            expectMore(6, 0, REMOVE_EVENT | TX_PENDING);
+            expectMore(5, 0, REMOVE_EVENT | TX_PENDING);
+            expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
+            expectMore(3, 13, TX_PENDING);
+            expectMore(2, 14, TX_PENDING);
+            if (blocking) {
+                expectMore(1, 15, TX_PENDING);
+                expectJust(0, 0, REMOVE_EVENT);
+            } else {
+                expectJust(1, 15, 0); // last event ends transaction when non-blocking retrieve (from HB)
+            }
         }
     }
 
@@ -1914,11 +2135,17 @@ public class HistoryTxTest {
         // send different snapshot, up to time=4
         distribute(6, 13, SNAPSHOT_BEGIN);
         distribute(5, 14, 0);
-        distribute(4, 15, SNAPSHOT_SNIP); // snip to time > timeKnow must advance timeKnow to timeSub
+        distribute(4, 15, SNAPSHOT_SNIP); // snip to time > timeKnown must advance timeKnown to timeSub
         // ---
-        expectMore(6, 13, TX_PENDING);
-        expectMore(5, 14, TX_PENDING);
-        expectJust(4, 15, SNAPSHOT_SNIP); // must end transaction
+        if (unconflated) {
+            expectMore(6, 13, SNAPSHOT_BEGIN);
+            expectMore(5, 14, 0);
+            expectJust(4, 15, SNAPSHOT_SNIP); // must end transaction
+        } else {
+            expectMore(6, 13, TX_PENDING);
+            expectMore(5, 14, TX_PENDING);
+            expectJust(4, 15, SNAPSHOT_SNIP); // must end transaction
+        }
     }
 
     @Test
@@ -1954,12 +2181,20 @@ public class HistoryTxTest {
         // send snapshot with only 1 items left (confirm it)
         distribute(1, 13, SNAPSHOT_BEGIN);
         // ---
-        expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
-        expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
-        expectJust(2, 0, REMOVE_EVENT | TX_PENDING);
+        if (unconflated) {
+            expectJust(1, 13, TX_PENDING | SNAPSHOT_BEGIN);
+        } else {
+            expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
+            expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
+            expectJust(2, 0, REMOVE_EVENT | TX_PENDING);
+        }
         // ---
         distribute(0, 0, REMOVE_EVENT | SNAPSHOT_END);
-        expectJust(0, 0, REMOVE_EVENT);
+        if (unconflated) {
+            expectJust(0, 0, REMOVE_EVENT | SNAPSHOT_SNIP);
+        } else {
+            expectJust(0, 0, REMOVE_EVENT);
+        }
     }
 
     @Test
@@ -2032,11 +2267,16 @@ public class HistoryTxTest {
         expectJust(0, 14, SNAPSHOT_END);
         // now sweep-remove and snip in the middle
         distribute(2, 0, REMOVE_EVENT | SNAPSHOT_BEGIN | SNAPSHOT_SNIP);
-        // remove old events in transaction and snip
-        // todo: can be further optimized
-        expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
-        expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
-        expectJust(2, 0, REMOVE_EVENT | SNAPSHOT_SNIP);
+
+        if (unconflated) {
+            expectJust(2, 0, REMOVE_EVENT | SNAPSHOT_BEGIN | SNAPSHOT_SNIP);
+        } else {
+            // remove old events in transaction and snip
+            // todo: can be further optimized
+            expectMore(4, 0, REMOVE_EVENT | TX_PENDING);
+            expectMore(3, 0, REMOVE_EVENT | TX_PENDING);
+            expectJust(2, 0, REMOVE_EVENT | SNAPSHOT_SNIP);
+        }
     }
 
     @Test
@@ -2279,7 +2519,7 @@ public class HistoryTxTest {
     // this case was found by MTStressTest
     @Test
     public void testLostTxPending4() {
-        if (blocking)
+        if (blocking || unconflated)
             return; // cannot do this test in blocking mode -- it explicitly tests proper buffering
         createAgent(-2, true); // agent subscribes from -2, but subscription gets snipped to zero
         // snapshot begin
@@ -2367,6 +2607,7 @@ public class HistoryTxTest {
         expectMore(3, 10, SNAPSHOT_BEGIN);
         expectMore(2, 11, 0);
         expectJust(1, 12, SNAPSHOT_END);
+
         // start sending the other snapshot (without update on the first items)
         distribute(3, 10, SNAPSHOT_BEGIN); // no update at time=3
         // unsubscribe the other agent
@@ -2375,22 +2616,40 @@ public class HistoryTxTest {
         distribute(2, 13, 0);
         distribute(1, 14, 0);
         distribute(0, 15, SNAPSHOT_END); // no sub any more
+
         // do update transaction
         distribute(2, 16, TX_PENDING);
         distribute(3, 17, TX_PENDING); // now update at time=3 (the only non-ignored event)
         distribute(1, 18, 0); // txEnd
+
         // and finally distribute a snapshot
         distribute(3, 17, SNAPSHOT_BEGIN); // same as in tx above
         distribute(2, 19, 0);
         distribute(1, 20, SNAPSHOT_END);
         // --
-        expectMore(2, 13, TX_PENDING);
-        expectMore(1, 14, TX_PENDING);
-        expectMore(2, 16, TX_PENDING);
-        expectMore(3, 17, TX_PENDING);
-        expectMore(1, 18, TX_PENDING);
-        expectMore(2, 19, TX_PENDING);
-        expectJust(1, 20, 0);
+        if (unconflated && blocking) {
+            expectMore(3, 10, SNAPSHOT_BEGIN);
+            expectMore(2, 13, TX_PENDING);
+            expectMore(1, 14, TX_PENDING | SNAPSHOT_END);
+            expectMore(2, 16, TX_PENDING);
+            expectMore(3, 17, TX_PENDING);
+            expectMore(1, 18, TX_PENDING);
+            expectMore(3, 17, TX_PENDING | SNAPSHOT_BEGIN);
+            expectMore(2, 19, TX_PENDING);
+            expectJust(1, 20, SNAPSHOT_END);
+        } else if (unconflated) {
+            expectMore(3, 17, SNAPSHOT_BEGIN);
+            expectMore(2, 19, 0);
+            expectJust(1, 20, SNAPSHOT_END);
+        } else {
+            expectMore(2, 13, TX_PENDING);
+            expectMore(1, 14, TX_PENDING);
+            expectMore(2, 16, TX_PENDING);
+            expectMore(3, 17, TX_PENDING);
+            expectMore(1, 18, TX_PENDING);
+            expectMore(2, 19, TX_PENDING);
+            expectJust(1, 20, 0);
+        }
     }
 
     // this case was found by MTStressTest
@@ -2473,7 +2732,12 @@ public class HistoryTxTest {
         distribute(1, 12, 0);
         distribute(0, 13, SNAPSHOT_END);
         // ---
-        expectNothing();
+        if (unconflated) {
+            expectMore(3, 10, SNAPSHOT_BEGIN);
+            expectJust(2, 11, SNAPSHOT_END);
+        } else {
+            expectNothing();
+        }
     }
 
     @Test
@@ -2488,6 +2752,7 @@ public class HistoryTxTest {
         expectMore(4, 10, SNAPSHOT_BEGIN);
         expectMore(3, 11, 0);
         expectJust(2, 12, SNAPSHOT_END);
+
         // now agent2 comes and subscribes for larger time interval
         createAgent2(0, true);
         // data source still sends updates on smaller subscription and they must be received by original agent
@@ -2498,14 +2763,22 @@ public class HistoryTxTest {
         expectMore(4, 13, TX_PENDING);
         expectMore(3, 14, TX_PENDING);
         expectJust(2, 15, 0);
+
         // now snapshot for agent2 is sent
         distribute(4, 13, SNAPSHOT_BEGIN);
         distribute(3, 14, 0);
         distribute(2, 15, 0);
         distribute(1, 16, 0);
         distribute(0, 17, SNAPSHOT_END);
-        // nothing new for original agent, though
-        expectNothing();
+        if (unconflated) {
+            expectMore(4, 13, SNAPSHOT_BEGIN);
+            expectMore(3, 14, 0);
+            expectJust(2, 15, SNAPSHOT_END);
+        } else {
+            // nothing new for original agent, though
+            expectNothing();
+        }
+
         // now agent2 resubscribes for smaller time interval
         setSubTime2(10);
         // data source still sends updates and they must be received by original agent
@@ -2516,12 +2789,19 @@ public class HistoryTxTest {
         expectMore(4, 18, TX_PENDING);
         expectMore(3, 19, TX_PENDING);
         expectJust(2, 20, 0);
+
         // now snapshot is resent because of subscription change
         distribute(4, 18, SNAPSHOT_BEGIN);
         distribute(3, 19, 0);
         distribute(2, 20, SNAPSHOT_END);
-        // nothing new for original agent, though
-        expectNothing();
+        if (unconflated) {
+            expectMore(4, 18, SNAPSHOT_BEGIN);
+            expectMore(3, 19, 0);
+            expectJust(2, 20, SNAPSHOT_END);
+        } else {
+            // nothing new for original agent, though
+            expectNothing();
+        }
     }
 
     @Test
@@ -2547,6 +2827,9 @@ public class HistoryTxTest {
         distribute(1, 16, 0);
         distribute(0, 17, SNAPSHOT_END);
         // ---
+        if (unconflated && blocking) {
+            expectMore(10, 0, SNAPSHOT_BEGIN | SNAPSHOT_END | REMOVE_EVENT);
+        }
         expectJust(10, 0, SNAPSHOT_BEGIN | SNAPSHOT_END | REMOVE_EVENT);
         // now close agent and reopen at time 0. Make sure valid snapshot is only up to time 10
         closeAgent();
@@ -2590,11 +2873,16 @@ public class HistoryTxTest {
         // distribute snapshot at lower values
         distribute(1, 12, SNAPSHOT_BEGIN);
         distribute(0, 13, SNAPSHOT_END);
-        // -- expect snapshot first, then updates (removes)
-        expectMore(1, 12, TX_PENDING);
-        expectMore(0, 13, TX_PENDING | SNAPSHOT_END);
-        expectMore(3, 0, TX_PENDING | REMOVE_EVENT);
-        expectJust(2, 0, REMOVE_EVENT);
+        if (unconflated) {
+            expectMore(1, 12, SNAPSHOT_BEGIN);
+            expectJust(0, 13, SNAPSHOT_END);
+        } else {
+            // -- expect snapshot first, then updates (removes)
+            expectMore(1, 12, TX_PENDING);
+            expectMore(0, 13, TX_PENDING | SNAPSHOT_END);
+            expectMore(3, 0, TX_PENDING | REMOVE_EVENT);
+            expectJust(2, 0, REMOVE_EVENT);
+        }
     }
 
     /*
@@ -2705,6 +2993,8 @@ public class HistoryTxTest {
         agent.close();
         agent = null;
         provider = null;
+        blockingProvider = null;
+        blockingListener = null;
         assertTrue("!available", !available);
     }
 
@@ -2761,7 +3051,64 @@ public class HistoryTxTest {
 
     // HistoryTxBlockingTest overrides
     RecordProvider getProvider(QDAgent agent) {
-        return agent;
+        // Non-blocking mode: do nothing
+        if (!blocking)
+            return agent;
+
+        // Blocking mode:
+        // Buffer size is limited to 1 and blocking is configured,
+        // while the actual buffer is off-loaded to a separate buffer.
+        // This way buffer blocking in History is stress-tested.
+        agent.setBufferOverflowStrategy(QDAgent.BufferOverflowStrategy.BLOCK);
+        agent.setMaxBufferSize(1);
+
+        // our buffer
+        final RecordBuffer buf = RecordBuffer.getInstance(agent.getMode());
+        // our provider
+        blockingProvider = new AbstractRecordProvider() {
+            @Override
+            public RecordMode getMode() {
+                return agent.getMode();
+            }
+
+            @Override
+            public boolean retrieve(RecordSink sink) {
+                return buf.retrieve(sink);
+            }
+
+            @Override
+            public void setRecordListener(RecordListener listener) {
+                blockingListener = listener;
+                if (listener != null && buf.hasNext())
+                    listener.recordsAvailable(blockingProvider);
+            }
+        };
+        // will mimic conflation logic
+        final RecordSink conflatingSink = new AbstractRecordSink() {
+            long lastPosition = -1;
+            @Override
+            public void append(RecordCursor cursor) {
+                if (lastPosition >= buf.getPosition()) {
+                    RecordCursor writeCursor = buf.writeCursorAt(lastPosition);
+                    if (writeCursor.getTime() == cursor.getTime() && !unconflated) {
+                        // Emulate conflation
+                        writeCursor.setEventFlags(cursor.getEventFlags());
+                        writeCursor.copyDataFrom(cursor);
+                        return;
+                    }
+                }
+                lastPosition = buf.getLimit();
+                buf.append(cursor);
+            }
+        };
+        // install an agent's listener
+        agent.setRecordListener(p -> {
+            boolean wasEmpty = !buf.hasNext();
+            agent.retrieve(conflatingSink);
+            if (wasEmpty && buf.hasNext() && blockingListener != null)
+                blockingListener.recordsAvailable(blockingProvider);
+        });
+        return blockingProvider;
     }
 
     private void startBatch() {
@@ -2783,7 +3130,6 @@ public class HistoryTxTest {
         distributeBatch = false;
     }
 
-
     private void removeData() {
         RecordBuffer buf = RecordBuffer.getInstance(RecordMode.FLAGGED_DATA);
         buf.add(RECORD, CIPHER, null);
@@ -2801,14 +3147,21 @@ public class HistoryTxTest {
         assertTrue("!available", !available && retrieveBuf.isEmpty());
     }
 
+    private void expectUnconflated(final long time, final int value, final int flags) {
+        if (unconflated) {
+            expect(time, value, flags);
+        }
+    }
+
     private void expect(final long time, final int value, final int flags) {
         assertTrue("available", available || !retrieveBuf.isEmpty());
         if (retrieveBuf.isEmpty())
             retrieveBatch(1);
         RecordCursor cursor = retrieveBuf.next();
+        assertNotNull(cursor);
         assertEquals("record", RECORD, cursor.getRecord());
         assertEquals("cipher", CIPHER, cursor.getCipher());
-        assertEquals("symbol", null, cursor.getSymbol());
+        assertNull("symbol", cursor.getSymbol());
         assertEquals("time", time, cursor.getTime());
         assertEquals("value", value, cursor.getInt(VALUE_INDEX));
         assertEquals("flags", flags, cursor.getEventFlags());
@@ -2856,7 +3209,7 @@ public class HistoryTxTest {
             }
         });
         assertEquals("received", size, retrieveBuf.size());
-        assertTrue("!available", !available);
+        assertFalse("!available", available);
         available = hasMore;
     }
 
@@ -2876,8 +3229,13 @@ public class HistoryTxTest {
     private class HistoryImpl extends History {
         boolean forceRetrieveUpdate;
 
-        HistoryImpl(Builder builder) {
-            super(builder);
+        HistoryImpl(Builder<QDHistory> builder) {
+            super(builder, new RecordOnlyFilter(builder.getScheme()) {
+                @Override
+                public boolean acceptRecord(DataRecord record) {
+                    return !unconflated;
+                }
+            });
         }
 
         @Override

@@ -18,7 +18,7 @@ public class SequenceField extends CompactIntField {
     private static final int SEQUENCE_MASK = (1 << MILLIS_SHIFT) - 1;
 
     public SequenceField(int index, String name) {
-        super(index, name, SerialFieldType.SEQUENCE.forNamedField(name));
+        this(index, name, SerialFieldType.SEQUENCE.forNamedField(name));
     }
 
     public SequenceField(int index, String name, SerialFieldType serialType) {

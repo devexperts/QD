@@ -15,9 +15,11 @@ import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataVisitor;
 import com.devexperts.qd.HistorySubscriptionFilter;
 import com.devexperts.qd.QDAgent;
+import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.QDHistory;
 import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.impl.matrix.management.CollectorOperation;
+import com.devexperts.qd.kit.RecordOnlyFilter;
 import com.devexperts.qd.ng.EventFlag;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
@@ -31,8 +33,8 @@ import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimePeriod;
 
 import static com.devexperts.qd.impl.matrix.Distribution.DEC_PENDING_COUNT_DIST_FLAG;
-import static com.devexperts.qd.impl.matrix.Distribution.ENABLED_SNAPSHOT_MODE_DIST_FLAG;
 import static com.devexperts.qd.impl.matrix.Distribution.HAD_SNAPSHOT_DIST_FLAG;
+import static com.devexperts.qd.impl.matrix.Distribution.SEND_SNAPSHOT_DIST_FLAG;
 import static com.devexperts.qd.impl.matrix.Distribution.TX_END_DIST_FLAG;
 import static com.devexperts.qd.impl.matrix.Distribution.TX_SWEEP_DIST_FLAG;
 import static com.devexperts.qd.impl.matrix.Distribution.UPDATED_RECORD_DIST_FLAG;
@@ -49,6 +51,13 @@ public class History extends Collector implements QDHistory {
         History.class, "snapshotBatchSize", 10000, 1, Integer.MAX_VALUE);
     static final long STATE_KEEP_TIME = TimePeriod.valueOf(SystemProperties.getProperty(
         History.class, "stateKeepTime", "60s")).getTime();
+
+    //FIXME Abstraction leak here: History should not know about dxscheme and unconflated Order.
+    // Flag specifying "conflated" or "unconflated" mode for History (dxscheme.fob=false or true respectively).
+    static final boolean FOB_FLAG = SystemProperties.getBooleanProperty("dxscheme.fob", false);
+    // By default, all records except Order are conflated.
+    static final String CONFLATE_FILTER = SystemProperties.getProperty(History.class, "conflateFilter",
+        FOB_FLAG ? "!:Order*" : "*");
 
     /*
      * Event flags.
@@ -161,17 +170,27 @@ public class History extends Collector implements QDHistory {
 
     private final HistorySubscriptionFilter historyFilter;
 
+    // Filter specifying records to conflate in "unconflated" mode
+    private final QDFilter conflateFilter;
+
     private ProcessVersionTracker processVersion = new ProcessVersionTracker();
 
     //======================================= constructor =======================================
 
     protected History(Builder<?> builder) {
+        this(builder, null);
+    }
+
+    protected History(Builder<?> builder, RecordOnlyFilter conflateFilter) {
         super(builder, true, true);
         HistorySubscriptionFilter historyFilter = builder.getHistoryFilter();
         // If history filter is not specified in builder get it as service.
         if (historyFilter == null)
             historyFilter = builder.getScheme().getService(HistorySubscriptionFilter.class);
         this.historyFilter = historyFilter;
+        if (conflateFilter == null)
+            conflateFilter = RecordOnlyFilter.valueOf(CONFLATE_FILTER, builder.getScheme());
+        this.conflateFilter = conflateFilter;
     }
 
     //======================================= methods =======================================
@@ -616,14 +635,17 @@ public class History extends Collector implements QDHistory {
         RecordCursor cursor;
         while ((cursor = source.next()) != null) {
             DataRecord record = cursor.getRecord();
+
             int rid = getRid(record);
             dist.countIncomingRecord(rid);
-            int cipher = cursor.getCipher();
-            String symbol = cursor.getSymbol();
             if (!record.hasTime())
                 continue;
+
+            int cipher = cursor.getCipher();
+            String symbol = cursor.getSymbol();
             if (storeEverything && !distributor.filter.accept(contract, record, cipher, symbol))
                 continue;
+
             int key = getKey(cipher, symbol);
             int tindex = tsub.getIndex(key, rid, 0);
             // storeEverything support
@@ -668,9 +690,16 @@ public class History extends Collector implements QDHistory {
             /*
              * (0) Turn on snapshot mode when we see SNAPSHOT_BEGIN/MODE flag (per QD-895).
              */
-            if ((eventFlags & (SNAPSHOT_BEGIN | SNAPSHOT_MODE)) != 0 && hb.snapshotMode()) {
-                // mark event that turned on snapshot mode (it will have to be processed by agents)
-                distFlags |= ENABLED_SNAPSHOT_MODE_DIST_FLAG;
+            if ((eventFlags & (SNAPSHOT_BEGIN | SNAPSHOT_MODE)) != 0) {
+                if (hb.enterSnapshotModeFirstTime()) {
+                    // mark event that turned on snapshot mode (it will have to be processed by agents)
+                    distFlags |= SEND_SNAPSHOT_DIST_FLAG;
+                } else if (!conflateFilter.accept(cursor)) {
+                    // We need to transparently retransmit the snapshot for unconflated events.
+                    hb.enterSnapshotModeForUnconflated();
+                    // mark event that triggered snapshot retransmission (it will have to be processed by agents)
+                    distFlags |= SEND_SNAPSHOT_DIST_FLAG;
+                }
             }
             /*
              * (1) Process transaction TX_PENDING logic. This logic is invoked even if subscription has changed and this
@@ -799,7 +828,7 @@ public class History extends Collector implements QDHistory {
                  * this agent.
                  */
                 if (sweepRemovePosition != endRemovePosition &&
-                    (!agent.useHistorySnapshot() || (distFlags & ENABLED_SNAPSHOT_MODE_DIST_FLAG) == 0))
+                    (!agent.useHistorySnapshot() || (distFlags & SEND_SNAPSHOT_DIST_FLAG) == 0))
                 {
                     /*
                      * Submit snapshot-removed records (if subscribed). Note, that they constitute a part of
@@ -832,7 +861,7 @@ public class History extends Collector implements QDHistory {
                 if (time >= timeSub && // (1)
                         ((distFlags & (UPDATED_RECORD_DIST_FLAG | UPDATED_SNIP_DIST_FLAG)) != 0) || // (1a, 1b)
                     agent.useHistorySnapshot() &&
-                        (((distFlags & (TX_END_DIST_FLAG | ENABLED_SNAPSHOT_MODE_DIST_FLAG)) != 0) || // (2a, 2b)
+                        (((distFlags & (TX_END_DIST_FLAG | SEND_SNAPSHOT_DIST_FLAG)) != 0) || // (2a, 2b)
                             (time < prevSnapshotTime && prevSnapshotTime > timeSub && hb.wasEverSnapshotMode()))) // (2c)
                 {
                     dist.add(nagent, position, distFlags, rid);
@@ -953,7 +982,7 @@ public class History extends Collector implements QDHistory {
              * then reset agent's known time, so that it starts delivering snapshot from HB and clear everything from
              * the local buffer (which might break snapshot consistency)
              */
-            if (agent.useHistorySnapshot() && (distFlags & ENABLED_SNAPSHOT_MODE_DIST_FLAG) != 0) {
+            if (agent.useHistorySnapshot() && (distFlags & SEND_SNAPSHOT_DIST_FLAG) != 0) {
                 timeKnown = Long.MAX_VALUE;
                 asub.setLong(aindex + TIME_KNOWN, timeKnown);
                 // Drop everything queued in agent buffer
@@ -1099,7 +1128,7 @@ public class History extends Collector implements QDHistory {
              *   2) event was received by history buffer in snapshot state
              *
              * This is so, because here we have an event that updates already retrieved part of the snapshot
-             * (time >= timeKnow) which may have happened after an update to the part of the snapshot that is yet
+             * (time >= timeKnown) which may have happened after an update to the part of the snapshot that is yet
              * to be retrieved, so the resulting snapshot may end up being inconsistent
              * (see HistoryTxTest.testPartialRetrieveUpdateInconsistency)
              *
@@ -1125,7 +1154,9 @@ public class History extends Collector implements QDHistory {
              */
             if (lastRecordInBuffer) {
                 RecordCursor writeCursor = agent.buffer.writeCursorAtPersistentPosition(lastRecord);
-                if (writeCursor.getTime() == (virtualTime ? VIRTUAL_TIME : time)) {
+                if (writeCursor.getTime() == (virtualTime ? VIRTUAL_TIME : time) &&
+                    conflateFilter.accept(writeCursor))
+                {
                     // Conflate update to the most recently updated item and that's it
                     conflateLastRecord(cursor, writeCursor, virtualTime, eventFlags);
                     continue;

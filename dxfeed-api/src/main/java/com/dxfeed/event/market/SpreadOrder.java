@@ -94,6 +94,19 @@ import javax.xml.bind.annotation.XmlType;
  *
  * This event type cannot be used with {@link DXFeed#getLastEvent DXFeed.getLastEvent} method.
  *
+ * <h3><a name="fobSection">Full Order Book Support</a></h3>
+ *
+ * Some feeds provide support for "Full Order Book" (FOB) where additional fields will be available:
+ * <ul>
+ * <li>{@link #getAction() action} - event business meaning (see {@link OrderAction} for more details)</li>
+ * <li>{@link #getActionTime() actionTime} - time of the last action</li>
+ * <li>{@link #getOrderId() orderId} - ID of this order</li>
+ * <li>{@link #getAuxOrderId() auxOrderId} - additional ID for this order</li>
+ * <li>{@link #getTradeId() tradeId} - trade (order execution) ID</li>
+ * <li>{@link #getTradePrice() tradePrice} - price of the trade</li>
+ * <li>{@link #getTradeSize() tradeSize} - size of the trade</li>
+ * </ul>
+ *
  * <h3>Implementation details</h3>
  *
  * This event is implemented on top of QDS records {@code SpreadOrder#<source-id>},

@@ -192,11 +192,25 @@ class DelegateGen {
 
     DelegateGen phantom(String phantomProperty) {
         if (fieldMappings.isEmpty()) {
+            // Phantom record
             record.phantomProperty = phantomProperty;
             mappingGen.phantom = true;
         } else {
-            lastFieldMapping().field.phantomProperty = phantomProperty;
+            // Phantom field
+            RecordField field = lastFieldMapping().field;
+            field.conditionalProperty = phantomProperty;
+            field.isPhantom = true;
         }
+        return this;
+    }
+
+    // implies optional
+    DelegateGen onlyIf(String conditionalProperty) {
+        // Conditional field
+        RecordField field = lastFieldMapping().field;
+        field.conditionalProperty = conditionalProperty;
+        field.isPhantom = false;
+        field.required = false;
         return this;
     }
 
@@ -284,7 +298,7 @@ class DelegateGen {
     }
 
     DelegateGen mapTimeAndSequence(String timeFieldName, String sequenceFieldName) {
-        map("Time", timeFieldName, FieldType.TIME).internal();
+        map("Time", timeFieldName, FieldType.TIME_SECONDS).internal();
         map("Sequence", sequenceFieldName, FieldType.SEQUENCE).internal();
         assign("TimeSequence", "(((long)#Time.Seconds#) << 32) | (#Sequence# & 0xFFFFFFFFL)");
         injectPutEventCode(
@@ -299,7 +313,7 @@ class DelegateGen {
     }
 
     DelegateGen mapTimeAndSequenceToIndex(String timeFieldName, String sequenceFieldName) {
-        map("Time", timeFieldName, FieldType.TIME).time(0).internal();
+        map("Time", timeFieldName, FieldType.TIME_SECONDS).time(0).internal();
         map("Sequence", sequenceFieldName, FieldType.SEQUENCE).time(1).internal();
         assign("Index", "(((long)#Time.Seconds#) << 32) | (#Sequence# & 0xFFFFFFFFL)");
         injectPutEventCode(

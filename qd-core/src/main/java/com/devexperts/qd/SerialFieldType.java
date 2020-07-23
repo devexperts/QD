@@ -16,23 +16,28 @@ import com.devexperts.qd.kit.CompactCharField;
 import com.devexperts.qd.kit.CompactIntField;
 import com.devexperts.qd.kit.DateField;
 import com.devexperts.qd.kit.DecimalField;
+import com.devexperts.qd.kit.LongField;
 import com.devexperts.qd.kit.MarshalledObjField;
 import com.devexperts.qd.kit.PlainIntField;
 import com.devexperts.qd.kit.SequenceField;
 import com.devexperts.qd.kit.ShortStringField;
 import com.devexperts.qd.kit.StringField;
-import com.devexperts.qd.kit.TimeField;
+import com.devexperts.qd.kit.TimeSecondsField;
+import com.devexperts.qd.kit.TimeMillisField;
 import com.devexperts.qd.kit.VoidIntField;
 import com.devexperts.qd.kit.WideDecimalField;
 
 import static com.devexperts.qd.SerialFieldType.Bits.FLAG_CUSTOM_OBJECT;
 import static com.devexperts.qd.SerialFieldType.Bits.FLAG_DATE;
 import static com.devexperts.qd.SerialFieldType.Bits.FLAG_DECIMAL;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_LONG;
 import static com.devexperts.qd.SerialFieldType.Bits.FLAG_SEQUENCE;
 import static com.devexperts.qd.SerialFieldType.Bits.FLAG_SERIAL_OBJECT;
 import static com.devexperts.qd.SerialFieldType.Bits.FLAG_SHORT_STRING;
 import static com.devexperts.qd.SerialFieldType.Bits.FLAG_STRING;
-import static com.devexperts.qd.SerialFieldType.Bits.FLAG_TIME;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_TIME_MILLIS;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_TIME_NANOS;
+import static com.devexperts.qd.SerialFieldType.Bits.FLAG_TIME_SECONDS;
 import static com.devexperts.qd.SerialFieldType.Bits.FLAG_WIDE_DECIMAL;
 import static com.devexperts.qd.SerialFieldType.Bits.ID_BYTE;
 import static com.devexperts.qd.SerialFieldType.Bits.ID_BYTE_ARRAY;
@@ -63,9 +68,15 @@ public final class SerialFieldType {
 
     public static final SerialFieldType DECIMAL = new SerialFieldType(ID_COMPACT_INT | FLAG_DECIMAL, "DECIMAL");
     public static final SerialFieldType SHORT_STRING = new SerialFieldType(ID_COMPACT_INT | FLAG_SHORT_STRING, "SHORT_STRING");
-    public static final SerialFieldType TIME = new SerialFieldType(ID_COMPACT_INT | FLAG_TIME, "TIME");
+    public static final SerialFieldType TIME_SECONDS = new SerialFieldType(ID_COMPACT_INT | FLAG_TIME_SECONDS, "TIME_SECONDS");
+    public static final SerialFieldType TIME_MILLIS = new SerialFieldType(ID_COMPACT_INT | FLAG_TIME_MILLIS, "TIME_MILLIS");
+    public static final SerialFieldType TIME_NANOS = new SerialFieldType(ID_COMPACT_INT | FLAG_TIME_NANOS, "TIME_NANOS"); // Reserved
+    /** @deprecated Use {@link #TIME_SECONDS} instead. */
+    @Deprecated
+    public static final SerialFieldType TIME = TIME_SECONDS;
     public static final SerialFieldType SEQUENCE = new SerialFieldType(ID_COMPACT_INT | FLAG_SEQUENCE, "SEQUENCE");
     public static final SerialFieldType DATE = new SerialFieldType(ID_COMPACT_INT | FLAG_DATE, "DATE");
+    public static final SerialFieldType LONG = new SerialFieldType(ID_COMPACT_INT | FLAG_LONG, "LONG");
     public static final SerialFieldType WIDE_DECIMAL = new SerialFieldType(ID_COMPACT_INT | FLAG_WIDE_DECIMAL, "WIDE_DECIMAL");
     public static final SerialFieldType STRING = new SerialFieldType(ID_BYTE_ARRAY | FLAG_STRING, "STRING");
     public static final SerialFieldType CUSTOM_OBJECT = new SerialFieldType(ID_BYTE_ARRAY | FLAG_CUSTOM_OBJECT, "CUSTOM_OBJECT");
@@ -74,6 +85,7 @@ public final class SerialFieldType {
     // Named instances (use same ids as standard ones)
     // used by forNamedField method
 
+    private static final SerialFieldType ID = LONG.withName("ID");
     private static final SerialFieldType MMID = SHORT_STRING.withName("MMID");
     private static final SerialFieldType EXCHANGE = UTF_CHAR.withName("EXCHANGE");
     private static final SerialFieldType PRICE = DECIMAL.withName("PRICE");
@@ -88,10 +100,10 @@ public final class SerialFieldType {
     private static final SerialFieldType SALE_FLAGS = COMPACT_INT.withName("SALE_FLAGS");
     private static final SerialFieldType PROFILE_FLAGS = COMPACT_INT.withName("PROFILE_FLAGS");
 
-    private static final SerialFieldType BID_TIME = TIME.withName("BID_TIME");
-    private static final SerialFieldType ASK_TIME = TIME.withName("ASK_TIME");
-    private static final SerialFieldType TRADE_TIME = TIME.withName("TRADE_TIME");
-    private static final SerialFieldType CANDLE_TIME = TIME.withName("CANDLE_TIME");
+    private static final SerialFieldType BID_TIME = TIME_SECONDS.withName("BID_TIME");
+    private static final SerialFieldType ASK_TIME = TIME_SECONDS.withName("ASK_TIME");
+    private static final SerialFieldType TRADE_TIME = TIME_SECONDS.withName("TRADE_TIME");
+    private static final SerialFieldType CANDLE_TIME = TIME_SECONDS.withName("CANDLE_TIME");
 
     private static final SerialFieldType QUOTE_PRICE = DECIMAL.withName("QUOTE_PRICE");
     private static final SerialFieldType TRADE_PRICE = DECIMAL.withName("TRADE_PRICE");
@@ -111,7 +123,8 @@ public final class SerialFieldType {
         this.id = id;
         this.name = name;
         this.isObject = (id & SERIAL_TYPE_MASK) == ID_BYTE_ARRAY || (id & SERIAL_TYPE_MASK) == ID_UTF_CHAR_ARRAY;
-        this.isLong = (id & REPRESENTATION_MASK) == FLAG_WIDE_DECIMAL;
+        this.isLong = (id & REPRESENTATION_MASK) == FLAG_WIDE_DECIMAL || (id & REPRESENTATION_MASK) == FLAG_LONG ||
+            (id & REPRESENTATION_MASK) == FLAG_TIME_MILLIS;
         if (isLong && isObject)
             throw new IllegalArgumentException("conflicting type");
     }
@@ -172,7 +185,7 @@ public final class SerialFieldType {
 
     /**
      * Returns a more specific serial type that shall be used for the field with the specified name.
-     * For {@link #COMPACT_INT}, {@link #DECIMAL}, {@link #SHORT_STRING}, and {@link #TIME} base types this
+     * For {@link #COMPACT_INT}, {@link #DECIMAL}, {@link #SHORT_STRING}, and {@link #TIME_SECONDS} base types this
      * method looks at the suffix of the name, for other base types just the base type itself is returned.
      */
     public SerialFieldType forNamedField(String name) {
@@ -184,7 +197,7 @@ public final class SerialFieldType {
 
     private SerialFieldType forNamedFieldImpl(String name) {
         // ----------- time fields -----------
-        if (this == COMPACT_INT || this == TIME) {
+        if (this == COMPACT_INT || this == TIME_SECONDS) {
             if (name.endsWith("Bid.Time"))
                 return BID_TIME;
             if (name.endsWith("Ask.Time"))
@@ -195,7 +208,7 @@ public final class SerialFieldType {
                 return CANDLE_TIME;
         }
         if (this == COMPACT_INT && name.endsWith("Time"))
-            return TIME;
+            return TIME_SECONDS;
         // ----------- price fields -----------
         if (this == DECIMAL)  {
             if (name.endsWith("Bid.Price") || name.endsWith("Ask.Price"))
@@ -209,7 +222,7 @@ public final class SerialFieldType {
             if (name.endsWith("High.Price") || name.endsWith("Low.Price") || name.endsWith("Open.Price") || name.endsWith("Close.Price"))
                 return SUMMARY_PRICE;
             if ((name.startsWith("Trade.") || name.startsWith("Candle.")) &&
-                (name.endsWith("Open") || name.endsWith("High") || name.endsWith("Low") || name.endsWith("Close")) || name.endsWith("VWAP"))
+                (name.endsWith("Open") || name.endsWith("High") || name.endsWith("Low") || name.endsWith("Close") || name.endsWith("VWAP")))
             {
                 return CANDLE_PRICE;
             }
@@ -224,6 +237,8 @@ public final class SerialFieldType {
             return DATE;
         if (this == COMPACT_INT && name.endsWith("Sequence"))
             return SEQUENCE;
+        if (this == LONG && name.endsWith("Id")) // Except DayId which is handled above
+            return ID;
         if (this == SHORT_STRING && name.endsWith("MMID"))
             return MMID;
         if (this == UTF_CHAR && name.endsWith("Exchange"))
@@ -268,12 +283,16 @@ public final class SerialFieldType {
                 return new DecimalField(index, name, this);
             case FLAG_SHORT_STRING:
                 return new ShortStringField(index, name, this);
-            case FLAG_TIME:
-                return new TimeField(index, name);
+            case FLAG_TIME_SECONDS:
+                return new TimeSecondsField(index, name);
+            case FLAG_TIME_MILLIS:
+                return new TimeMillisField(index, name);
             case FLAG_SEQUENCE:
                 return new SequenceField(index, name);
             case FLAG_DATE:
                 return new DateField(index, name);
+            case FLAG_LONG:
+                return new LongField(index, name);
             case FLAG_WIDE_DECIMAL:
                 return new WideDecimalField(index, name);
             default:
@@ -348,11 +367,16 @@ public final class SerialFieldType {
         public static final int FLAG_INT = 0x00; // plain int as int field
         public static final int FLAG_DECIMAL = 0x10; // decimal representation as int field
         public static final int FLAG_SHORT_STRING = 0x20; // short (up to 4-character) string representation as int field
-        public static final int FLAG_TIME = 0x30; // time in seconds in this integer field
+        public static final int FLAG_TIME_SECONDS = 0x30; // time in seconds as integer field
+        @Deprecated
+        public static final int FLAG_TIME = FLAG_TIME_SECONDS;
         public static final int FLAG_SEQUENCE = 0x40; // sequence in this integer fields (with top 10 bits representing millis)
         public static final int FLAG_DATE = 0x50; // day id in this integer field
+        public static final int FLAG_LONG = 0x60; // plain long as two int fields
         public static final int FLAG_WIDE_DECIMAL = 0x70; // WideDecimal representation as long field
         public static final int FLAG_STRING = 0x80; // String representation as byte array (for ID_BYTE_ARRAY)
+        public static final int FLAG_TIME_MILLIS = 0x90; // time in millis as long field
+        public static final int FLAG_TIME_NANOS = 0xa0; // Reserved for future use: time in nanos as long field
         public static final int FLAG_CUSTOM_OBJECT = 0xe0; // custom serialized object as byte array (for ID_BYTE_ARRAY)
         public static final int FLAG_SERIAL_OBJECT = 0xf0; // serialized object as byte array (for ID_BYTE_ARRAY)
     }
