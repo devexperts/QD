@@ -242,7 +242,7 @@ public class ImplCodeGen {
             map("AuxOrderId", "AuxOrderId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
             map("Price", "Price", FieldType.PRICE).
             map("Size", "Size", FieldType.SIZE).
-            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
+            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
             map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes("com.dxfeed.event.order.impl.Order.suffixes.count", "").
             map("Flags", "Flags", FieldType.FLAGS).
             map("TradeId", "TradeId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
@@ -284,7 +284,7 @@ public class ImplCodeGen {
             map("AuxOrderId", "AuxOrderId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
             map("Price", "Price", FieldType.PRICE).
             map("Size", "Size", FieldType.SIZE).
-            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
+            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
             map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes("com.dxfeed.event.order.impl.AnalyticOrder.suffixes.count", "").
             map("Flags", "Flags", FieldType.FLAGS).
             map("TradeId", "TradeId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
@@ -326,7 +326,7 @@ public class ImplCodeGen {
             map("AuxOrderId", "AuxOrderId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
             map("Price", "Price", FieldType.PRICE).
             map("Size", "Size", FieldType.SIZE).
-            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
+            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
             map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes("com.dxfeed.event.order.impl.SpreadOrder.suffixes.count", "").
             map("Flags", "Flags", FieldType.FLAGS).
             map("TradeId", "TradeId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).

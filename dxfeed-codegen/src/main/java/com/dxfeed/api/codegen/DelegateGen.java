@@ -200,6 +200,8 @@ class DelegateGen {
             RecordField field = lastFieldMapping().field;
             field.conditionalProperty = phantomProperty;
             field.isPhantom = true;
+            field.required = false;
+            field.enabled = false;
         }
         return this;
     }
@@ -211,6 +213,7 @@ class DelegateGen {
         field.conditionalProperty = conditionalProperty;
         field.isPhantom = false;
         field.required = false;
+        field.enabled = false;
         return this;
     }
 
@@ -249,6 +252,7 @@ class DelegateGen {
         fm.field.onlySuffixesProperty = suffixesProperty;
         fm.field.onlySuffixesDefault = suffixesDefault;
         fm.field.required = false;
+        fm.field.enabled = false;
         return this;
     }
 
@@ -259,6 +263,7 @@ class DelegateGen {
             throw new AssertionError("Record should have suffixes");
         fm.field.exceptSuffixes = suffixes;
         fm.field.required = false;
+        fm.field.enabled = false;
         return this;
     }
 

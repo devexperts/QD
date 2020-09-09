@@ -96,16 +96,16 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
 
     /**
      * The threshold for the number of elements in the hashtable. The hashtable
-     * grows when <code>count &gt; threshold</code> is true before the attempt
+     * grows when {@code count > threshold} is true before the attempt
      * to add an element. The value of the threshold is always equal to
      * <code>(table.length << 1) / 3<code> if {@link #table} is not
-     * <code>null</code> or 0 otherwise.
+     * {@code null} or 0 otherwise.
      */
     private transient int threshold;
 
     /**
      * First key in the hashtable. This variable is always defined when
-     * <code>count &gt; 0</code>. This place is reserved for 0 value, because
+     * {@code count > 0}. This place is reserved for 0 value, because
      * it cannot be stored in {@link #table}, but if the table does not
      * contain 0, then an arbitrary key is placed here.
      */
@@ -121,15 +121,15 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
      * in this array, i.e. everything except for the {@link #first_key}.
      * Zeroes denote unused entries in the table. The length of this array
      * is always a power of 2 and is at least {@link #INITIAL_LENGTH}.
-     * It is <code>null</code> until it is not allocated.
+     * It is {@code null} until it is not allocated.
      */
     private transient long[] table;
 
     /**
      * The values for the corresponding entries from {@link #table}.
      * The memory for this object is allocated only when any non-null mapping
-     * is added to hashtable. When <code>table_val == null</code> all
-     * mappings are treated as being mapped to <code>null</code>.
+     * is added to hashtable. When {@code table_val == null} all
+     * mappings are treated as being mapped to {@code null}.
      */
     private transient V[] table_val;
 
@@ -143,7 +143,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
      * to make iterators on the hash fail-fast.
      * @see ConcurrentModificationException
      */
-    private transient volatile int mod_count;
+    private transient int mod_count;
 
     // Constructors
 
@@ -215,7 +215,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
                     if (lhm_table[i] != 0)
                         put(lhm_table[i], null);
             } else {
-                // everething maps to some values
+                // everything maps to some values
                 for (int i = lhm_table.length; --i >= 0;)
                     if (lhm_table[i] != 0)
                         put(lhm_table[i], lhm_table_val[i]);
@@ -493,7 +493,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
     }
 
     /**
-     * Removes the mapping for the <code>table[index]</code> from
+     * Removes the mapping for the {@code table[index]} from
      * this map assuming that it is present.
      */
     private void removeByIndex(int index) {
@@ -530,8 +530,8 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
 
     // Stores different views of this map
     private transient volatile LongSet key_set;
-    private transient volatile Collection<V> values;
-    private transient volatile Set<Map.Entry<Long,V>> entry_set;
+    private transient Collection<V> values;
+    private transient Set<Map.Entry<Long, V>> entry_set;
 
     // Implements LongSet#longKeySet()
 
@@ -550,9 +550,12 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
      */
     @Override
     public LongSet longKeySet() {
-        if (key_set == null)
-            key_set = new LongHashSet(this);
-        return key_set;
+        LongSet ks = this.key_set;
+        if (ks == null) {
+            ks = new LongHashSet(this);
+            this.key_set = ks;
+        }
+        return ks;
     }
 
     /**
@@ -568,8 +571,9 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
      */
     @Override
     public Collection<V> values() {
-        if (values == null) {
-            values = new AbstractCollection<V>() {
+        Collection<V> vals = this.values;
+        if (vals == null) {
+            vals = new AbstractCollection<V>() {
                 @Override
                 public int size() {
                     return count;
@@ -590,8 +594,9 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
                     return new ValuesIterator();
                 }
             };
+            this.values = vals;
         }
-        return values;
+        return vals;
     }
 
     // Implements Set#entrySet()
@@ -611,8 +616,9 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
      */
     @Override
     public Set<Map.Entry<Long,V>> entrySet() {
-        if (entry_set == null) {
-            entry_set = new AbstractSet<Map.Entry<Long,V>>() {
+        Set<Map.Entry<Long, V>> es = this.entry_set;
+        if (es == null) {
+            es = new AbstractSet<Map.Entry<Long,V>>() {
                 @Override
                 public int size() {
                     return count;
@@ -663,17 +669,18 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
                     return new EntrySetIterator();
                 }
             };
+            this.entry_set = es;
         }
-        return entry_set;
+        return es;
     }
 
     // Internal rehashing methods
 
     /**
      * Rehashes internal structure of this map so that
-     * <code>table.length = (1 &lt;&lt; new_power)</code>. It is
+     * {@code table.length = (1 << new_power)}. It is
      * an error to call this method with
-     * <code>new_power &lt; INITIAL_POWER</code>.
+     * {@code new_power < INITIAL_POWER}.
      */
     private void rehash(int new_power) {
         int new_length = 1 << new_power;
@@ -685,7 +692,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
 
     /**
      * Performs actual unconditional rehashing assuming that {@link #shift}
-     * if already assigned to a correct value and <code>new_length</code>
+     * if already assigned to a correct value and {@code new_length}
      * if a correct power of 2.
      */
     @SuppressWarnings("unchecked")
@@ -697,7 +704,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
             table_val = null;
         } else { // actual rehash -- because count > 1 we know that table != null
             long[] t = new long[new_length]; // new table
-            V[] tv = null; // new table_val -- we will alocate it if needed
+            V[] tv = null; // new table_val -- we will allocate it if needed
             for (int i = table.length; --i >= 0; ) { // scan entire old hashtable
                 long k = table[i];
                 if (k != 0) { // Non-empty value -- place it into new table 't'
@@ -747,14 +754,14 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
 
     /**
      * Makes sure that no rehashes or memory reallocations will be
-     * needed until <code>size() &lt;= capacity</code>.
-     * @throws IllegalArgumentException when <code>capacity &gt; MAX_CAPACITY</code>.
+     * needed until {@code size() <= capacity}.
+     * @throws IllegalArgumentException when {@code capacity > MAX_CAPACITY}.
      */
     public void ensureCapacity(int capacity) {
         if (capacity > MAX_CAPACITY)
             throw new IllegalArgumentException("Invalid capacity");
         if (capacity <= threshold)
-            return; // Nothing todo -- already have enough capacity
+            return; // Nothing to do -- already have enough capacity
         rehash(getPower(capacity));
     }
 
@@ -779,7 +786,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
      * but is faster, because it does not produce excessive garbage.
      * When capacity is less or equal than 1, this method is equivalent
      * to {@link #compact()}.
-     * @throws IllegalArgumentException when <code>capacity &gt; MAX_CAPACITY</code>.
+     * @throws IllegalArgumentException when {@code capacity > MAX_CAPACITY}.
      */
     public void compact(int capacity) {
         if (capacity <= 1 || capacity <= count) { // Simply compact such cases
@@ -814,7 +821,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
      * to the sequence of {@link #clear()} and {@link #compact(int)} calls,
      * but is faster. When capacity is less or equal than 1, this method is
      * equivalent to {@link #clearAndCompact()}.
-     * @throws IllegalArgumentException when <code>capacity &gt; MAX_CAPACITY</code>.
+     * @throws IllegalArgumentException when {@code capacity > MAX_CAPACITY}.
      */
     public void clearAndCompact(int capacity) {
         if (capacity <= 1) { // they don't ask for big capacity
@@ -929,8 +936,8 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
         /**
          * This index points to the element in hashtable on which
          * we shall stop iteration. It points to an
-         * empty slot in the {@link #table}, i.e. <code>table[last_index] == 0</code>
-         * and is defined when <code>index &gt;= 0</code>.
+         * empty slot in the {@link #table}, i.e. {@code table[last_index] == 0}
+         * and is defined when {@code index >= 0}.
          */
         private int last_index;
 
@@ -948,7 +955,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
          * The last returned value by the {@link #nextIndex()} method.
          * The value of -1 indicates that the value was not returned yet
          * (or the value returned was already removed). The value of -2
-         * indicates that fisrt_key was returned. Any non-negative value
+         * indicates that first_key was returned. Any non-negative value
          * indicates that the corresponding entry from the table was
          * returned.
          */
@@ -962,7 +969,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
 
         protected AbstractIterator() {}
 
-        // Implemenets Iterator#hasNext()
+        // Implements Iterator#hasNext()
         @Override
         public boolean hasNext() {
             if (index == -1) // Yes, we have a lots of elements ahead, if the set is not empty
@@ -1025,7 +1032,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
             last_returned = -1;
         }
 
-        // Abstract method Iterator#next() to be overriden
+        // Abstract method Iterator#next() to be overridden
         @Override
         @SuppressWarnings({"IteratorNextCanNotThrowNoSuchElementException"})
         public abstract T next();
@@ -1085,7 +1092,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
 
     /**
      * Abstract entry implementation that is consistent with the
-     * <code>java.util.HashMap.Entry</code>.
+     * {@code java.util.HashMap.Entry}.
      */
     private abstract class AbstractEntry implements LongMap.Entry<V> {
         protected final int expected_mod_count = mod_count;
@@ -1110,6 +1117,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
         @Override
         public abstract V setValue(V value);
 
+        @Override
         public boolean equals(Object o) {
             if (!(o instanceof Map.Entry))
                 return false;
@@ -1130,19 +1138,21 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
             return (value == null ? e.getValue() == null : value.equals(e.getValue()));
         }
 
+        @Override
         public int hashCode() {
             Object value = getValue();
             int hash = (int) (key ^ (key >> 32)); // !!! This is hashcode of java.lang.Long
             return hash ^ ((value == null) ? 0 : value.hashCode());
         }
 
+        @Override
         public String toString() {
             return key + "=" + getValue();
         }
     }
 
     /**
-     * Entry implementaion for {@link LongHashMap#first_key} mapping.
+     * Entry implementation for {@link LongHashMap#first_key} mapping.
      */
     private final class FirstKeyEntry extends AbstractEntry {
         FirstKeyEntry() {
@@ -1167,7 +1177,7 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
     }
 
     /**
-     * Entry implementaion for {@link LongHashMap#table} mappings.
+     * Entry implementation for {@link LongHashMap#table} mappings.
      */
     private final class IndexEntry extends AbstractEntry {
         private final int index;

@@ -1,3 +1,10 @@
+QDS 3.293:
+
+* [QD-1246] LongHashMap key_set,values,entry_set,mod_count fields should not be volatile
+* [QD-1252] dxFeed API: Add accessor to flags constants for OrderAction in Order
+* [QD-1254] QDS: Improve schema generation code
+* [QD-1255] dxFeed API: Make "ExecutedSize" field in Order enabled for Full Order Book
+
 QDS 3.292:
 
 * [QD-1251] New order source for cboe C2 options

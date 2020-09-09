@@ -39,6 +39,18 @@ public class MarketAccessorImpl {
         order.setFlags(flags);
     }
 
+    public static int orderAction(OrderAction action) {
+        return action.getCode() << OrderBase.ACTION_SHIFT;
+    }
+
+    public static OrderAction getOrderAction(int flags) {
+        return OrderAction.valueOf(Util.getBits(flags, OrderBase.ACTION_MASK, OrderBase.ACTION_SHIFT));
+    }
+
+    public static int setOrderAction(int flags, OrderAction action) {
+        return Util.setBits(flags, OrderBase.ACTION_MASK, OrderBase.ACTION_SHIFT, action.getCode());
+    }
+
     public static int orderExchange(char exchangeCode) {
         Util.checkChar(exchangeCode, OrderBase.EXCHANGE_MASK, "exchangeCode");
         return exchangeCode << OrderBase.EXCHANGE_SHIFT;

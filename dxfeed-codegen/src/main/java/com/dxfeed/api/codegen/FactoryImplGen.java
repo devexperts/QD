@@ -119,45 +119,12 @@ class FactoryImplGen {
     private void generateFieldCode(ClassGen cg, Map<String, RecordField> fields, String recordNameReference,
         boolean isRegional)
     {
-        String conditionalProperty = null;
-        boolean isPhantom = false;
         for (Map.Entry<String, RecordField> fieldEntry : fields.entrySet()) {
             String fieldName = fieldEntry.getKey();
             RecordField f = fieldEntry.getValue();
             if (isRegional && f.isCompositeOnly)
                 continue;
-            if (conditionalProperty != null &&
-                (!conditionalProperty.equals(f.conditionalProperty) || isPhantom != f.isPhantom))
-            {
-                cg.unindent();
-                cg.code("}");
-                conditionalProperty = null;
-            }
-            if (f.conditionalProperty != null && !f.conditionalProperty.equals(conditionalProperty)) {
-                cg.addImport(new ClassName(SystemProperties.class));
-                cg.code("if (SystemProperties.getBooleanProperty(\"" + f.conditionalProperty + "\", false)) {");
-                cg.indent();
-                conditionalProperty = f.conditionalProperty;
-                isPhantom = f.isPhantom;
-            }
-            if (f.onlySuffixesDefault != null || f.exceptSuffixes != null) {
-                cg.code("if (" +
-                    (f.onlySuffixesDefault != null ?
-                        ("suffix.matches(" +
-                            (f.onlySuffixesProperty != null ?
-                                "SystemProperties.getProperty(\"" + f.onlySuffixesProperty + "\", \"" +
-                                    f.onlySuffixesDefault + "\")" :
-                                "\"" + f.onlySuffixesDefault + "\""
-                            ) +
-                            ")"
-                        ) :
-                        ""
-                    ) +
-                    (f.onlySuffixesDefault != null && f.exceptSuffixes != null ? " && " : "") +
-                    (f.exceptSuffixes != null ? "!suffix.matches(\"" + f.exceptSuffixes + "\")" : "") +
-                    ")");
-                cg.indent();
-            }
+
             cg.addImport(new ClassName(SerialFieldType.class));
             for (FieldType.Field field : f.fieldType.fields) {
                 String typeExpr = "SerialFieldType." + field.serialType;
@@ -179,17 +146,43 @@ class FactoryImplGen {
                 } else {
                     cg.code("builder.addOptionalField(" +
                         recordNameReference + ", \"" + field.getFullName(fieldName) + "\", " + typeExpr +
-                        ", \"" + f.eventName + "\", \"" + f.propertyName + "\", " + f.enabled +
+                        ", \"" + f.eventName + "\", \"" + f.propertyName + "\", " + generateEnabledCondition(cg, f) +
                         (f.time == SchemeFieldTime.COMMON_FIELD ? "" : ", SchemeFieldTime." + f.time) + ");");
                 }
             }
-            if (f.onlySuffixesDefault != null || f.exceptSuffixes != null)
-                cg.unindent();
         }
-        if (conditionalProperty != null) {
-            cg.unindent();
-            cg.code("}");
+    }
+
+    private String generateEnabledCondition(ClassGen cg, RecordField f) {
+        if (f.enabled) {
+            // Field is unconditionally enabled
+            return "true";
         }
+
+        String enabledCondition = "";
+        if (f.conditionalProperty != null) {
+            // Field is enabled if system property is set
+            cg.addImport(new ClassName(SystemProperties.class));
+            enabledCondition += "SystemProperties.getBooleanProperty(\"" + f.conditionalProperty + "\", false)";
+        }
+        if (f.onlySuffixesDefault != null) {
+            if (!enabledCondition.isEmpty()) {
+                enabledCondition += " && ";
+            }
+            // Field is enabled if suffix matches pattern
+            enabledCondition += "suffix.matches(" + (f.onlySuffixesProperty != null ?
+                "SystemProperties.getProperty(\"" + f.onlySuffixesProperty + "\", \"" + f.onlySuffixesDefault + "\")" :
+                "\"" + f.onlySuffixesDefault + "\"") + ")";
+
+        }
+        if (f.exceptSuffixes != null) {
+            if (!enabledCondition.isEmpty()) {
+                enabledCondition += " && ";
+            }
+            // Field is enabled if not suffix matches pattern
+            enabledCondition += "!suffix.matches(\"" + f.exceptSuffixes + "\")";
+        }
+        return (enabledCondition.isEmpty()) ? "false" : enabledCondition;
     }
 
     private void generateCreateDelegatesCode(ClassGen cg, boolean streamOnly) {
