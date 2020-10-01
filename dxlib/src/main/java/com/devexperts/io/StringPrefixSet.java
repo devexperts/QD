@@ -18,9 +18,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.TreeSet;
-import javax.annotation.Nonnull;
 
 /**
  * Class for working with set of string prefixes.
@@ -36,20 +34,14 @@ class StringPrefixSet {
     /**
      * All possible prefixes.
      */
-    public static final StringPrefixSet ANYTHING_SET = new StringPrefixSet(Collections.<String>emptySet(), new TreeSet<>(Collections.singletonList("")));
+    public static final StringPrefixSet ANYTHING_SET = new StringPrefixSet(new HashSet<>(), new TreeSet<>(Collections.singletonList("")));
 
     /**
      * None of the possible prefix.
      */
-    public static final StringPrefixSet NOTHING_SET = new StringPrefixSet(Collections.<String>emptySet(), new TreeSet<String>());
+    public static final StringPrefixSet NOTHING_SET = new StringPrefixSet(new HashSet<>(), new TreeSet<>());
 
     private static final String ANYTHING_SYMBOL = "*";
-
-    @Nonnull
-    private final TreeSet<String> prefixSet = new TreeSet<>();
-
-    @Nonnull
-    private final Set<String> fullNamesSet = new HashSet<>();
 
     /**
      * Constructs set of prefix by names and separators. Names can use wildcard only symbol "*".
@@ -94,50 +86,40 @@ class StringPrefixSet {
     static StringPrefixSet valueOf(Collection<String> names) {
         if (names == null)
             return NOTHING_SET;
-        boolean isAnything = false;
-        Set<String> fullNamesSet = new HashSet<>();
-        TreeSet<String> prefixTree = new TreeSet<>();
-        int i = 0;
+        HashSet<String> fullNamesSet = new HashSet<>();
+        TreeSet<String> prefixSet = new TreeSet<>();
+        int i = -1;
         for (String name : names) {
+            i++;
             if (name.length() == 0)
                 continue;
             int index = name.indexOf(ANYTHING_SYMBOL);
             if (index == -1) {
                 fullNamesSet.add(name);
-                continue;
+            } else {
+                if (index != name.length() - ANYTHING_SYMBOL.length())
+                    throw new IllegalArgumentException("Name at index " + i + " has wrong format: " + name);
+                prefixSet.add(name.substring(0, index));
             }
-            if (index != name.length() - 1)
-                throw new IllegalArgumentException("Name at number " + i + " has a wrong format: " + name);
-            if (index == 0) {
-                isAnything = true;
-                continue;
-            }
-            prefixTree.add(name.substring(0, name.length() - 1));
-            i++;
         }
-        if (isAnything)
-            return ANYTHING_SET;
-        return optimize(fullNamesSet, prefixTree);
+        return optimize(fullNamesSet, prefixSet);
     }
 
-    private static StringPrefixSet optimize(Set<String> fullNamesSet, TreeSet<String> prefixSet) {
-        Iterator<String> it = prefixSet.iterator();
-        String cur;
-        String last = null;
-        if (it.hasNext())
-            last = it.next();
-        while (it.hasNext()) {
-            cur = it.next();
-            if (cur.startsWith(last))
-                it.remove();
-            else
-                last = cur;
+    private static StringPrefixSet optimize(HashSet<String> fullNamesSet, TreeSet<String> prefixSet) {
+        if (prefixSet.size() > 1) {
+            Iterator<String> it = prefixSet.iterator();
+            String last = it.next();
+            while (it.hasNext()) {
+                String cur = it.next();
+                if (cur.startsWith(last))
+                    it.remove();
+                else
+                    last = cur;
+            }
         }
-        it = fullNamesSet.iterator();
-        String prefix;
-        while (it.hasNext()) {
-            cur = it.next();
-            prefix = prefixSet.floor(cur);
+        for (Iterator<String> it = fullNamesSet.iterator(); it.hasNext();) {
+            String cur = it.next();
+            String prefix = prefixSet.floor(cur);
             if (prefix != null && cur.startsWith(prefix))
                 it.remove();
         }
@@ -150,14 +132,13 @@ class StringPrefixSet {
         return new StringPrefixSet(fullNamesSet, prefixSet);
     }
 
-    private StringPrefixSet(@Nonnull Set<String> fullNamesSet, @Nonnull TreeSet<String> prefixSet) {
-        this.fullNamesSet.addAll(fullNamesSet);
-        this.prefixSet.addAll(prefixSet);
-    }
 
-    private StringPrefixSet(StringPrefixSet prefixSet) {
-        this.fullNamesSet.addAll(prefixSet.fullNamesSet);
-        this.prefixSet.addAll(prefixSet.prefixSet);
+    private final HashSet<String> fullNamesSet;
+    private final TreeSet<String> prefixSet;
+
+    private StringPrefixSet(HashSet<String> fullNamesSet, TreeSet<String> prefixSet) {
+        this.fullNamesSet = fullNamesSet;
+        this.prefixSet = prefixSet;
     }
 
     /**
@@ -165,7 +146,6 @@ class StringPrefixSet {
      *
      * @param other set of prefix
      * @return the union of two sets of prefix.
-     * @throws IllegalArgumentException if the sets are different delimiter symbol between the prefix.
      */
     StringPrefixSet add(StringPrefixSet other) {
         if (this == ANYTHING_SET || other == ANYTHING_SET)
@@ -179,13 +159,13 @@ class StringPrefixSet {
             prefixSetUnion.addAll(prefixSet);
             return optimize(fullNamesSetUnion, prefixSetUnion);
         }
-        return this == NOTHING_SET ? new StringPrefixSet(other) : new StringPrefixSet(this);
+        return this == NOTHING_SET ? other : this;
     }
 
     StringPrefixSet copy() {
         if (this == ANYTHING_SET || this == NOTHING_SET)
             return this;
-        return new StringPrefixSet(this);
+        return new StringPrefixSet(fullNamesSet, prefixSet);
     }
 
     /**
@@ -195,9 +175,9 @@ class StringPrefixSet {
      * @return {@code true} if name is contained in list.
      */
     boolean accept(String name) {
-        if (isAnything())
+        if (this == ANYTHING_SET)
             return true;
-        if (isNothing())
+        if (this == NOTHING_SET)
             return false;
         if (fullNamesSet.contains(name))
             return true;
@@ -211,7 +191,7 @@ class StringPrefixSet {
      * @return {@code true} if set contains any prefix name.
      */
     boolean isAnything() {
-        return fullNamesSet.isEmpty() && (prefixSet.size() == 1 && prefixSet.first().length() == 0);
+        return this == ANYTHING_SET;
     }
 
     /**
@@ -220,18 +200,17 @@ class StringPrefixSet {
      * @return {@code true} if set not contains any prefix name.
      */
     boolean isNothing() {
-        return fullNamesSet.isEmpty() && prefixSet.isEmpty();
+        return this == NOTHING_SET;
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o)
+        if (o == this)
             return true;
-        if (o == null || !(o instanceof StringPrefixSet))
+        if (!(o instanceof StringPrefixSet))
             return false;
         StringPrefixSet other = (StringPrefixSet) o;
-        return fullNamesSet.equals(other.fullNamesSet)
-            && prefixSet.equals(other.prefixSet);
+        return fullNamesSet.equals(other.fullNamesSet) && prefixSet.equals(other.prefixSet);
     }
 
     @Override
@@ -241,24 +220,17 @@ class StringPrefixSet {
 
     @Override
     public String toString() {
-        String className = "SerialClassList{";
-        if (this == NOTHING_SET)
-            return className + "NOTHING}";
         if (this == ANYTHING_SET)
-            return className + "ANYTHING}";
-        return className + "prefixes=" + prefixSet
-                + ", full names = " + new TreeSet<>(fullNamesSet)
-                + "}";
+            return "StringPrefixSet{ANYTHING}";
+        if (this == NOTHING_SET)
+            return "StringPrefixSet{NOTHING}";
+        return "StringPrefixSet{prefixes=" + prefixSet + ", full names = " + new TreeSet<>(fullNamesSet) + "}";
     }
 
     public List<String> getList() {
-        List<String> result = new ArrayList<>();
-        if (fullNamesSet != null)
-            result.addAll(fullNamesSet);
-        if (prefixSet != null) {
-            for (String prefix : prefixSet)
-                result.add(prefix + ANYTHING_SYMBOL);
-        }
+        List<String> result = new ArrayList<>(fullNamesSet);
+        for (String prefix : prefixSet)
+            result.add(prefix + ANYTHING_SYMBOL);
         return result;
     }
 }

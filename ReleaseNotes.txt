@@ -1,3 +1,11 @@
+
+QDS 3.294:
+
+* [QD-1262] Handle MARS time synchronization tracker multicast initialization error on MacOS
+* [QD-1257] Add connector option to ignore received subscription removal requests
+  - added 'subscriptionKeepAlive' parameter accepting '0' (default behavior) and 'inf' (ignores unsubscription) values
+* [QD-1261] Unsynchronized usage of WeakHashMap in SerialClassContext
+
 QDS 3.293:
 
 * [QD-1246] LongHashMap key_set,values,entry_set,mod_count fields should not be volatile

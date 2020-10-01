@@ -26,6 +26,9 @@ import com.devexperts.qd.SubscriptionConsumer;
 import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.SubscriptionIterator;
 import com.devexperts.qd.kit.CompositeFilters;
+import com.devexperts.qd.ng.EventFlag;
+import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordProvider;
 import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.qtp.auth.BasicChannelShaperFactory;
@@ -43,6 +46,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.Executor;
 import javax.annotation.Nonnull;
 
@@ -85,6 +89,14 @@ public class AgentAdapter extends MessageAdapter {
          * Explicit subscription executor.
          */
         private Executor subscriptionExecutor;
+
+        /**
+         * Subscription keep-alive period.
+         * <p>If more than zero, unsubscription requests will be delayed for a specified period to amortize
+         * fast unsub/sub sequences.
+         * <p><b>NOTE:</b> For the moment only zero and unlimited periods are supported.
+         */
+        private TimePeriod subscriptionKeepAlive = TimePeriod.ZERO;
 
         public Factory(QDTicker ticker, QDStream stream, QDHistory history, SubscriptionFilter filter) {
             super(ticker, stream, history, filter);
@@ -165,6 +177,22 @@ public class AgentAdapter extends MessageAdapter {
             rebuildChannels();
         }
 
+        @Nonnull
+        public synchronized TimePeriod getSubscriptionKeepAlive() {
+            return subscriptionKeepAlive;
+        }
+
+        @Configurable(description = "subscription keep-alive period (0 or 'inf')")
+        public synchronized void setSubscriptionKeepAlive(TimePeriod keepAlive) {
+            Objects.requireNonNull(keepAlive);
+            if (subscriptionKeepAlive.equals(keepAlive))
+                return;
+            if (!TimePeriod.ZERO.equals(keepAlive) && !TimePeriod.UNLIMITED.equals(keepAlive))
+                throw new IllegalArgumentException("Only zero or infinite supported");
+            this.subscriptionKeepAlive = keepAlive;
+            rebuildChannels();
+        }
+
         synchronized Executor getOrCreateSubscriptionExecutor() {
             if (subscriptionExecutor != null)
                 return subscriptionExecutor;
@@ -202,6 +230,7 @@ public class AgentAdapter extends MessageAdapter {
     private final DataScheme scheme;
     private final QDFilter filter; // @NotNull
     private AgentAdapter.Factory factory;
+    private boolean skipRemoveSubscription = false; // current implementation supports only infinite keep-alive period
 
     final QDFilter[] peerFilter = new QDFilter[N_CONTRACTS]; // filters received from remote peer in DESCRIBE PROTOCOL message
 
@@ -347,6 +376,7 @@ public class AgentAdapter extends MessageAdapter {
 
     private void setAgentFactory(AgentAdapter.Factory factory) {
         this.factory = factory;
+        skipRemoveSubscription = TimePeriod.UNLIMITED.equals(factory.getSubscriptionKeepAlive());
     }
 
     Factory getAgentFactory() {
@@ -366,25 +396,44 @@ public class AgentAdapter extends MessageAdapter {
             throw new IllegalArgumentException(message.toString());
         if (!isAlive()) {
             reportIgnoredMessage("Adapter is " + getStatus(), message);
-        } else {
-            boolean hasContract = false;
-            QDContract contract = message.getContract();
+        } else if (!skipRemoveSubscription || !message.isSubscriptionRemove()) {
             RecordSource sub = LegacyAdapter.of(iterator);
-            long initialPosition = sub.getPosition();
-            for (int i = 0; i < shapers.length; i++) {
-                ChannelShaper shaper = shapers[i];
-                if (shaper.getContract() != contract)
-                    continue;
-                hasContract = true;
-                AgentChannel channel = getOrCreateChannelAt(i);
-                sub.setPosition(initialPosition);
-                channel.processSubscription(message, sub);
+            if (skipRemoveSubscription) {
+                RecordBuffer buf = skipRemoveSubscription(sub);
+                processSubscription(buf, message);
+                buf.release();
+            } else {
+                processSubscription(sub, message);
             }
             LegacyAdapter.release(iterator, sub);
-            if (!hasContract)
-                reportIgnoredMessage("Contract is not supported", message);
         }
         SubscriptionConsumer.VOID.processSubscription(iterator); // silently ignore all remaining data if it was not processed
+    }
+
+    private void processSubscription(RecordSource sub, MessageType message) {
+        QDContract contract = message.getContract();
+        boolean hasContract = false;
+        long initialPosition = sub.getPosition();
+        for (int i = 0; i < shapers.length; i++) {
+            ChannelShaper shaper = shapers[i];
+            if (shaper.getContract() != contract)
+                continue;
+            hasContract = true;
+            AgentChannel channel = getOrCreateChannelAt(i);
+            sub.setPosition(initialPosition);
+            channel.processSubscription(message, sub);
+        }
+        if (!hasContract)
+            reportIgnoredMessage("Contract is not supported", message);
+    }
+
+    private RecordBuffer skipRemoveSubscription(RecordSource sub) {
+        RecordBuffer buf = RecordBuffer.getInstance(sub.getMode());
+        for (RecordCursor cur; (cur = sub.next()) != null; ) {
+            if (!EventFlag.REMOVE_SYMBOL.in(cur.getEventFlags()))
+                buf.append(cur);
+        }
+        return buf;
     }
 
     private AgentChannel getOrCreateChannelAt(int i) {

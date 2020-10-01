@@ -21,9 +21,11 @@ import java.lang.ref.WeakReference;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.WeakHashMap;
 
@@ -48,7 +50,8 @@ public class SerialClassContext {
      */
     public static final String DEFAULT_BLACK_LIST_NAME = "/META-INF/SerialClassBlacklist.txt";
 
-    private static final WeakHashMap<ClassLoader, SerialClassContext> defaultSerialContextMap = new WeakHashMap<>();
+    private static final Map<ClassLoader, SerialClassContext> defaultSerialContextMap =
+        Collections.synchronizedMap(new WeakHashMap<>());
 
     private static final String ARRAY_PREFIX = "[";
 
@@ -79,45 +82,38 @@ public class SerialClassContext {
      * @return serial class context.
      */
     public static SerialClassContext getDefaultSerialContext(ClassLoader loader) {
-        if (loader == null)
-            loader = ClassUtil.resolveContextClassLoader(null);
-        SerialClassContext defaultContext = defaultSerialContextMap.get(loader);
-        if (defaultContext == null) {
-            StringPrefixSet whitelist = readPrefixSet(loader, DEFAULT_WHITE_LIST_NAME, StringPrefixSet.ANYTHING_SET);
-            StringPrefixSet blacklist = readPrefixSet(loader, DEFAULT_BLACK_LIST_NAME, StringPrefixSet.NOTHING_SET);
-            defaultContext = new SerialClassContext(loader, whitelist, blacklist);
-            defaultSerialContextMap.put(loader, defaultContext);
-        }
-        return defaultContext;
+        return defaultSerialContextMap.computeIfAbsent(
+            ClassUtil.resolveContextClassLoader(loader),
+            SerialClassContext::readSerialClassContext);
+    }
+
+    private static SerialClassContext readSerialClassContext(ClassLoader cl) {
+        StringPrefixSet whitelist = readPrefixSet(cl, DEFAULT_WHITE_LIST_NAME, StringPrefixSet.ANYTHING_SET);
+        StringPrefixSet blacklist = readPrefixSet(cl, DEFAULT_BLACK_LIST_NAME, StringPrefixSet.NOTHING_SET);
+        return new SerialClassContext(cl, whitelist, blacklist);
     }
 
     private static StringPrefixSet readPrefixSet(ClassLoader cl, String prefixSetName, StringPrefixSet def) {
-        if (prefixSetName == null)
-            return def;
-        List<URL> urls = new ArrayList<>();
-        if (cl == null)
-            cl = Thread.currentThread().getContextClassLoader();
+        List<URL> urls;
         try {
-            urls.addAll(Collections.list(cl.getResources(prefixSetName)));
+            urls = Collections.list(cl.getResources(prefixSetName));
         } catch (IOException e) {
             return def;
         }
         if (urls.isEmpty())
             return def;
-        StringPrefixSet set = null;
+        List<String> names = new ArrayList<>();
         for (URL url : urls) {
             try (BufferedReader r = new BufferedReader(new InputStreamReader(url.openStream(), StandardCharsets.UTF_8))) {
-                for (String name; (name = r.readLine()) != null;) {
-                    if (set == null)
-                        set = StringPrefixSet.valueOf(name);
-                    else
-                        set = set.add(StringPrefixSet.valueOf(name));
+                for (String line; (line = r.readLine()) != null;) {
+                    // support multiple names on a single line for compatibility
+                    names.addAll(Arrays.asList(line.split(StringPrefixSet.DEFAULT_NAMES_SEPARATOR)));
                 }
             } catch (IOException e) {
                 log.error("Cannot read " + LogUtil.hideCredentials(url), e);
             }
         }
-        return set == null ? def : set;
+        return names.isEmpty() ? def : StringPrefixSet.valueOf(names);
     }
 
     private final StringPrefixSet whitelist;
@@ -157,7 +153,7 @@ public class SerialClassContext {
      * @return {@code true}, if class name contained in whitelist and not contained in blacklist.
      * @throws NullPointerException if className is null.
      */
-    public synchronized boolean accept(String className) {
+    public boolean accept(String className) {
         Objects.requireNonNull(className, "className");
         if (className.startsWith(ARRAY_PREFIX))
             return true;
@@ -176,7 +172,7 @@ public class SerialClassContext {
      * @throws ClassNotFoundException if the class not contained in whitelist or contained in blacklist.
      * @throws NullPointerException   if className is null.
      */
-    public synchronized void check(String className) throws ClassNotFoundException {
+    public void check(String className) throws ClassNotFoundException {
         Objects.requireNonNull(className, "className");
         if (className.startsWith(ARRAY_PREFIX))
             return;

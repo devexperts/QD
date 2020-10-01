@@ -30,13 +30,18 @@ public class TimePeriod implements Serializable {
     public static final TimePeriod UNLIMITED = new TimePeriod(Long.MAX_VALUE);
 
     /**
+     * Input representation of unlimited interval
+     */
+    private static final String UNLIMITED_STR = "inf";
+
+    /**
      * Returns <code>TimePeriod</code> with <tt>value</tt> milliseconds.
      *
      * @param value value in milliseconds
      * @return <code>TimePeriod</code> with <tt>value</tt> milliseconds.
      */
     public static TimePeriod valueOf(long value) {
-        return value == 0 ? ZERO : new TimePeriod(value);
+        return value == 0 ? ZERO : (value == Long.MAX_VALUE ? UNLIMITED : new TimePeriod(value));
     }
 
     /**
@@ -49,6 +54,7 @@ public class TimePeriod implements Serializable {
      * <li> Letter "S" can be also omitted. In this case last number will be supposed to be seconds.
      * <li> Number of seconds can be fractional. So it is possible to define duration accurate within milliseconds.
      * <li> Every part can be omitted. It is supposed that it's value is zero then.
+     * <li> String "inf" recognized as unlimited period.
      * </ul>
      *
      * @param value string representation
@@ -68,6 +74,8 @@ public class TimePeriod implements Serializable {
 
     protected static long parse(String value) {
         try {
+            if (UNLIMITED_STR.equalsIgnoreCase(value))
+                return UNLIMITED.getTime();
             boolean metAnyPart = false;
             value = value.toUpperCase() + '#';
             long res = 0;

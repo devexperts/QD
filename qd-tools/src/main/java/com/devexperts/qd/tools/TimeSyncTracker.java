@@ -127,13 +127,9 @@ public class TimeSyncTracker implements TimeSyncTrackerMBean, MARSPlugin {
         try {
             socket.joinGroup(InetAddress.getByName(addr));
         } catch (IOException e) {
-            // Workaround for JDK-8178161 (see QD-1131)
-            String javaVersion = System.getProperty("java.version");
+            // Workaround for JDK-8178161 (see QD-1131, QD-1262)
             String osName = System.getProperty("os.name");
-            if (e.getMessage().contains("assign requested address") &&
-                osName.toLowerCase().startsWith("mac") &&
-                (javaVersion.startsWith("1.8") || javaVersion.startsWith("9.")))
-            {
+            if (e.getMessage().contains("assign requested address") && osName.toLowerCase().startsWith("mac")) {
                 QDLog.log.info("Time synchronization tracker initialization failed - unsupported on MacOS");
             } else {
                 QDLog.log.error("Failed to join multicast group for time synchronization tracker", e);
