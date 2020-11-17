@@ -140,16 +140,16 @@ public class FieldAdaptationTest {
 
             // Wide Decimal Infinity conversion
             // Note that (int) Long.MAX_VALUE == -1
-            { WIDE, PINT, "Infinity", (int)Long.MAX_VALUE, "wide decimal->int" },
-            { WIDE, CINT, "Infinity", (int)Long.MAX_VALUE, "wide decimal->compact int" },
+            { WIDE, PINT, "Infinity", (int) Long.MAX_VALUE, "wide decimal->int" },
+            { WIDE, CINT, "Infinity", (int) Long.MAX_VALUE, "wide decimal->compact int" },
             { WIDE, TINY, "Infinity", "Infinity", "wide decimal->decimal" },
             { WIDE, WIDE, "Infinity", "Infinity", "wide decimal->wide decimal" },
             { WIDE, LONG, "Infinity", Long.toString(Long.MAX_VALUE), "wide decimal->long" },
 
             // Wide Decimal -Infinity conversion
             // Note that (int) Long.MIN_VALUE == 0
-            { WIDE, PINT, "-Infinity", (int)Long.MIN_VALUE, "wide decimal->int" },
-            { WIDE, CINT, "-Infinity", (int)Long.MIN_VALUE, "wide decimal->compact int" },
+            { WIDE, PINT, "-Infinity", (int) Long.MIN_VALUE, "wide decimal->int" },
+            { WIDE, CINT, "-Infinity", (int) Long.MIN_VALUE, "wide decimal->compact int" },
             { WIDE, TINY, "-Infinity", "-Infinity", "wide decimal->decimal" },
             { WIDE, WIDE, "-Infinity", "-Infinity", "wide decimal->wide decimal" },
             { WIDE, LONG, "-Infinity", Long.MIN_VALUE, "wide decimal->long" },

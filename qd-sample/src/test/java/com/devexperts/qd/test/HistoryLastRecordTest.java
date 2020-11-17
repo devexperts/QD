@@ -48,7 +48,7 @@ public class HistoryLastRecordTest extends TestCase {
         SubscriptionBuffer sub = new SubscriptionBuffer();
         int sym[] = new int[s];
         for (int i = 0; i < s; i++) {
-            sym[i] = SCHEME.getCodec().encode("" + (char)('A' + i));
+            sym[i] = SCHEME.getCodec().encode("" + (char) ('A' + i));
             sub.visitRecord(rec, sym[i], null);
         }
         agent.addSubscription(sub);

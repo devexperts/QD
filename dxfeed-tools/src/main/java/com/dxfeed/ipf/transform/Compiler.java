@@ -162,7 +162,7 @@ class Compiler {
             t == Tokenizer.TT_WORD ? tokenizer.sval :
             t == '"' ? '"' + tokenizer.sval + '"' :
             t == '\'' ? "'" + tokenizer.sval + "'" :
-            "'" + (char)t + "'";
+            "'" + (char) t + "'";
         return new IllegalArgumentException("Unexpected token " + s);
     }
 

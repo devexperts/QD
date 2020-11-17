@@ -298,7 +298,7 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
             File dir = file.getParentFile();
             if (dir != null)
                 dir.mkdirs(); // just in case we have no dirs
-            return compression.compress(new FileOutputStream(file),	compression.stripExtension(file.getName()));
+            return compression.compress(new FileOutputStream(file), compression.stripExtension(file.getName()));
         });
     }
 

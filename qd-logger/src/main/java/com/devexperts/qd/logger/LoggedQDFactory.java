@@ -62,11 +62,11 @@ public class LoggedQDFactory extends QDFactory {
                 log.debug("create" + contract + "(" + getScheme() + ", " + getStats() + ") = #" + n);
                 switch (contract) {
                 case TICKER:
-                    return new LoggedTicker(log.child("ticker" + n), (QDTicker)buildViaDelegate(), this);
+                    return new LoggedTicker(log.child("ticker" + n), (QDTicker) buildViaDelegate(), this);
                 case STREAM:
-                    return new LoggedStream(log.child("stream" + n), (QDStream)buildViaDelegate(), this);
+                    return new LoggedStream(log.child("stream" + n), (QDStream) buildViaDelegate(), this);
                 case HISTORY:
-                    return new LoggedHistory(log.child("history" + n), (QDHistory)buildViaDelegate(), this);
+                    return new LoggedHistory(log.child("history" + n), (QDHistory) buildViaDelegate(), this);
                 default:
                     throw new IllegalArgumentException();
                 }

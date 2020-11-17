@@ -20,9 +20,9 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 /**
- * 	This test checks that when you subscribe using symbol decorated with {@link TimeSeriesSubscriptionSymbol} in
- * 	{@link DXFeedSubscription} you have to use decorated symbol to unsubscribe as well. This decoration is used to
- * 	represent history subscription (as an alternative to {@link com.dxfeed.api.DXFeedTimeSeriesSubscription}).
+ * This test checks that when you subscribe using symbol decorated with {@link TimeSeriesSubscriptionSymbol} in
+ * {@link DXFeedSubscription} you have to use decorated symbol to unsubscribe as well. This decoration is used to
+ * represent history subscription (as an alternative to {@link com.dxfeed.api.DXFeedTimeSeriesSubscription}).
  */
 public class TimeSeriesSubscriptionTest {
 

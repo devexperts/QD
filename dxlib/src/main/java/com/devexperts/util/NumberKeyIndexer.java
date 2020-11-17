@@ -17,7 +17,7 @@ import java.io.Serializable;
  * A subclass of {@link Indexer} that distinguishes and identifies elements using number keys.
  *
  * <p>It assumes that elements are fully identifiable by numeric ID and treats object keys as a mere wrappers.
- * The hash function is computed using <b>(int)(key&nbsp;^&nbsp;(key&nbsp;&gt;&gt;&gt;&nbsp;32))</b> formula.
+ * The hash function is computed using <b>(int) (key&nbsp;^&nbsp;(key&nbsp;&gt;&gt;&gt;&nbsp;32))</b> formula.
  *
  * <p>The <b>NumberKeyIndexer</b> is {@link Serializable}, so that all concrete subclasses
  * shall be <b>serializable</b> in order to support serialization of indexed set and map..

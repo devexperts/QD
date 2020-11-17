@@ -226,9 +226,9 @@ public class ServiceFilterTest extends TestCase {
         assertEquals(filter2.intersection(filter1), ServiceFilter.NOTHING);
 
         filter1 = ServiceFilter.valueOf("*Service");
-        filter2 = ServiceFilter.valueOf("Service");	assertEquals(filter1.intersection(filter2), filter2);
+        filter2 = ServiceFilter.valueOf("Service"); assertEquals(filter1.intersection(filter2), filter2);
         assertEquals(filter2.intersection(filter1), filter2);
-        filter2 = ServiceFilter.valueOf("PrintService");	assertEquals(filter1.intersection(filter2), filter2);
+        filter2 = ServiceFilter.valueOf("PrintService"); assertEquals(filter1.intersection(filter2), filter2);
         assertEquals(filter2.intersection(filter1), filter2);
         filter2 = ServiceFilter.valueOf("PrintServicePrint");
         assertEquals(filter1.intersection(filter2), ServiceFilter.NOTHING);
@@ -241,7 +241,7 @@ public class ServiceFilterTest extends TestCase {
         filter2 = ServiceFilter.valueOf("ServicePrint");
         assertEquals(filter1.intersection(filter2), filter2);
         assertEquals(filter2.intersection(filter1), filter2);
-        filter2 = ServiceFilter.valueOf("ServiceFirstPrint");	assertEquals(filter1.intersection(filter2), filter2);
+        filter2 = ServiceFilter.valueOf("ServiceFirstPrint"); assertEquals(filter1.intersection(filter2), filter2);
         assertEquals(filter2.intersection(filter1), filter2);
         filter2 = ServiceFilter.valueOf("PrintServicePrint");
         assertEquals(filter1.intersection(filter2), ServiceFilter.NOTHING);

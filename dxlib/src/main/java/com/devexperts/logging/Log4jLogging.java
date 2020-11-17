@@ -123,7 +123,7 @@ class Log4jLogging extends DefaultLogging {
             ((Category) peer).callAppenders(new LoggingEvent(FQCN, ((Category) peer), priority, msg == null ? "" : msg, t));
         } catch (Exception e) {
             System.err.println(new LogFormatter().format('E', System.currentTimeMillis(),
-                Thread.currentThread().getName(), "Log4j",	e + " during logging of " + msg));
+                Thread.currentThread().getName(), "Log4j", e + " during logging of " + msg));
             if (!(e instanceof IllegalStateException) || e.getMessage() == null ||
                 !e.getMessage().equals("Current state = FLUSHED, new state = CODING"))
             {

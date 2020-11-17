@@ -53,5 +53,5 @@ public class QTPConstants {
      * and becomes garbage when the message is sent.
      */
     public static final int COMPOSER_BUFFER_SIZE =
-        SystemProperties.getIntProperty("com.devexperts.qd.qtp.composerBufferSize", (int)(1.5 * COMPOSER_THRESHOLD));
+        SystemProperties.getIntProperty("com.devexperts.qd.qtp.composerBufferSize", (int) (1.5 * COMPOSER_THRESHOLD));
 }

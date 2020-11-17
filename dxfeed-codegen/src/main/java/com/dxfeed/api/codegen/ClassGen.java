@@ -155,10 +155,10 @@ class ClassGen {
         for (int i = 0; i < split.length; i++) {
             StringBuilder sb = new StringBuilder();
             for (int j = 0; j < indent; j++) {
-                sb.append("\t");
+                sb.append("    ");
             }
             if (i > 0)
-                sb.append("\t"); // continuation
+                sb.append("    "); // continuation
             sb.append(split[i]);
             code.add(sb.toString());
         }

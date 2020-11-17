@@ -237,7 +237,7 @@ public class SubConsistencyTest extends TestCase {
 
         private SubscriptionFilter randomFilter() {
             return RND.nextBoolean() ? null :
-                CompositeFilters.makeNot(PatternFilter.valueOf("" + (char)('A' + RND.nextInt('Z' - 'A')) + "*", SCHEME));
+                CompositeFilters.makeNot(PatternFilter.valueOf("" + (char) ('A' + RND.nextInt('Z' - 'A')) + "*", SCHEME));
         }
 
         public void run() {

@@ -1,3 +1,7 @@
+QDS 3.295:
+
+* [QD-1264] dxFeed API: Extend Trade and TradeETH events with new field dayId
+* [QD-1225] [Housekeeping] Migrate tabs to spaces, CRLF to LF
 
 QDS 3.294:
 

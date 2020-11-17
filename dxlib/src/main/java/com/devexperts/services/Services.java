@@ -72,7 +72,7 @@ public class Services {
      * <li>If {@code implClassName != null} then it is used.
      * <li>If {@code loader == null} and system property with name {@code serviceClass.getName()}
      *     is defined then it is used.
-     * <li>If {@code "META-INF/services/" +	serviceClass.getName()} resource is defined within
+     * <li>If {@code "META-INF/services/" + serviceClass.getName()} resource is defined within
      *     the specified {@code loader} then its first line is used.
      * </ol>
      *
@@ -233,7 +233,7 @@ public class Services {
         return null;
     }
 
-    private static Object adaptInstanceIfNeeded(Class<?> serviceClass, ClassLoader loader, Object instance)	throws Exception {
+    private static Object adaptInstanceIfNeeded(Class<?> serviceClass, ClassLoader loader, Object instance) throws Exception {
         if (serviceClass.isInstance(instance))
             return instance;
         SupersedesService supersedesAnnotation = serviceClass.getAnnotation(SupersedesService.class);

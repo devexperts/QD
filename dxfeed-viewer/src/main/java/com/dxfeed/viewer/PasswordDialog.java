@@ -175,7 +175,7 @@ public class PasswordDialog extends JDialog {
         }
         dialog.setLocationRelativeTo(parent);
         if (parent != null) {
-            dialog.setLocation((int) parent.getLocationOnScreen().getX() + parent.getWidth() / 2 - dialog.getSize().width / 2, (int)parent.getLocationOnScreen().getY() + parent.getHeight() / 2 - dialog.getSize().height / 2);
+            dialog.setLocation((int) parent.getLocationOnScreen().getX() + parent.getWidth() / 2 - dialog.getSize().width / 2, (int) parent.getLocationOnScreen().getY() + parent.getHeight() / 2 - dialog.getSize().height / 2);
         }
         dialog.usernameTextField.grabFocus();
         dialog.setVisible(true);

@@ -130,17 +130,18 @@ public class ImplCodeGen {
             map("Size", "Last.Size", FieldType.SIZE).
             field("Tick", "Last.Tick", FieldType.FLAGS).optional().
             map("Change", "Last.Change", FieldType.PRICE).optional().
+            map("DayId", "DayId", FieldType.DATE).optional().
             map("DayVolume", "Volume", FieldType.VOLUME).optional().
             map("DayTurnover", "DayTurnover", FieldType.TURNOVER).optional().
             map("Flags", "Last.Flags", FieldType.FLAGS).optional().
             injectGetEventCode(
                 "if (event.getTickDirection() == Direction.UNDEFINED) {",
-                "\t// if direction is not provided via flags field - compute it from tick field if provided",
-                "\tint tick = m.getTick(cursor);",
-                "\tif (tick == 1)",
-                "\t\tevent.setTickDirection(Direction.ZERO_UP);",
-                "\telse if (tick == 2)",
-                "\t\tevent.setTickDirection(Direction.ZERO_DOWN);",
+                "    // if direction is not provided via flags field - compute it from tick field if provided",
+                "    int tick = m.getTick(cursor);",
+                "    if (tick == 1)",
+                "        event.setTickDirection(Direction.ZERO_UP);",
+                "    else if (tick == 2)",
+                "        event.setTickDirection(Direction.ZERO_DOWN);",
                 "}"
             ).
             injectPutEventCode(
@@ -160,6 +161,7 @@ public class ImplCodeGen {
             map("Price", "ETHLast.Price", FieldType.PRICE).
             map("Size", "ETHLast.Size", FieldType.SIZE).
             map("Change", "ETHLast.Change", FieldType.PRICE).optional().
+            map("DayId", "DayId", FieldType.DATE).optional().
             map("DayVolume", "ETHVolume", FieldType.VOLUME).optional().
             map("DayTurnover", "ETHDayTurnover", FieldType.TURNOVER).optional().
             map("Flags", "ETHLast.Flags", FieldType.FLAGS).
@@ -230,9 +232,9 @@ public class ImplCodeGen {
             withPlainEventFlags().
             map("Void", "Void", FieldType.VOID).time(0).internal().
             map("Index", "Index", FieldType.INDEX).time(1).internal().
-            assign("Index", "((long)getSource().id() << 32) | (#Index# & 0xFFFFFFFFL)").
+            assign("Index", "((long) getSource().id() << 32) | (#Index# & 0xFFFFFFFFL)").
             injectPutEventCode(
-                "int index = (int)event.getIndex();",
+                "int index = (int) event.getIndex();",
                 "#Index=index#;"
             ).
             mapTimeAndSequence().
@@ -256,11 +258,11 @@ public class ImplCodeGen {
             field("IcebergFlags", "IcebergFlags", FieldType.FLAGS).optional().disabledByDefault().
             injectPutEventCode(
                 "if (index < 0)",
-                "\tthrow new IllegalArgumentException(\"Invalid index to publish\");",
+                "    throw new IllegalArgumentException(\"Invalid index to publish\");",
                 "if ((event.getEventFlags() & (OrderBase.SNAPSHOT_END | OrderBase.SNAPSHOT_SNIP)) != 0 && index != 0)",
-                "\tthrow new IllegalArgumentException(\"SNAPSHOT_END and SNAPSHOT_SNIP orders must have index == 0\");",
+                "    throw new IllegalArgumentException(\"SNAPSHOT_END and SNAPSHOT_SNIP orders must have index == 0\");",
                 "if (event.getOrderSide() == Side.UNDEFINED && event.hasSize())",
-                "\tthrow new IllegalArgumentException(\"only empty orders can have side == UNDEFINED\");"
+                "    throw new IllegalArgumentException(\"only empty orders can have side == UNDEFINED\");"
             ).
             publishable();
 
@@ -272,9 +274,9 @@ public class ImplCodeGen {
             withPlainEventFlags().
             map("Void", "Void", FieldType.VOID).time(0).internal().
             map("Index", "Index", FieldType.INDEX).time(1).internal().
-            assign("Index", "((long)getSource().id() << 32) | (#Index# & 0xFFFFFFFFL)").
+            assign("Index", "((long) getSource().id() << 32) | (#Index# & 0xFFFFFFFFL)").
             injectPutEventCode(
-                "int index = (int)event.getIndex();",
+                "int index = (int) event.getIndex();",
                 "#Index=index#;"
             ).
             mapTimeAndSequence().
@@ -298,11 +300,11 @@ public class ImplCodeGen {
             map("IcebergFlags", "IcebergFlags", FieldType.FLAGS).optional().disabledByDefault().
             injectPutEventCode(
                 "if (index < 0)",
-                "\tthrow new IllegalArgumentException(\"Invalid index to publish\");",
+                "    throw new IllegalArgumentException(\"Invalid index to publish\");",
                 "if ((event.getEventFlags() & (OrderBase.SNAPSHOT_END | OrderBase.SNAPSHOT_SNIP)) != 0 && index != 0)",
-                "\tthrow new IllegalArgumentException(\"SNAPSHOT_END and SNAPSHOT_SNIP orders must have index == 0\");",
+                "    throw new IllegalArgumentException(\"SNAPSHOT_END and SNAPSHOT_SNIP orders must have index == 0\");",
                 "if (event.getOrderSide() == Side.UNDEFINED && event.hasSize())",
-                "\tthrow new IllegalArgumentException(\"only empty orders can have side == UNDEFINED\");"
+                "    throw new IllegalArgumentException(\"only empty orders can have side == UNDEFINED\");"
             ).
             publishable();
 
@@ -314,9 +316,9 @@ public class ImplCodeGen {
             withPlainEventFlags().
             map("Void", "Void", FieldType.VOID).time(0).internal().
             map("Index", "Index", FieldType.INDEX).time(1).internal().
-            assign("Index", "((long)getSource().id() << 32) | (#Index# & 0xFFFFFFFFL)").
+            assign("Index", "((long) getSource().id() << 32) | (#Index# & 0xFFFFFFFFL)").
             injectPutEventCode(
-                "int index = (int)event.getIndex();",
+                "int index = (int) event.getIndex();",
                 "#Index=index#;"
             ).
             mapTimeAndSequence().
@@ -335,11 +337,11 @@ public class ImplCodeGen {
             map("SpreadSymbol", "SpreadSymbol", FieldType.STRING).
             injectPutEventCode(
                 "if (index < 0)",
-                "\tthrow new IllegalArgumentException(\"Invalid index to publish\");",
+                "    throw new IllegalArgumentException(\"Invalid index to publish\");",
                 "if ((event.getEventFlags() & (OrderBase.SNAPSHOT_END | OrderBase.SNAPSHOT_SNIP)) != 0 && index != 0)",
-                "\tthrow new IllegalArgumentException(\"SNAPSHOT_END and SNAPSHOT_SNIP orders must have index == 0\");",
+                "    throw new IllegalArgumentException(\"SNAPSHOT_END and SNAPSHOT_SNIP orders must have index == 0\");",
                 "if (event.getOrderSide() == Side.UNDEFINED && event.hasSize())",
-                "\tthrow new IllegalArgumentException(\"only empty orders can have side == UNDEFINED\");"
+                "    throw new IllegalArgumentException(\"only empty orders can have side == UNDEFINED\");"
             ).
             publishable();
 
@@ -347,7 +349,7 @@ public class ImplCodeGen {
             inheritDelegateFrom(ORDER_BASE_DELEGATE).
             subContract(QDContract.TICKER).
             source("m.getRecordExchange() == 0 ? OrderSource.COMPOSITE_BID : OrderSource.REGIONAL_BID").
-            assign("Index", "((long)getSource().id() << 48) | ((long)m.getRecordExchange() << 32)").
+            assign("Index", "((long) getSource().id() << 48) | ((long) m.getRecordExchange() << 32)").
             map("Time", "BidTime", "Bid.Time", FieldType.TIME_SECONDS).optional().
             assign("Sequence", "0").
             map("Price", "BidPrice", "Bid.Price", FieldType.PRICE).
@@ -362,7 +364,7 @@ public class ImplCodeGen {
             inheritDelegateFrom(ORDER_BASE_DELEGATE).
             subContract(QDContract.TICKER).
             source("m.getRecordExchange() == 0 ? OrderSource.COMPOSITE_ASK : OrderSource.REGIONAL_ASK").
-            assign("Index", "((long)getSource().id() << 48) | ((long)m.getRecordExchange() << 32)").
+            assign("Index", "((long) getSource().id() << 48) | ((long) m.getRecordExchange() << 32)").
             map("Time", "AskTime", "Ask.Time", FieldType.TIME_SECONDS).optional().
             assign("Sequence", "0").
             map("Price", "AskPrice", "Ask.Price", FieldType.PRICE).
@@ -378,7 +380,7 @@ public class ImplCodeGen {
             inheritMappingFrom(MARKET_EVENT_MAPPING).
             source("OrderSource.AGGREGATE_BID").
             withPlainEventFlags().
-            assign("Index", "((long)getSource().id() << 48) | ((long)#ExchangeCode# << 32) | (#MarketMaker# & 0xFFFFFFFFL)").
+            assign("Index", "((long) getSource().id() << 48) | ((long) #ExchangeCode# << 32) | (#MarketMaker# & 0xFFFFFFFFL)").
             map("ExchangeCode", "MMExchange", FieldType.CHAR).time(0).
             map("MarketMaker", "MMID", FieldType.SHORT_STRING).time(1).
             map("Time", "BidTime", "MMBid.Time", FieldType.TIME_SECONDS).optional().
@@ -393,7 +395,7 @@ public class ImplCodeGen {
             inheritDelegateFrom(ORDER_BASE_DELEGATE).
             source("OrderSource.AGGREGATE_ASK").
             withPlainEventFlags().
-            assign("Index", "((long)getSource().id() << 48) | ((long)#ExchangeCode# << 32) | (#MarketMaker# & 0xFFFFFFFFL)").
+            assign("Index", "((long) getSource().id() << 48) | ((long) #ExchangeCode# << 32) | (#MarketMaker# & 0xFFFFFFFFL)").
             map("ExchangeCode", "MMExchange", FieldType.CHAR).time(0).
             map("MarketMaker", "MMID", FieldType.SHORT_STRING).time(1).
             map("Time", "AskTime", "MMAsk.Time", FieldType.TIME_SECONDS).optional().
@@ -540,9 +542,9 @@ public class ImplCodeGen {
             withPlainEventFlags().
             map("Void", "Void", FieldType.VOID).time(0).optional().internal().
             map("Index", "Index", FieldType.INDEX).time(1).optional().internal().
-            assign("Index", "((long)#Index#)").
+            assign("Index", "((long) #Index#)").
             injectPutEventCode(
-                "int index = (int)event.getIndex();",
+                "int index = (int) event.getIndex();",
                 "#Index=index#;"
             ).
             mapTimeAndSequence().optional().prevOptional().

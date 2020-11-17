@@ -71,7 +71,7 @@ public class MDREventUtil {
     }
 
     private static IllegalArgumentException unknownType(int type) {
-        return new IllegalArgumentException("Unknown type '" + (type >= ' ' ? (char)type : '?') + "'");
+        return new IllegalArgumentException("Unknown type '" + (type >= ' ' ? (char) type : '?') + "'");
     }
 
     public static char getType(DataRecord record) {

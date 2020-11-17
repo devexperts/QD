@@ -1026,7 +1026,7 @@ public class TickChartRendererPanel extends JPanel {
                     final Rectangle2D bounds = metrics.getStringBounds(strTimeAxisLabel, null);
                     if (x_last == 0 || x_last - x > (int) bounds.getWidth() / 2 + 4) {
                         chartG2D.setColor(COLOR_TRADE_TIMELINE[protrusionLevel].brighter().brighter());
-                        chartG2D.drawString(strTimeAxisLabel, x - (int) bounds.getWidth() / 2 + 1, y_timeLine + (int)bounds.getHeight() - 2);
+                        chartG2D.drawString(strTimeAxisLabel, x - (int) bounds.getWidth() / 2 + 1, y_timeLine + (int) bounds.getHeight() - 2);
                         x_lastTimeLineProtrusion[protrusionLevel] = x;
                     }
                 }
@@ -1116,7 +1116,7 @@ public class TickChartRendererPanel extends JPanel {
 
         selectSizeColor(curTimeAndSale);
         bounds = metrics.getStringBounds(strLastTickSize, null);
-        y = CHART_TOP_MARGIN + chartHeightExMargins - sizeChartHeight / 2 + (int)bounds.getHeight() / 2 - 2;
+        y = CHART_TOP_MARGIN + chartHeightExMargins - sizeChartHeight / 2 + (int) bounds.getHeight() / 2 - 2;
         chartG2D.drawString(strLastTickSize, x1, y);
     }
 

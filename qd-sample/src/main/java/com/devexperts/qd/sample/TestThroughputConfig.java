@@ -27,7 +27,7 @@ import java.util.TreeMap;
 
 class TestThroughputConfig {
     @Retention(RetentionPolicy.RUNTIME) @interface Doc { String value(); }
-    @Retention(RetentionPolicy.RUNTIME)	@interface Hex {}
+    @Retention(RetentionPolicy.RUNTIME) @interface Hex {}
 
     @Doc("ticker|history|stream")
     public CollectorFactory collector = TICKER;
@@ -204,7 +204,7 @@ class TestThroughputConfig {
     private static String toString(Field f, Object value) {
         if (f.getAnnotation(Hex.class) == null)
             return String.valueOf(value);
-        return "0x" + Long.toHexString(((Number)value).longValue());
+        return "0x" + Long.toHexString(((Number) value).longValue());
     }
 
     private static CollectorFactory getCollectorFactory(String collector_arg) {

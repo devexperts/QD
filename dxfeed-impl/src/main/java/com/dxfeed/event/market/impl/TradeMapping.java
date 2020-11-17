@@ -26,6 +26,7 @@ public class TradeMapping extends MarketEventMapping {
     private final int iSize;
     private final int iTick;
     private final int iChange;
+    private final int iDayId;
     private final int iDayVolume;
     private final int iDayTurnover;
     private final int iFlags;
@@ -40,6 +41,7 @@ public class TradeMapping extends MarketEventMapping {
         iSize = findIntField("Last.Size", true);
         iTick = MappingUtil.findIntField(record, "Last.Tick", false);
         iChange = findIntField("Last.Change", false);
+        iDayId = MappingUtil.findIntField(record, "DayId", false);
         iDayVolume = findIntField("Volume", false);
         iDayTurnover = findIntField("DayTurnover", false);
         iFlags = MappingUtil.findIntField(record, "Last.Flags", false);
@@ -431,6 +433,18 @@ public class TradeMapping extends MarketEventMapping {
         if (iChange < 0)
             return;
         setAsWideDecimal(cursor, iChange, change);
+    }
+
+    public int getDayId(RecordCursor cursor) {
+        if (iDayId < 0)
+            return 0;
+        return getInt(cursor, iDayId);
+    }
+
+    public void setDayId(RecordCursor cursor, int dayId) {
+        if (iDayId < 0)
+            return;
+        setInt(cursor, iDayId, dayId);
     }
 
     @Deprecated

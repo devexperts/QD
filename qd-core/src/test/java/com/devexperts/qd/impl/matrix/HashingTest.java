@@ -187,7 +187,7 @@ public class HashingTest extends TestCase {
             double e = Math.abs(x * q - p) * q;
             grade = Math.min(grade, e);
             sb.append(a).append(" ").append(p).append("/").append(q);
-            sb.append(" ~").append(e < 0.0001 ? e : (long)(e * 10000) / 10000.0).append(",");
+            sb.append(" ~").append(e < 0.0001 ? e : (long) (e * 10000) / 10000.0).append(",");
             if (grade < 1e-6 || rem < 1e-6 || q > (1 << 20))
                 break;
         }

@@ -135,7 +135,7 @@ class Symbols {
                 int bitCount = charCode.getBitCount(index);
                 if (charWeights[index] > 0)
                     out.printf(Locale.US, format,
-                        "'" + (char)(Util.FIRST_ASCII_CHAR + index) + "'",
+                        "'" + (char) (Util.FIRST_ASCII_CHAR + index) + "'",
                         charWeights[index], bitCount, codeToString(charCode.getCode(index), bitCount));
             }
 

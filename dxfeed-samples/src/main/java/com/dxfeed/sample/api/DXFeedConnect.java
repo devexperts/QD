@@ -64,7 +64,7 @@ public class DXFeedConnect {
                 parentheses++;
                 sb.append(ch);
                 break;
-            case '}': case ')':	case ']':
+            case '}': case ')': case ']':
                 if (parentheses > 0)
                     parentheses--;
                 sb.append(ch);

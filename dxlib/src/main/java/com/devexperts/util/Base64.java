@@ -50,7 +50,7 @@ public final class Base64 {
         }
         pad = alphabet.length() == 64 ? -1 : alphabet.charAt(64);
         if (pad >= 0 && ia[pad] != -1)
-            throw new IllegalArgumentException("Alphabet contains pad character '" + (char)pad + "'.");
+            throw new IllegalArgumentException("Alphabet contains pad character '" + (char) pad + "'.");
     }
 
     /**

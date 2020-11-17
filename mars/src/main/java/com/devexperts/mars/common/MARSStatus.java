@@ -16,11 +16,11 @@ package com.devexperts.mars.common;
  */
 public final class MARSStatus implements Comparable {
 
-    public static final MARSStatus OK = new MARSStatus("Ok", "OK", (byte)4);
-    public static final MARSStatus WARNING = new MARSStatus("Warning", "WARNG", (byte)2);
-    public static final MARSStatus ERROR = new MARSStatus("Error", "ERROR", (byte)1);
-    public static final MARSStatus REMOVED = new MARSStatus("Removed", "RMVED", (byte)5);
-    public static final MARSStatus UNDEFINED = new MARSStatus("<undefined>", "UNDEF", (byte)3);
+    public static final MARSStatus OK = new MARSStatus("Ok", "OK", (byte) 4);
+    public static final MARSStatus WARNING = new MARSStatus("Warning", "WARNG", (byte) 2);
+    public static final MARSStatus ERROR = new MARSStatus("Error", "ERROR", (byte) 1);
+    public static final MARSStatus REMOVED = new MARSStatus("Removed", "RMVED", (byte) 5);
+    public static final MARSStatus UNDEFINED = new MARSStatus("<undefined>", "UNDEF", (byte) 3);
 
     public static final String[] STATUS_NAMES = {MARSStatus.UNDEFINED.toString(),
         MARSStatus.OK.toString(), MARSStatus.WARNING.toString(), MARSStatus.ERROR.toString()};

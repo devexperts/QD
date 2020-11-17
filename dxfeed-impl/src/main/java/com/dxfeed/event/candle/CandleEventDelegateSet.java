@@ -40,7 +40,7 @@ class CandleEventDelegateSet<T extends Candle, D extends CandleEventDelegateImpl
         Object descriptor = getRecordDescriptor(m.getRecordPeriod(), m.getRecordPrice());
         if (delegate.isSub()) {
             Map<Object, List<D>> map;
-            map = delegate.isTimeSeries() ?	timeSeriesDelegatesByDescriptor : regularDelegatesByDescriptor;
+            map = delegate.isTimeSeries() ? timeSeriesDelegatesByDescriptor : regularDelegatesByDescriptor;
             if (map.put(descriptor, Collections.<D>singletonList(delegate)) != null)
                 throw new IllegalArgumentException("Only one delegate for descriptor " + descriptor + " is supported: " + delegate);
         }

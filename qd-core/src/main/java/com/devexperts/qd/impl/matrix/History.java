@@ -833,7 +833,7 @@ public class History extends Collector implements QDHistory {
                     /*
                      * Submit snapshot-removed records (if subscribed). Note, that they constitute a part of
                      * an implicit sweep transaction.
-			         */
+                     */
                     addRemovedToDist(removeBuffer, sweepRemovePosition, endRemovePosition, dist,
                         (UPDATED_RECORD_DIST_FLAG | TX_SWEEP_DIST_FLAG) | (distFlags & HAD_SNAPSHOT_DIST_FLAG),
                         nagent, rid, timeSub);

@@ -916,7 +916,7 @@ public final class RecordBuffer extends RecordSource implements
             Throws.throwIndexOutOfBoundsException(opos, objLimit);
         if (objFlds[opos + OBJ_RECORD] == null)
             Throws.throwCleared();
-        Arrays.fill(intFlds, ipos,	ipos + mode.intBufOffset + cursor.intCount, 0);
+        Arrays.fill(intFlds, ipos, ipos + mode.intBufOffset + cursor.intCount, 0);
         Arrays.fill(objFlds, opos, opos + mode.objBufOffset + cursor.objCount, null);
         size--;
     }

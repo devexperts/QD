@@ -87,6 +87,7 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         builder.addRequiredField("Trade", "Last.Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
         builder.addOptionalField("Trade", "Last.Tick", SerialFieldType.COMPACT_INT, "Trade", "Tick", true);
         builder.addOptionalField("Trade", "Last.Change", select(SerialFieldType.DECIMAL, "dxscheme.price"), "Trade", "Change", true);
+        builder.addOptionalField("Trade", "DayId", SerialFieldType.DATE, "Trade", "DayId", true);
         builder.addOptionalField("Trade", "Volume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Trade", "DayVolume", true);
         builder.addOptionalField("Trade", "DayTurnover", select(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "Trade", "DayTurnover", true);
         builder.addOptionalField("Trade", "Last.Flags", SerialFieldType.COMPACT_INT, "Trade", "Flags", true);
@@ -101,6 +102,7 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             builder.addRequiredField(recordName, "Last.Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
             builder.addOptionalField(recordName, "Last.Tick", SerialFieldType.COMPACT_INT, "Trade", "Tick", true);
             builder.addOptionalField(recordName, "Last.Change", select(SerialFieldType.DECIMAL, "dxscheme.price"), "Trade", "Change", true);
+            builder.addOptionalField(recordName, "DayId", SerialFieldType.DATE, "Trade", "DayId", true);
             builder.addOptionalField(recordName, "Volume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Trade", "DayVolume", true);
             builder.addOptionalField(recordName, "DayTurnover", select(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "Trade", "DayTurnover", true);
             builder.addOptionalField(recordName, "Last.Flags", SerialFieldType.COMPACT_INT, "Trade", "Flags", true);
@@ -113,6 +115,7 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         builder.addRequiredField("TradeETH", "ETHLast.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
         builder.addRequiredField("TradeETH", "ETHLast.Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
         builder.addOptionalField("TradeETH", "ETHLast.Change", select(SerialFieldType.DECIMAL, "dxscheme.price"), "TradeETH", "Change", true);
+        builder.addOptionalField("TradeETH", "DayId", SerialFieldType.DATE, "TradeETH", "DayId", true);
         builder.addOptionalField("TradeETH", "ETHVolume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "TradeETH", "DayVolume", true);
         builder.addOptionalField("TradeETH", "ETHDayTurnover", select(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "TradeETH", "DayTurnover", true);
         builder.addRequiredField("TradeETH", "ETHLast.Flags", SerialFieldType.COMPACT_INT);
@@ -124,6 +127,7 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             builder.addRequiredField(recordName, "ETHLast.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
             builder.addRequiredField(recordName, "ETHLast.Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
             builder.addOptionalField(recordName, "ETHLast.Change", select(SerialFieldType.DECIMAL, "dxscheme.price"), "TradeETH", "Change", true);
+            builder.addOptionalField(recordName, "DayId", SerialFieldType.DATE, "TradeETH", "DayId", true);
             builder.addOptionalField(recordName, "ETHVolume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "TradeETH", "DayVolume", true);
             builder.addOptionalField(recordName, "ETHDayTurnover", select(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "TradeETH", "DayTurnover", true);
             builder.addRequiredField(recordName, "ETHLast.Flags", SerialFieldType.COMPACT_INT);

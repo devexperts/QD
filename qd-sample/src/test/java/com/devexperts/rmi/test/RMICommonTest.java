@@ -474,7 +474,7 @@ public class RMICommonTest {
         @Override
         public void doAs(Object subject, Runnable action) throws SecurityException {
             if(subject instanceof AuthToken) {
-                if (((AuthToken) subject).getUser().equals("test") && ((AuthToken)subject).getPassword().equals("demo"))
+                if (((AuthToken) subject).getUser().equals("test") && ((AuthToken) subject).getPassword().equals("demo"))
                     action.run();
                 else
                     throw new SecurityException();

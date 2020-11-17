@@ -72,9 +72,9 @@ public enum CandleType {
     /**
      * Certain price change, calculated according to the following rules:
      * <ol>
-     *     	<li>high(n) - low(n) = price range</li>
-     *     	<li>close(n) = high(n) or close(n) = low(n)</li>
-     * 	 	<li>open(n+1) = close(n)</li>
+     *     <li>high(n) - low(n) = price range</li>
+     *     <li>close(n) = high(n) or close(n) = low(n)</li>
+     *     <li>open(n+1) = close(n)</li>
      * </ol>
      * where n is the number of the bar.
      */
@@ -83,10 +83,10 @@ public enum CandleType {
     /**
      * Certain price change, calculated according to the following rules:
      * <ol>
-     *     	<li>high(n) - low(n) = price range</li>
-     *     	<li>close(n) = high(n) or close(n) = low(n)</li>
-     * 	 	<li>open(n+1) = close(n) + tick size, if close(n) = high(n)</li>
-     * 	 	<li>open(n+1) = close(n) - tick size, if close(n) = low(n)</li>
+     *     <li>high(n) - low(n) = price range</li>
+     *     <li>close(n) = high(n) or close(n) = low(n)</li>
+     *     <li>open(n+1) = close(n) + tick size, if close(n) = high(n)</li>
+     *     <li>open(n+1) = close(n) - tick size, if close(n) = low(n)</li>
      * </ol>
      * where n is the number of the bar.
      */
@@ -95,10 +95,10 @@ public enum CandleType {
     /**
      * Certain price change, calculated according to the following rules:
      * <ol>
-     *     	<li>high(n+1) - high(n) = price range or low(n) - low(n+1) = price range</li>
-     *     	<li>close(n) = high(n) or close(n) = low(n)</li>
-     * 	 	<li>open(n+1) = high(n), if high(n+1) - high(n) = price range</li>
-     * 	 	<li>open(n+1) = low(n), if low(n) - low(n+1) = price range</li>
+     *     <li>high(n+1) - high(n) = price range or low(n) - low(n+1) = price range</li>
+     *     <li>close(n) = high(n) or close(n) = low(n)</li>
+     *     <li>open(n+1) = high(n), if high(n+1) - high(n) = price range</li>
+     *     <li>open(n+1) = low(n), if low(n) - low(n+1) = price range</li>
      * </ol>
      * where n is the number of the bar.
      */

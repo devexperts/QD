@@ -29,7 +29,7 @@ import javax.xml.bind.annotation.XmlType;
  * <p> Analytic order is similar to a regular {@link Order}. In addition this event has few additional properties:
  * <ul>
  *     <li>{@link #icebergPeakSize} - the size of the peak, i.e. the visible part of the iceberg,
- *     						   that is being continually refilled until the order is fully traded or cancelled;
+ *                              that is being continually refilled until the order is fully traded or cancelled;
  *     <li>{@link #icebergHiddenSize} - the prediction of current hidden size of the iceberg, as inferred by the model;
  *     <li>{@link #icebergExecutedSize} - the executed size of the iceberg order. For {@link IcebergType#SYNTHETIC} type
  *                             represents total executed size of all orders сomposing current iceberg;

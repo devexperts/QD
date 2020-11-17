@@ -72,7 +72,7 @@ class Void implements
     @Override
     public Object nextObjField() { throw new IllegalStateException(); }
     @Override
-    public long getTime() {	throw new IllegalStateException(); }
+    public long getTime() { throw new IllegalStateException(); }
 
     @Override
     public void processData(DataIterator iterator) {

@@ -165,7 +165,7 @@ public class DebugDumpReader {
         System.out.println("--- Dump information ---");
         System.out.println("Owner = " + owner);
         System.out.println("QDS   = " + version);
-        System.out.println("JVM   = " + ((systemProperties instanceof Map) ? ((Map<?, ?>)systemProperties).get("java.version") : null));
+        System.out.println("JVM   = " + ((systemProperties instanceof Map) ? ((Map<?, ?>) systemProperties).get("java.version") : null));
         if (exception instanceof Throwable) {
             System.out.println("Error = " + exception);
             ((Throwable) exception).printStackTrace(System.out);

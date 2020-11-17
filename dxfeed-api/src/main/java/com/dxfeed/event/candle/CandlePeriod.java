@@ -80,7 +80,7 @@ public class CandlePeriod implements CandleSymbolAttribute<CandlePeriod>, Serial
      * {@link CandleType#PRICE_MOMENTUM} and {@link CandleType#PRICE_RENKO}
      * is not defined and this method returns {@code 0}.
      * The result of this method is equal to
-     * {@code (long)(this.getType().getPeriodIntervalMillis() * this.getValue())}
+     * {@code (long) (this.getType().getPeriodIntervalMillis() * this.getValue())}
      * @see CandleType#getPeriodIntervalMillis()
      * @return aggregation period in milliseconds.
      */

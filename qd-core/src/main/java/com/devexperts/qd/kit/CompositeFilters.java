@@ -494,7 +494,7 @@ public class CompositeFilters {
             if (filter == null)
                 filter = PatternFilter.valueOfImpl(spec, spec, scheme);
             if (context == QDFilterContext.RECORD_ONLY && filter instanceof PatternFilter)
-                filter = PatternFilter.valueOfImpl(":" + ((PatternFilter)filter).getPattern(), spec, scheme);
+                filter = PatternFilter.valueOfImpl(":" + ((PatternFilter) filter).getPattern(), spec, scheme);
             return filter;
         }
     }

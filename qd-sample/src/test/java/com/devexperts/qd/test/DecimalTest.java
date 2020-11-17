@@ -73,7 +73,7 @@ public class DecimalTest extends TestCase {
         for (int i = 0; i < 100000; i++) {
             long mantissa = r.nextLong();
             int precision = r.nextInt(37) - 18; // from -18 to +18
-            double d = precision >= 0 ? (double) mantissa / POWERS[precision] : (double)mantissa * POWERS[-precision];
+            double d = precision >= 0 ? (double) mantissa / POWERS[precision] : (double) mantissa * POWERS[-precision];
 
             int d1 = Decimal.compose(d);
             int d2 = Decimal.composeDecimal(mantissa, precision);
@@ -620,7 +620,7 @@ public class DecimalTest extends TestCase {
         // This method also creates some canonical decimal representations for large mantissa.
         for (int m = 10; m <= 100000000; m *= 10)
             for (int i = 1; i <= 15; i++) {
-                double d = i >= 9 ? (double) m / POWERS[i - 9] : (double)m * POWERS[9 - i];
+                double d = i >= 9 ? (double) m / POWERS[i - 9] : (double) m * POWERS[9 - i];
                 map.put((m << 4) + i, d);
                 map.put((-m << 4) + i, -d);
             }
@@ -639,7 +639,7 @@ public class DecimalTest extends TestCase {
         // Create canonical and non-canonical decimal representations for single-digit decimals.
         for (int m = 2; m <= 10; m++) {
             for (int i = 1; i <= 15; i++) {
-                double d = i >= 9 ? (double) m / POWERS[i - 9] : (double)m * POWERS[9 - i];
+                double d = i >= 9 ? (double) m / POWERS[i - 9] : (double) m * POWERS[9 - i];
                 map.put((m << 4) + i, d);
                 map.put((-m << 4) + i, -d);
             }

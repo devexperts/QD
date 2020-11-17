@@ -58,7 +58,7 @@ public abstract class AbstractMessageConnector implements MessageConnector {
         String suffix = "Connector";
         if (type.endsWith(suffix))
             type = type.substring(0, type.length() - suffix.length());
-  		return type + "-" + factory.toString();
+        return type + "-" + factory.toString();
     }
 
     /**

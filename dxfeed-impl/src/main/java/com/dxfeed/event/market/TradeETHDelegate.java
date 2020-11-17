@@ -48,6 +48,7 @@ public final class TradeETHDelegate extends MarketEventDelegateImpl<TradeETH> {
         event.setPrice(m.getPrice(cursor));
         event.setSizeAsDouble(m.getSizeDouble(cursor));
         event.setChange(m.getChange(cursor));
+        event.setDayId(m.getDayId(cursor));
         event.setDayVolumeAsDouble(m.getDayVolumeDouble(cursor));
         event.setDayTurnover(m.getDayTurnover(cursor));
         event.setFlags(m.getFlags(cursor));
@@ -64,6 +65,7 @@ public final class TradeETHDelegate extends MarketEventDelegateImpl<TradeETH> {
         m.setPrice(cursor, event.getPrice());
         m.setSizeDouble(cursor, event.getSizeAsDouble());
         m.setChange(cursor, event.getChange());
+        m.setDayId(cursor, event.getDayId());
         m.setDayVolumeDouble(cursor, event.getDayVolumeAsDouble());
         m.setDayTurnover(cursor, event.getDayTurnover());
         m.setFlags(cursor, event.getFlags());

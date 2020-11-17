@@ -78,7 +78,7 @@ public abstract class AbstractMessageVisitor implements MessageVisitor {
 
     /**
      * This method consumes other message type. This implementation always return {@code true}.
-\	 */
+     */
     public boolean visitOtherMessage(int messageType, byte[] messageBytes, int offset, int length) {
         return true;
     }

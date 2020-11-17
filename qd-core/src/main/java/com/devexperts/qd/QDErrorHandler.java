@@ -34,7 +34,7 @@ public interface QDErrorHandler {
 
         private String annotate(Object obj, String message) {
             if (obj instanceof QDStatsContainer)
-                message += " [" + ((QDStatsContainer)obj).getStats().getFullKeyProperties() + "]";
+                message += " [" + ((QDStatsContainer) obj).getStats().getFullKeyProperties() + "]";
             return message;
         }
     };

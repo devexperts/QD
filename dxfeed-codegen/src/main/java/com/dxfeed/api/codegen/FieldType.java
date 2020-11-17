@@ -139,19 +139,19 @@ enum FieldType {
     ),
     CHAR(new Builder()
         .addField(new Field(false, SerialFieldType.UTF_CHAR))
-        .addAccess(Access.createWithAccessPattern("", "char", "'\\0'", "(char)getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("", "char", "'\\0'", "(char) getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
         .setMapper(new DefaultMapper(char.class))
     ),
     SHORT_STRING(new Builder()
         .addField(new Field(false, SerialFieldType.SHORT_STRING))
-        .addAccess(Access.createWithAccessPattern("String", "String", "null", "ShortString.decode(getInt(cursor, %s))", "setInt(cursor, %s, (int)ShortString.encode(%s))"))
+        .addAccess(Access.createWithAccessPattern("String", "String", "null", "ShortString.decode(getInt(cursor, %s))", "setInt(cursor, %s, (int) ShortString.encode(%s))"))
         .addAccess(Access.createWithAccessPattern("", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
         .addImport(new ClassName(ShortString.class))
         .setMapper(new DefaultMapper("String", String.class))
     ),
     STRING(new Builder()
         .addField(new Field(true, SerialFieldType.UTF_CHAR_ARRAY))
-        .addAccess(Access.createWithAccessPattern("", "String", "null", "(String)getObj(cursor, %s)", "setObj(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("", "String", "null", "(String) getObj(cursor, %s)", "setObj(cursor, %s, %s)"))
         .setMapper(new DefaultMapper(String.class))
     ),
     MARSHALLED(new Builder()
@@ -349,7 +349,7 @@ enum FieldType {
                 if (type.isSameType(boolean.class))
                     return base + " != 0";
                 if (!CodeGenUtils.isPrimitiveAssignable(decimalType, type))
-                    return "(" + type + ")" + base;
+                    return "(" + type + ") " + base;
                 return base;
             } else {
                 return ClassValueMappingRegistry.getInstance().deserialize(type, decimalType, base);
@@ -363,7 +363,7 @@ enum FieldType {
                 if (type.isSameType(boolean.class))
                     modValue = value + " ? 1 : 0";
                 else if (!CodeGenUtils.isPrimitiveAssignable(type, decimalType))
-                    modValue = "(" + decimalType + ")" + value;
+                    modValue = "(" + decimalType + ") " + value;
                 else modValue = value;
             } else {
                 modValue = ClassValueMappingRegistry.getInstance().serialize(type, decimalType, value);

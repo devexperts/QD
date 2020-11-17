@@ -17,7 +17,7 @@ import junit.framework.TestCase;
 
 public class DayRangeTest extends TestCase {
 
-    public void testRequestsForDayIdBCENotSupported()	{
+    public void testRequestsForDayIdBCENotSupported() {
         int dayId = DayUtil.getDayIdByYearMonthDay(-1, 1, 1);
         try {
             DayRange.getWeekRangeByDayId(dayId, 1);

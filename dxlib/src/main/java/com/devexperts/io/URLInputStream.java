@@ -329,7 +329,7 @@ public class URLInputStream extends FilterInputStream {
      * request parameter specified at creation.
      *
      * @return {@code true} if content was modified according to {@code If-Modified-Since} parameter,
-     * 		or parameter was not specified or was 0
+     *      or parameter was not specified or was 0
      * @throws IOException if an I/O error occurs
      */
     public boolean isModifiedSince() throws IOException {

@@ -341,7 +341,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
         SubMatrix tsub = total.sub; // Atomic read.
 
         // visit collector
-        visitor.visitCollector(System.identityHashCode(this), stats.getFullKeyProperties(),	contract.toString(), hasTime);
+        visitor.visitCollector(System.identityHashCode(this), stats.getFullKeyProperties(), contract.toString(), hasTime);
 
         // Implementation note: this method is full of "atomic read" operations, both explicit and implicit.
         // They are intended to prevent exceptions due to concurrent update of subscription matrix.

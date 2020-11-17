@@ -25,6 +25,7 @@ public class TradeETHMapping extends MarketEventMapping {
     private final int iPrice;
     private final int iSize;
     private final int iChange;
+    private final int iDayId;
     private final int iDayVolume;
     private final int iDayTurnover;
     private final int iFlags;
@@ -38,6 +39,7 @@ public class TradeETHMapping extends MarketEventMapping {
         iPrice = findIntField("ETHLast.Price", true);
         iSize = findIntField("ETHLast.Size", true);
         iChange = findIntField("ETHLast.Change", false);
+        iDayId = MappingUtil.findIntField(record, "DayId", false);
         iDayVolume = findIntField("ETHVolume", false);
         iDayTurnover = findIntField("ETHDayTurnover", false);
         iFlags = MappingUtil.findIntField(record, "ETHLast.Flags", true);
@@ -403,6 +405,18 @@ public class TradeETHMapping extends MarketEventMapping {
         if (iChange < 0)
             return;
         setAsWideDecimal(cursor, iChange, change);
+    }
+
+    public int getDayId(RecordCursor cursor) {
+        if (iDayId < 0)
+            return 0;
+        return getInt(cursor, iDayId);
+    }
+
+    public void setDayId(RecordCursor cursor, int dayId) {
+        if (iDayId < 0)
+            return;
+        setInt(cursor, iDayId, dayId);
     }
 
     @Deprecated

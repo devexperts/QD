@@ -11,6 +11,7 @@
  */
 package com.dxfeed.event.market;
 
+import com.devexperts.util.DayUtil;
 import com.devexperts.util.TimeFormat;
 import com.devexperts.util.TimeUtil;
 import com.dxfeed.event.LastingEvent;
@@ -28,16 +29,16 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  * Trade events represent the most recent information that is available about the last trade on the market
  * at any given moment of time.
  *
- * <p>{@link Trade} event represents last trade information for <b>regular trading hours</b>
- * (RTH) with an official volume <b>for the whole trading day</b>.
+ * <p>{@link Trade} event represents last trade information for <b>regular trading hours</b> (RTH)
+ * with an official volume and turnover <b>for the whole trading day</b> identified by {@link #getDayId() dayId} field.
  *
  * <p>{@link TradeETH} event is defined only for symbols (typically stocks and ETFs) with a designated
  * <b>extended trading hours</b> (ETH, pre market and post market trading sessions). It represents
- * last trade price during ETH and accumulated volume during ETH.
+ * last trade price during ETH and also accumulated volume and turnover during ETH for current trading day.
  */
 @XmlType(propOrder = {
     "time", "timeNanoPart", "sequence", "exchangeCode", "price", "change", "sizeAsDouble",
-    "dayVolumeAsDouble", "dayTurnover", "tickDirection", "extendedTradingHours"
+    "dayId", "dayVolumeAsDouble", "dayTurnover", "tickDirection", "extendedTradingHours"
 })
 public abstract class TradeBase extends MarketEvent implements LastingEvent<String> {
     private static final long serialVersionUID = 1;
@@ -74,6 +75,7 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
     private double price = Double.NaN;
     private double change = Double.NaN;
     private double size = Double.NaN;
+    private int dayId;
     private double dayVolume = Double.NaN;
     private double dayTurnover = Double.NaN;
     private int flags;
@@ -257,6 +259,24 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
     }
 
     /**
+     * Returns identifier of the current trading day.
+     * Identifier of the day is the number of days passed since January 1, 1970.
+     * @return identifier of the current trading day.
+     */
+    public int getDayId() {
+        return dayId;
+    }
+
+    /**
+     * Changes identifier of the current trading day.
+     * Identifier of the day is the number of days passed since January 1, 1970.
+     * @param dayId identifier of the current trading day.
+     */
+    public void setDayId(int dayId) {
+        this.dayId = dayId;
+    }
+
+    /**
      * Returns total volume traded for a day as integer number (rounded toward zero).
      * @return total volume traded for a day as integer number (rounded toward zero).
      */
@@ -380,6 +400,7 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
             ", price=" + price +
             ", change=" + change +
             ", size=" + size +
+            ", day=" + DayUtil.getYearMonthDayByDayId(dayId) +
             ", dayVolume=" + dayVolume +
             ", dayTurnover=" + dayTurnover +
             ", direction=" + getTickDirection() +

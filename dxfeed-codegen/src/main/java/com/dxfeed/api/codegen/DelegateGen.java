@@ -305,10 +305,10 @@ class DelegateGen {
     DelegateGen mapTimeAndSequence(String timeFieldName, String sequenceFieldName) {
         map("Time", timeFieldName, FieldType.TIME_SECONDS).internal();
         map("Sequence", sequenceFieldName, FieldType.SEQUENCE).internal();
-        assign("TimeSequence", "(((long)#Time.Seconds#) << 32) | (#Sequence# & 0xFFFFFFFFL)");
+        assign("TimeSequence", "(((long) #Time.Seconds#) << 32) | (#Sequence# & 0xFFFFFFFFL)");
         injectPutEventCode(
-            "#Time.Seconds=(int)(event.getTimeSequence() >>> 32)#;",
-            "#Sequence=(int)event.getTimeSequence()#;"
+            "#Time.Seconds=(int) (event.getTimeSequence() >>> 32)#;",
+            "#Sequence=(int) event.getTimeSequence()#;"
         );
         return this;
     }
@@ -320,10 +320,10 @@ class DelegateGen {
     DelegateGen mapTimeAndSequenceToIndex(String timeFieldName, String sequenceFieldName) {
         map("Time", timeFieldName, FieldType.TIME_SECONDS).time(0).internal();
         map("Sequence", sequenceFieldName, FieldType.SEQUENCE).time(1).internal();
-        assign("Index", "(((long)#Time.Seconds#) << 32) | (#Sequence# & 0xFFFFFFFFL)");
+        assign("Index", "(((long) #Time.Seconds#) << 32) | (#Sequence# & 0xFFFFFFFFL)");
         injectPutEventCode(
-            "#Time.Seconds=(int)(event.getIndex() >>> 32)#;",
-            "#Sequence=(int)event.getIndex()#;"
+            "#Time.Seconds=(int) (event.getIndex() >>> 32)#;",
+            "#Sequence=(int) event.getIndex()#;"
         );
         return this;
     }
