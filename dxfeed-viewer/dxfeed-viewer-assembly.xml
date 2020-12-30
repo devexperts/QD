@@ -30,9 +30,24 @@
     </dependencySets>
 
     <fileSets>
+        <!-- default to Windows line endings -->
         <fileSet>
             <directory>files</directory>
             <outputDirectory>/</outputDirectory>
+            <excludes>
+                <exclude>*.sh</exclude>
+            </excludes>
+            <lineEnding>windows</lineEnding>
+        </fileSet>
+        <!-- force unix line endings and executable bit for unix launcher -->
+        <fileSet>
+            <directory>files</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>*.sh</include>
+            </includes>
+            <lineEnding>unix</lineEnding>
+            <fileMode>755</fileMode>
         </fileSet>
     </fileSets>
 </assembly>

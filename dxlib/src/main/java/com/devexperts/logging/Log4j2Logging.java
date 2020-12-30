@@ -147,7 +147,14 @@ class Log4j2Logging extends DefaultLogging {
 
     @Override
     void setDebugEnabled(Object peer, boolean debugEnabled) {
-        ((Logger) peer).setLevel(debugEnabled ? DEBUG : INFO);
+        Logger logger = (Logger) peer;
+        if (debugEnabled) {
+            if (logger.getLevel().isMoreSpecificThan(DEBUG))
+                logger.setLevel(DEBUG);
+        } else {
+            if (logger.getLevel().isLessSpecificThan(INFO))
+                logger.setLevel(INFO);
+        }
     }
 
     @Override

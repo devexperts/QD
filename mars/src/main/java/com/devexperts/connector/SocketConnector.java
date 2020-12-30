@@ -129,7 +129,7 @@ class SocketConnector extends SocketController {
         }
         SocketAddress address = resolved_addresses.get(current_address);
 
-        StringBuffer connectingMsgBuf = new StringBuffer().append("connecting... ");
+        StringBuilder connectingMsgBuf = new StringBuilder().append("connecting... ");
         Throwable throwable = null;
 
         String connectorState = null;
@@ -157,8 +157,8 @@ class SocketConnector extends SocketController {
             if (isEqual && (curTime - prevConnectStatusTime < LOG_DELAY)) {
                 prevConnectStatusNumber++;
             } else {
-                StringBuffer buf = new StringBuffer(curConnectStatus.length() + 50);
                 if (prevConnectStatusNumber != 0) {
+                    StringBuilder buf = new StringBuilder(curConnectStatus.length() + 50);
                     buf.append('[');
                     if (isEqual) {
                         buf.append(prevConnectStatusNumber + 1).append(" msg, address=").append(address).append(']');
@@ -196,7 +196,7 @@ class SocketConnector extends SocketController {
         // Resolve parsed addresses.
         Set<SocketAddress> addresses = new HashSet<SocketAddress>();
         for (SocketAddress address : parsed_addresses) {
-            StringBuffer resolvingMsgBuf = new StringBuffer().append("Resolving ").append(address.getHost());
+            StringBuilder resolvingMsgBuf = new StringBuilder().append("Resolving ").append(address.getHost());
             UnknownHostException exception = null;
             try {
                 InetAddress[] addrs = InetAddress.getAllByName(address.getHost());
@@ -214,8 +214,8 @@ class SocketConnector extends SocketController {
                     if (isEqual && (curTime - prevResolveStatusTime < LOG_DELAY)) {
                         prevResolveStatusNumber++;
                     } else {
-                        StringBuffer buf = new StringBuffer(curResolveStatus.length() + 50);
                         if (prevResolveStatusNumber != 0) {
+                            StringBuilder buf = new StringBuilder(curResolveStatus.length() + 50);
                             buf.append('[');
                             if (isEqual) {
                                 buf.append(prevResolveStatusNumber + 1).append(" msg]");

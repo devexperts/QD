@@ -54,7 +54,7 @@ public class QDLogImpl extends QDLog {
     }
 
     protected void log(PrintStream out, char level, Object msg) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         sb.append(level);
         sb.append(' ');
         appendTime(sb);
@@ -81,7 +81,7 @@ public class QDLogImpl extends QDLog {
     }
 
     private String compactName(String name) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         boolean skiplower = false;
         int n = name.length();
         for (int i = 0; i < n; i++) {
@@ -100,7 +100,7 @@ public class QDLogImpl extends QDLog {
         return sb.toString();
     }
 
-    private void appendTime(StringBuffer sb) {
+    private void appendTime(StringBuilder sb) {
         long this_time = System.currentTimeMillis();
         int this_minute = (int) (this_time / TimeUtil.MINUTE);
         if (this_minute != last_minute) {

@@ -37,7 +37,7 @@ public class JMXNameBuilder {
         boolean first_value_char = false;
         boolean quoted_value = false;
         String key = "";
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         for (int i = 0, n = keyProperties.length(); i <= n; i++) {
             char c = i < n ? keyProperties.charAt(i) : '\0';
             if (in_key && c == '=') {
@@ -113,7 +113,7 @@ public class JMXNameBuilder {
             }
         if (legal)
             return rawValue;
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         sb.append('"');
         for (int i = 0, n = rawValue.length(); i < n; i++) {
             char c = rawValue.charAt(i);

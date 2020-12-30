@@ -51,14 +51,15 @@ class DefaultLogging {
 
     Map<String, Exception> configureLogFile(String log_file) {
         Logger root = Logger.getLogger("");
-        Map<String, Exception> errors = new LinkedHashMap<String, Exception>();
+        Map<String, Exception> errors = new LinkedHashMap<>();
 
         try {
             // Don't reset configuration. Retain all manually configured loggers, but
             // reconfigure the root logger, which (as we checked) has a default configuration with
             // 1 ConsoleHandler with SimpleFormatter and INFO level
-            for (Handler handler : root.getHandlers())
+            for (Handler handler : root.getHandlers()) {
                 root.removeHandler(handler);
+            }
 
             // configure "log" file or console
             Handler handler = null;
@@ -105,8 +106,16 @@ class DefaultLogging {
         return ((Logger) peer).isLoggable(Level.FINE);
     }
 
-    void setDebugEnabled(Object peer, boolean debug_enabled) {
-        ((Logger) peer).setLevel(debug_enabled ? Level.ALL : Level.INFO);
+    void setDebugEnabled(Object peer, boolean debugEnabled) {
+        Logger category = (Logger) peer;
+        Level priority = category.getLevel(); // may be null if was not directly configured
+        if (debugEnabled) {
+            if (priority == null || priority.intValue() > Level.FINE.intValue())
+                category.setLevel(Level.FINE);
+        } else {
+            if (priority == null || priority.intValue() < Level.INFO.intValue())
+                category.setLevel(Level.INFO);
+        }
     }
 
     void log(Object peer, Level level, String msg, Throwable t) {
@@ -141,7 +150,7 @@ class DefaultLogging {
             value = value.substring(0, value.length() - 1);
         }
         try {
-            return Integer.valueOf(value) * multiplier;
+            return Integer.parseInt(value) * multiplier;
         } catch (NumberFormatException e) {
             errors.put(key, e);
             return 0;

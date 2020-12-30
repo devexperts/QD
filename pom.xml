@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.295</version>
+    <version>3.296</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -100,7 +100,7 @@
         <dependency>
             <groupId>com.devexperts.dgen</groupId>
             <artifactId>dgen</artifactId>
-            <version>1.0</version>
+            <version>1.1</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

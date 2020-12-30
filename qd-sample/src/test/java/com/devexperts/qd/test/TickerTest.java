@@ -151,7 +151,7 @@ public class TickerTest extends QDTestBase {
      */
     private static void assertEquals(String msg, SubscriptionMap expected, SubscriptionMap actual) {
         if (!expected.equals(actual)) {
-            StringBuffer sb = new StringBuffer();
+            StringBuilder sb = new StringBuilder();
             sb.append(msg);
             SubscriptionMap expected_left = new SubscriptionMap(expected);
             expected_left.removeAll(actual);

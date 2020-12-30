@@ -62,7 +62,7 @@ public class TestSubscriptionProvider extends AbstractRecordProvider {
             DataRecord record = scheme.getRecord(rnd.nextInt(scheme.getRecordCount()));
             String symbol;
             if (symbols == null) {
-                StringBuffer sb = new StringBuffer();
+                StringBuilder sb = new StringBuilder();
                 for (int i = 0, n = rnd.nextInt(15) + 1; i < n; i++)
                     sb.append(nextChar());
                 symbol = new String(sb);

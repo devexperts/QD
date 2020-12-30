@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.295</version>
+        <version>3.296</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -41,10 +41,30 @@
             <artifactId>dxfeed-promise</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.binarytweed</groupId>
+            <artifactId>quarantining-test-runner</artifactId>
+            <version>0.0.3</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>junit</groupId>
+                    <artifactId>junit</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <!-- Specify dgen.config path for IDEA (it fails to change current dir for compiling) -->
+                    <compilerArgument>-Adgen.config=${project.basedir}/dgen.config</compilerArgument>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>jaxb2-maven-plugin</artifactId>

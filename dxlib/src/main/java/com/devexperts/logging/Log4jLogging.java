@@ -97,7 +97,15 @@ class Log4jLogging extends DefaultLogging {
 
     @Override
     void setDebugEnabled(Object peer, boolean debugEnabled) {
-        ((Category) peer).setPriority(debugEnabled ? Priority.DEBUG : Priority.INFO);
+        Category category = (Category) peer;
+        Priority priority = category.getPriority(); // may be null if was not directly configured
+        if (debugEnabled) {
+            if (priority == null || priority.isGreaterOrEqual(Priority.DEBUG))
+                category.setPriority(Priority.DEBUG);
+        } else {
+            if (priority == null || Priority.INFO.isGreaterOrEqual(priority))
+                category.setPriority(Priority.INFO);
+        }
     }
 
     @Override

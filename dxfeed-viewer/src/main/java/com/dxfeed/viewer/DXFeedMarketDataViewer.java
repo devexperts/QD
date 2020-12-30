@@ -254,7 +254,8 @@ public class DXFeedMarketDataViewer implements Runnable {
 
     private int getIntProperty(String value, int defaultValue) {
         try {
-            return Integer.parseInt(value);
+            if (value != null)
+                return Integer.parseInt(value);
         } catch (NumberFormatException e) {
             log.error("Failed to parse integer property from string \"" + value + "\"");
         }

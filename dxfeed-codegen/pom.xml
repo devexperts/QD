@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.295</version>
+        <version>3.296</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -34,14 +34,12 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>default-compile</id>
-                        <configuration>
-                            <proc>none</proc>
-                        </configuration>
-                    </execution>
-                </executions>
+                <configuration>
+                    <compilerArguments>
+                        <!-- disable annotation processing to make maven and IDEA happy -->
+                        <processorpath>NULL</processorpath>
+                    </compilerArguments>
+                </configuration>
             </plugin>
         </plugins>
     </build>
@@ -59,7 +57,7 @@
         </dependency>
         <dependency>
             <groupId>com.devexperts.qd</groupId>
-            <artifactId>dxfeed-impl</artifactId>
+            <artifactId>qds</artifactId>
             <version>${project.version}</version>
         </dependency>
         <!-- Utility classes for testing -->

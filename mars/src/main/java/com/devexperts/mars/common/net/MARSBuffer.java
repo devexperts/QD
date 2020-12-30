@@ -161,8 +161,7 @@ public class MARSBuffer {
                 }
             } catch (Exception e) {
                 Logging.getLogging(MARSBuffer.class).error(
-                    new StringBuffer(37).append("readEvents() crlf=")
-                        .append(crlf).append(" parsed=").append(parsed).toString(), e);
+                    "readEvents() crlf=" + crlf + " parsed=" + parsed, e);
             }
         }
         removeChars(parsed);

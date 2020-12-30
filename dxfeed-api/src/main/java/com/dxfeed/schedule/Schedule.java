@@ -43,6 +43,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.PrimitiveIterator;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -58,6 +59,7 @@ import java.util.regex.Pattern;
  * trading hours of covered trading schedule.
  */
 public final class Schedule {
+    private static final Logging log = Logging.getLogging(Schedule.class);
 
     private static final String CACHE_LIMIT_PROPERTY = "com.dxfeed.schedule.cache";
     private static final String DOWNLOAD_PROPERTY = "com.dxfeed.schedule.download";
@@ -184,7 +186,7 @@ public final class Schedule {
                 next = newNext;
                 doDownload();
             } catch (Throwable t) {
-                Logging.getLogging(Schedule.class).error("Unexpected error", t);
+                log.error("Unexpected error", t);
             }
         }
     }
@@ -193,10 +195,9 @@ public final class Schedule {
         String url = downloadURL; // Atomic read.
         if (url == null)
             return;
-        Logging log = Logging.getLogging(Schedule.class);
         byte[] data;
         try {
-            data = URLInputStream.readURL(url);
+            data = URLInputStream.readBytes(url);
         } catch (Throwable t) {
             log.error("Failed to download schedule defaults from " + LogUtil.hideCredentials(url), t);
             return;
@@ -606,9 +607,42 @@ public final class Schedule {
             if (start.compareTo(end) < 0)
                 s.add(index, new SessionDef(SessionType.NO_TRADING, start, end));
         }
+
+        boolean isTrading() {
+            for (SessionDef session : sessions) {
+                if (session.type != SessionType.NO_TRADING)
+                    return true;
+            }
+            return false;
+        }
     }
 
-    private static final Pattern SDS_EC_PATTERN = Pattern.compile("ec[0-9]{4}");
+    // Generic strategy pattern is "name[params]", where name is alpha string and params shall start with non-alpha.
+    private static final Pattern STRATEGY_PATTERN = Pattern.compile("([a-zA-Z_]+)([^a-zA-Z_].*)?");
+    private static final Pattern SDS_EC_PATTERN = Pattern.compile("ec([0-9]{4})");
+    private static final Pattern HDS_JNTD_PATTERN = Pattern.compile("jntd([0-9])");
+
+    private static Matcher getStrategy(String def, Map<String, String> props, String key, String name, Pattern pattern) {
+        String value = props.get(key);
+        if (value == null || value.isEmpty())
+            return null;
+        Matcher m = STRATEGY_PATTERN.matcher(value);
+        if (m.matches()) {
+            if (!m.group(1).equals(name)) {
+                // In case of unknown strategy - log it and ignore it as if none were specified. For compatibility.
+                // Once several different strategies are supported - this warning shall be moved elsewhere
+                // or method signature shall be changed to avoid misreporting of "unknown" strategy.
+                log.warn("Unknown " + key + " strategy " + m.group(1) + " for " + def);
+                return null;
+            }
+            Matcher result = pattern.matcher(value);
+            if (result.matches())
+                return result;
+            // If strategy does not match specified pattern - fall through to throw exception below.
+        }
+        // If property does not match neither generic strategy pattern nor specific strategy pattern - throw exception.
+        throw new IllegalArgumentException("broken " + key + " strategy for " + def);
+    }
 
     final String def;
     private String name;
@@ -619,6 +653,7 @@ public final class Schedule {
     private LongHashSet holidays;
     private LongHashSet shortdays;
     private long earlyClose;
+    private int joinNextTradingDay;
     private DayDef[] weekDays;
     private LongHashMap<DayDef> specialDays;
 
@@ -639,9 +674,10 @@ public final class Schedule {
     private void init() {
         Defaults defaults = DEFAULTS; // Atomic volatile read.
         String venue = def.substring(0, def.indexOf('('));
-        Map<String, String> props = defaults.venues.get(venue);
-        props = props == null ? new HashMap<>() : new HashMap<>(props);
-        props = readProps(props, def.substring(def.indexOf('(') + 1, def.length() - 1));
+        Map<String, String> props = new HashMap<>();
+        if (defaults.venues.containsKey(venue))
+            props.putAll(defaults.venues.get(venue));
+        props.putAll(readProps(def.substring(def.indexOf('(') + 1, def.length() - 1)));
         String name = props.get("name");
         if (name == null)
             name = venue;
@@ -651,15 +687,10 @@ public final class Schedule {
         TimeZone timeZone = TimeZone.getTimeZone(tz);
         LongHashSet holidays = readDays(defaults.holidays, props.get("hd"));
         LongHashSet shortdays = readDays(defaults.shortdays, props.get("sd"));
-        String sds = props.get("sds");
-        long earlyClose;
-        if (sds == null || sds.isEmpty()) {
-            earlyClose = 0;
-        } else if (SDS_EC_PATTERN.matcher(sds).matches()) {
-            earlyClose = new TimeDef(def, sds.substring(2)).offset();
-        } else {
-            throw new IllegalArgumentException("unknown short day strategy for " + def);
-        }
+        Matcher ec = getStrategy(def, props, "sds", "ec", SDS_EC_PATTERN);
+        long earlyClose = ec == null ? 0 : new TimeDef(def, ec.group(1)).offset();
+        Matcher jntd = getStrategy(def, props, "hds", "jntd", HDS_JNTD_PATTERN);
+        int joinNextTradingDay = jntd == null ? 0 : Integer.parseInt(jntd.group(1));
         String td = props.get("td");
         if (td == null)
             td = "12345";
@@ -701,6 +732,7 @@ public final class Schedule {
             this.holidays = holidays;
             this.shortdays = shortdays;
             this.earlyClose = earlyClose;
+            this.joinNextTradingDay = joinNextTradingDay;
             this.weekDays = weekDays;
             this.specialDays = specialDays;
 
@@ -714,34 +746,29 @@ public final class Schedule {
     private void checkEarlyClose() {
         if (earlyClose == 0)
             return;
-        for (long sd : shortdays) {
+        for (PrimitiveIterator.OfLong it = shortdays.longIterator(); it.hasNext();) {
+            long sd = it.nextLong();
             if (holidays.contains(sd))
                 continue;
-            if (!checkShortDay((int) sd))
+            if (isTooShortForEarlyClose((int) sd))
                 return;
         }
     }
 
-    private boolean checkShortDay(int yearMonthDay) {
-        int year = yearMonthDay / 10000;
-        int month = yearMonthDay / 100 % 100;
-        int day = yearMonthDay % 100;
-        int dayId = DayUtil.getDayIdByYearMonthDay(year, month, day);
-        long time = dayId * DAY_LENGTH - rawOffset + DAY_LENGTH / 2;
-        DayDef def = specialDays.get(yearMonthDay);
-        if (def == null)
-            def = weekDays[dayOfWeek(dayId)];
-        int lastRegular = getLastRegularSessionIndex(def);
-        if (lastRegular < def.sessions.length) {
-            SessionDef session = def.sessions[lastRegular];
+    private boolean isTooShortForEarlyClose(int yearMonthDay) {
+        int dayId = DayUtil.getDayIdByYearMonthDay(yearMonthDay);
+        DayDef dayDef = getDayDef(dayId, yearMonthDay);
+        int lastRegular = getLastRegularSessionIndex(dayDef);
+        if (lastRegular < dayDef.sessions.length) {
+            SessionDef session = dayDef.sessions[lastRegular];
+            long time = getTimeByDayId(dayId);
             if (session.isTooShort(calendar, time, earlyClose)) {
-                Logging log = Logging.getLogging(getClass());
                 log.warn("Last regular session of short day " + yearMonthDay +
-                    " in " + this.def + " is too short for early close strategy. Strategy will be ignored.");
-                return false;
+                    " in " + def + " is too short for early close strategy. Day won't be shortened.");
+                return true;
             }
         }
-        return true;
+        return false;
     }
 
     private Day getDay(int dayId) {
@@ -772,45 +799,137 @@ public final class Schedule {
         }
     }
 
+    private long getTimeByDayId(int dayId) {
+        return dayId * DAY_LENGTH - rawOffset + DAY_LENGTH / 2;
+    }
+
+    private void addTradingDaySessions(Day day, DayDef def, long time, boolean shortday, List<Session> sessions) {
+        int lastRegular = (shortday && earlyClose != 0) ? getLastRegularSessionIndex(def) : def.sessions.length;
+        if (lastRegular < def.sessions.length) {
+            SessionDef session = def.sessions[lastRegular];
+            if (session.isTooShort(calendar, time, earlyClose))
+                // last regular session is too short for early close short day strategy - switch off it
+                lastRegular = def.sessions.length;
+        }
+        long shift = -earlyClose;
+        for (int i = 0; i < def.sessions.length; i++) {
+            SessionDef session = def.sessions[i];
+            if (i < lastRegular)
+                sessions.add(session.create(day, calendar, time, 0, 0));
+            else if (i == lastRegular)
+                sessions.add(session.create(day, calendar, time, 0, shift));
+            else if (i < def.sessions.length - 1)
+                sessions.add(session.create(day, calendar, time, shift, shift));
+            else
+                sessions.add(session.create(day, calendar, time, shift, 0));
+        }
+        if (lastRegular == def.sessions.length - 1) {
+            long endTime = sessions.get(sessions.size() - 1).getEndTime();
+            sessions.add(new Session(day, SessionType.NO_TRADING, endTime, endTime - shift));
+        }
+    }
+
+    private int getEarliestTradingHolidayOffset(int dayId, int maxOffset) {
+        int earliestOffset = -1;
+        for (int offset = 1; offset <= maxOffset; offset++) {
+            int yearMonthDay = DayUtil.getYearMonthDayByDayId(dayId - offset);
+            boolean isHoliday = holidays.contains(yearMonthDay);
+            boolean isTrading = getDayDef(dayId - offset, yearMonthDay).isTrading();
+            if (!isHoliday && isTrading) {
+                // found true trading day - abort farther search and return best result
+                return earliestOffset;
+            }
+            if (isHoliday && isTrading) {
+                // found candidate - update best result and look for even better one
+                earliestOffset = offset;
+            }
+        }
+        return earliestOffset;
+    }
+
+    private int getNextTradingDayOffset(int dayId, int maxOffset) {
+        for (int offset = 0; offset <= maxOffset; offset++) {
+            int yearMonthDay = DayUtil.getYearMonthDayByDayId(dayId + offset);
+            if (!holidays.contains(yearMonthDay) && getDayDef(dayId + offset, yearMonthDay).isTrading()) {
+                return offset;
+            }
+        }
+        return -1;
+    }
+
+    private DayDef getDayDef(int dayId, int yearMonthDay) {
+        DayDef dayDef = specialDays.get(yearMonthDay);
+        if (dayDef == null)
+            dayDef = weekDays[dayOfWeek(dayId)];
+        return dayDef;
+    }
+
+    private void createJntdDays(int startDayId, int endDayId) {
+        int startYearMonthDay = DayUtil.getYearMonthDayByDayId(startDayId);
+        int endYearMonthDay = DayUtil.getYearMonthDayByDayId(endDayId);
+        DayDef startDef = getDayDef(startDayId, startYearMonthDay);
+        DayDef endDef = getDayDef(endDayId, endYearMonthDay);
+
+        // create all initial empty days
+        long startTime = startDef.dayStart.get(calendar, getTimeByDayId(startDayId));
+        for (int dayId = startDayId; dayId < endDayId; dayId++) {
+            int yearMonthDay = DayUtil.getYearMonthDayByDayId(dayId);
+            Day day = new Day(this, dayId, yearMonthDay, holidays.contains(yearMonthDay), shortdays.contains(yearMonthDay), startTime);
+            day.setSessions(Collections.singletonList(new Session(day, SessionType.NO_TRADING, startTime, startTime)));
+            idCache.put(day);
+            ymdCache.put(day);
+        }
+
+        // create final trading day
+        boolean isShortday = shortdays.contains(endYearMonthDay);
+        long resetTime = startDef.resetTime.get(calendar, getTimeByDayId(startDayId));
+        Day endDay = new Day(this, endDayId, endYearMonthDay, false, isShortday, resetTime);
+
+        ArrayList<Session> sessions = new ArrayList<>();
+        addTradingDaySessions(endDay, startDef, getTimeByDayId(startDayId), false, sessions);
+        for (int dayId = startDayId + 1; dayId < endDayId; dayId++) {
+            DayDef dayDef = getDayDef(dayId, DayUtil.getYearMonthDayByDayId(dayId));
+            long time = getTimeByDayId(dayId);
+            sessions.add(new Session(endDay, SessionType.NO_TRADING,
+                dayDef.dayStart.get(calendar, time), dayDef.dayEnd.get(calendar, time)));
+        }
+        addTradingDaySessions(endDay, endDef, getTimeByDayId(endDayId), isShortday, sessions);
+        sessions.trimToSize();
+        endDay.setSessions(Collections.unmodifiableList(sessions));
+
+        idCache.put(endDay);
+        ymdCache.put(endDay);
+    }
+
     // GuardedBy: lock
     private Day createDay(int dayId) {
         creationCounter.incrementAndGet();
-        long time = dayId * DAY_LENGTH - rawOffset + DAY_LENGTH / 2;
-        calendar.setTimeInMillis(time);
-        int yearMonthDay = calendar.get(Calendar.YEAR) * 10000 + (calendar.get(Calendar.MONTH) + 1) * 100 + calendar.get(Calendar.DAY_OF_MONTH);
-        boolean holiday = holidays.contains(yearMonthDay);
-        boolean shortday = shortdays.contains(yearMonthDay);
-        DayDef def = specialDays.get(yearMonthDay);
-        if (def == null)
-            def = weekDays[dayOfWeek(dayId)];
-        Day day = new Day(this, dayId, yearMonthDay, holiday, shortday, def.resetTime.get(calendar, time));
-        if (holiday)
-            day.setSessions(Collections.singletonList(new Session(day, SessionType.NO_TRADING, def.dayStart.get(calendar, time), def.dayEnd.get(calendar, time))));
-        else {
-            ArrayList<Session> sessions = new ArrayList<>(def.sessions.length);
-            int lastRegular = (shortday && earlyClose != 0) ? getLastRegularSessionIndex(def) : def.sessions.length;
-            if (lastRegular < def.sessions.length) {
-                SessionDef session = def.sessions[lastRegular];
-                if (session.isTooShort(calendar, time, earlyClose))
-                    // last regular session is too short for early close short day strategy - switch off it
-                    lastRegular = def.sessions.length;
+
+        if (joinNextTradingDay != 0) {
+            int tradingOffset = getNextTradingDayOffset(dayId, joinNextTradingDay);
+            if (tradingOffset >= 0) {
+                int endDayId = dayId + tradingOffset;
+                int earliestOffset = getEarliestTradingHolidayOffset(endDayId, joinNextTradingDay);
+                if (earliestOffset >= tradingOffset) {
+                    createJntdDays(endDayId - earliestOffset, endDayId);
+                    return idCache.getByKey(dayId);
+                }
             }
-            long shift = -1 * earlyClose;
-            for (int i = 0; i < def.sessions.length; i++) {
-                SessionDef session = def.sessions[i];
-                if (i < lastRegular)
-                    sessions.add(session.create(day, calendar, time, 0, 0));
-                else if (i == lastRegular)
-                    sessions.add(session.create(day, calendar, time, 0, shift));
-                else if (i < def.sessions.length - 1)
-                    sessions.add(session.create(day, calendar, time, shift, shift));
-                else
-                    sessions.add(session.create(day, calendar, time, shift, 0));
-            }
-            if (lastRegular == def.sessions.length - 1) {
-                long endTime = sessions.get(sessions.size() - 1).getEndTime();
-                sessions.add(new Session(day, SessionType.NO_TRADING, endTime, endTime - shift));
-            }
+        }
+
+        long time = getTimeByDayId(dayId);
+        int yearMonthDay = DayUtil.getYearMonthDayByDayId(dayId);
+        boolean isHoliday = holidays.contains(yearMonthDay);
+        boolean isShortDay = shortdays.contains(yearMonthDay);
+        DayDef dayDef = getDayDef(dayId, yearMonthDay);
+        Day day = new Day(this, dayId, yearMonthDay, isHoliday, isShortDay, dayDef.resetTime.get(calendar, time));
+        if (isHoliday) {
+            day.setSessions(Collections.singletonList(
+                new Session(day, SessionType.NO_TRADING, dayDef.dayStart.get(calendar, time), dayDef.dayEnd.get(calendar, time))));
+        } else {
+            ArrayList<Session> sessions = new ArrayList<>();
+            addTradingDaySessions(day, dayDef, time, isShortDay, sessions);
+            sessions.trimToSize();
             day.setSessions(Collections.unmodifiableList(sessions));
         }
         return day;
@@ -852,7 +971,7 @@ public final class Schedule {
             if (in != null)
                 setDefaults(in);
         } catch (Throwable t) {
-            Logging.getLogging(Schedule.class).error("Unexpected error", t);
+            log.error("Unexpected error", t);
         }
         downloadDefaults(SystemProperties.getProperty(DOWNLOAD_PROPERTY, null));
     }
@@ -887,7 +1006,7 @@ public final class Schedule {
                 if (newDef.shortdays.put(subkey, readDays(newDef.shortdays, value)) != null)
                     throw new IllegalArgumentException("duplicate short day list " + line);
             } else if (key.startsWith("tv.")) {
-                if (newDef.venues.put(subkey, readProps(new HashMap<>(), value)) != null)
+                if (newDef.venues.put(subkey, readProps(value)) != null)
                     throw new IllegalArgumentException("duplicate venue " + line);
             }
         }
@@ -901,7 +1020,7 @@ public final class Schedule {
             try {
                 schedule.init();
             } catch (Throwable t) {
-                Logging.getLogging(Schedule.class).error("Unexpected error", t);
+                log.error("Unexpected error", t);
             }
         return "newer than current - applied";
     }
@@ -942,7 +1061,8 @@ public final class Schedule {
         return days;
     }
 
-    private static Map<String, String> readProps(Map<String, String> m, String props) {
+    private static Map<String, String> readProps(String props) {
+        Map<String, String> m = new HashMap<>();
         for (String s : props.split(";")) {
             String[] ss = s.split("=", -1);
             for (int i = 0; i < ss.length - 1; i++)

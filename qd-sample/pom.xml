@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.295</version>
+        <version>3.296</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -98,6 +98,11 @@
             <artifactId>dxfeed-ipf-filter</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.devexperts.qd</groupId>
+            <artifactId>dxfeed-codegen</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <!-- Jetty for HTTP Server Sample -->
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
@@ -141,6 +146,15 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <testCompilerArguments>
+                        <processor>com.dxfeed.api.codegen.ImplCodeGenAnnotationProcessor</processor>
+                    </testCompilerArguments>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

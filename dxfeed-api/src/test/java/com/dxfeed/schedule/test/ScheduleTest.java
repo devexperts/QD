@@ -11,6 +11,8 @@
  */
 package com.dxfeed.schedule.test;
 
+import com.devexperts.util.DayUtil;
+import com.dxfeed.schedule.Day;
 import com.dxfeed.schedule.DayFilter;
 import com.dxfeed.schedule.Schedule;
 import com.dxfeed.schedule.Session;
@@ -18,12 +20,12 @@ import com.dxfeed.schedule.SessionFilter;
 import com.dxfeed.schedule.SessionType;
 import junit.framework.TestCase;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -37,11 +39,11 @@ import static com.devexperts.util.TimeUtil.SECOND;
 
 public class ScheduleTest extends TestCase {
     public void testParsing() {
-        assertTrue(gmt("0=").getDayById(42).getStartTime() % DAY == 0);
-        assertTrue(gmt("de=2300;0=").getDayById(42).getStartTime() % DAY == 23 * HOUR);
-        assertTrue(gmt("0=01000200").getDayById(42).getNextDay(DayFilter.NON_TRADING).getStartTime() % DAY == 0);
-        assertTrue(gmt("0=01000200").getDayById(42).getNextDay(DayFilter.NON_TRADING).getSessions().size() == 1);
-        assertTrue(gmt("0=01000200").getNearestSessionByTime(System.currentTimeMillis(), SessionFilter.TRADING).getStartTime() % DAY == 1 * HOUR);
+        assertEquals(0, gmt("0=").getDayById(42).getStartTime() % DAY);
+        assertEquals(23 * HOUR, gmt("de=2300;0=").getDayById(42).getStartTime() % DAY);
+        assertEquals(0, gmt("0=01000200").getDayById(42).getNextDay(DayFilter.NON_TRADING).getStartTime() % DAY);
+        assertEquals(1, gmt("0=01000200").getDayById(42).getNextDay(DayFilter.NON_TRADING).getSessions().size());
+        assertEquals(HOUR, gmt("0=01000200").getNearestSessionByTime(System.currentTimeMillis(), SessionFilter.TRADING).getStartTime() % DAY);
 
         check("0=", "000000", "NO_TRADING");
         check("0=01000200", "000000,010000,020000", "NO_TRADING,REGULAR,NO_TRADING");
@@ -137,11 +139,288 @@ public class ScheduleTest extends TestCase {
         map.put(2, "17001800");
         map.put(3, "18001900");
         checkSessions("sd=20191224;sds=ec0330;0=p10001700r17001800a18001900", 20191224, map);
+    }
 
-        checkException("sd=20191224;sds=0330;0=p07000930p09301600a16001900", "unknown short day strategy for");
-        checkException("sd=20191224;sds=ec-0330;0=p07000930p09301600a16001900", "unknown short day strategy for");
-        checkException("sd=20191224;sds=ec+0330;0=p07000930p09301600a16001900", "unknown short day strategy for");
-        checkException("sd=20191224;sds=ec0j60;0=p07000930p09301600a16001900", "unknown short day strategy for");
+    public void testBrokenStrategies() {
+        checkException("(tz=GMT;sd=20191224;sds=0330;0=)", "broken sds strategy for ");
+        checkException("(tz=GMT;sd=20191224;sds=ec;0=)", "broken sds strategy for ");
+        checkException("(tz=GMT;sd=20191224;sds=ec-0330;0=)", "broken sds strategy for ");
+        checkException("(tz=GMT;sd=20191224;sds=ec+0330;0=)", "broken sds strategy for ");
+        checkException("(tz=GMT;sd=20191224;sds=ec0j60;0=)", "broken sds strategy for ");
+
+        checkException("(tz=GMT;hd=20191224;hds=42;0=)", "broken hds strategy for ");
+        checkException("(tz=GMT;hd=20191224;hds=jntd;0=)", "broken hds strategy for ");
+        checkException("(tz=GMT;hd=20191224;hds=jntd-1;0=)", "broken hds strategy for ");
+        checkException("(tz=GMT;hd=20191224;hds=jntd+1;0=)", "broken hds strategy for ");
+        checkException("(tz=GMT;hd=20191224;hds=jntd2020;0=)", "broken hds strategy for ");
+    }
+
+    /**
+     * Test day and session continuity for US holidays and disabled strategies
+     */
+    public void testContinuityForDisabledStrategies() {
+        String def = "dis(tz=America/Chicago;hd=US;sd=US;td=12345;de=1605;0=p06000830r08301515;sds=ec0000;hds=jntd0)";
+        Schedule schedule = Schedule.getInstance(def);
+        Schedule fallback = Schedule.getInstance(def.replaceAll(";sds=.*[)]", ")"));
+        checkSame(def, schedule, fallback, 20100101, 20210101);
+    }
+
+    /**
+     * Test day and session continuity for US holidays and related jntd strategies
+     */
+    public void testContinuityForUSJntdStrategies() {
+        for (int i : new int[] {1, 2, 3, 5, 9}) {
+            String def = "con(tz=America/Chicago;hd=US;sd=US;td=12345;de=1605;0=p06000830r08301515;hds=jntd" + i + ")";
+            Schedule schedule = Schedule.getInstance(def);
+            Schedule backward = Schedule.getInstance("backward" + def);
+            checkSame(def, schedule, backward, 20100101, 20210101);
+        }
+    }
+
+    /**
+     * Test day and session continuity for TR holidays and related jntd strategies
+     */
+    public void testContinuityForTRJntdStrategies() {
+        for (int i : new int[] {1, 2, 3, 5, 9}) {
+            String def = "con(tz=America/Chicago;hd=TR;sd=TR;td=12345;de=1605;0=p06000830r08301515;hds=jntd" + i + ")";
+            Schedule schedule = Schedule.getInstance(def);
+            Schedule backward = Schedule.getInstance("backward" + def);
+            checkSame(def, schedule, backward, 20100101, 20210101);
+        }
+    }
+
+    /**
+     * Test jntd strategy turning to fallback scenario (no jntd) when holiday is on a weekend
+     */
+    public void testJntdInapplicable() {
+        String def = "miss(tz=America/Chicago;hd=20200704,20201227;td=12345;de=1605;0=p06000830r08301515;hds=jntd3)";
+        Schedule schedule = Schedule.getInstance(def);
+        Schedule fallback = Schedule.getInstance(def.replaceAll(";hds=jntd[0-9]", ""));
+        checkSame(def, schedule, fallback, 20200703, 20200706);
+        checkSame(def, schedule, fallback, 20201225, 20201228);
+    }
+
+    /**
+     * Test jntd strategy turning to fallback scenario (no jntd) when jntd duration is less than necessary
+     */
+    public void testJntdTooShortToAct() {
+        String def = "short(tz=America/Chicago;hd=20200703,20201225;td=12345;de=1605;0=p06000830r08301515;hds=jntd2)";
+        Schedule schedule = Schedule.getInstance(def);
+        Schedule fallback = Schedule.getInstance(def.replaceAll(";hds=jntd[0-9]", ""));
+        checkSame(def, schedule, fallback, 20200703, 20200706);
+        checkSame(def, schedule, fallback, 20201225, 20201228);
+    }
+
+    /**
+     * Test jntd strategy when holiday is followed by trading day
+     */
+    public void testJntdWithFollowingTradingDay() {
+        String def = "trading(tz=America/Chicago;hd=20200120,20201126;td=12345;de=1605;0=p06000830r08301515;hds=jntd1)";
+        checkJntdInActionAllPermutations(def, 20200120, 20200121);
+        checkJntdInActionAllPermutations(def, 20201126, 20201127);
+    }
+
+    /**
+     * Test jntd strategy when holiday is followed by more holidays and then by trading day
+     */
+    public void testJntdWithFollowingHolidayAndTradingDay() {
+        String def = "holidayTrading(tz=America/Chicago;hd=20200120,20200121,20200122;td=12345;de=1605;0=p06000830r08301515;hds=jntd3)";
+        checkJntdInActionAllPermutations(def, 20200120, 20200123);
+    }
+
+    /**
+     * Test jntd strategy cases when holiday is followed by weekend
+     */
+    public void testJntdOverWeekend() {
+        String def = "weekend(tz=America/Chicago;hd=20200703,20201225;td=12345;de=1605;0=p06000830r08301515;hds=jntd3)";
+        checkJntdInActionAllPermutations(def, 20200703, 20200706);
+        checkJntdInActionAllPermutations(def, 20201225, 20201228);
+    }
+
+    /**
+     * Test jntd strategy when holiday is followed by weekend which is also marked as holidays
+     */
+    public void testJntdOverHolidayWeekend() {
+        String def = "holidayWeekend(tz=America/Chicago;hd=20200703,20200704,20200705;td=12345;de=1605;0=p06000830r08301515;hds=jntd3)";
+        checkJntdInActionAllPermutations(def, 20200703, 20200706);
+    }
+
+    /**
+     * Test jntd strategy when holiday is followed by more holidays and then by weekend
+     */
+    public void testJntdDualHolidaysOverWeekend() {
+        String def = "longHolidayWeekend(tz=America/Chicago;hd=20201126,20201127;td=12345;de=1605;0=p06000830r08301515;hds=jntd5)";
+        checkJntdInActionAllPermutations(def, 20201126, 20201130);
+    }
+
+    // check jntd strategy in action for given holiday; generates all permutations to load days in that order
+    private void checkJntdInActionAllPermutations(String def, int holidayYmd, int tradingYmd) {
+        // fallback schedule has no holidays and no holiday strategy; use it to clearly see strategy effect
+        String fallbackDef = def.replaceAll(";hd=[^;]*;", ";").replaceAll(";hds=jntd[0-9]", "");
+        int[] permutation = new int[tradingYmd - holidayYmd + 1];
+        // generate all permutations; but no more than a certain number to put a limit on max test duration
+        for (int i = 0; i < 1000; i++) {
+            // re-init permutation in ascending order
+            for (int k = 0; k < permutation.length; k++)
+                permutation[k] = holidayYmd + k;
+            // use Fisher–Yates shuffle algorithm to build permutation by it's numeric ID (here ID == iteration index)
+            // the numeric ID in a factorial number system is used by shuffle instead of random number generator
+            // this algorithm produces all permutations, although in a weird order (not important here)
+            int remainder = i;
+            for (int k = permutation.length; k > 1; k--) {
+                int r = remainder % k;
+                remainder /= k;
+                int swap = permutation[k - 1];
+                permutation[k - 1] = permutation[r];
+                permutation[r] = swap;
+            }
+            if (remainder != 0) {
+                // an indication that all permutations were produced prior to this iteration and we are repeating them
+                // starts to happen when (ID == n!) and produces same permutation as for (ID modulo n!)
+                break;
+            }
+
+            // prepend identity of schedule with iteration number to effectively bypass caching in Schedule
+            // this is needed to get clear start for each permutation for it to matter
+            Schedule schedule = Schedule.getInstance(i + def);
+            Schedule fallback = Schedule.getInstance(i + fallbackDef);
+            checkJntdInAction(schedule, fallback, holidayYmd, tradingYmd, permutation);
+        }
+    }
+
+    // check jntd strategy in action for given holiday; load days in order of given permutation
+    private void checkJntdInAction(Schedule schedule, Schedule fallback, int holidayYmd, int tradingYmd, int... permutation) {
+        for (int ymd : permutation) {
+            int dayId = DayUtil.getDayIdByYearMonthDay(ymd);
+            schedule.getDayById(dayId);
+            fallback.getDayById(dayId);
+        }
+        int holidayDayId = DayUtil.getDayIdByYearMonthDay(holidayYmd);
+        int tradingDayId = DayUtil.getDayIdByYearMonthDay(tradingYmd);
+        long startTime = fallback.getDayById(holidayDayId).getStartTime(); // when longTradingDay shall start
+        long endTime = fallback.getDayById(tradingDayId).getEndTime(); // when longTradingDay shall end
+        Day longTradingDay = schedule.getDayById(tradingDayId);
+
+        assertTrue(schedule.getDayById(holidayDayId).isHoliday());
+
+        assertEquals(startTime, longTradingDay.getStartTime());
+        assertEquals(endTime, longTradingDay.getEndTime());
+        assertEquals(fallback.getDayById(holidayDayId).getResetTime(), longTradingDay.getResetTime());
+        assertFalse(longTradingDay.isHoliday());
+        assertTrue(longTradingDay.isTrading());
+
+        int n = 0;
+        for (Session session : fallback.getDayById(holidayDayId).getSessions()) {
+            Session s = longTradingDay.getSessions().get(n++);
+            assertEquals(session.getType(), s.getType());
+            assertEquals(session.getStartTime(), s.getStartTime());
+            assertEquals(session.getEndTime(), s.getEndTime());
+        }
+        for (int dayId = holidayDayId + 1; dayId < tradingDayId; dayId++) {
+            Day day = fallback.getDayById(dayId);
+            Session s = longTradingDay.getSessions().get(n++);
+            assertEquals(SessionType.NO_TRADING, s.getType());
+            assertEquals(day.getStartTime(), s.getStartTime());
+            assertEquals(day.getEndTime(), s.getEndTime());
+        }
+        for (Session session : fallback.getDayById(tradingDayId).getSessions()) {
+            Session s = longTradingDay.getSessions().get(n++);
+            assertEquals(session.getType(), s.getType());
+            assertEquals(session.getStartTime(), s.getStartTime());
+            assertEquals(session.getEndTime(), s.getEndTime());
+        }
+        assertEquals(longTradingDay.getSessions().size(), n);
+
+        for (int dayId = holidayDayId; dayId < tradingDayId; dayId++) {
+            Day day = schedule.getDayById(dayId);
+            assertEquals(startTime, day.getStartTime());
+            assertEquals(startTime, day.getEndTime());
+            assertEquals(1, day.getSessions().size());
+            Session session = day.getSessions().get(0);
+            assertEquals(SessionType.NO_TRADING, session.getType());
+            assertEquals(startTime, session.getStartTime());
+            assertEquals(startTime, session.getEndTime());
+        }
+    }
+
+    // check that two schedules produce same days for specified day range; other schedule is tested in reverse order
+    private void checkSame(String message, Schedule schedule, Schedule other, int startYmd, int endYmd) {
+        List<Day> days = getDays(schedule, startYmd, endYmd);
+        checkContinuity(message, days);
+        checkSame(message, days, other);
+    }
+
+    // returns days from startYmd to endYmd
+    private List<Day> getDays(Schedule schedule, int startYmd, int endYmd) {
+        int startDayId = DayUtil.getDayIdByYearMonthDay(startYmd);
+        int endDayId = DayUtil.getDayIdByYearMonthDay(endYmd);
+        List<Day> days = new ArrayList<>();
+        for (int dayId = startDayId; dayId <= endDayId; dayId++)
+            days.add(schedule.getDayById(dayId));
+        return days;
+    }
+
+    // check dayId and time continuity among specified days
+    private void checkContinuity(String message, List<Day> days) {
+        checkContinuity(message, days.get(0));
+        for (int i = 1; i < days.size(); i++) {
+            Day prev = days.get(i - 1);
+            Day cur = days.get(i);
+            checkContinuity(message, cur);
+            if (cur.getDayId() != prev.getDayId() + 1)
+                fail(message + " has a dayId gap or crossing between " + prev + " and " + cur);
+            if (cur.getStartTime() != prev.getEndTime())
+                fail(message + " has a time gap or crossing between " + prev + " and " + cur);
+        }
+    }
+
+    // check time continuity among day sessions
+    private void checkContinuity(String message, Day day) {
+        if (day.getYearMonthDay() != DayUtil.getYearMonthDayByDayId(day.getDayId()))
+            fail(message + " has " + day + " must have " + DayUtil.getYearMonthDayByDayId(day.getDayId()));
+        Session firstSession = day.getSessions().get(0);
+        if (day.getStartTime() != firstSession.getStartTime())
+            fail(message + " has " + day + " with start time different from " + firstSession);
+        Session lastSession = day.getSessions().get(day.getSessions().size() - 1);
+        if (day.getEndTime() != lastSession.getEndTime())
+            fail(message + " has " + day + " with end time different from " + lastSession);
+        for (int i = 1; i < day.getSessions().size(); i++) {
+            Session prev = day.getSessions().get(i - 1);
+            Session cur = day.getSessions().get(i);
+            if (cur.getStartTime() != prev.getEndTime())
+                fail(message + " has " + day + " with a time hole or crossing between " + prev + " and " + cur);
+        }
+    }
+
+    // compare specified days to same days taken in reverse order from specified separate schedule instance
+    private void checkSame(String message, List<Day> days, Schedule schedule) {
+        for (int i = days.size() - 1; i >= 0; i--) {
+            Day day = days.get(i);
+            Day other = schedule.getDayById(day.getDayId());
+            checkSame(message, day, other);
+        }
+    }
+
+    // checks that given days have same values for all parameters and sessions; works for separate schedule instances
+    private void checkSame(String message, Day a, Day b) {
+        if (a.getDayId() != b.getDayId() ||
+            a.getYearMonthDay() != b.getYearMonthDay() ||
+            a.isHoliday() != b.isHoliday() ||
+            a.isShortDay() != b.isShortDay() ||
+            a.getResetTime() != b.getResetTime() ||
+            a.isTrading() != b.isTrading() ||
+            a.getStartTime() != b.getStartTime() ||
+            a.getEndTime() != b.getEndTime() ||
+            a.getSessions().size() != b.getSessions().size()
+        ) {
+            fail(message + " has " + a + " different from alternative " + b);
+        }
+        for (int i = 0; i < a.getSessions().size(); i++) {
+            Session as = a.getSessions().get(i);
+            Session bs = b.getSessions().get(i);
+            if (as.getType() != bs.getType() || as.getStartTime() != bs.getStartTime() || as.getEndTime() != bs.getEndTime())
+                fail(message + " has " + a + " different from alternative " + b + " for session " + as + " vs " + bs);
+        }
     }
 
     private void checkSessions(String extra, int day, Map<Integer, String> map) {
@@ -185,18 +464,13 @@ public class ScheduleTest extends TestCase {
         return zdt.toInstant().toEpochMilli();
     }
 
-    private void checkException(String extra, String message) {
-        boolean thrown = false;
+    private void checkException(String def, String message) {
         try {
-            gmt(extra);
+            Schedule.getInstance(def);
+            fail("expected to get an IllegalArgumentException: " + message + def);
+        } catch (IllegalArgumentException t) {
+            assertEquals(message + def, t.getMessage());
         }
-        catch (Throwable t) {
-            if (t instanceof IllegalArgumentException)
-                thrown = t.getMessage().contains(message);
-            else
-                throw t;
-        }
-        assertTrue(message, thrown);
     }
 
     private Schedule gmt(String extra) {
@@ -207,28 +481,15 @@ public class ScheduleTest extends TestCase {
         List<Session> sessions = gmt(extra).getDayById(42).getSessions();
         String[] timeArray = times.split(",");
         String[] typeArray = types.split(",");
-        assertTrue(sessions.size() == timeArray.length);
-        assertTrue(sessions.size() == typeArray.length);
+        assertEquals(timeArray.length, sessions.size());
+        assertEquals(typeArray.length, sessions.size());
         for (int i = 0; i < sessions.size(); i++) {
             Session s = sessions.get(i);
             long time = Integer.parseInt(timeArray[i]);
             time = time / 10000 * HOUR + time / 100 % 100 * MINUTE + time % 100 * SECOND;
-            assertTrue(s.getStartTime() % DAY == time);
-            assertTrue(s.getType() == SessionType.valueOf(typeArray[i]));
+            assertEquals(time, s.getStartTime() % DAY);
+            assertEquals(SessionType.valueOf(typeArray[i]), s.getType());
         }
     }
 
-    public void testDefaults() throws IOException {
-        int goodHoliday = 20170111;
-        int badHoliday = 20170118;
-        String def = "date=30000101-000000+0000\n\n";
-        def += "hd.GOOD=\\\n" + goodHoliday + ",\\\n\n";
-        Schedule.setDefaults(def.getBytes());
-        for (int i = goodHoliday - 1; i <= goodHoliday + 1; i++)
-            assertEquals(i == goodHoliday, Schedule.getInstance("(tz=GMT;0=;hd=GOOD)").getDayByYearMonthDay(i).isHoliday());
-        def += "hd.BAD=\\\n" + badHoliday + ",\\";
-        Schedule.setDefaults(def.getBytes());
-        for (int i = badHoliday - 1; i <= badHoliday + 1; i++)
-            assertEquals(i == badHoliday, Schedule.getInstance("(tz=GMT;0=;hd=BAD)").getDayByYearMonthDay(i).isHoliday());
-    }
 }

@@ -13,6 +13,7 @@ package com.devexperts.logging.test;
 
 import com.devexperts.logging.LogFormatter;
 import com.devexperts.logging.Logging;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
@@ -24,6 +25,8 @@ import org.apache.logging.log4j.core.config.properties.PropertiesConfigurationFa
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -61,6 +64,13 @@ public class Log4j2CompatibilityTest extends LogFormatterTestBase {
         context.setConfigLocation(Log4j2CompatibilityTest.class.getResource("/test.log4j2.properties").toURI());
     }
 
+    @Override
+    protected void tearDown() throws Exception {
+        super.tearDown();
+        if (logFile.exists())
+            logFile.delete();
+    }
+
     protected void initLogFormatter() {
         System.getProperties().setProperty(LogFormatter.CONFIG_FILE_PROPERTY,
             Log4j2CompatibilityTest.class.getResource("/test.logformatter.properties").toExternalForm());
@@ -95,5 +105,57 @@ public class Log4j2CompatibilityTest extends LogFormatterTestBase {
         assertTrue("'" + test_message + "' not found in log file", content.contains(test_message));
         assertTrue("Exception not found in log file", content.contains(IllegalArgumentException.class.getName()));
         assertTrue("Exception stack trace not found in log file", content.contains("\tat " + getClass().getName()));
+    }
+
+    public void testConfigureDebugEnabled() throws IOException {
+        goTestConfigureDebugEnbled(true);
+    }
+    public void testConfigureDebugDisabled() throws IOException {
+        goTestConfigureDebugEnbled(false);
+    }
+
+    private void goTestConfigureDebugEnbled(boolean defaultDebugEnabled) throws IOException {
+        Logger defaultLog = LogManager.getLogger("default.test");
+        Logger errorLog = LogManager.getLogger("default.error");
+        Logger traceLog = LogManager.getLogger("default.trace");
+
+        assertEquals(Level.DEBUG, defaultLog.getLevel());
+        assertEquals(Level.ERROR, errorLog.getLevel());
+        assertEquals(Level.TRACE, traceLog.getLevel());
+
+        List<Logger> loggers = Arrays.asList(defaultLog, errorLog, traceLog);
+        List<Level> levels = Arrays.asList(Level.ERROR, Level.WARN, Level.INFO, Level.DEBUG, Level.TRACE);
+        for (Logger logger : loggers) {
+            Logging.getLogging(logger.getName()).configureDebugEnabled(defaultDebugEnabled);
+            for (Level level : levels) {
+                logger.log(level, logger.getName() + "-" + level.name());
+            }
+        }
+        final String content = loadFile(logFile);
+
+        if (defaultDebugEnabled) {
+            loggers.forEach(
+                l -> assertTrue("Debug disabled for " + l.getName(), Logging.getLogging(l.getName()).debugEnabled())
+            );
+            checkLevelRange(defaultLog, levels, content, Level.ERROR, Level.DEBUG);
+            checkLevelRange(errorLog, levels, content, Level.ERROR, Level.DEBUG);
+            checkLevelRange(traceLog, levels, content, Level.ERROR, Level.TRACE);
+        } else {
+            loggers.forEach(
+                l -> assertFalse("Debug enabled for " + l.getName(), Logging.getLogging(l.getName()).debugEnabled())
+            );
+            checkLevelRange(defaultLog, levels, content, Level.ERROR, Level.INFO);
+            checkLevelRange(errorLog, levels, content, Level.ERROR, Level.ERROR);
+            checkLevelRange(traceLog, levels, content, Level.ERROR, Level.INFO);
+        }
+    }
+
+    private void checkLevelRange(Logger logger, List<Level> levels, String content, Level min, Level max) {
+        String name = logger.getName();
+        for (Level level : levels) {
+            boolean expected = level.isInRange(min, max);
+            assertEquals((expected ? "Expected" : "Unexpected") + " message of level " + level + " for logger " + name,
+                expected, content.contains(logger.getName() + "-" + level.name()));
+        }
     }
 }
