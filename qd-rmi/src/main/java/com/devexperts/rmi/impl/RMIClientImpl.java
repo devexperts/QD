@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2020 Devexperts LLC
+ * Copyright (C) 2002 - 2021 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -216,10 +216,19 @@ public class RMIClientImpl extends RMIClient {
 
     void removeConnection(RMIConnection connection) {
         synchronized (services) {
+            // move outgoing requests of removed connection back to pending requests queue
+            RMIRequestImpl<?>[] requests = connection.requestsManager.getOutgoingRequests(new RMIRequestImpl[0]);
+            for (RMIRequestImpl<?> request : requests) {
+                if (!request.isNestedRequest()) {
+                    connection.requestsManager.removeOutgoingRequest(request);
+                    pendingRequests.addPendingRequest(request);
+                }
+            }
             // now clear descriptors of this connection
             List<RMIServiceDescriptor> result = new ArrayList<>();
             for (RMIServiceDescriptor descriptor : connection.clientDescriptorsManager.clearDescriptors())
                 result.add(createUnavailableDescriptor(descriptor.getServiceId(), descriptor.getProperties()));
+            // will also rebalance all pending requests
             updateServiceDescriptors(result, connection);
         }
     }

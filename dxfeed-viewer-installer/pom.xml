@@ -3,7 +3,7 @@
   !++
   QDS - Quick Data Signalling Library
   !-
-  Copyright (C) 2002 - 2020 Devexperts LLC
+  Copyright (C) 2002 - 2021 Devexperts LLC
   !-
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
   If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.296</version>
+        <version>3.297</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -24,6 +24,13 @@
 
     <properties>
         <deploy.skip>true</deploy.skip>
+        <license.skipCheckLicense>true</license.skipCheckLicense>
+        <!--
+        NOTE: beware of jgitflow plugin issues:
+        use of ${project.version} here would cause problems during release with jgitflow plugin dependency tracking.
+        jgitflow plugin will synchronize this value with main project version during release procedure automatically.
+        -->
+        <viewer.version>3.297</viewer.version>
     </properties>
 
     <profiles>
@@ -31,7 +38,7 @@
             <id>install4j</id>
             <activation>
                 <property>
-                    <name>install4j</name>
+                    <name>install4j.home</name>
                 </property>
             </activation>
 
@@ -39,7 +46,7 @@
                 <dependency>
                     <groupId>com.devexperts.qd</groupId>
                     <artifactId>dxfeed-viewer</artifactId>
-                    <version>${project.version}</version>
+                    <version>${viewer.version}</version>
                 </dependency>
             </dependencies>
 
@@ -61,15 +68,16 @@
                                     <classifier>assembly</classifier>
                                     <type>zip</type>
                                     <includeArtifactIds>dxfeed-viewer</includeArtifactIds>
+                                    <failOnMissingClassifierArtifact>true</failOnMissingClassifierArtifact>
                                 </configuration>
                             </execution>
                         </executions>
                     </plugin>
 
                     <plugin>
-                        <groupId>com.google.code.maven-install4j</groupId>
-                        <artifactId>maven-install4j-plugin</artifactId>
-                        <version>0.1.1</version>
+                        <groupId>org.sonatype.install4j</groupId>
+                        <artifactId>install4j-maven-plugin</artifactId>
+                        <version>1.1.2</version>
                         <executions>
                             <execution>
                                 <phase>compile</phase>
@@ -79,31 +87,28 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <executable>${install4j}</executable>
-                            <configFile>${basedir}/viewer.install4j</configFile>
-                            <releaseId>${project.version}</releaseId>
-
+                            <projectFile>${basedir}/viewer.install4j</projectFile>
                             <attach>false</attach>
-                            <skipOnMissingExecutable>true</skipOnMissingExecutable>
+                            <release>${viewer.version}</release>
+                            <failIfMissing>true</failIfMissing>
 
-                            <compilerVariables>
+                            <variables>
                                 <property>
                                     <name>version</name>
-                                    <value>${project.version}</value>
+                                    <value>${viewer.version}</value>
                                 </property>
-                            </compilerVariables>
+                            </variables>
                         </configuration>
                     </plugin>
                 </plugins>
             </build>
 
-            <pluginRepositories>
-                <pluginRepository>
-                    <id>googlecode-maven-install4j</id>
-                    <name>googlecode-maven-install4j</name>
-                    <url>http://maven-install4j.googlecode.com/svn/m2-repo</url>
-                </pluginRepository>
-            </pluginRepositories>
+            <repositories>
+                <repository>
+                    <id>bintray-dxfeed</id>
+                    <url>https://dl.bintray.com/dxfeed/Maven</url>
+                </repository>
+            </repositories>
         </profile>
     </profiles>
 </project>

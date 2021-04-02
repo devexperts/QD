@@ -1,0 +1,26 @@
+artifactory:
+  maven-open:
+    artifacts:
+      - com.devexperts.qd:dxfeed-api
+      - com.devexperts.qd:dxfeed-bin
+      - com.devexperts.qd:dxfeed-codegen
+      - com.devexperts.qd:dxfeed-impl
+      - com.devexperts.qd:dxfeed-news
+      - com.devexperts.qd:dxfeed-ondemand
+      - com.devexperts.qd:dxfeed-plotter
+      - com.devexperts.qd:dxfeed-promise
+      - com.devexperts.qd:dxfeed-samples
+      - com.devexperts.qd:dxfeed-viewer
+      - com.devexperts.qd:dxfeed-webservice
+      - com.devexperts.qd:dxfeed-webservice-impl
+      - com.devexperts.qd:dxfeed-scheme
+      - com.devexperts.qd:dxlib
+      - com.devexperts.qd:mars
+      - com.devexperts.qd:QD
+      - com.devexperts.qd:qd-core
+      - com.devexperts.qd:qd-dataextractor
+      - com.devexperts.qd:qds
+      - com.devexperts.qd:qds-file
+      - com.devexperts.qd:qds-monitoring
+      - com.devexperts.qd:qds-tools
+      - com.devexperts.qd:rt-api-builder

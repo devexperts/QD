@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2020 Devexperts LLC
+ * Copyright (C) 2002 - 2021 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,6 +13,7 @@ package com.dxfeed.api.impl;
 
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.SerialFieldType;
+import com.devexperts.util.SystemProperties;
 
 import java.util.Collection;
 
@@ -33,7 +34,7 @@ public abstract class EventDelegateFactory {
 
     //TODO rename to selectDecimal
     protected SerialFieldType select(SerialFieldType type, String... typeSelectors) {
-        if ("true".equalsIgnoreCase(System.getProperty("dxscheme.wide")))
+        if (SystemProperties.getBooleanProperty("dxscheme.wide", true))
             type = SerialFieldType.WIDE_DECIMAL;
         for (int i = typeSelectors.length; --i >= 0;) {
             String selector = System.getProperty(typeSelectors[i]);

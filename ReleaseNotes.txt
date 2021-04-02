@@ -1,3 +1,20 @@
+QDS 3.297:
+
+* [QD-1288] InstrumentProfileReader fails on IPF service request with compression
+* [QD-1283] RMI requests waiting to send hanging forever on reconnect
+* [QD-1268] [Schedule] Add default FRED schedule
+* [QD-1286] [Schedule] Remove 20210403 holiday from US-BOND holiday list
+* [QD-1285] Support QD public artifacts publication to dxFeed public Artifactory
+* [QD-1247] Prototype of QD scheme configuration via machine readable schema file
+  - Turned off by default. To turn it on, use "-Dscheme=ext:dxfeed" or other
+    "ext:" specification.
+* [QD-1281] dxFeed API: use "wide" mode by default
+  - dxFeed API now behaves by default as if JVM parameter "-Ddxscheme.wide=true" was set.
+    Old default behavior may be restored by running JVM with "-Ddxscheme.wide=false" parameter.
+* [QD-1275] Cannot create installer for dxFeedViewer
+* [QD-1278] dxFeed webservice: Log error details from REST requests
+* [QD-1279] dxFeed webservice: Subscription REST calls should not start a session
+* [QD-1273] Update files for year 2021 in copyright
 
 QDS 3.296:
 

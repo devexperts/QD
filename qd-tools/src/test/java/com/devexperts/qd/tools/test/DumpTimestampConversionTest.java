@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2020 Devexperts LLC
+ * Copyright (C) 2002 - 2021 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,36 +11,59 @@
  */
 package com.devexperts.qd.tools.test;
 
+import com.binarytweed.test.Quarantine;
+import com.binarytweed.test.QuarantiningRunner;
 import com.devexperts.io.IOUtil;
 import com.devexperts.io.StreamInput;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.SerialFieldType;
+import com.devexperts.qd.kit.DefaultScheme;
+import com.devexperts.qd.kit.PentaCodec;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.qtp.HeartbeatPayload;
 import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.qtp.file.FileWriterImpl;
 import com.devexperts.qd.tools.Tools;
+import com.devexperts.qd.util.Decimal;
 import com.devexperts.test.ThreadCleanCheck;
 import com.devexperts.util.TimeFormat;
-import com.dxfeed.event.market.impl.QuoteMapping;
-import junit.framework.TestCase;
+import com.dxfeed.api.impl.SchemeBuilder;
+import com.dxfeed.api.impl.SchemeProperties;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Properties;
 import java.util.TimeZone;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Tests conversion of files between different text and binary formats with different timestamps via dump tool.
+ *
+ * Test replaces default scheme using global property, so requires isolation.
  */
-public class DumpTimestampConversionTest extends TestCase {
-    private static final DataScheme SCHEME = QDFactory.getDefaultScheme();
-    private static final DataRecord QUOTE_RECORD = SCHEME.findRecordByName("Quote");
-    private static final QuoteMapping QUOTE_MAPPING = QUOTE_RECORD.getMapping(QuoteMapping.class);
+@SuppressWarnings("SameParameterValue")
+@RunWith(QuarantiningRunner.class)
+@Quarantine({"com.dxfeed", "com.devexperts.qd"})
+public class DumpTimestampConversionTest {
+
+    private static final DataScheme SCHEME = DumpSchemeProvider.getInstance();
+    private static final DataRecord QUOTE_RECORD = SCHEME.getRecord(0);
+    private static final int QUOTE_BID_PRICE_INDEX = QUOTE_RECORD.findFieldByName("Bid.Price").getIndex();
+
     private static final String EXPECTED_SYMBOL = "IBM.TEST";
     private static final String HEX = "0123456789abcdef";
 
@@ -456,6 +479,10 @@ public class DumpTimestampConversionTest extends TestCase {
     private static final String EXPECTED_CURRENT_TIME_TEXT_TIME_CONTENTS_PATTERN =
         "\\d{8}-\\d{6}.\\d{3}-0[45]00:\\d+\n";
 
+    private static final String SCHEME_PROP = "scheme";
+
+    private String savedSchemeProp;
+
     private File getTimeFile(File file) {
         String s = file.toString();
         assertTrue(s.endsWith(FILE_EXTENSION));
@@ -467,6 +494,7 @@ public class DumpTimestampConversionTest extends TestCase {
         return new File(fileSplit.replace("~", time));
     }
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     private void deleteFile(File file) {
         file.delete();
         getTimeFile(file).delete();
@@ -484,20 +512,26 @@ public class DumpTimestampConversionTest extends TestCase {
         deleteSplitFile(DESTINATION_FILE_SPLIT);
     }
 
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         ThreadCleanCheck.before();
         deleteFiles();
+        savedSchemeProp = (String) System.getProperties().setProperty(SCHEME_PROP, DumpSchemeProvider.class.getName());
         TimeFormat.setDefaultTimeZone(TimeZone.getTimeZone("America/New_York"));
         QDFactory.setVersion("QDS-TEST");
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         deleteFiles();
         TimeFormat.setDefaultTimeZone(TimeZone.getDefault());
         QDFactory.setVersion(null);
         ThreadCleanCheck.after();
+        if (savedSchemeProp == null) {
+            System.getProperties().remove(SCHEME_PROP);
+        } else {
+            System.getProperties().setProperty(SCHEME_PROP, savedSchemeProp);
+        }
     }
 
     private void write(String dataFilePath) {
@@ -515,7 +549,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
         // write quote event 0
         cursor = buf.add(QUOTE_RECORD, 0, EXPECTED_SYMBOL);
-        QUOTE_MAPPING.setBidPrice(cursor, EXPECTED_BID_PRICE_0);
+        cursor.setInt(QUOTE_BID_PRICE_INDEX, Decimal.compose(EXPECTED_BID_PRICE_0));
         writer.visitStreamData(buf);
         buf.clear();
 
@@ -525,9 +559,9 @@ public class DumpTimestampConversionTest extends TestCase {
 
         // write quote events 1.1 & 1.2
         cursor = buf.add(QUOTE_RECORD, 0, EXPECTED_SYMBOL);
-        QUOTE_MAPPING.setBidPrice(cursor, EXPECTED_BID_PRICE_1_1);
+        cursor.setInt(QUOTE_BID_PRICE_INDEX, Decimal.compose(EXPECTED_BID_PRICE_1_1));
         cursor = buf.add(QUOTE_RECORD, 0, EXPECTED_SYMBOL);
-        QUOTE_MAPPING.setBidPrice(cursor, EXPECTED_BID_PRICE_1_2);
+        cursor.setInt(QUOTE_BID_PRICE_INDEX, Decimal.compose(EXPECTED_BID_PRICE_1_2));
         writer.visitStreamData(buf);
         buf.clear();
 
@@ -547,8 +581,9 @@ public class DumpTimestampConversionTest extends TestCase {
         StringBuilder sb = new StringBuilder();
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
-            while ((line = br.readLine()) != null)
+            while ((line = br.readLine()) != null) {
                 sb.append(line).append('\n');
+            }
             return sb.toString();
         }
     }
@@ -574,8 +609,9 @@ public class DumpTimestampConversionTest extends TestCase {
     private String takeNLines(String s, int n) {
         StringBuilder sb = new StringBuilder();
         String[] lines = s.split("\n", n + 1);
-        for (int i = 0; i < lines.length && i < n; i++)
+        for (int i = 0; i < lines.length && i < n; i++) {
             sb.append(lines[i]).append('\n');
+        }
         return sb.toString();
     }
 
@@ -639,11 +675,13 @@ public class DumpTimestampConversionTest extends TestCase {
     // ---------------------------- convertion helpers ----------------------------
 
     private void convert(String srcOpt, String destOpt) {
-        Tools.invoke("dump", SOURCE_FILE + "[speed=max]" + srcOpt, "--tape", DESTINATION_FILE + NO_PROTO_OPTS + destOpt);
+        Tools
+            .invoke("dump", SOURCE_FILE + "[speed=max]" + srcOpt, "--tape", DESTINATION_FILE + NO_PROTO_OPTS + destOpt);
     }
 
     private void convertToSplit(String destOpt) {
-        Tools.invoke("dump", SOURCE_FILE + "[speed=max]", "--tape", DESTINATION_FILE_SPLIT + NO_PROTO_OPTS + SPLIT_OPT + destOpt);
+        Tools.invoke("dump", SOURCE_FILE + "[speed=max]", "--tape",
+            DESTINATION_FILE_SPLIT + NO_PROTO_OPTS + SPLIT_OPT + destOpt);
     }
 
     private void convertSplit(String destOpt) {
@@ -651,7 +689,8 @@ public class DumpTimestampConversionTest extends TestCase {
     }
 
     private void convertSplitToSplit(String destOpt) {
-        Tools.invoke("dump", SOURCE_FILE_SPLIT + "[speed=max]", "--tape", DESTINATION_FILE_SPLIT + NO_PROTO_OPTS + SPLIT_OPT + destOpt);
+        Tools.invoke("dump", SOURCE_FILE_SPLIT + "[speed=max]", "--tape",
+            DESTINATION_FILE_SPLIT + NO_PROTO_OPTS + SPLIT_OPT + destOpt);
     }
 
     // ---------------------------- helpers assertions for file existence ----------------------------
@@ -695,8 +734,10 @@ public class DumpTimestampConversionTest extends TestCase {
 
     private void assertBinarySplitTimeNone(String fileSplit) throws IOException {
         assertSplitDataFileOnly(fileSplit);
-        assertEquals(EXPECTED_BINARY_TIME_NONE_SPLIT_0_MESSAGE_CONTENTS, getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
-        assertEquals(EXPECTED_BINARY_TIME_NONE_SPLIT_1_MESSAGE_CONTENTS, getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
+        assertEquals(EXPECTED_BINARY_TIME_NONE_SPLIT_0_MESSAGE_CONTENTS,
+            getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
+        assertEquals(EXPECTED_BINARY_TIME_NONE_SPLIT_1_MESSAGE_CONTENTS,
+            getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
     }
 
     private void assertBinaryTimeMessage(File file) throws IOException {
@@ -711,8 +752,10 @@ public class DumpTimestampConversionTest extends TestCase {
 
     private void assertBinarySplitTimeMessage(String fileSplit) throws IOException {
         assertSplitDataFileOnly(fileSplit);
-        assertEquals(EXPECTED_BINARY_TIME_MESSAGE_SPLIT_0_MESSAGE_CONTENTS, getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
-        assertEquals(EXPECTED_BINARY_TIME_MESSAGE_SPLIT_1_MESSAGE_CONTENTS, getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
+        assertEquals(EXPECTED_BINARY_TIME_MESSAGE_SPLIT_0_MESSAGE_CONTENTS,
+            getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
+        assertEquals(EXPECTED_BINARY_TIME_MESSAGE_SPLIT_1_MESSAGE_CONTENTS,
+            getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
     }
 
     private void assertBinaryTimeField(File file) throws IOException {
@@ -727,8 +770,10 @@ public class DumpTimestampConversionTest extends TestCase {
 
     private void assertBinarySplitTimeField(String fileSplit) throws IOException {
         assertSplitDataFileOnly(fileSplit);
-        assertEquals(EXPECTED_BINARY_TIME_FIELD_SPLIT_0_MESSAGE_CONTENTS, getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
-        assertEquals(EXPECTED_BINARY_TIME_FIELD_SPLIT_1_MESSAGE_CONTENTS, getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
+        assertEquals(EXPECTED_BINARY_TIME_FIELD_SPLIT_0_MESSAGE_CONTENTS,
+            getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
+        assertEquals(EXPECTED_BINARY_TIME_FIELD_SPLIT_1_MESSAGE_CONTENTS,
+            getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
     }
 
     private void assertBinaryTimeLong(File file) throws IOException {
@@ -745,10 +790,14 @@ public class DumpTimestampConversionTest extends TestCase {
 
     private void assertBinarySplitTimeLong(String fileSplit) throws IOException {
         assertSplitDataAndTimeFiles(fileSplit);
-        assertEquals(EXPECTED_BINARY_TIME_LONG_SPLIT_0_MESSAGE_CONTENTS, getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
-        assertMatches(EXPECTED_TIME_LONG_SPLIT_0_TIME_PATTERN, getContents(getTimeFile(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME))));
-        assertEquals(EXPECTED_BINARY_TIME_LONG_SPLIT_1_MESSAGE_CONTENTS, getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
-        assertMatches(EXPECTED_TIME_LONG_SPLIT_1_TIME_PATTERN, getContents(getTimeFile(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME))));
+        assertEquals(EXPECTED_BINARY_TIME_LONG_SPLIT_0_MESSAGE_CONTENTS,
+            getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
+        assertMatches(EXPECTED_TIME_LONG_SPLIT_0_TIME_PATTERN,
+            getContents(getTimeFile(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME))));
+        assertEquals(EXPECTED_BINARY_TIME_LONG_SPLIT_1_MESSAGE_CONTENTS,
+            getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
+        assertMatches(EXPECTED_TIME_LONG_SPLIT_1_TIME_PATTERN,
+            getContents(getTimeFile(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME))));
     }
 
     private void assertBinaryTimeText(File file) throws IOException {
@@ -765,10 +814,14 @@ public class DumpTimestampConversionTest extends TestCase {
 
     private void assertBinarySplitTimeText(String fileSplit) throws IOException {
         assertSplitDataAndTimeFiles(fileSplit);
-        assertEquals(EXPECTED_BINARY_TIME_TEXT_SPLIT_0_MESSAGE_CONTENTS, getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
-        assertMatches(EXPECTED_TIME_TEXT_SPLIT_0_TIME_PATTERN, getContents(getTimeFile(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME))));
-        assertEquals(EXPECTED_BINARY_TIME_TEXT_SPLIT_1_MESSAGE_CONTENTS, getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
-        assertMatches(EXPECTED_TIME_TEXT_SPLIT_1_TIME_PATTERN, getContents(getTimeFile(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME))));
+        assertEquals(EXPECTED_BINARY_TIME_TEXT_SPLIT_0_MESSAGE_CONTENTS,
+            getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
+        assertMatches(EXPECTED_TIME_TEXT_SPLIT_0_TIME_PATTERN,
+            getContents(getTimeFile(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME))));
+        assertEquals(EXPECTED_BINARY_TIME_TEXT_SPLIT_1_MESSAGE_CONTENTS,
+            getBinaryContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
+        assertMatches(EXPECTED_TIME_TEXT_SPLIT_1_TIME_PATTERN,
+            getContents(getTimeFile(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME))));
     }
 
     private void assertTextTimeNone(File file) throws IOException {
@@ -778,8 +831,10 @@ public class DumpTimestampConversionTest extends TestCase {
 
     private void assertTextSplitTimeNone(String fileSplit) throws IOException {
         assertSplitDataFileOnly(fileSplit);
-        assertEquals(EXPECTED_TEXT_TIME_NONE_SPLIT_0_CONTENTS, getContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
-        assertEquals(EXPECTED_TEXT_TIME_NONE_SPLIT_1_CONTENTS, getContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
+        assertEquals(EXPECTED_TEXT_TIME_NONE_SPLIT_0_CONTENTS,
+            getContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
+        assertEquals(EXPECTED_TEXT_TIME_NONE_SPLIT_1_CONTENTS,
+            getContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
     }
 
     private void assertTextTimeField(File file) throws IOException {
@@ -799,8 +854,10 @@ public class DumpTimestampConversionTest extends TestCase {
 
     private void assertTextSplitTimeField(String fileSplit) throws IOException {
         assertSplitDataFileOnly(fileSplit);
-        assertEquals(EXPECTED_TEXT_TIME_FIELD_SPLIT_0_CONTENTS, getContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
-        assertEquals(EXPECTED_TEXT_TIME_FIELD_SPLIT_1_CONTENTS, getContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
+        assertEquals(EXPECTED_TEXT_TIME_FIELD_SPLIT_0_CONTENTS,
+            getContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
+        assertEquals(EXPECTED_TEXT_TIME_FIELD_SPLIT_1_CONTENTS,
+            getContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
     }
 
     private void assertTextTimeMessage(File file) throws IOException {
@@ -815,8 +872,10 @@ public class DumpTimestampConversionTest extends TestCase {
 
     private void assertTextSplitTimeMessage(String fileSplit) throws IOException {
         assertSplitDataFileOnly(fileSplit);
-        assertEquals(EXPECTED_TEXT_TIME_MESSAGE_SPLIT_0_CONTENTS, getContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
-        assertEquals(EXPECTED_TEXT_TIME_MESSAGE_SPLIT_1_CONTENTS, getContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
+        assertEquals(EXPECTED_TEXT_TIME_MESSAGE_SPLIT_0_CONTENTS,
+            getContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
+        assertEquals(EXPECTED_TEXT_TIME_MESSAGE_SPLIT_1_CONTENTS,
+            getContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
     }
 
     private void assertTextTimeLong(File file) throws IOException {
@@ -833,10 +892,14 @@ public class DumpTimestampConversionTest extends TestCase {
 
     private void assertTextSplitTimeLong(String fileSplit) throws IOException {
         assertSplitDataAndTimeFiles(fileSplit);
-        assertEquals(EXPECTED_TEXT_TIME_LONG_SPLIT_0_CONTENTS, getContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
-        assertMatches(EXPECTED_TIME_LONG_SPLIT_0_TIME_PATTERN, getContents(getTimeFile(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME))));
-        assertEquals(EXPECTED_TEXT_TIME_LONG_SPLIT_1_CONTENTS, getContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
-        assertMatches(EXPECTED_TIME_LONG_SPLIT_1_TIME_PATTERN, getContents(getTimeFile(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME))));
+        assertEquals(EXPECTED_TEXT_TIME_LONG_SPLIT_0_CONTENTS,
+            getContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
+        assertMatches(EXPECTED_TIME_LONG_SPLIT_0_TIME_PATTERN,
+            getContents(getTimeFile(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME))));
+        assertEquals(EXPECTED_TEXT_TIME_LONG_SPLIT_1_CONTENTS,
+            getContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
+        assertMatches(EXPECTED_TIME_LONG_SPLIT_1_TIME_PATTERN,
+            getContents(getTimeFile(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME))));
     }
 
     private void assertTextTimeText(File file) throws IOException {
@@ -853,10 +916,14 @@ public class DumpTimestampConversionTest extends TestCase {
 
     private void assertTextSplitTimeText(String fileSplit) throws IOException {
         assertSplitDataAndTimeFiles(fileSplit);
-        assertEquals(EXPECTED_TEXT_TIME_TEXT_SPLIT_0_CONTENTS, getContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
-        assertMatches(EXPECTED_TIME_TEXT_SPLIT_0_TIME_PATTERN, getContents(getTimeFile(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME))));
-        assertEquals(EXPECTED_TEXT_TIME_TEXT_SPLIT_1_CONTENTS, getContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
-        assertMatches(EXPECTED_TIME_TEXT_SPLIT_1_TIME_PATTERN, getContents(getTimeFile(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME))));
+        assertEquals(EXPECTED_TEXT_TIME_TEXT_SPLIT_0_CONTENTS,
+            getContents(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME)));
+        assertMatches(EXPECTED_TIME_TEXT_SPLIT_0_TIME_PATTERN,
+            getContents(getTimeFile(getSplitFile(fileSplit, EXPECTED_FILE_0_TIME))));
+        assertEquals(EXPECTED_TEXT_TIME_TEXT_SPLIT_1_CONTENTS,
+            getContents(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME)));
+        assertMatches(EXPECTED_TIME_TEXT_SPLIT_1_TIME_PATTERN,
+            getContents(getTimeFile(getSplitFile(fileSplit, EXPECTED_FILE_1_TIME))));
     }
 
     private void assertCsvTimeNone(File file) throws IOException {
@@ -891,6 +958,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- convert default binary file to other time formats
 
+    @Test
     public void testConvertToTimeNone() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -898,6 +966,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeNone(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertToTimeMessage() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -905,6 +974,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertToTimeField() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -912,6 +982,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeField(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertToTimeLong() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -919,6 +990,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeLong(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertToTimeText() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -928,6 +1000,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- convert default binary file to text with various time formats
 
+    @Test
     public void testConvertToText() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -935,6 +1008,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeField(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertToTextTimeNone() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -942,6 +1016,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeNone(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertToTextTimeField() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -949,6 +1024,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeField(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertToTextTimeMessage() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -956,6 +1032,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertToTextTimeLong() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -963,6 +1040,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeLong(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertToTextTimeText() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -972,6 +1050,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- convert various time formats to default binary
 
+    @Test
     public void testConvertTimeField() throws IOException {
         writeSourceFile("[time=field]");
         assertBinaryTimeField(SOURCE_FILE);
@@ -979,6 +1058,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTimeLong() throws IOException {
         writeSourceFile("[time=long]");
         assertBinaryTimeLong(SOURCE_FILE);
@@ -986,6 +1066,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTimeText() throws IOException {
         writeSourceFile("[time=text]");
         assertBinaryTimeText(SOURCE_FILE);
@@ -995,6 +1076,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- convert text files with various time formats to default binary
 
+    @Test
     public void testConvertText() throws IOException {
         writeSourceFile("[format=text]");
         assertTextTimeField(SOURCE_FILE);
@@ -1002,6 +1084,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTextTimeNone() throws IOException {
         writeSourceFile("[format=text,time=none]");
         assertTextTimeNone(SOURCE_FILE);
@@ -1009,6 +1092,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeNoneMerged(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTextTimeField() throws IOException {
         writeSourceFile("[format=text,time=field]");
         assertTextTimeField(SOURCE_FILE);
@@ -1016,6 +1100,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTextTimeMessage() throws IOException {
         writeSourceFile("[format=text,time=message]");
         assertTextTimeMessage(SOURCE_FILE);
@@ -1023,6 +1108,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTextTimeLong() throws IOException {
         writeSourceFile("[format=text,time=long]");
         assertTextTimeLong(SOURCE_FILE);
@@ -1030,6 +1116,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTextTimeText() throws IOException {
         writeSourceFile("[format=text,time=text]");
         assertTextTimeText(SOURCE_FILE);
@@ -1039,6 +1126,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- convert binary file with long times (often used in legacy practice) to various time formats
 
+    @Test
     public void testConvertTimeLongToTimeNone() throws IOException {
         writeSourceFile("[time=long]");
         assertBinaryTimeLong(SOURCE_FILE);
@@ -1046,6 +1134,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeNone(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTimeLongToTimeMessage() throws IOException {
         writeSourceFile("[time=long]");
         assertBinaryTimeLong(SOURCE_FILE);
@@ -1053,6 +1142,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTimeLongToTimeField() throws IOException {
         writeSourceFile("[time=long]");
         assertBinaryTimeLong(SOURCE_FILE);
@@ -1060,6 +1150,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeField(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTimeLongToTimeLong() throws IOException {
         writeSourceFile("[time=long]");
         assertBinaryTimeLong(SOURCE_FILE);
@@ -1067,6 +1158,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeLong(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTimeLongToTimeText() throws IOException {
         writeSourceFile("[time=long]");
         assertBinaryTimeLong(SOURCE_FILE);
@@ -1076,6 +1168,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- convert binary file with long times (often used in legacy practice) to text with various time formats
 
+    @Test
     public void testConvertTimeLongToText() throws IOException {
         writeSourceFile("[time=long]");
         assertBinaryTimeLong(SOURCE_FILE);
@@ -1083,6 +1176,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeField(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTimeLongToTextTimeLong() throws IOException {
         writeSourceFile("[time=long]");
         assertBinaryTimeLong(SOURCE_FILE);
@@ -1090,6 +1184,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeLong(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTimeFieldToTextTimeMessage() throws IOException {
         writeSourceFile("[time=field]");
         assertBinaryTimeField(SOURCE_FILE);
@@ -1097,6 +1192,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTimeFieldToTextTimeField() throws IOException {
         writeSourceFile("[time=field]");
         assertBinaryTimeField(SOURCE_FILE);
@@ -1104,6 +1200,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeField(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTimeMessageToTextTimeMessage() throws IOException {
         writeSourceFile("[time=message]");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1111,6 +1208,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTimeMessageToTextTimeField() throws IOException {
         writeSourceFile("[time=message]");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1120,6 +1218,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- convert text file to various time formats in binary
 
+    @Test
     public void testConvertTextToTimeNone() throws IOException {
         writeSourceFile("[format=text]");
         assertTextTimeField(SOURCE_FILE);
@@ -1127,6 +1226,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeNoneMerged(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTextToTimeLong() throws IOException {
         writeSourceFile("[format=text]");
         assertTextTimeField(SOURCE_FILE);
@@ -1134,6 +1234,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeLong(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTextToTimeText() throws IOException {
         writeSourceFile("[format=text]");
         assertTextTimeField(SOURCE_FILE);
@@ -1141,6 +1242,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeText(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTextToTimeMessage() throws IOException {
         writeSourceFile("[format=text]");
         assertTextTimeField(SOURCE_FILE);
@@ -1148,6 +1250,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTextToTimeField() throws IOException {
         writeSourceFile("[format=text]");
         assertTextTimeField(SOURCE_FILE);
@@ -1157,6 +1260,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- convert text file to various time formats in text
 
+    @Test
     public void testConvertTextToTextTimeNone() throws IOException {
         writeSourceFile("[format=text]");
         assertTextTimeField(SOURCE_FILE);
@@ -1164,6 +1268,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeNone(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTextToTextTimeMessage() throws IOException {
         writeSourceFile("[format=text]");
         assertTextTimeField(SOURCE_FILE);
@@ -1171,6 +1276,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTextToTextTimeLong() throws IOException {
         writeSourceFile("[format=text]");
         assertTextTimeField(SOURCE_FILE);
@@ -1178,6 +1284,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeLong(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTextToTextTimeText() throws IOException {
         writeSourceFile("[format=text]");
         assertTextTimeField(SOURCE_FILE);
@@ -1185,6 +1292,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeText(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTextToTextTimeField() throws IOException {
         writeSourceFile("[format=text]");
         assertTextTimeField(SOURCE_FILE);
@@ -1194,6 +1302,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- misc conversions
 
+    @Test
     public void testConvertTextTimeMessageToTextTimeMessage() throws IOException {
         writeSourceFile("[format=text,time=message]");
         assertTextTimeMessage(SOURCE_FILE);
@@ -1201,6 +1310,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTextTimeMessageToTextTimeField() throws IOException {
         writeSourceFile("[format=text,time=message]");
         assertTextTimeMessage(SOURCE_FILE);
@@ -1210,6 +1320,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- convert default binary to cvs with various time formats
 
+    @Test
     public void testConvertToCsv() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1217,6 +1328,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertCsvTimeField(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertToCsvTimeNone() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1224,6 +1336,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertCsvTimeNone(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertToCsvTimeField() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1231,6 +1344,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertCsvTimeField(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertToCsvTimeMessage() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1238,6 +1352,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertCsvTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertToCsvTimeLong() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1245,6 +1360,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertCsvTimeLong(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertToCsvTimeText() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1254,6 +1370,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- convert from cvs with various time formats to default binary
 
+    @Test
     public void testConvertCsv() throws IOException {
         writeSourceFile("[format=csv]");
         assertCsvTimeField(SOURCE_FILE);
@@ -1261,6 +1378,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertCsvTimeNone() throws IOException {
         writeSourceFile("[format=csv,time=none]");
         assertCsvTimeNone(SOURCE_FILE);
@@ -1268,6 +1386,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeNoneMerged(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertCsvTimeField() throws IOException {
         writeSourceFile("[format=csv,time=field]");
         assertCsvTimeField(SOURCE_FILE);
@@ -1275,6 +1394,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertCsvTimeLong() throws IOException {
         writeSourceFile("[format=csv,time=long]");
         assertCsvTimeLong(SOURCE_FILE);
@@ -1282,6 +1402,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertCsvTimeText() throws IOException {
         writeSourceFile("[format=csv,time=text]");
         assertCsvTimeText(SOURCE_FILE);
@@ -1291,6 +1412,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- convert binary without time to text with various time format that should include current time
 
+    @Test
     public void testConvertTimeNoneToTextCurrentTime() throws IOException {
         writeSourceFile("[time=none]");
         assertBinaryTimeNone(SOURCE_FILE);
@@ -1298,6 +1420,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextCurrentTimeField(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTimeNoneToTextCurrentField() throws IOException {
         writeSourceFile("[time=none]");
         assertBinaryTimeNone(SOURCE_FILE);
@@ -1305,6 +1428,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextCurrentTimeField(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTimeNoneToTextCurrentTimeMessage() throws IOException {
         writeSourceFile("[time=none]");
         assertBinaryTimeNone(SOURCE_FILE);
@@ -1312,6 +1436,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextCurrentTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTimeNoneToTextCurrentTimeLong() throws IOException {
         writeSourceFile("[time=none]");
         assertBinaryTimeNone(SOURCE_FILE);
@@ -1319,6 +1444,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextCurrentTimeLong(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTimeNoneToTextCurrentTimeText() throws IOException {
         writeSourceFile("[time=none]");
         assertBinaryTimeNone(SOURCE_FILE);
@@ -1326,6 +1452,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextCurrentTimeText(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTimeNoneToCurrentTimeLong() throws IOException {
         writeSourceFile("[time=none]");
         assertBinaryTimeNone(SOURCE_FILE);
@@ -1333,6 +1460,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryCurrentTimeLong(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertTimeNoneToCurrentTimeText() throws IOException {
         writeSourceFile("[time=none]");
         assertBinaryTimeNone(SOURCE_FILE);
@@ -1342,6 +1470,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- convert to various binary split formats
 
+    @Test
     public void testConvertToSplit() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1349,6 +1478,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinarySplitTimeMessage(DESTINATION_FILE_SPLIT);
     }
 
+    @Test
     public void testConvertToSplitTimeNone() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1356,6 +1486,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinarySplitTimeNone(DESTINATION_FILE_SPLIT);
     }
 
+    @Test
     public void testConvertToSplitTimeMessage() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1363,6 +1494,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinarySplitTimeMessage(DESTINATION_FILE_SPLIT);
     }
 
+    @Test
     public void testConvertToSplitTimeField() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1370,6 +1502,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinarySplitTimeField(DESTINATION_FILE_SPLIT);
     }
 
+    @Test
     public void testConvertToSplitTimeLong() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1377,6 +1510,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinarySplitTimeLong(DESTINATION_FILE_SPLIT);
     }
 
+    @Test
     public void testConvertToSplitTimeText() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1386,6 +1520,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- convert split binary file to various binary formats
 
+    @Test
     public void testConvertSplit() throws IOException {
         writeSourceFileSplit("");
         assertBinarySplitTimeMessage(SOURCE_FILE_SPLIT);
@@ -1393,6 +1528,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertSplitTimeMessage() throws IOException {
         writeSourceFileSplit("[time=message]");
         assertBinarySplitTimeMessage(SOURCE_FILE_SPLIT);
@@ -1400,6 +1536,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertSplitTimeField() throws IOException {
         writeSourceFileSplit("[time=field]");
         assertBinarySplitTimeField(SOURCE_FILE_SPLIT);
@@ -1407,6 +1544,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertSplitTimeLong() throws IOException {
         writeSourceFileSplit("[time=long]");
         assertBinarySplitTimeLong(SOURCE_FILE_SPLIT);
@@ -1414,6 +1552,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessage(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertSplitTimeText() throws IOException {
         writeSourceFileSplit("[time=text]");
         assertBinarySplitTimeText(SOURCE_FILE_SPLIT);
@@ -1423,6 +1562,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- convert split binary file to text
 
+    @Test
     public void testConvertSplitToText() throws IOException {
         writeSourceFileSplit("");
         assertBinarySplitTimeMessage(SOURCE_FILE_SPLIT);
@@ -1430,6 +1570,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeField(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertSplitTimeMessageToText() throws IOException {
         writeSourceFileSplit("[time=message]");
         assertBinarySplitTimeMessage(SOURCE_FILE_SPLIT);
@@ -1437,6 +1578,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeField(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertSplitTimeFieldToText() throws IOException {
         writeSourceFileSplit("[time=field]");
         assertBinarySplitTimeField(SOURCE_FILE_SPLIT);
@@ -1444,6 +1586,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeField(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertSplitTimeLongToText() throws IOException {
         writeSourceFileSplit("[time=long]");
         assertBinarySplitTimeLong(SOURCE_FILE_SPLIT);
@@ -1451,6 +1594,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextTimeField(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertSplitTimeTextToText() throws IOException {
         writeSourceFileSplit("[time=text]");
         assertBinarySplitTimeText(SOURCE_FILE_SPLIT);
@@ -1460,6 +1604,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- convert to various text split formats
 
+    @Test
     public void testConvertToTextSplit() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1467,6 +1612,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextSplitTimeField(DESTINATION_FILE_SPLIT);
     }
 
+    @Test
     public void testConvertToTextSplitTimeNone() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1474,6 +1620,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextSplitTimeNone(DESTINATION_FILE_SPLIT);
     }
 
+    @Test
     public void testConvertToTextSplitTimeMessage() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1481,6 +1628,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextSplitTimeMessage(DESTINATION_FILE_SPLIT);
     }
 
+    @Test
     public void testConvertToTextSplitTimeField() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1488,6 +1636,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextSplitTimeField(DESTINATION_FILE_SPLIT);
     }
 
+    @Test
     public void testConvertToTextSplitTimeLong() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1495,6 +1644,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextSplitTimeLong(DESTINATION_FILE_SPLIT);
     }
 
+    @Test
     public void testConvertToTextSplitTimeText() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1504,6 +1654,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- misc conversions between split formats
 
+    @Test
     public void testConvertSplitToTextSplit() throws IOException {
         writeSourceFileSplit("");
         assertBinarySplitTimeMessage(SOURCE_FILE_SPLIT);
@@ -1511,6 +1662,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextSplitTimeField(DESTINATION_FILE_SPLIT);
     }
 
+    @Test
     public void testConvertSplitTimeLongToTextSplit() throws IOException {
         writeSourceFileSplit("[time=long]");
         assertBinarySplitTimeLong(SOURCE_FILE_SPLIT);
@@ -1518,6 +1670,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertTextSplitTimeField(DESTINATION_FILE_SPLIT);
     }
 
+    @Test
     public void testConvertTextSplitToSplitTimeLong() throws IOException {
         writeSourceFileSplit("[format=text]");
         assertTextSplitTimeField(SOURCE_FILE_SPLIT);
@@ -1527,6 +1680,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- conversion with RAW_DATA
 
+    @Test
     public void testConvertRawData() throws IOException {
         writeSourceFile("[saveAs=raw_data]");
         assertBinaryTimeMessageRawData(SOURCE_FILE);
@@ -1534,6 +1688,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessageRawData(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertToRawData() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1541,6 +1696,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessageRawData(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertReadAsRawData() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1548,6 +1704,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessageRawData(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertRawDataText() throws IOException {
         writeSourceFile("[saveAs=raw_data,format=text]");
         assertTextTimeFieldRawData(SOURCE_FILE);
@@ -1555,6 +1712,7 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeMessageRawData(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertReadAsRawDataToText() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
@@ -1564,6 +1722,7 @@ public class DumpTimestampConversionTest extends TestCase {
 
     // -------------- to/from blob
 
+    @Test
     public void testConvertBlobToBinaryTimeNone() throws IOException {
         writeSourceFile("[saveAs=history_data,format=blob:Quote:IBM.TEST]");
         assertBlob(SOURCE_FILE);
@@ -1571,10 +1730,37 @@ public class DumpTimestampConversionTest extends TestCase {
         assertBinaryTimeNoneMerged(DESTINATION_FILE);
     }
 
+    @Test
     public void testConvertToBlob() throws IOException {
         writeSourceFile("");
         assertBinaryTimeMessage(SOURCE_FILE);
         convert("[readAs=history_data]", "[format=blob:Quote:IBM.TEST]");
         assertBlob(DESTINATION_FILE);
     }
+
+    public static class DumpSchemeProvider {
+
+        public static final DataScheme INSTANCE = buildScheme();
+
+        public static DataScheme getInstance() {
+            return INSTANCE;
+        }
+
+        private static DefaultScheme buildScheme() {
+            SchemeBuilder sb = new SchemeBuilder(new SchemeProperties(new Properties()));
+            sb.addOptionalField("Quote", "Sequence", SerialFieldType.SEQUENCE, "Quote", "Sequence", false);
+            sb.addOptionalField("Quote", "TimeNanoPart", SerialFieldType.COMPACT_INT, "Quote", "TimeNanoPart", false);
+            sb.addOptionalField("Quote", "Bid.Time", SerialFieldType.TIME_SECONDS, "Quote", "BidTime", true);
+            sb.addOptionalField("Quote", "Bid.Exchange", SerialFieldType.UTF_CHAR, "Quote", "BidExchangeCode", true);
+            sb.addRequiredField("Quote", "Bid.Price", SerialFieldType.DECIMAL);
+            sb.addRequiredField("Quote", "Bid.Size", SerialFieldType.COMPACT_INT);
+            sb.addOptionalField("Quote", "Ask.Time", SerialFieldType.TIME_SECONDS, "Quote", "AskTime", true);
+            sb.addOptionalField("Quote", "Ask.Exchange", SerialFieldType.UTF_CHAR, "Quote", "AskExchangeCode", true);
+            sb.addRequiredField("Quote", "Ask.Price", SerialFieldType.DECIMAL);
+            sb.addRequiredField("Quote", "Ask.Size", SerialFieldType.COMPACT_INT);
+
+            return new DefaultScheme(PentaCodec.INSTANCE, sb.buildRecords());
+        }
+    }
+
 }

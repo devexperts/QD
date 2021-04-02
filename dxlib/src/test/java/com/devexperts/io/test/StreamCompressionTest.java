@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2020 Devexperts LLC
+ * Copyright (C) 2002 - 2021 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,11 +11,11 @@
  */
 package com.devexperts.io.test;
 
-import com.devexperts.io.ByteArrayInput;
 import com.devexperts.io.ByteArrayOutput;
 import com.devexperts.io.StreamCompression;
 import junit.framework.TestCase;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -66,33 +66,47 @@ public class StreamCompressionTest extends TestCase {
     }
 
     public void testNoneCompression() throws IOException {
-        checkCompression(StreamCompression.NONE);
+        checkCompression(StreamCompression.NONE, "This is a test");
+        checkCompression(StreamCompression.NONE, "");
     }
 
     public void testGZipCompression() throws IOException {
-        checkCompression(StreamCompression.GZIP);
+        checkCompression(StreamCompression.GZIP, "This is a test");
+        checkCompression(StreamCompression.GZIP, "");
     }
 
     public void testZipCompression() throws IOException {
-        checkCompression(StreamCompression.GZIP);
+        checkCompression(StreamCompression.ZIP, "This is a test");
+        checkCompression(StreamCompression.ZIP, "");
     }
 
-    private void checkCompression(StreamCompression compression) throws IOException {
-        String testString = "This is a test";
+    private void checkCompression(StreamCompression compression, String testString) throws IOException {
         byte[] testBytes = testString.getBytes(StandardCharsets.UTF_8);
         ByteArrayOutput out = new ByteArrayOutput();
         OutputStream cOut = compression.compress(out, "test");
         cOut.write(testBytes);
         cOut.close();
 
-        ByteArrayInput in = new ByteArrayInput(out.toByteArray());
+        // imitate slow stream
+        ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray()) {
+            @Override
+            public synchronized int read(byte[] b, int off, int len) {
+                return super.read(b, off, len > 0 ? 1 : len);
+            }
+        };
         assertEquals(compression, StreamCompression.detectCompressionByHeader(in));
 
         InputStream cIn = compression.decompress(in);
-        byte[] readBytes = new byte[testBytes.length];
-        int readNoBytes = cIn.read(readBytes);
+        byte[] readBytes = new byte[testBytes.length * 2];
+        int readNoBytes = 0;
+        do {
+            int r = cIn.read(readBytes, readNoBytes, readBytes.length - readNoBytes);
+            if (r <= 0)
+                break;
+            readNoBytes += r;
+        } while (readNoBytes < readBytes.length);
         assertEquals(testBytes.length, readNoBytes);
-        assertEquals(testString, new String(readBytes, StandardCharsets.UTF_8));
+        assertEquals(testString, new String(readBytes, 0, readNoBytes, StandardCharsets.UTF_8));
         assertEquals(-1, cIn.read());
         cIn.close();
     }

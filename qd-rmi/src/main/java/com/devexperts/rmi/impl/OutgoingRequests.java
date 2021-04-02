@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2020 Devexperts LLC
+ * Copyright (C) 2002 - 2021 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.rmi.impl;
 
+import com.devexperts.rmi.RMIExceptionType;
 import com.devexperts.rmi.task.RMIServiceDescriptor;
 
 import java.util.ArrayList;
@@ -27,7 +28,8 @@ import javax.annotation.concurrent.ThreadSafe;
 class OutgoingRequests {
 
     private final ServiceFilter filter;
-    private final PriorityQueue<RMIRequestImpl<?>> outgoingRequests = new PriorityQueue<>(11, RMIRequestImpl.REQUEST_COMPARATOR_BY_SENDING_TIME);
+    private final PriorityQueue<RMIRequestImpl<?>> outgoingRequests =
+        new PriorityQueue<>(11, RMIRequestImpl.REQUEST_COMPARATOR_BY_SENDING_TIME);
 
     OutgoingRequests(ServiceFilter filter) {
         this.filter = filter;
@@ -78,5 +80,13 @@ class OutgoingRequests {
 
     synchronized RMIRequestImpl<?>[] getRequests(RMIRequestImpl<?>[] requests) {
         return outgoingRequests.toArray(requests);
+    }
+
+    void close() {
+        // Limit synchronized range to honor lock hierarchy with requestLock
+        RMIRequestImpl<?>[] requests = getRequests(new RMIRequestImpl[0]);
+        for (RMIRequestImpl<?> request : requests) {
+            request.setFailedState(RMIExceptionType.DISCONNECTION, null);
+        }
     }
 }

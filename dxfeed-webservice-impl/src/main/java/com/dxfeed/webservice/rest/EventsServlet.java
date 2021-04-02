@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2020 Devexperts LLC
+ * Copyright (C) 2002 - 2021 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.dxfeed.webservice.rest;
 
+import com.devexperts.logging.Logging;
 import com.dxfeed.webservice.DXFeedContext;
 
 import java.io.IOException;
@@ -22,6 +23,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 public class EventsServlet extends HttpServlet {
+    private static final Logging log = Logging.getLogging(EventsServlet.class);
+    
     Thread sseConnectionChecker;
 
     @Override
@@ -105,6 +108,8 @@ public class EventsServlet extends HttpServlet {
                 handleHttpException((HttpErrorException) cause, resp);
                 return;
             }
+            log.error("Error processing the resource: " + req +
+                ", remoteAddr " + req.getRemoteAddr(), cause != null ? cause : e);
             if (cause instanceof ServletException)
                 throw (ServletException) cause;
             if (cause instanceof IOException)
@@ -114,12 +119,13 @@ public class EventsServlet extends HttpServlet {
     }
 
     private void handleHttpException(HttpErrorException e, HttpServletResponse response) throws IOException {
+        log.warn("HttpException: " + e.getMessage());
         if (response.isCommitted())
             return;
 
         for (Map.Entry<String, String> header : e.getHeaders().entrySet()) {
             response.setHeader(header.getKey(), header.getValue());
         }
-        response.sendError(e.getStatusCode());
+        response.sendError(e.getStatusCode(), e.getMessage());
     }
 }

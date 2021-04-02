@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2020 Devexperts LLC
+ * Copyright (C) 2002 - 2021 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.dxfeed.ipf;
 
+import com.devexperts.io.StreamCompression;
 import com.devexperts.io.URLInputStream;
 import com.devexperts.io.UncloseableInputStream;
 import com.dxfeed.ipf.impl.InstrumentProfileParser;
@@ -21,9 +22,6 @@ import java.io.InputStream;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 /**
  * Reads instrument profiles from the stream using Simple File Format.
@@ -53,11 +51,10 @@ public class InstrumentProfileReader {
 
     /**
      * Reads and returns instrument profiles from specified file.
-     * This method recognizes popular data compression formats "zip" and "gzip" by analysing file name.
-     * If file name ends with ".zip" then all compressed files will be read independently one by one
-     * in their order of appearing and total concatenated list of instrument profiles will be returned.
-     * If file name ends with ".gz" then compressed content will be read and returned.
-     * In other cases file will be considered uncompressed and will be read as is.
+     * This method recognizes data compression formats "zip" and "gzip" automatically.
+     * In case of <em>zip</em> the first file entry will be read and parsed as a plain data stream.
+     * In case of <em>gzip</em> compressed content will be read and processed.
+     * In other cases data considered uncompressed and will be parsed as is.
      *
      * <p>Authentication information can be supplied to this method as part of URL user info
      * like {@code "http://user:password@host:port/path/file.ipf"}.
@@ -69,21 +66,20 @@ public class InstrumentProfileReader {
      *
      * @param address URL of file to read from
      * @return list of instrument profiles
-     *
      * @throws InstrumentProfileFormatException if input stream does not conform to the Simple File Format
-     * @throws IOException  If an I/O error occurs
+     * @throws IOException If an I/O error occurs
      */
     public List<InstrumentProfile> readFromFile(String address) throws IOException {
         return readFromFile(address, null, null);
     }
 
     /**
-     * Reads and returns instrument profiles from specified address with a specified basic user and password credentials.
-     * This method recognizes popular data compression formats "zip" and "gzip" by analysing file name.
-     * If file name ends with ".zip" then all compressed files will be read independently one by one
-     * in their order of appearing and total concatenated list of instrument profiles will be returned.
-     * If file name ends with ".gz" then compressed content will be read and returned.
-     * In other cases file will be considered uncompressed and will be read as is.
+     * Reads and returns instrument profiles from specified address with a specified basic user and password
+     * credentials.
+     * This method recognizes data compression formats "zip" and "gzip" automatically.
+     * In case of <em>zip</em> the first file entry will be read and parsed as a plain data stream.
+     * In case of <em>gzip</em> compressed content will be read and processed.
+     * In other cases data considered uncompressed and will be parsed as is.
      *
      * <p>Specified user and password take precedence over authentication information that is supplied to this method
      * as part of URL user info like {@code "http://user:password@host:port/path/file.ipf"}.
@@ -94,9 +90,8 @@ public class InstrumentProfileReader {
      * @param user the user name (may be null).
      * @param password the password (may be null).
      * @return list of instrument profiles.
-     *
      * @throws InstrumentProfileFormatException if input stream does not conform to the Simple File Format.
-     * @throws IOException  If an I/O error occurs.
+     * @throws IOException If an I/O error occurs.
      */
     public List<InstrumentProfile> readFromFile(String address, String user, String password) throws IOException {
         String url = resolveSourceURL(address);
@@ -105,7 +100,7 @@ public class InstrumentProfileReader {
         try (InputStream in = connection.getInputStream()) {
             URLInputStream.checkConnectionResponseCode(connection);
             lastModified = connection.getLastModified();
-            return read(in, url);
+            return readCompressed(in);
         }
     }
 
@@ -133,50 +128,49 @@ public class InstrumentProfileReader {
     }
 
     /**
-     * Reads and returns instrument profiles from specified stream using specified name to select data compression format.
-     * This method recognizes popular data compression formats "zip" and "gzip" by analysing file name.
-     * If file name ends with ".zip" then all compressed files will be read independently one by one
-     * in their order of appearing and total concatenated list of instrument profiles will be returned.
-     * If file name ends with ".gz" then compressed content will be read and returned.
-     * In other cases file will be considered uncompressed and will be read as is.
+     * Reads and returns instrument profiles from specified stream using specified name to select data compression
+     * format.
+     * <p>
+     * <b>DEPRECATION NOTE:</b> current implementation ignores provided name and falls back to automatic detection of
+     * compressed streams using {@link #readCompressed(InputStream)}. Also multi-file zip archives or zip archives
+     * containing compressed file are not supported since v3.297.
      *
      * @throws InstrumentProfileFormatException if input stream does not conform to the Simple File Format
-     * @throws IOException  If an I/O error occurs
+     * @throws IOException If an I/O error occurs
+     * @see #readCompressed(InputStream)
+     * @deprecated use {@link #readCompressed(InputStream)}, it detects compressed streams automatically.
      */
-    public List<InstrumentProfile> read(InputStream in, String name) throws IOException {
-        // NOTE: decompression streams (zip and gzip) require explicit call to "close()" method to release native Inflater resources.
-        // However we shall not close underlying stream here to allow proper nesting of data streams.
-        if (name.toLowerCase().endsWith(".zip")) {
-            try (ZipInputStream zip = new ZipInputStream(new UncloseableInputStream(in))) {
-                List<InstrumentProfile> profiles = null;
-                for (ZipEntry entry = zip.getNextEntry(); entry != null; entry = zip.getNextEntry())
-                    if (!entry.isDirectory()) {
-                        List<InstrumentProfile> p = read(zip, entry.getName());
-                        if (!p.isEmpty()) {
-                            if (profiles == null)
-                                profiles = p;
-                            else
-                                profiles.addAll(p);
-                        }
-                    }
-                return profiles == null ? new ArrayList<>() : profiles;
-            }
-        }
-        if (name.toLowerCase().endsWith(".gz")) {
-            try (GZIPInputStream gzip = new GZIPInputStream(new UncloseableInputStream(in))) {
-                return read(gzip);
-            }
-        }
-        return read(in);
+    final public List<InstrumentProfile> read(InputStream in, String name) throws IOException {
+        return readCompressed(in);
     }
 
     /**
      * Reads and returns instrument profiles from specified stream.
+     * This method recognizes data compression formats "zip" and "gzip" automatically.
+     * In case of <em>zip</em> the first file entry will be read and parsed as a plain data stream.
+     * In case of <em>gzip</em> compressed content will be read and processed.
+     * In other cases data considered uncompressed and will be parsed as is.
      *
      * @throws InstrumentProfileFormatException if input stream does not conform to the Simple File Format
-     * @throws IOException  If an I/O error occurs
+     * @throws IOException If an I/O error occurs
+     */
+    final public List<InstrumentProfile> readCompressed(InputStream in) throws IOException {
+        try (InputStream decompressed =
+             StreamCompression.detectCompressionByHeaderAndDecompress(new UncloseableInputStream(in)))
+        {
+            return read(decompressed);
+        }
+    }
+
+    /**
+     * Reads and returns instrument profiles from specified plain data stream.
+     * For potentially compressed data use {@link #readCompressed} method.
+     *
+     * @throws InstrumentProfileFormatException if input stream does not conform to the Simple File Format
+     * @throws IOException If an I/O error occurs
      */
     public List<InstrumentProfile> read(InputStream in) throws IOException {
+        // NOTE: The method has been overridden a couple of times to support non-standard data formats.
         List<InstrumentProfile> profiles = new ArrayList<>();
         InstrumentProfileParser parser = new InstrumentProfileParser(in) {
             @Override
@@ -185,15 +179,16 @@ public class InstrumentProfileReader {
             }
         };
         InstrumentProfile ip;
-        while ((ip = parser.next()) != null)
+        while ((ip = parser.next()) != null) {
             profiles.add(ip);
+        }
         return profiles;
     }
 
     /**
      * To be overridden in subclasses to allow {@link String#intern() intern} strings using pools
-     * (like {@link com.devexperts.util.StringCache StringCache}) to reduce memory footprint. Default implementation does nothing
-     * (returns value itself).
+     * (like {@link com.devexperts.util.StringCache StringCache}) to reduce memory footprint. Default implementation
+     * does nothing (returns value itself).
      *
      * @param value string value to intern
      * @return canonical representation of the given string value

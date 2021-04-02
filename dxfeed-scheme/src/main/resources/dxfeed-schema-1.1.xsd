@@ -1,0 +1,603 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xsv="http://www.w3.org/2007/XMLSchema-versioning"
+           xsv:minVersion="1.1"
+           xmlns="https://www.dxfeed.com/datascheme"
+           targetNamespace="https://www.dxfeed.com/datascheme"
+>
+    <!-- Simple types for use in attributes & Ko -->
+
+    <!-- Names of all objects, like all languages identifier -->
+    <xs:simpleType name="schemeName" final="restriction">
+        <xs:annotation><xs:documentation>
+            Allowed name of scheme entity.
+            Must start with a letter or underscore and can be continued with letters, digits, or underscores.
+        </xs:documentation></xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[a-zA-Z_][a-zA-Z0-9_]*" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Names of all objects, like all languages identifier, but could be empty -->
+    <xs:simpleType name="schemeNameOrEmpty" final="restriction">
+        <xs:annotation><xs:documentation>
+            Allowed name of scheme entity or empty line.
+            Non-empty name must start with a letter or underscore and can be continued with letters, digits, or
+            underscores.
+        </xs:documentation></xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:pattern value="([a-zA-Z_][a-zA-Z0-9_]*|)" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Set of names of all objects, delimited by '|' -->
+    <xs:simpleType name="schemeNameSet" final="restriction">
+        <xs:annotation><xs:documentation>
+            Set of allowed names of scheme entities.
+            List of schemeNames separated by |.
+        </xs:documentation></xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[a-zA-Z_][a-zA-Z0-9_]*(\|[a-zA-Z_][a-zA-Z0-9_]*)*" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Names of fields aliases, add dot and could start from digit -->
+    <xs:simpleType name="schemeExtendedName" final="restriction">
+        <xs:annotation><xs:documentation>
+            Set of allowed extended names of scheme entities. Used for field aliases and other protocol-specific tasks.
+            Must start with a letter, digit or underscore and can be continued with letters, digits, dots or
+            underscores.
+        </xs:documentation></xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[a-zA-Z0-9_][a-zA-Z0-9_.]*" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- doc string -->
+    <xs:simpleType name="docString" final="restriction">
+        <xs:annotation><xs:documentation>Documentation string. Any text content with normalized whitespaces.</xs:documentation></xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:whiteSpace value="replace"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Mode of object creation -->
+    <xs:simpleType name="objectModeType" final="restriction">
+        <xs:annotation><xs:documentation>Mode of scheme entities creation: new entity or update for existing one.</xs:documentation></xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="new">
+                <xs:annotation><xs:documentation>New entity (default).</xs:documentation></xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="update">
+                <xs:annotation><xs:documentation>Update for existing entity.</xs:documentation></xs:annotation>
+            </xs:enumeration>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Type of generator -->
+    <xs:simpleType name="generatorTypeType" final="restriction">
+        <xs:annotation><xs:documentation>Type of record names augmentation used by record generators.</xs:documentation></xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="prefix">
+                <xs:annotation><xs:documentation>Prepend iterator string to record name.</xs:documentation></xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="suffix">
+                <xs:annotation><xs:documentation>Append iterator string to record name (default).</xs:documentation></xs:annotation>
+            </xs:enumeration>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Mode of iterator in generator -->
+    <xs:simpleType name="iteratorModeType" final="restriction">
+        <xs:annotation><xs:documentation>Mode of iterator updating.</xs:documentation></xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="new">
+                <xs:annotation><xs:documentation>New iterator (default).</xs:documentation></xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="append">
+                <xs:annotation><xs:documentation>Append new strings in iterator to existing ones.</xs:documentation></xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="replace">
+                <xs:annotation><xs:documentation>Replace exiting strings in iterator with new ones.</xs:documentation></xs:annotation>
+            </xs:enumeration>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Mode of Alias in field -->
+    <xs:simpleType name="aliasOrTagModeType" final="restriction">
+        <xs:annotation><xs:documentation>Mode of field aliases and tags updating.</xs:documentation></xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="add">
+                <xs:annotation><xs:documentation>Add new value (default).</xs:documentation></xs:annotation>
+            </xs:enumeration>
+            <xs:enumeration value="remove">
+                <xs:annotation><xs:documentation>Remove existing value.</xs:documentation></xs:annotation>
+            </xs:enumeration>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Range of bitfield offsets: [0..63] -->
+    <xs:simpleType name="bitoffsetType" final="restriction">
+        <xs:annotation><xs:documentation>Bitfield offset type: integer in [0,63] range.</xs:documentation></xs:annotation>
+        <xs:restriction base="xs:integer">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="63"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Range of bitfield sizes: [1..64] -->
+    <xs:simpleType name="bitsizeType" final="restriction">
+        <xs:annotation><xs:documentation>Bitfield size type: integer in [1,64] range.</xs:documentation></xs:annotation>
+        <xs:restriction base="xs:integer">
+            <xs:minInclusive value="1"/>
+            <xs:maxInclusive value="64"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Structure of scheme -->
+    <xs:element name="dxfeed" type="topType"/>
+
+    <xs:complexType name="topType">
+        <xs:annotation><xs:documentation>Top-level element for DXFeed scheme.</xs:documentation></xs:annotation>
+        <xs:sequence>
+            <xs:element name="import" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+                <xs:annotation><xs:documentation>
+                    Import instruction.
+                    Must contain URL.
+                    Referred file will be imported as soon as this instruction will be parsed.
+                </xs:documentation></xs:annotation>
+            </xs:element>
+            <!-- Types collection -->
+            <xs:element name="types" minOccurs="0" maxOccurs="1">
+                <xs:annotation><xs:documentation>Container for custom types.</xs:documentation></xs:annotation>
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="type" type="typeType" minOccurs="1" maxOccurs="unbounded"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <!-- Enums collection -->
+            <xs:element name="enums" minOccurs="0" maxOccurs="1">
+                <xs:annotation><xs:documentation>Container for enums.</xs:documentation></xs:annotation>
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="enum" type="enumType" minOccurs="1" maxOccurs="unbounded">
+                            <xs:key name="uniqValues">
+                                <xs:selector xpath="value"/>
+                                <xs:field xpath="@name"/>
+                            </xs:key>
+                            <xs:key name="uniqOrds">
+                                <xs:selector xpath="value"/>
+                                <xs:field xpath="@ord"/>
+                            </xs:key>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+                <xs:key name="uniqEnum">
+                    <xs:selector xpath="enum"/>
+                    <xs:field xpath="@name"/>
+                </xs:key>
+            </xs:element>
+            <!-- Records and generators collection -->
+            <xs:element name="records" minOccurs="0" maxOccurs="1">
+                <xs:annotation><xs:documentation>Container for records and generators.</xs:documentation></xs:annotation>
+                <xs:complexType>
+                    <xs:choice minOccurs="1" maxOccurs="unbounded">
+                        <xs:element name="record" type="recordType">
+                            <xs:key name="uniqRecFields">
+                                <xs:selector xpath="field"/>
+                                <xs:field xpath="@name"/>
+                            </xs:key>
+                        </xs:element>
+                        <xs:element name="generator" type="generatorType"/>
+                    </xs:choice>
+                </xs:complexType>
+                <xs:key name="uniqRecord">
+                    <xs:selector xpath="record"/>
+                    <xs:field xpath="@name"/>
+                </xs:key>
+            </xs:element>
+            <!-- Mappings collection -->
+            <xs:element name="mappings" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="mapping" type="mappingType" minOccurs="1" maxOccurs="unbounded">
+                            <xs:key name="uniqEventFields">
+                                <xs:selector xpath="map|field"/>
+                                <xs:field xpath="@eventField"/>
+                            </xs:key>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+                <xs:key name="uniqMapping">
+                    <xs:selector xpath="mapping"/>
+                    <xs:field xpath="@name"/>
+                </xs:key>
+            </xs:element>
+            <!-- Visibility rules collection -->
+            <xs:element name="visibility" minOccurs="0" maxOccurs="1">
+                <xs:annotation><xs:documentation>Container for visibility rules.</xs:documentation></xs:annotation>
+                <xs:complexType>
+                    <xs:choice minOccurs="0" maxOccurs="unbounded">
+                        <xs:element name="enable" type="visibilityType">
+                            <xs:annotation><xs:documentation>
+                                Visibility rule to enable records or record fields.
+                            </xs:documentation></xs:annotation>
+                        </xs:element>
+                        <xs:element name="disable" type="visibilityType">
+                            <xs:annotation><xs:documentation>
+                                Visibility rule to disable records or record fields.
+                            </xs:documentation></xs:annotation>
+                        </xs:element>
+                    </xs:choice>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="typeType">
+        <xs:annotation><xs:documentation>Description of one custom type.</xs:documentation></xs:annotation>
+        <xs:all>
+            <xs:element name="doc" type="docString" minOccurs="0" maxOccurs="1">
+                <xs:annotation><xs:documentation>Documentation string.</xs:documentation></xs:annotation>
+            </xs:element>
+        </xs:all>
+        <xs:attribute name="name" type="schemeName" use="required">
+            <xs:annotation><xs:documentation>Name of this custom type.</xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="mode" type="objectModeType" default="new" use="optional">
+            <xs:annotation><xs:documentation>Mode of this custom type. Default is "new".</xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="base" type="schemeName" use="required">
+            <xs:annotation><xs:documentation>Base type to refer by this custom type.</xs:documentation></xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
+    <xs:complexType name="enumType">
+        <xs:annotation><xs:documentation>Description of enum type.</xs:documentation></xs:annotation>
+        <xs:sequence>
+            <xs:element name="doc" type="docString" minOccurs="0" maxOccurs="1">
+                <xs:annotation><xs:documentation>Documentation string.</xs:documentation></xs:annotation>
+            </xs:element>
+            <xs:element name="value" minOccurs="1" maxOccurs="unbounded">
+                <xs:annotation><xs:documentation>One value of enum.</xs:documentation></xs:annotation>
+                <xs:complexType>
+                    <xs:all>
+                        <xs:element name="doc" type="docString" minOccurs="0" maxOccurs="1">
+                            <xs:annotation><xs:documentation>Documentation string.</xs:documentation></xs:annotation>
+                        </xs:element>
+                    </xs:all>
+                    <xs:attribute name="name" type="schemeName" use="required">
+                        <xs:annotation><xs:documentation>Name of value (enum constant).</xs:documentation></xs:annotation>
+                    </xs:attribute>
+                    <xs:attribute name="mode" type="objectModeType" default="new" use="optional">
+                        <xs:annotation><xs:documentation>Mode of value.</xs:documentation></xs:annotation>
+                    </xs:attribute>
+                    <xs:attribute name="ord" type="xs:nonNegativeInteger" use="optional">
+                        <xs:annotation><xs:documentation>Ordinal number of value.</xs:documentation></xs:annotation>
+                    </xs:attribute>
+                    <xs:assert test="(mode = 'update') or (@ord)" />
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="name" type="schemeName" use="required">
+            <xs:annotation><xs:documentation>Name of this enum.</xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="mode" type="objectModeType" default="new" use="optional">
+            <xs:annotation><xs:documentation>Mode of this enum. Default is "new".</xs:documentation></xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
+    <xs:complexType name="recordType">
+        <xs:annotation><xs:documentation>
+            Record or record template.
+        </xs:documentation></xs:annotation>
+        <xs:sequence>
+            <xs:element name="doc" type="docString" minOccurs="0" maxOccurs="1">
+                <xs:annotation><xs:documentation>Documentation string.</xs:documentation></xs:annotation>
+            </xs:element>
+            <xs:element name="index" minOccurs="0" maxOccurs="1">
+                <xs:annotation><xs:documentation>
+                    Fields which constitute index (time) field for history protocol.
+                </xs:documentation></xs:annotation>
+                <xs:complexType>
+                    <xs:attribute name="field0" type="schemeNameOrEmpty" use="optional">
+                        <xs:annotation>
+                            <xs:documentation>The first field included in the time field.</xs:documentation>
+                        </xs:annotation>
+                    </xs:attribute>
+                    <xs:attribute name="field1" type="schemeNameOrEmpty" use="optional">
+                        <xs:annotation>
+                            <xs:documentation>The second field included in the time field.</xs:documentation>
+                        </xs:annotation>
+                    </xs:attribute>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="field" type="basicFieldType" minOccurs="0" maxOccurs="unbounded">
+                <xs:annotation><xs:documentation>One field of record.</xs:documentation></xs:annotation>
+                <xs:alternative test="@type != 'flags'" type="basicFieldType"/>
+                <xs:alternative test="@type  = 'flags'" type="flagsFieldType"/>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="name" type="schemeName" use="required">
+            <xs:annotation><xs:documentation>
+                Name of record or template.
+                Must be unique among other records in scheme or templates in the given generator.
+            </xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="eventName" type="schemeName" use="optional"/>
+        <xs:attribute name="mode" type="objectModeType" default="new" use="optional">
+            <xs:annotation><xs:documentation>Mode of this record. Default is "new".</xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="copyFrom" type="schemeName" use="optional">
+            <xs:annotation><xs:documentation>
+                Name of record which should be used as base for this one.
+                All fields and properties will be copied from given record immediately.
+                Only records with mode="new" can be based on other records.
+            </xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="disabled" type="xs:boolean" default="false" use="optional">
+            <xs:annotation><xs:documentation>Record will be disabled by default.</xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="regionals" type="xs:boolean" default="false" use="optional">
+            <xs:annotation><xs:documentation>Record will generate all regional variants.</xs:documentation></xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
+    <xs:complexType name="basicFieldType">
+        <xs:sequence>
+            <xs:element name="doc" type="docString" minOccurs="0" maxOccurs="1">
+                <xs:annotation><xs:documentation>Documentation string.</xs:documentation></xs:annotation>
+            </xs:element>
+            <xs:element name="alias" minOccurs="0" maxOccurs="unbounded">
+                <xs:annotation><xs:documentation>
+                    Alias of this field.
+                    Field could have multiple aliases.
+                    Aliases are used to generate protocol-level records.
+                </xs:documentation></xs:annotation>
+                <xs:complexType>
+                    <xs:attribute name="name" type="schemeExtendedName" use="required">
+                        <xs:annotation><xs:documentation>Name of the alias.</xs:documentation></xs:annotation>
+                    </xs:attribute>
+                    <xs:attribute name="mode" type="aliasOrTagModeType" default="add" use="optional">
+                        <xs:annotation><xs:documentation>Mode of this alias. Default is "add".</xs:documentation></xs:annotation>
+                    </xs:attribute>
+                    <xs:attribute name="main" type="xs:boolean" default="false" use="optional">
+                        <xs:annotation><xs:documentation>Marks the main alias.</xs:documentation></xs:annotation>
+                    </xs:attribute>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="tag" minOccurs="0" maxOccurs="unbounded">
+                <xs:annotation><xs:documentation>
+                    Tag of the field.
+                    Field could have multiple tags.
+                    Tags are used to match field by visibility rules.
+                </xs:documentation></xs:annotation>
+                <xs:complexType>
+                    <xs:attribute name="name" type="schemeName" use="required">
+                        <xs:annotation><xs:documentation>Name of the tag.</xs:documentation></xs:annotation>
+                    </xs:attribute>
+                    <xs:attribute name="mode" type="aliasOrTagModeType" default="add" use="optional">
+                        <xs:annotation><xs:documentation>Mode of this tag. Default is "add".</xs:documentation></xs:annotation>
+                    </xs:attribute>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="name" type="schemeName" use="required">
+            <xs:annotation><xs:documentation>
+                Name of the field.
+                Must be unique among other fields in given record.
+            </xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="mode" type="objectModeType" default="new" use="optional">
+            <xs:annotation><xs:documentation>Mode of this field. Default is "new".</xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="type" type="schemeName" use="optional">
+            <xs:annotation><xs:documentation>
+                Type name of the field.
+                Can refer types which will be defined later.
+            </xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="disabled" type="xs:boolean" default="false" use="optional">
+            <xs:annotation><xs:documentation>Field will be disabled by default.</xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="compositeOnly" type="xs:boolean" default="false" use="optional">
+            <xs:annotation><xs:documentation>Field will be disabled for regional records.</xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="eventName" type="schemeName" use="optional"/>
+    </xs:complexType>
+
+    <xs:complexType name="flagsFieldType">
+        <xs:complexContent>
+            <xs:extension base="basicFieldType">
+                <xs:sequence>
+                    <xs:element name="bitfields" minOccurs="0" maxOccurs="1">
+                        <xs:annotation><xs:documentation>
+                            Set of bitfields to split flags into.
+                            All bitfields must not overlap.
+                        </xs:documentation></xs:annotation>
+                        <xs:complexType>
+                            <xs:sequence>
+                                <xs:element name="field" minOccurs="1" maxOccurs="unbounded">
+                                    <xs:annotation><xs:documentation>
+                                        One bitfield, which is a consecutive group of bits.
+                                    </xs:documentation></xs:annotation>
+                                    <xs:complexType>
+                                        <xs:all>
+                                            <xs:element name="doc" type="docString" minOccurs="0" maxOccurs="1">
+                                                <xs:annotation><xs:documentation>Documentation string.</xs:documentation></xs:annotation>
+                                            </xs:element>
+                                        </xs:all>
+                                        <xs:attribute name="name" type="schemeName" use="required">
+                                            <xs:annotation><xs:documentation>
+                                                Bitfield name.
+                                                Must be unique among other bitfields of given field.
+                                            </xs:documentation></xs:annotation>
+                                        </xs:attribute>
+                                        <xs:attribute name="mode" type="objectModeType" default="new" use="optional">
+                                            <xs:annotation><xs:documentation>
+                                                Mode of this bitfield. Default is "new".
+                                            </xs:documentation></xs:annotation>
+                                        </xs:attribute>
+                                        <xs:attribute name="offset" type="bitoffsetType" use="optional">
+                                            <xs:annotation><xs:documentation>
+                                                Offset of bitfield in flags field in bits.
+                                                Must be integer between 0 and 63 inclusive.
+                                            </xs:documentation></xs:annotation>
+                                        </xs:attribute>
+                                        <xs:attribute name="size" type="bitsizeType" use="optional">
+                                            <xs:annotation><xs:documentation>
+                                                Size of bitfield in flags field in bits.
+                                                Must be integer between 1 and 64 inclusive.
+                                            </xs:documentation></xs:annotation>
+                                        </xs:attribute>
+                                    </xs:complexType>
+                                </xs:element>
+                            </xs:sequence>
+                        </xs:complexType>
+                        <xs:key name="uniqBitFields">
+                            <xs:selector xpath="field"/>
+                            <xs:field xpath="@name"/>
+                        </xs:key>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="generatorType">
+        <xs:annotation><xs:documentation>
+            Generator of family of records.
+        </xs:documentation></xs:annotation>
+        <xs:sequence>
+            <xs:element name="doc" type="docString" minOccurs="0" maxOccurs="1">
+                <xs:annotation><xs:documentation>Documentation string.</xs:documentation></xs:annotation>
+            </xs:element>
+            <xs:element name="iterator" minOccurs="0" maxOccurs="1">
+                <xs:annotation><xs:documentation>
+                    Set of strings to augment record template name to generate family of records.
+                </xs:documentation></xs:annotation>
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="value" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+                            <xs:annotation><xs:documentation>
+                                One string in iterator set. Could be empty.
+                            </xs:documentation></xs:annotation>
+                        </xs:element>
+                    </xs:sequence>
+                    <xs:attribute name="mode" type="iteratorModeType" default="new" use="optional">
+                        <xs:annotation><xs:documentation>Mode of this iterator. Default is "new".</xs:documentation></xs:annotation>
+                    </xs:attribute>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="record" type="recordType" minOccurs="1" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="name" type="schemeName" use="required">
+            <xs:annotation><xs:documentation>
+                Name of the generator.
+                Must be unique among other generators.
+            </xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="mode" type="objectModeType" default="new" use="optional">
+            <xs:annotation><xs:documentation>Mode of this generator. Default is "new".</xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="type" type="generatorTypeType" default="suffix" use="optional">
+            <xs:annotation><xs:documentation>Type of record names augmentation used by this generators.</xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="delimiter" type="xs:string" default="" use="optional">
+            <xs:annotation><xs:documentation>
+                Delimiter to add between record template name and non-empty string from iterator.
+            </xs:documentation></xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
+    <xs:complexType name="mappingType">
+        <xs:sequence>
+            <xs:element name="doc" type="docString" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="mapTimeSequenceNano" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                    <xs:attribute name="time" type="schemeNameSet" default="Time" use="optional"/>
+                    <xs:attribute name="sequence" type="schemeName" default="Sequence" use="optional"/>
+                    <xs:attribute name="nanoPart" type="schemeName" default="TimeNanoPart" use="optional"/>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="map" type="basicMapType" maxOccurs="unbounded">
+                <xs:alternative test="@type != 'flags'" type="basicMapType"/>
+                <xs:alternative test="@type  = 'flags'" type="flagsMapType"/>
+                <xs:key name="uniqMapFields">
+                    <xs:selector xpath="map"/>
+                    <xs:field xpath="@eventField"/>
+                </xs:key>
+            </xs:element>
+            <xs:element name="field" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:all>
+                        <xs:element name="doc" type="docString" minOccurs="0"/>
+                    </xs:all>
+                    <xs:attribute name="name" type="schemeName" use="required"/>
+                    <xs:attribute name="mode" type="objectModeType" default="new" use="optional"/>
+                    <xs:attribute name="type" type="schemeName" use="required"/>
+                    <xs:attribute name="value" type="xs:string" use="optional"/>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="name" type="schemeName" use="required"/>
+        <xs:attribute name="mode" type="objectModeType" default="new" use="optional"/>
+        <xs:attribute name="record" type="schemeName" use="required"/>
+        <xs:attribute name="event" type="schemeName" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="basicMapType">
+        <xs:sequence>
+            <xs:element name="doc" type="docString" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
+        <xs:attribute name="eventField" type="schemeName" use="required"/>
+        <xs:attribute name="recordField" type="schemeName" use="required"/>
+        <xs:attribute name="mode" type="objectModeType" default="new" use="optional"/>
+        <xs:attribute name="type" type="schemeName" use="optional"/>
+    </xs:complexType>
+
+    <xs:complexType name="flagsMapType">
+        <xs:complexContent>
+            <xs:extension base="basicMapType">
+                <xs:sequence>
+                    <xs:element name="map" type="basicMapType" minOccurs="0" maxOccurs="unbounded"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="visibilityType">
+        <xs:annotation><xs:documentation>
+            Visibility rule.
+            Visibility rules allow to override disabled/enabled status of records and fields.
+        </xs:documentation></xs:annotation>
+        <xs:sequence>
+            <xs:element name="include-tags" type="tagListType" minOccurs="0" maxOccurs="unbounded">
+                <xs:annotation><xs:documentation>Set of tags which all must be set for matching record field.</xs:documentation></xs:annotation>
+            </xs:element>
+            <xs:element name="exclude-tags" type="tagListType" minOccurs="0" maxOccurs="unbounded">
+                <xs:annotation><xs:documentation>Set of tags which all must not be set for matching record field.</xs:documentation></xs:annotation>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="record" type="xs:string" use="required">
+            <xs:annotation><xs:documentation>Regexp pattern to match record names.</xs:documentation></xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="useEventName" type="xs:boolean" default="false" use="optional"/>
+        <xs:attribute name="field" type="xs:string" default="" use="optional">
+            <xs:annotation><xs:documentation>
+                Regexp pattern to match record field names.
+                If this attribute is not set, rule matches whole records.
+            </xs:documentation></xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
+    <xs:complexType name="tagListType">
+        <xs:sequence>
+            <xs:element name="tag" type="schemeName" minOccurs="0" maxOccurs="unbounded">
+                <xs:annotation><xs:documentation>One tag in the set.</xs:documentation></xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+</xs:schema>

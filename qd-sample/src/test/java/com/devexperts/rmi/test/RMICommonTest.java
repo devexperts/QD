@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2020 Devexperts LLC
+ * Copyright (C) 2002 - 2021 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -21,12 +21,16 @@ import com.devexperts.rmi.RMIException;
 import com.devexperts.rmi.RMIExceptionType;
 import com.devexperts.rmi.RMIOperation;
 import com.devexperts.rmi.RMIRequest;
-import com.devexperts.rmi.RMIServer;
+import com.devexperts.rmi.RMIRequestState;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
 import com.devexperts.rmi.samples.DifferentServices;
 import com.devexperts.rmi.security.SecurityController;
+import com.devexperts.rmi.task.RMIChannel;
+import com.devexperts.rmi.task.RMIChannelState;
+import com.devexperts.rmi.task.RMIChannelSupport;
 import com.devexperts.rmi.task.RMIService;
 import com.devexperts.rmi.task.RMIServiceImplementation;
+import com.devexperts.rmi.task.RMITask;
 import com.devexperts.test.ThreadCleanCheck;
 import com.devexperts.test.TraceRunner;
 import org.junit.After;
@@ -35,17 +39,22 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 @RunWith(TraceRunner.class)
@@ -104,10 +113,6 @@ public class RMICommonTest {
         initPorts();
     }
 
-    private void exportServices(RMIServer server, RMIService<?> service) {
-        server().getServer().export(service);
-    }
-
     public interface Summator {
         int sum(int a, int b) throws RMIException;
 
@@ -133,7 +138,7 @@ public class RMICommonTest {
     @Test
     public void testNullSubject() {
         connectDefault();
-        exportServices(server().getServer(), new RMIServiceImplementation<>(new SummatorImpl(), Summator.class));
+        server().getServer().export(new RMIServiceImplementation<>(new SummatorImpl(), Summator.class));
         RMIRequest<Integer> sum = client.getClient().getPort(Marshalled.NULL).createRequest(
             RMIOperation.valueOf(Summator.class, int.class, "sum", int.class, int.class), 25, 48);
         sum.send();
@@ -145,7 +150,7 @@ public class RMICommonTest {
         }
     }
 
-// --------------------------------------------------
+    // --------------------------------------------------
 
     //only for RMIClient
     @Test
@@ -158,11 +163,11 @@ public class RMICommonTest {
             client.getClient().getService("*").addServiceDescriptorsListener(descriptors -> exportLatch.countDown());
             RMIService<ConstNumber> two = new RMIServiceImplementation<>(new Two(), ConstNumber.class, "TwoFive");
             RMIService<ConstNumber> five = new RMIServiceImplementation<>(new Five(), ConstNumber.class, "TwoFive");
-            exportServices(server.getServer(), two);
+            server.getServer().export(two);
             assertEquals(num.getValue(), 2);
             log.info("---");
-            exportServices(server.getServer(), five);
-            exportLatch.await(10, TimeUnit.SECONDS);
+            server.getServer().export(five);
+            assertTrue(exportLatch.await(10, TimeUnit.SECONDS));
             long result = num.getValue();
             if (result != 2 && result != 5)
                 fail();
@@ -194,7 +199,7 @@ public class RMICommonTest {
         }
     }
 
-// --------------------------------------------------
+    // --------------------------------------------------
 
     public interface InfiniteLooper {
         void loop() throws RMIException, InterruptedException;
@@ -208,24 +213,17 @@ public class RMICommonTest {
         }
 
         @Override
-        @SuppressWarnings({"InfiniteLoopStatement"})
-        public void loop() throws InterruptedException {
+        public void loop() {
             server.disconnect();
-            long startLoop = System.currentTimeMillis();
-            while (!finish && System.currentTimeMillis() < startLoop + 10000) {
-                Thread.sleep(10);
-            }
+            NTU.waitCondition(10_000, 10, () -> finish);
         }
     }
 
 
     public static class SimpleInfiniteLooper implements InfiniteLooper {
         @Override
-        public void loop() throws InterruptedException {
-            long startLoop = System.currentTimeMillis();
-            while (!finish && System.currentTimeMillis() < startLoop + 10000) {
-                Thread.sleep(10);
-            }
+        public void loop() {
+            NTU.waitCondition(10_000, 10, () -> finish);
         }
     }
 
@@ -233,7 +231,7 @@ public class RMICommonTest {
     @Test
     public void testRequestRunningTimeout() {
         client().getClient().setRequestRunningTimeout(0);
-        exportServices(server().getServer(), new RMIServiceImplementation<>(new SimpleInfiniteLooper(), InfiniteLooper.class));
+        server().getServer().export(new RMIServiceImplementation<>(new SimpleInfiniteLooper(), InfiniteLooper.class));
         connectDefault();
         InfiniteLooper looper = clientPort.getProxy(InfiniteLooper.class);
         try {
@@ -247,7 +245,7 @@ public class RMICommonTest {
         }
     }
 
-// --------------------------------------------------
+    // --------------------------------------------------
 
     static class CountingExecutorService extends AbstractExecutorService implements AutoCloseable {
         private final ExecutorService delegate;
@@ -325,8 +323,8 @@ public class RMICommonTest {
         // Set custom executor and try
         RMIServiceImplementation<Ping> service;
         Ping proxy;
-        try (CountingExecutorService currentExecutor =
-                 new CountingExecutorService(Executors.newSingleThreadExecutor(r -> new Thread(r, "RMICommonTest-CountingExecutorService-part-1"))))
+        try (CountingExecutorService currentExecutor = new CountingExecutorService(
+            Executors.newSingleThreadExecutor(r -> new Thread(r, "RMICommonTest-CountingExecutorService-part-1"))))
         {
             server.getServer().setDefaultExecutor(currentExecutor);
             service = new RMIServiceImplementation<>(new SimplePing(), Ping.class);
@@ -337,8 +335,8 @@ public class RMICommonTest {
         }
 
         // change executor and make sure processing goes to the new one
-        try (CountingExecutorService currentExecutor =
-                 new CountingExecutorService(Executors.newSingleThreadExecutor(r -> new Thread(r, "RMICommonTest-CountingExecutorService-part-2"))))
+        try (CountingExecutorService currentExecutor = new CountingExecutorService(
+            Executors.newSingleThreadExecutor(r -> new Thread(r, "RMICommonTest-CountingExecutorService-part-2"))))
         {
             server.getServer().setDefaultExecutor(currentExecutor);
             log.info("---------------- Running part 2 ----------------");
@@ -346,8 +344,8 @@ public class RMICommonTest {
         }
 
         // Specify explicit executor for the service
-        try (CountingExecutorService currentExecutor =
-                 new CountingExecutorService(Executors.newSingleThreadExecutor(r -> new Thread(r, "RMICommonTest-CountingExecutorService-part-3"))))
+        try (CountingExecutorService currentExecutor = new CountingExecutorService(
+            Executors.newSingleThreadExecutor(r -> new Thread(r, "RMICommonTest-CountingExecutorService-part-3"))))
         {
             service.setExecutor(currentExecutor);
             log.info("---------------- Running part 3 ----------------");
@@ -356,24 +354,25 @@ public class RMICommonTest {
     }
 
     private static void pingAndCount(Ping proxy, CountingExecutorService currentExecutor, int n) {
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < n; i++) {
             try {
                 proxy.ping();
             } catch (RMIException e) {
                 fail(e.getMessage());
             }
+        }
         if (currentExecutor.getSubmissionsNumber() != n) {
             fail(currentExecutor.getSubmissionsNumber() + " vs " + n);
         }
     }
 
-// --------------------------------------------------
+    // --------------------------------------------------
 
     //only for RMIClient
     @Test
     public void testConnectionAfterSendingRequest() {
         initPorts();
-        exportServices(server().getServer(), DifferentServices.CALCULATOR_SERVICE);
+        server().getServer().export(DifferentServices.CALCULATOR_SERVICE);
         @SuppressWarnings("unchecked")
         RMIRequest<Double> sum = clientPort.createRequest(DifferentServices.CalculatorService.PLUS, 12.1321, 352.561);
         sum.send();
@@ -390,7 +389,7 @@ public class RMICommonTest {
         }
     }
 
-// --------------------------------------------------
+    // --------------------------------------------------
 
     //only RMIClient
     @Test
@@ -398,8 +397,7 @@ public class RMICommonTest {
         initPorts();
         SomeSubject trueSubject = new SomeSubject("true");
         SomeSubject falseSubject = new SomeSubject("false");
-        exportServices(server().getServer(),
-            new RMIServiceImplementation<>(new SummatorImpl(), Summator.class, "summator"));
+        server().getServer().export(new RMIServiceImplementation<>(new SummatorImpl(), Summator.class, "summator"));
         server().setSecurityController(new SomeSecurityController(trueSubject));
         trueClient = RMIEndpoint.createEndpoint(RMIEndpoint.Side.CLIENT);
         int port = NTU.connectServer(server());
@@ -408,7 +406,7 @@ public class RMICommonTest {
         Summator summator = trueClient.getClient().getProxy(Summator.class, "summator");
 
         try {
-            assertEquals(summator.sum(256,458), 256 + 458);
+            assertEquals(summator.sum(256, 458), 256 + 458);
         } catch (RMIException e) {
             fail(e.getMessage());
         }
@@ -423,7 +421,7 @@ public class RMICommonTest {
             summator.sum(256, 458);
             fail();
         } catch (RMIException e) {
-            if (e.getType() != RMIExceptionType.SECURITY_VIOLATION);
+            assertEquals(RMIExceptionType.SECURITY_VIOLATION, e.getType());
         }
         falseClient.close();
     }
@@ -473,11 +471,13 @@ public class RMICommonTest {
 
         @Override
         public void doAs(Object subject, Runnable action) throws SecurityException {
-            if(subject instanceof AuthToken) {
-                if (((AuthToken) subject).getUser().equals("test") && ((AuthToken) subject).getPassword().equals("demo"))
+            if (subject instanceof AuthToken) {
+                AuthToken token = (AuthToken) subject;
+                if (token.getUser().equals("test") && token.getPassword().equals("demo")) {
                     action.run();
-                else
+                } else {
                     throw new SecurityException();
+                }
             } else {
                 throw new SecurityException();
             }
@@ -496,12 +496,14 @@ public class RMICommonTest {
         client = new RMIEndpointImpl(RMIEndpoint.Side.CLIENT, endpointClient, null, null);
         NTU.connect(client, NTU.localHost(port));
 
-        QDEndpoint endpointBadClient = QDEndpoint.newBuilder().withName("QD_BAD_CLIENT").build().user("test").password("test");
+        QDEndpoint endpointBadClient =
+            QDEndpoint.newBuilder().withName("QD_BAD_CLIENT").build().user("test").password("test");
         falseClient = new RMIEndpointImpl(RMIEndpoint.Side.CLIENT, endpointBadClient, null, null);
         NTU.connect(falseClient, NTU.localHost(port));
 
         // Operation on good client goes through
-        RMIOperation<Integer> operation = RMIOperation.valueOf(Summator.class, Summator.class.getMethod("sum", int.class, int.class));
+        RMIOperation<Integer> operation =
+            RMIOperation.valueOf(Summator.class, Summator.class.getMethod("sum", int.class, int.class));
         RMIRequest<Integer> request = client.getClient().createRequest(null, operation, 1, 23);
         request.send();
         try {
@@ -517,8 +519,247 @@ public class RMICommonTest {
             request.getBlocking();
             fail();
         } catch (RMIException e) {
-            if(e.getType() != RMIExceptionType.SECURITY_VIOLATION)
+            if (e.getType() != RMIExceptionType.SECURITY_VIOLATION)
                 fail(e.getMessage());
         }
+    }
+
+
+    // --------------------------------------------------
+
+    private static final int LARGE_SIZE = 100_000;
+    private static final int SMALL_SIZE = 100;
+
+    // see com.devexperts.rmi.impl.MessageComposer.MAX_CONCURRENT_RMI_MESSAGES
+    private static final int MAX_CONCURRENT_MESSAGES = 6;
+
+    interface LargeRequestProcessor {
+        public int process(String reqId, byte[] data) throws RMIException;
+    }
+
+    static class LargeRequestProcessorImpl implements LargeRequestProcessor {
+        @Override
+        public int process(String reqId, byte[] data) throws RMIException {
+            log.info("processing request " + reqId + ", size = " + data.length);
+            return Arrays.hashCode(data);
+        }
+    }
+
+    static final RMIOperation<Integer> PROCESS_OP =
+        RMIOperation.valueOf(LargeRequestProcessor.class, int.class, "process", String.class, byte[].class);
+
+    private void connectShaped() {
+        int port = NTU.connectServer(server, "shaped[outLimit=" + LARGE_SIZE + "]+");
+        NTU.connect(client(), "shaped[outLimit=" + LARGE_SIZE + "]+" + NTU.localHost(port));
+        initPorts();
+    }
+
+    /**
+     * Check that pending and in-transition requests are correctly handled when the client connection is lost
+     * (see QD-1283)
+     */
+    @Test
+    public void testClientReconnect() throws Exception {
+        server().getServer().export(new LargeRequestProcessorImpl(), LargeRequestProcessor.class);
+        connectShaped();
+
+        // pass a test request to ensure that all initial procedures related to service were performed
+        RMIRequest<Integer> testReq = clientPort.createRequest(PROCESS_OP, "test", getRandomBytes(SMALL_SIZE));
+        testReq.send();
+        testReq.getPromise().await(10_000, TimeUnit.MILLISECONDS);
+
+        List<RMIRequest<Integer>> reqs = fillConnectionWithLargeRequests();
+
+        // send stale request that shall wait for sending
+        RMIRequest<Integer> staleReq = clientPort.createRequest(PROCESS_OP, "stale", getRandomBytes(SMALL_SIZE));
+        staleReq.send();
+        // sleep a bit and check that it's still waiting to send
+        Thread.sleep(10);
+        assertEquals(RMIRequestState.WAITING_TO_SEND, staleReq.getState());
+
+        // disconnect abruptly and connect again
+        NTU.disconnectClientAbruptly(((RMIEndpointImpl) client).getQdEndpoint(), true);
+
+        // Sending/sent request should fail on disconnect if not finished yet
+        for (RMIRequest<Integer> req : reqs) {
+            assertTrue(NTU.waitCondition(60_000, 10, req::isCompleted));
+        }
+        // request that was in WAITING_TO_SEND state on disconnect shall be processed after reconnecting
+        staleReq.getPromise().await(60_000, TimeUnit.MILLISECONDS);
+        client.close();
+    }
+
+    //region Aux ChannelService
+    @SuppressWarnings("unused")
+    interface ChannelService {
+        void startChannel();
+        int getValue();
+        void finishChannel();
+
+    }
+    private static class ChannelServiceImpl implements ChannelService, RMIChannelSupport<Object> {
+        RMITask<?> task;
+        final int value;
+
+        ChannelServiceImpl(int value) {
+            this.value = value;
+        }
+
+        @Override
+        public void startChannel() {
+            task = RMITask.current();
+            task.setCancelListener(task1 -> {
+                log.info("TASK CANCEL");
+                task1.cancel();
+            });
+            task.suspend(task1 -> {
+                log.info("SUSPEND CANCEL");
+                task1.cancel();
+            });
+        }
+
+        @Override
+        public int getValue() {
+            return value;
+        }
+
+        @Override
+        public void finishChannel() {
+            RMITask.current().complete(null);
+            task.complete(null);
+        }
+
+        @Override
+        public void openChannel(RMITask<Object> task) {
+            task.getChannel().addChannelHandler(this, ChannelService.class);
+        }
+    }
+
+    private static final RMIOperation<Void> START_CHANNEL_OP =
+        RMIOperation.valueOf(ChannelService.class, void.class, "startChannel");
+    private static final RMIOperation<Integer> CHANNEL_GET_VALUE_OP =
+        RMIOperation.valueOf(ChannelService.class, int.class, "getValue");
+    private static final RMIOperation<Void> FINISH_CHANNEL_OP =
+        RMIOperation.valueOf(ChannelService.class, void.class, "finishChannel");
+    //endregion
+
+    /**
+     * Check that a new channel (not sent yet) with nested requests correctly handled after reconnect (see QD-1283)
+     */
+    @Test
+    public void testClientNewChannelReconnect() throws Exception {
+        server().getServer().export(new LargeRequestProcessorImpl(), LargeRequestProcessor.class);
+        server().getServer().export(new ChannelServiceImpl(42), ChannelService.class);
+        connectShaped();
+
+        // pass a test request to ensure that all initial procedures related to service were performed
+        RMIRequest<Integer> testReq = clientPort.createRequest(PROCESS_OP, "test", getRandomBytes(SMALL_SIZE));
+        testReq.send();
+        testReq.getPromise().await(10_000, TimeUnit.MILLISECONDS);
+
+        List<RMIRequest<Integer>> reqs = fillConnectionWithLargeRequests();
+
+        // send stale request that shall wait for sending
+        RMIRequest<Void> channelReq = clientPort.createRequest(START_CHANNEL_OP);
+        channelReq.send();
+        RMIChannel channel = channelReq.getChannel();
+        RMIRequest<?> nestedReq = channel.createRequest(CHANNEL_GET_VALUE_OP);
+        nestedReq.send();
+        // sleep a bit and check that it's still waiting to send
+        Thread.sleep(10);
+        assertEquals(RMIRequestState.WAITING_TO_SEND, channelReq.getState());
+        assertEquals(RMIRequestState.WAITING_TO_SEND, nestedReq.getState());
+
+        // disconnect abruptly and connect again
+        NTU.disconnectClientAbruptly(((RMIEndpointImpl) client).getQdEndpoint(), true);
+
+        // Sending/sent request should fail on disconnect if not finished yet
+        for (RMIRequest<Integer> req : reqs) {
+            assertTrue(NTU.waitCondition(60_000, 10, req::isCompleted));
+        }
+        // request that was in WAITING_TO_SEND state on disconnect shall be processed after reconnecting
+        nestedReq.getPromise().await(60_000, TimeUnit.MILLISECONDS);
+        assertEquals(42, nestedReq.getBlocking());
+        RMIRequest<Void> finishChannel = channel.createRequest(FINISH_CHANNEL_OP);
+        finishChannel.send();
+        finishChannel.getPromise().await(60_000, TimeUnit.MILLISECONDS);
+        channelReq.getPromise().await(60_000, TimeUnit.MILLISECONDS);
+        client.close();
+    }
+
+    /**
+     * Check that an open (in progress) channel with nested requests correctly handled after reconnect (see QD-1283).
+     */
+    @Test
+    public void testClientOpenChannelReconnect() throws Exception {
+        server().getServer().export(new LargeRequestProcessorImpl(), LargeRequestProcessor.class);
+        server().getServer().export(new ChannelServiceImpl(42), ChannelService.class);
+        connectShaped();
+
+        // open channel
+        RMIRequest<Void> channelReq = clientPort.createRequest(START_CHANNEL_OP);
+        channelReq.send();
+        RMIChannel channel = channelReq.getChannel();
+        assertTrue(NTU.waitCondition(60_000, 10, channel::isOpen));
+        assertEquals(RMIRequestState.SENT, channelReq.getState());
+
+        // pass a test request to ensure that all initial procedures related to service were performed
+        RMIRequest<Integer> testReq = clientPort.createRequest(PROCESS_OP, "test", getRandomBytes(SMALL_SIZE));
+        testReq.send();
+        testReq.getPromise().await(10_000, TimeUnit.MILLISECONDS);
+
+        List<RMIRequest<Integer>> reqs = fillConnectionWithLargeRequests();
+
+        // send stale nested request that shall wait for sending
+        RMIRequest<?> nestedReq = channel.createRequest(CHANNEL_GET_VALUE_OP);
+        nestedReq.send();
+        // sleep a bit and check that it's still waiting to send
+        Thread.sleep(10);
+        assertEquals(RMIRequestState.WAITING_TO_SEND, nestedReq.getState());
+
+        // disconnect abruptly and connect again
+        NTU.disconnectClientAbruptly(((RMIEndpointImpl) client).getQdEndpoint(), true);
+
+        // Sending/sent request should fail on disconnect if not finished yet
+        for (RMIRequest<Integer> req : reqs) {
+            assertTrue(NTU.waitCondition(60_000, 10, req::isCompleted));
+        }
+        // nested request of an open channel that was in WAITING_TO_SEND state on disconnect shall fail on disconnect
+        assertTrue(NTU.waitCondition(60_000, 10, nestedReq::isCompleted));
+        assertEquals(RMIRequestState.FAILED, nestedReq.getState());
+        assertEquals(RMIRequestState.FAILED, channelReq.getState());
+        assertEquals(RMIChannelState.CLOSED, channel.getState());
+        client.close();
+    }
+
+
+    private byte[] getRandomBytes(int size) {
+        byte[] data = new byte[size];
+        Random rnd = ThreadLocalRandom.current();
+        rnd.nextBytes(data);
+        return data;
+    }
+
+    /**
+     * Send enough {@link LargeRequestProcessor} requests to fill output queue and wait all of them started sending.
+     *
+     * @return list of generated requests
+     */
+    private List<RMIRequest<Integer>> fillConnectionWithLargeRequests() {
+        byte[] data = new byte[LARGE_SIZE];
+        Random rnd = ThreadLocalRandom.current();
+
+        ArrayList<RMIRequest<Integer>> reqs = new ArrayList<>();
+        for (int i = 1; i <= MAX_CONCURRENT_MESSAGES; i++) {
+            rnd.nextBytes(data);
+            RMIRequest<Integer> req = clientPort.createRequest(PROCESS_OP, "large-" + i, data.clone());
+            req.send();
+            reqs.add(req);
+            assertTrue(NTU.waitCondition(10_000, 10, () -> {
+                RMIRequestState state = req.getState();
+                return state != RMIRequestState.NEW && state != RMIRequestState.WAITING_TO_SEND;
+            }));
+        }
+        return reqs;
     }
 }

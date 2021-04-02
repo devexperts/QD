@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2020 Devexperts LLC
+ * Copyright (C) 2002 - 2021 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,24 @@
  */
 package com.devexperts.qd.kit;
 
+import com.devexperts.io.ByteArrayOutput;
+import com.devexperts.qd.DataField;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDLog;
+import com.devexperts.qd.SerialFieldType;
 import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.spi.DataSchemeService;
 import com.devexperts.services.Services;
 
+import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+
+import static com.devexperts.util.Base64.URLSAFE_UNPADDED;
 
 /**
  * The <code>DefaultScheme</code> is a basic implementation of data scheme.
@@ -39,6 +47,8 @@ public class DefaultScheme implements DataScheme {
     private final HashMap<String, AbstractDataObjField> obj_fields_by_name;
 
     private final Map<Class<?>, Object> services = Collections.synchronizedMap(new HashMap<>());
+
+    protected String digest;
 
     public DefaultScheme(SymbolCodec codec, DataRecord... records) {
         if (codec == null)
@@ -123,6 +133,21 @@ public class DefaultScheme implements DataScheme {
         return result;
     }
 
+    @Override
+    public String getDigest() {
+        String d = digest;
+        if (d == null) {
+            d = calculateDigest(this);
+            digest = d;
+        }
+        return d;
+    }
+
+    @Override
+    public String toString() {
+        return this.getClass().getSimpleName() + ", Digest " + getDigest();
+    }
+
     // ========== Miscellaneous Stuff ==========
 
     /**
@@ -151,4 +176,41 @@ public class DefaultScheme implements DataScheme {
     public static void verifyScheme(DataScheme scheme) {
     }
 
+    public static String calculateDigest(DataScheme scheme) {
+        MessageDigest digest;
+        byte[] output;
+        try {
+            digest = MessageDigest.getInstance("SHA-256");
+            ByteArrayOutput out = new ByteArrayOutput(1024);
+            for (int ridx = 0; ridx < scheme.getRecordCount(); ridx++) {
+                DataRecord rec = scheme.getRecord(ridx);
+                // Put name of record into hash
+                out.writeUTFString(rec.getName());
+                out.writeCompactInt((rec.hasTime() ? 1 : 0));
+                for (int fidx = 0; fidx < rec.getIntFieldCount(); fidx++) {
+                    DataField fld = rec.getIntField(fidx);
+                    serializeField(out, fld);
+                }
+                for (int fidx = 0; fidx < rec.getObjFieldCount(); fidx++) {
+                    DataField fld = rec.getObjField(fidx);
+                    serializeField(out, fld);
+                }
+            }
+            digest.update(out.toByteArray());
+            output = digest.digest();
+        } catch (NoSuchAlgorithmException | IOException e) {
+            throw new RuntimeException(e);
+        }
+        return URLSAFE_UNPADDED.encode(output);
+    }
+
+    private static void serializeField(ByteArrayOutput out, DataField fld) throws IOException {
+        // Skip hashing of names of VOID fields, as they are not using in protocol at all
+        if (fld.getSerialType() != SerialFieldType.VOID) {
+            out.writeUTFString(fld.getName());
+            out.writeUTFString(fld.getLocalName());
+            out.writeUTFString(fld.getPropertyName());
+        }
+        out.writeCompactInt(fld.getSerialType().getId());
+    }
 }

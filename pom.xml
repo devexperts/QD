@@ -3,7 +3,7 @@
   !++
   QDS - Quick Data Signalling Library
   !-
-  Copyright (C) 2002 - 2020 Devexperts LLC
+  Copyright (C) 2002 - 2021 Devexperts LLC
   !-
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
   If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.296</version>
+    <version>3.297</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -50,6 +50,7 @@
         <module>auth</module>
         <module>proto</module>
         <module>qd-rmi</module>
+        <module>dxfeed-scheme</module>
         <module>dxfeed-impl</module>
         <module>dxfeed-ipf-filter</module>
 
@@ -147,6 +148,7 @@
         <aspectj.version>1.8.2</aspectj.version>
         <junit.version>4.12</junit.version>
         <jmh.version>1.21</jmh.version>
+        <quarantining-test-runner.version>0.0.3</quarantining-test-runner.version>
     </properties>
 
     <profiles>

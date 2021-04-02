@@ -64,8 +64,8 @@
       </java>
       <includedFiles />
       <unextractableFiles />
-      <vmOptionsFile mode="template" overwriteMode="0" fileMode="644">
-        <content />
+      <vmOptionsFile mode="content" overwriteMode="0" fileMode="644">
+        <content>-Ddxscheme.wide=true</content>
       </vmOptionsFile>
       <customScript mode="1" file="">
         <content />

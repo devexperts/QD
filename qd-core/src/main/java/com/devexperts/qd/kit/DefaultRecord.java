@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2020 Devexperts LLC
+ * Copyright (C) 2002 - 2021 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -120,6 +120,28 @@ public class DefaultRecord implements DataRecord {
         if (otherField != null && otherField != field)
             throw new IllegalArgumentException("Field name conflict between " +
                 field.getName() + " and " + otherField.getName());
+    }
+
+    public void addFieldAlias(String oldName, String newName) {
+        if (newName.equals(BuiltinFields.EVENT_SYMBOL_FIELD_NAME)) {
+            throw new IllegalArgumentException(
+                "Field name conflicts with " + BuiltinFields.EVENT_SYMBOL_FIELD_NAME + ": " +
+                    oldName);
+        }
+        DataField sourceField = fieldsByName.get(oldName);
+        if (sourceField == null)
+            throw new IllegalArgumentException("Field with name " + oldName + " doesn't exist");
+        DataField targetField = fieldsByName.get(newName);
+        if (targetField != null) {
+            if (sourceField != targetField) {
+                throw new IllegalArgumentException("Field name conflicts with " + targetField.getName() + ": " +
+                    newName);
+            }
+        } else {
+            fieldsByName.put(newName, sourceField);
+            if (sourceField instanceof AbstractDataField)
+                ((AbstractDataField)sourceField).setPropertyName(newName);
+        }
     }
 
     /**

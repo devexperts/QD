@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2020 Devexperts LLC
+ * Copyright (C) 2002 - 2021 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -543,29 +543,34 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
         stateHolder.scheduleUpdate();
     }
 
+    private static final Set<String> SUPPORTED_PROPERTIES = new LinkedHashSet<>(Arrays.asList(
+        DXFEED_PROPERTIES_PROPERTY,
+        DXFEED_THREAD_POOL_SIZE_PROPERTY,
+        DXFEED_AGGREGATION_PERIOD_PROPERTY,
+        DXFEED_ADDRESS_PROPERTY,
+        DXFEED_USER_PROPERTY,
+        DXFEED_PASSWORD_PROPERTY,
+        DXFEED_WILDCARD_ENABLE_PROPERTY,
+        DXENDPOINT_EVENT_TIME_PROPERTY,
+        DXENDPOINT_STORE_EVERYTHING_PROPERTY,
+        DXSCHEME_NANO_TIME_PROPERTY,
+        DXPUBLISHER_PROPERTIES_PROPERTY,
+        DXPUBLISHER_ADDRESS_PROPERTY,
+        DXPUBLISHER_THREAD_POOL_SIZE_PROPERTY
+    ));
+
+    private static final Set<String> MASKED_PROPERTIES = new HashSet<>(Arrays.asList(
+        DXFEED_USER_PROPERTY,
+        DXFEED_PASSWORD_PROPERTY
+    ));
+
+    private static boolean supportsProperty(String key) {
+        return SUPPORTED_PROPERTIES.contains(key)
+            || key.startsWith(DXSCHEME_ENABLED_PROPERTY_PREFIX);
+    }
+
     @ServiceProvider
     public static class BuilderImpl extends Builder {
-        private static final Set<String> SUPPORTED_PROPERTIES = new LinkedHashSet<>(Arrays.asList(
-            DXFEED_PROPERTIES_PROPERTY,
-            DXFEED_THREAD_POOL_SIZE_PROPERTY,
-            DXFEED_AGGREGATION_PERIOD_PROPERTY,
-            DXFEED_ADDRESS_PROPERTY,
-            DXFEED_USER_PROPERTY,
-            DXFEED_PASSWORD_PROPERTY,
-            DXFEED_WILDCARD_ENABLE_PROPERTY,
-            DXENDPOINT_EVENT_TIME_PROPERTY,
-            DXENDPOINT_STORE_EVERYTHING_PROPERTY,
-            DXSCHEME_NANO_TIME_PROPERTY,
-            DXPUBLISHER_PROPERTIES_PROPERTY,
-            DXPUBLISHER_ADDRESS_PROPERTY,
-            DXPUBLISHER_THREAD_POOL_SIZE_PROPERTY
-        ));
-
-        private static final Set<String> MASKED_PROPERTIES = new HashSet<>(Arrays.asList(
-            DXFEED_USER_PROPERTY,
-            DXFEED_PASSWORD_PROPERTY
-        ));
-
         private final Properties props = new Properties();
         private QDEndpoint.Builder qdEndpointBuilder = QDEndpoint.newBuilder();
 
@@ -598,9 +603,8 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
 
         @Override
         public boolean supportsProperty(String key) {
-            return SUPPORTED_PROPERTIES.contains(key)
-                || key.startsWith(DXSCHEME_ENABLED_PROPERTY_PREFIX)
-                || qdEndpointBuilder.supportsProperty(key);
+            return DXEndpointImpl.supportsProperty(key) ||
+                qdEndpointBuilder.supportsProperty(key);
         }
 
         private void loadPropertiesDefaults(Properties defaultProps, boolean ignoreName) {
@@ -649,9 +653,10 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
             loadProperties();
             // Create scheme
             DataScheme scheme = QDFactory.getDefaultScheme();
-            SchemeProperties schemeProperties = new SchemeProperties(props);
             if (scheme == DXFeedScheme.getInstance())
-                scheme = DXFeedScheme.withProperties(schemeProperties);
+                scheme = DXFeedScheme.withProperties(new SchemeProperties(props));
+            else if (scheme instanceof ConfigurableDataScheme)
+                scheme = ((ConfigurableDataScheme)scheme).withProperties(props);
             // create QD endpoint
             QDEndpoint qdEndpoint = qdEndpointBuilder.
                 withProperties(props).
@@ -720,8 +725,14 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
         public RMIEndpoint build() {
             DXEndpointImpl dxEndpoint = null;
             qdEndpointBuilder.withProperties(props);
-            if (scheme != null)
-                qdEndpointBuilder.withScheme(scheme);
+            if (scheme == null) {
+                scheme = QDFactory.getDefaultScheme();
+                if (scheme == DXFeedScheme.getInstance())
+                    scheme = DXFeedScheme.withProperties(new SchemeProperties(props));
+                else if (scheme instanceof ConfigurableDataScheme)
+                    scheme = ((ConfigurableDataScheme)scheme).withProperties(props);
+            }
+            qdEndpointBuilder.withScheme(scheme);
             if (dxRole != null)
                 qdEndpointBuilder.withCollectors(getRoleContracts(dxRole));
             qdEndpointBuilder.withName(getOrCreateName());
@@ -743,8 +754,9 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
 
         @Override
         public boolean supportsProperty(String key) {
-            return super.supportsProperty(key)
-                || qdEndpointBuilder.supportsProperty(key);
+            return super.supportsProperty(key) ||
+                DXEndpointImpl.supportsProperty(key) ||
+                qdEndpointBuilder.supportsProperty(key);
         }
     }
 

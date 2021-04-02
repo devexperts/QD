@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2020 Devexperts LLC
+ * Copyright (C) 2002 - 2021 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,6 +18,7 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Locale;
 import java.util.zip.Deflater;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -128,9 +129,13 @@ public final class StreamCompression {
      * @throws NullPointerException if {@code mimeType} is {@code null}.
      */
     public static StreamCompression detectCompressionByMimeType(String mimeType) {
-        if (mimeType.equals(GZIP.mimeType) || mimeType.equals("application/gzip") || mimeType.equals("application/x-gzip"))
+        if (mimeType.equalsIgnoreCase(GZIP.mimeType) ||
+            mimeType.equalsIgnoreCase("application/gzip") ||
+            mimeType.equalsIgnoreCase("application/x-gzip"))
+        {
             return GZIP;
-        if (mimeType.equals(ZIP.mimeType))
+        }
+        if (mimeType.equalsIgnoreCase(ZIP.mimeType))
             return ZIP;
         return NONE;
     }
@@ -143,6 +148,7 @@ public final class StreamCompression {
      * @throws NullPointerException if {@code fileName} is {@code null}.
      */
     public static StreamCompression detectCompressionByExtension(String fileName) {
+        fileName = fileName.toLowerCase(Locale.ROOT);
         if (fileName.endsWith(GZIP.extension))
             return GZIP;
         if (fileName.endsWith(ZIP.extension))
@@ -166,13 +172,17 @@ public final class StreamCompression {
         int n = 4;
         byte[] buffer = new byte[n];
         in.mark(n);
-        int read = in.read(buffer);
+        int pos = 0;
+        do {
+            int r = in.read(buffer, pos, n - pos);
+            if (r <= 0)
+                break;
+            pos += r;
+        } while (pos < n);
         in.reset();
-        if (read != n)
-            return NONE;
-        if (buffer[0] == (byte) 0x1f && buffer[1] == (byte) 0x8b)
+        if (pos >= 2 && buffer[0] == (byte) 0x1f && buffer[1] == (byte) 0x8b)
             return GZIP;
-        if (buffer[0] == 'P' && buffer[1] == 'K' && buffer[2] == 0x03 && buffer[3] == 0x04)
+        if (pos >= 4 && buffer[0] == 'P' && buffer[1] == 'K' && buffer[2] == 0x03 && buffer[3] == 0x04)
             return ZIP;
         return NONE;
     }
@@ -267,14 +277,14 @@ public final class StreamCompression {
      */
     public InputStream decompress(InputStream in) throws IOException {
         switch (kind) {
-        case KIND_NONE:
-            return in;
-        case KIND_GZIP:
-            return new GZIPInput(in, GZIP_BUFFER_SIZE);
-        case KIND_ZIP:
-            return new ZipInput(in, ZIP_BUFFER_SIZE);
-        default:
-            throw new AssertionError();
+            case KIND_NONE:
+                return in;
+            case KIND_GZIP:
+                return new GZIPInput(in, GZIP_BUFFER_SIZE);
+            case KIND_ZIP:
+                return new ZipInput(in, ZIP_BUFFER_SIZE);
+            default:
+                throw new AssertionError();
         }
     }
 
@@ -288,14 +298,14 @@ public final class StreamCompression {
      */
     public OutputStream compress(OutputStream out, String name) throws IOException {
         switch (kind) {
-        case KIND_NONE:
-            return out;
-        case KIND_GZIP:
-            return new GZIPOutput(out, GZIP_BUFFER_SIZE, level);
-        case KIND_ZIP:
-            return new ZipOutput(out, ZIP_BUFFER_SIZE, level, name);
-        default:
-            throw new AssertionError();
+            case KIND_NONE:
+                return out;
+            case KIND_GZIP:
+                return new GZIPOutput(out, GZIP_BUFFER_SIZE, level);
+            case KIND_ZIP:
+                return new ZipOutput(out, ZIP_BUFFER_SIZE, level, name);
+            default:
+                throw new AssertionError();
         }
     }
 

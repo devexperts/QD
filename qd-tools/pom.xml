@@ -3,7 +3,7 @@
   !++
   QDS - Quick Data Signalling Library
   !-
-  Copyright (C) 2002 - 2020 Devexperts LLC
+  Copyright (C) 2002 - 2021 Devexperts LLC
   !-
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
   If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.296</version>
+        <version>3.297</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -73,6 +73,18 @@
             <artifactId>dxfeed-tools</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.binarytweed</groupId>
+            <artifactId>quarantining-test-runner</artifactId>
+            <version>${quarantining-test-runner.version}</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>junit</groupId>
+                    <artifactId>junit</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <!-- Utility classes for testing -->
         <dependency>
             <groupId>com.devexperts.qd</groupId>
@@ -89,6 +101,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <!-- some tests plays with global properties, so it's better to run isolated -->
+                    <reuseForks>false</reuseForks>
                     <systemProperties>
                         <!-- speedup file-dump based tests -->
                         <com.devexperts.qd.qtp.file.maxBufferTime>0.005s</com.devexperts.qd.qtp.file.maxBufferTime>

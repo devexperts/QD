@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ !++
+ QDS - Quick Data Signalling Library
+ !-
+ Copyright (C) 2002 - 2021 Devexperts LLC
+ !-
+ This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ If a copy of the MPL was not distributed with this file, You can obtain one at
+ http://mozilla.org/MPL/2.0/.
+ !__
+-->
+<dxfeed xmlns="https://www.dxfeed.com/datascheme"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="https://www.dxfeed.com/datascheme dxfeed-schema.xsd">
+    <!--
+    Supported serialization formats:
+
+    void, byte, utf_char, short, int, compact_int, byte_array, utf_char_array, tiny_decimal,
+    short_string, time, sequence, date, wide_decimal, string, custom_object, serial_object.
+
+    There is one special serialization type "decimal" which could be forced to be "wide_decimal"
+    or "tiny_decimal" for type instances. By default, it is "wide_decimal".
+
+    Fields can reference "field types".
+
+    1. Each basic serialization type is field type.
+    2. Type created with <type> element is field type.
+    3. Special types (see below) are field types.
+
+    Special types are embedded and have extended semantics.
+    They could not be defined here, as they have a special
+    code in codegen
+
+    * sequence — has special mapping in delegate together with time.
+    * time — has special mapping in delegate together with time. If there are several
+            "time" fields in record, "max" is used for mapping.
+    * time_nano_part — serial is "compact_int", generates special mapping together with time.
+    * flags — serial is "compact_int", could be split into sub-fields with bitmasks and shifts and mapped into enums.
+    * index — serial is "compact_int", used in history code.
+    -->
+
+    <types>
+        <!--
+        Special types, which are selected via select() in *FactoryImpl now
+        -->
+        <!-- select(SerialFieldType.COMPACT_INT) -->
+        <type name="int_or_decimal" base="wide_decimal"/>
+        <!-- select(SerialFieldType.DECIMAL, "dxscheme.price") -->
+        <type name="price" base="decimal"/>
+        <!-- select(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price") -->
+        <type name="turnover" base="decimal"/>
+        <!-- select(SerialFieldType.COMPACT_INT, "dxscheme.size") -->
+        <type name="size" base="int_or_decimal"/>
+        <!-- select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size") -->
+        <type name="volume" base="decimal"/>
+        <!-- select(SerialFieldType.DECIMAL, "dxscheme.oi") -->
+        <type name="oi" base="decimal"/>
+        <!-- Semantic names for "int_or_decimal" -->
+        <type name="open_interest" base="int_or_decimal"/>
+        <type name="count" base="int_or_decimal"/>
+
+        <!-- Default for unspecified decimal is tiny_decimal for now -->
+        <type name="decimal" base="wide_decimal"/>
+    </types>
+</dxfeed>

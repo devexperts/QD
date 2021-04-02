@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2020 Devexperts LLC
+ * Copyright (C) 2002 - 2021 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -147,7 +147,7 @@ public abstract class QDFactory {
             return defaultScheme; // double check under synchronization
         showVersion();
         defaultScheme = createDefaultScheme(null);
-        QDLog.log.info("Using scheme " + defaultScheme.getClass().getName());
+        QDLog.log.info("Using scheme " + defaultScheme.getClass().getName() + " " + defaultScheme.getDigest());
         return defaultScheme;
     }
 
@@ -155,14 +155,26 @@ public abstract class QDFactory {
      * Creates default data scheme for a specified class loader.
      * <code>loader</code> may be <code>null</code> to specify default class loader.
      * In this case "scheme" system property is checked for an implementation class name or jar file first.
+     * If "scheme" system property value starts with "ext:" prefix, try to load {@link DataSchemeFactory}
+     * via {@link Services#createServices(Class, ClassLoader)}.
      * The scheme is loaded via
      * {@link Services#createService(Class, ClassLoader, String) Services.createService(DataScheme.class, loader, scheme)},
      * where scheme is the value of "scheme" system property or null.
      * @throws IllegalArgumentException if default scheme is not found.
      */
     public static DataScheme createDefaultScheme(ClassLoader loader) {
-        DataScheme scheme = Services.createService(DataScheme.class, loader,
-            loader != null ? null : SystemProperties.getProperty("scheme", null));
+        String schemeProp = SystemProperties.getProperty("scheme", null);
+
+        if (schemeProp != null) {
+            for (DataSchemeFactory dsf : Services.createServices(DataSchemeFactory.class, loader)) {
+                // Could throw IllegalArgumentException!
+                DataScheme scheme = dsf.createDataScheme(schemeProp);
+                if (scheme != null)
+                    return scheme;
+            }
+        }
+
+        DataScheme scheme = Services.createService(DataScheme.class, loader, loader != null ? null : schemeProp);
         if (scheme == null)
             throw new IllegalArgumentException("Default scheme is not found");
         return scheme;

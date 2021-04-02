@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2020 Devexperts LLC
+ * Copyright (C) 2002 - 2021 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -328,6 +328,8 @@ public class EventsResource {
      *                     subscription is stored into the session under a name specified in this parameter, so that this subscription
      *                     can be later modified. The value of "DEFAULT_EVENT_SOURCE" is used by default when "session" parameter is set
      *                     to an empty string.
+     *                     Please notice that the new web session is not created and session ID cookie is not returned
+     *                     if the request already contains a valid cookie for existing session ID.
      * @param reconnect    Reconnect flag. When set, then existing session is recovered with its subscription.
      *                     "session" parameter is implied when "reconnect" is set.
      */
@@ -344,14 +346,16 @@ public class EventsResource {
         if (reconnect != null) {
             HttpSession httpSession = req.getSession(false);
             if (httpSession == null)
-                throw sessionNotFound();
+                throw sessionNotFound("httpSession is null");
             Object attr = httpSession.getAttribute(name);
             if (attr instanceof EventConnection) {
                 conn = (EventConnection) attr;
-                if (!filter.toString().equals(conn.filter.toString()))
-                    throw sessionNotFound();
+                if (!filter.toString().equals(conn.filter.toString())) {
+                    log.warn("Filters in " + name + " differ: " + filter + " vs. " + conn.filter);
+                    throw sessionNotFound("bad filters in " + name);
+                }
             } else {
-                throw sessionNotFound();
+                throw sessionNotFound("no connection " + name);
             }
         } else {
             conn = new EventConnection(getFeed(filter), filter);
@@ -359,8 +363,7 @@ public class EventsResource {
         // update subscription
         updateSubscription(SubOp.ADD_SUB, conn);
         // store in new session if requested (DO getSession BEFORE STARTING ASYNC)
-        if (session != null)
-            req.getSession(true).setAttribute(name, conn);
+        req.getSession(true).setAttribute(name, conn);
         // start asynchronous connection
         boolean wasActive = conn.start(req.startAsync(), format, indent);
         log.info((reconnect != null ? "Restarted " : "Started ") + (wasActive ? "active " : "") + conn);
@@ -378,13 +381,13 @@ public class EventsResource {
     @Secure(AUTH_REQUEST)
     @HelpOrder(3)
     public void doAddSubscription(String session) throws HttpErrorException, IOException {
-        HttpSession httpSession = req.getSession();
+        HttpSession httpSession = req.getSession(false);
         if (httpSession == null)
-            throw sessionNotFound();
+            throw sessionNotFound("httpSession is null");
         String name = session == null || session.isEmpty() ? DEFAULT_SESSION : session;
         EventConnection conn = (EventConnection) httpSession.getAttribute(name);
         if (conn == null)
-            throw sessionNotFound();
+            throw sessionNotFound("no connection " + name);
         updateSubscription(SubOp.ADD_SUB, conn);
         if (writeResponse(new SubResponse(SubResponse.Status.OK), conn))
             log.info("Added subscription to " + conn);
@@ -399,13 +402,13 @@ public class EventsResource {
     @Secure(AUTH_REQUEST)
     @HelpOrder(4)
     public void doRemoveSubscription(String session) throws HttpErrorException, IOException {
-        HttpSession httpSession = req.getSession();
+        HttpSession httpSession = req.getSession(false);
         if (httpSession == null)
-            throw sessionNotFound();
+            throw sessionNotFound("httpSession is null");
         String name = session == null || session.isEmpty() ? DEFAULT_SESSION : session;
         EventConnection conn = (EventConnection) httpSession.getAttribute(name);
         if (conn == null)
-            throw sessionNotFound();
+            throw sessionNotFound("no connection " + name);
         updateSubscription(SubOp.REMOVE_SUB, conn);
         if (writeResponse(new SubResponse(SubResponse.Status.OK), conn))
             log.info("Removed subscription from " + conn);
@@ -462,8 +465,8 @@ public class EventsResource {
     }
 
     @Nonnull
-    private HttpErrorException sessionNotFound() {
-        return new HttpErrorException(HttpServletResponse.SC_PRECONDITION_FAILED, "Session not found");
+    private HttpErrorException sessionNotFound(String message) {
+        return new HttpErrorException(HttpServletResponse.SC_PRECONDITION_FAILED, "Session not found: " + message);
     }
 
     private boolean writeResponse(Object result, Object logErrReason) {

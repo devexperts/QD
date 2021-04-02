@@ -1,0 +1,483 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ !++
+ QDS - Quick Data Signalling Library
+ !-
+ Copyright (C) 2002 - 2021 Devexperts LLC
+ !-
+ This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ If a copy of the MPL was not distributed with this file, You can obtain one at
+ http://mozilla.org/MPL/2.0/.
+ !__
+-->
+<dxfeed xmlns="https://www.dxfeed.com/datascheme"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="https://www.dxfeed.com/datascheme dxfeed-schema.xsd">
+    <!-- Any command line / external inclusion will have priority higher than 0 and override these settings -->
+    <import>types.xml</import>
+    <import>visibility.xml</import>
+
+    <enums>
+        <enum name="Direction">
+            <value name="UNDEFINED" ord="0"/>
+            <value name="DOWN" ord="1"/>
+            <value name="ZERO_DOWN" ord="2"/>
+            <value name="ZERO" ord="3"/>
+            <value name="ZERO_UP" ord="4"/>
+            <value name="UP" ord="5"/>
+        </enum>
+
+        <enum name="PriceType">
+            <value name="REGULAR" ord="0"/>
+            <value name="INDICATIVE" ord="1"/>
+            <value name="PRELIMINARY" ord="2"/>
+            <value name="FINAL" ord="3"/>
+        </enum>
+
+        <enum name="TradingStatus">
+            <value name="UNDEFINED" ord="0"/>
+            <value name="HALTED" ord="1"/>
+            <value name="ACTIVE" ord="2"/>
+        </enum>
+
+        <enum name="ShortSaleRestriction">
+            <value name="UNDEFINED" ord="0"/>
+            <value name="ACTIVE" ord="1"/>
+            <value name="INACTIVE" ord="2"/>
+        </enum>
+
+        <enum name="Scope">
+            <value name="COMPOSITE" ord="0"/>
+            <value name="REGIONAL" ord="1"/>
+            <value name="AGGREGATE" ord="2"/>
+            <value name="ORDER" ord="3"/>
+        </enum>
+
+        <enum name="Side">
+            <value name="UNDEFINED" ord="0"/>
+            <value name="BUY" ord="1"/>
+            <value name="SELL" ord="2"/>
+        </enum>
+
+        <enum name="IcebergType">
+            <value name="UNDEFINED" ord="0"/>
+            <value name="NATIVE" ord="1"/>
+            <value name="SYNTHETIC" ord="2"/>
+        </enum>
+    </enums>
+
+    <records>
+        <!-- MarketFactoryImpl:49 -->
+        <record name="Quote" regionals="true">
+            <field name="Sequence" type="sequence" disabled="true"/>
+            <field name="TimeNanoPart" type="time_nano_part" disabled="true"/>
+            <field name="BidTime" type="time"><alias name="Bid.Time"/></field>
+            <field name="BidExchangeCode" type="exchange" compositeOnly="true"><alias name="Bid.Exchange"/></field>
+            <field name="BidPrice" type="price"><alias name="Bid.Price"/></field>
+            <field name="BidSize" type="size"><alias name="Bid.Size"/></field>
+            <field name="AskTime" type="time"><alias name="Ask.Time"/></field>
+            <field name="AskExchangeCode" type="exchange" compositeOnly="true"><alias name="Ask.Exchange"/></field>
+            <field name="AskPrice" type="price"><alias name="Ask.Price"/></field>
+            <field name="AskSize" type="size"><alias name="Ask.Size"/></field>
+        </record>
+
+        <!-- MarketFactoryImpl:82 -->
+        <record name="Trade" regionals="true">
+            <field name="Time" type="time"><alias name="Last.Time"/></field>
+            <field name="Sequence" type="sequence"><alias name="Last.Sequence"/></field>
+            <field name="TimeNanoPart" type="time_nano_part" disabled="true"><alias name="Last.TimeNanoPart"/></field>
+            <field name="ExchangeCode" type="exchange" compositeOnly="true"><alias name="Last.Exchange"/></field>
+            <field name="Price" type="price"><alias name="Last.Price"/></field>
+            <field name="Size" type="size"><alias name="Last.Size"/></field>
+            <field name="Tick" type="compact_int"><alias name="Last.Tick"/></field>
+            <field name="Change" type="price"><alias name="Last.Change"/></field>
+            <field name="DayId" type="date"/>
+            <field name="Volume" type="volume"/>
+            <field name="DayTurnover" type="turnover"/>
+            <field name="Flags" type="flags">
+                <alias name="Last.Flags"/>
+                <bitfields>
+                    <field name="ETH" offset="0" size="1"/>
+                    <field name="Direction" offset="1" size="3"/>
+                </bitfields>
+            </field>
+        </record>
+
+        <!-- MarketFactoryImpl:109 -->
+        <record name="TradeETH" regionals="true">
+            <field name="Time" type="time"><alias name="ETHLast.Time"/></field>
+            <field name="Sequence" type="sequence"><alias name="ETHLast.Sequence"/></field>
+            <field name="TimeNanoPart" type="time_nano_part" disabled="true"><alias name="Last.TimeNanoPart"/></field>
+            <field name="ExchangeCode" type="exchange" compositeOnly="true"><alias name="ETHLast.Exchange"/></field>
+            <field name="Price" type="price"><alias name="ETHLast.Price"/></field>
+            <field name="Size" type="size"><alias name="ETHLast.Size"/></field>
+            <field name="Change" type="price"><alias name="ETHLast.Change"/></field>
+            <field name="DayId" type="date"/>
+            <field name="DayVolume" type="volume"><alias name="ETHVolume"/></field>
+            <field name="DayTurnover" type="turnover"><alias name="ETHDayTurnover"/></field>
+            <field name="Flags" type="flags">
+                <alias name="ETHLast.Flags"/>
+                <bitfields>
+                    <field name="ETH" offset="0" size="1"/>
+                    <field name="Direction" offset="1" size="3"/>
+                </bitfields>
+            </field>
+        </record>
+
+        <!-- MarketFactoryImpl:132 -->
+        <record name="Summary" regionals="true">
+            <field name="DayId" type="date"/>
+            <field name="DayOpenPrice" type="price"><alias name="DayOpen.Price"/></field>
+            <field name="DayHighPrice" type="price"><alias name="DayHigh.Price"/></field>
+            <field name="DayLowPrice" type="price"><alias name="DayLow.Price"/></field>
+            <field name="DayClosePrice" type="price"><alias name="DayClose.Price"/></field>
+            <field name="PrevDayId" type="date"/>
+            <field name="PrevDayClosePrice" type="price"><alias name="PrevDayClose.Price"/></field>
+            <field name="PrevDayVolume" type="volume"/>
+            <field name="OpenInterest" type="open_interest" compositeOnly="true"/>
+            <field name="Flags" type="flags">
+                <bitfields>
+                    <field name="PrevClose" offset="0" size="2"/>
+                    <field name="Close" offset="2" size="2"/>
+                </bitfields>
+            </field>
+        </record>
+
+        <!-- MarketFactoryImpl:155 -->
+        <record name="Fundamental" regionals="true">
+            <field name="OpenPrice" type="price"><alias name="Open.Price"/></field>
+            <field name="HighPrice" type="price"><alias name="High.Price"/></field>
+            <field name="LowPrice" type="price"><alias name="Low.Price"/></field>
+            <field name="ClosePrice" type="price"><alias name="Close.Price"/></field>
+            <field name="OpenInterest" type="open_interest" compositeOnly="true" eventName="Summary"/>
+        </record>
+
+        <!--
+        MarketFactoryImpl:168
+        Used with its own visibility rule to enable only "Book&I" by default
+        -->
+        <record name="Book" regionals="true" disabled="true">
+            <index field0="ID" />
+            <field name="ID" type="compact_int"/>
+            <!-- <field name="Sequence" type="void"/> -->
+            <field name="Time" type="time_seconds"/>
+            <field name="Type" type="char"/>
+            <field name="Price" type="price"/>
+            <field name="Size" type="size"/>
+            <field name="TimeInForce" type="char"/>
+            <field name="Symbol" type="utf_char_array"/>
+        </record>
+
+        <!-- MarketFactoryImpl:180 -->
+        <record name="Profile">
+            <field name="Beta" type="decimal"/>
+            <field name="Eps" type="decimal"/>
+            <field name="DivFreq" type="count"/>
+            <field name="ExdDivAmount" type="decimal"><alias name="ExdDiv.Amount"/></field>
+            <field name="ExdDivDate" type="date"><alias name="ExdDiv.Date"/></field>
+            <field name="HighPrice52" type="price"><alias name="52High.Price"/></field>
+            <field name="LowPrice52" type="price"><alias name="52Low.Price"/></field>
+            <field name="Shares" type="decimal"/>
+            <field name="FreeFloat" type="decimal"/>
+            <field name="HighLimitPrice" type="price"/>
+            <field name="LowLimitPrice" type="price"/>
+            <field name="HaltStartTime" type="time"><alias name="Halt.StartTime"/></field>
+            <field name="HaltEndTime" type="time"><alias name="Halt.EndTime"/></field>
+            <field name="Flags" type="flags">
+                <bitfields>
+                    <field name="Status" offset="0" size="2"/>
+                    <field name="SSR" offset="2" size="2"/>
+                </bitfields>
+            </field>
+            <field name="Description" type="utf_char_array"/>
+            <field name="StatusReason" type="utf_char_array"/>
+        </record>
+
+        <!-- MarketFactoryImpl:197 -->
+        <record name="OrderBase" disabled="true">
+            <index field1="Index"/>
+            <field name="Index" type="compact_int"/>
+            <field name="Time" type="time"/>
+            <field name="Sequence" type="sequence"/>
+            <field name="TimeNanoPart" type="time_nano_part" disabled="true"/>
+            <field name="ActionTime" type="time_millis" disabled="true"><tag name="fob"/></field>
+            <field name="OrderId" type="long" disabled="true"><tag name="fob"/></field>
+            <field name="AuxOrderId" type="long" disabled="true"><tag name="fob"/></field>
+            <field name="Price" type="price"/>
+            <field name="Size" type="size"/>
+            <field name="ExecutedSize" type="decimal" disabled="true"><tag name="fob"/></field>
+            <field name="Count" type="count" disabled="true"/>
+            <!-- Normal -->
+            <field name="Flags" type="flags">
+                <bitfields>
+                    <field name="Scope" offset="0" size="2"/>
+                    <field name="Side" offset="2" size="2"/>
+                    <field name="Exchange" offset="4" size="7"/>
+                </bitfields>
+            </field>
+            <field name="TradeId" type="long" disabled="true"><tag name="fob"/></field>
+            <field name="TradePrice" type="decimal" disabled="true"><tag name="fob"/></field>
+            <field name="TradeSize" type="decimal" disabled="true"><tag name="fob"/></field>
+            <!-- Special -->
+            <field name="MarketMaker" type="short_string" disabled="true"><alias name="MMID"/></field>
+        </record>
+
+        <record name="OrderIcebergBase" copyFrom="OrderBase" disabled="true">
+            <!-- Icebergs -->
+            <field name="IcebergPeakSize" type="decimal" disabled="true"/>
+            <field name="IcebergHiddenSize" type="decimal" disabled="true"/>
+            <field name="IcebergExecutedSize" type="decimal" disabled="true"/>
+            <field name="IcebergFlags" type="flags" disabled="true">
+                <bitfields>
+                    <field name="IcebergType" offset="0" size="2"/>
+                </bitfields>
+            </field>
+        </record>
+
+        <!-- MarketFactoryImpl:197 -->
+        <generator name="Order" type="suffix" delimiter="#">
+            <iterator>
+                <value/>
+                <value>NTV</value>
+                <value>ntv</value>
+                <value>NFX</value>
+                <value>ESPD</value>
+                <value>XNFI</value>
+                <value>ICE</value>
+                <value>ISE</value>
+                <value>DEA</value>
+                <value>DEX</value>
+                <value>BYX</value>
+                <value>BZX</value>
+                <value>BATE</value>
+                <value>CHIX</value>
+                <value>CEUX</value>
+                <value>BXTR</value>
+                <value>IST</value>
+                <value>BI20</value>
+                <value>ABE</value>
+                <value>FAIR</value>
+                <value>GLBX</value>
+                <value>glbx</value>
+                <value>ERIS</value>
+                <value>XEUR</value>
+                <value>xeur</value>
+                <value>CFE</value>
+                <value>C2OX</value>
+                <value>SMFE</value>
+            </iterator>
+            <!-- Simple copy from "OrderBase" -->
+            <record name="Order" copyFrom="OrderIcebergBase"/>
+        </generator>
+
+        <!-- MarketFactoryImpl:222 -->
+        <generator name="AnalyticOrder" type="suffix" delimiter="#">
+            <iterator>
+                <value/>
+                <value>GLBX</value>
+            </iterator>
+            <!-- Simple copy from "OrderBase" -->
+            <record name="AnalyticOrder" copyFrom="OrderIcebergBase"/>
+        </generator>
+
+        <!-- MarketFactoryImpl:247 -->
+        <generator name="SpreadOrder" type="suffix" delimiter="#">
+            <iterator>
+                <value/>
+                <value>ISE</value>
+            </iterator>
+            <record name="SpreadOrder" copyFrom="OrderBase">
+                <field name="SpreadSymbol" type="utf_char_array"/>
+            </record>
+        </generator>
+
+        <!-- MarketFactoryImpl:268 -->
+        <record name="MarketMaker">
+            <index field0="MMExchange" field1="MMID"/>
+            <field name="MMExchange" type="char"/>
+            <field name="MMID" type="short_string"/>
+            <field name="MMBidTime" type="time"><alias name="MMBid.Time"/></field>
+            <field name="MMBidPrice" type="price"><alias name="MMBid.Price"/></field>
+            <field name="MMBidSize" type="size"><alias name="MMBid.Size"/></field>
+            <field name="MMBidCount" type="count"><alias name="MMBid.Count"/></field>
+            <field name="MMAskTime" type="time"><alias name="MMAsk.Time"/></field>
+            <field name="MMAskPrice" type="price"><alias name="MMAsk.Price"/></field>
+            <field name="MMAskSize" type="size"><alias name="MMAsk.Size"/></field>
+            <field name="MMAskCount" type="count"><alias name="MMAsk.Count"/></field>
+        </record>
+
+        <!-- MarketFactoryImpl:279 -->
+        <record name="TimeAndSale" regionals="true">
+            <index field0="Time" field1="Sequence"/>
+            <field name="Time" type="time"/>
+            <field name="Sequence" type="sequence"/>
+            <field name="TimeNanoPart" type="time_nano_part" disabled="true"/>
+            <!-- NB! This is not only for composites, see line 296 -->
+            <field name="Exchange" type="char"/>
+            <field name="Price" type="price"/>
+            <field name="Size" type="size"/>
+            <field name="BidPrice" type="price"><alias name="Bid.Price"/></field>
+            <field name="AskPrice" type="price"><alias name="Ask.Price"/></field>
+            <field name="SaleConditions" type="short_string"><alias name="ExchangeSaleConditions"/></field>
+            <field name="Flags" type="flags">
+                <bitfields>
+                    <field name="Type" offset="0" size="2"/>
+                    <field name="ValidTick" offset="2" size="1"/>
+                    <field name="ETH" offset="3" size="1"/>
+                    <field name="SpreadLeg" offset="4" size="1"/>
+                    <field name="Side" offset="5" size="2"/>
+                    <field name="TradeThroughExempt" offset="8" size="7"/>
+                </bitfields>
+            </field>
+            <field name="Buyer" type="string" disabled="true"/>
+            <field name="Seller" type="string" disabled="true"/>
+        </record>
+
+        <!-- CandleFactoryImpl:39 -->
+        <record name="TradeHistory">
+            <index field0="Time" field1="Sequence"/>
+            <field name="Time" type="time"/>
+            <field name="Sequence" type="sequence"/>
+            <field name="Exchange" type="char"/>
+            <field name="Price" type="price"/>
+            <field name="Size" type="size"/>
+            <field name="Bid" type="price"/>
+            <field name="Ask" type="price"/>
+        </record>
+
+        <!-- CandleFactoryImpl:47 -->
+        <record name="CandleBase" disabled="true">
+            <index field0="Time" field1="Sequence"/>
+            <field name="Time" type="time"/>
+            <field name="Sequence" type="sequence"/>
+            <field name="Count" type="decimal"/>
+            <field name="Open" type="price"/>
+            <field name="High" type="price"/>
+            <field name="Low" type="price"/>
+            <field name="Close" type="price"/>
+            <field name="Volume" type="volume"/>
+            <field name="VWAP" type="price"/>
+            <field name="BidVolume" type="volume"><alias name="Bid.Volume"/></field>
+            <field name="AskVolume" type="volume"><alias name="Ask.Volume"/></field>
+            <field name="ImpVolatility" type="decimal"/>
+            <field name="OpenInterest" type="oi"/>
+        </record>
+
+        <!-- CandleFactoryImpl:47 -->
+        <generator name="Candle" type="suffix">
+            <!-- Only with empty suffix by default -->
+            <iterator>
+                <value/>
+            </iterator>
+            <record name="Candle" copyFrom="CandleBase"/>
+        </generator>
+
+        <!-- CandleFactoryImpl:64 -->
+        <generator name="OldStyleCandle" type="suffix" delimiter=".">
+            <!-- Only with empty suffix by default -->
+            <iterator>
+                <value>133ticks</value>
+                <value>144ticks</value>
+                <value>233ticks</value>
+                <value>333ticks</value>
+                <value>400ticks</value>
+                <value>512ticks</value>
+                <value>1600ticks</value>
+                <value>3200ticks</value>
+                <value>1min</value>
+                <value>2min</value>
+                <value>3min</value>
+                <value>4min</value>
+                <value>5min</value>
+                <value>6min</value>
+                <value>10min</value>
+                <value>12min</value>
+                <value>15min</value>
+                <value>20min</value>
+                <value>30min</value>
+                <value>1hour</value>
+                <value>2hour</value>
+                <value>3hour</value>
+                <value>4hour</value>
+                <value>6hour</value>
+                <value>8hour</value>
+                <value>12hour</value>
+                <value>Day</value>
+                <value>2Day</value>
+                <value>3Day</value>
+                <value>4Day</value>
+                <value>Week</value>
+                <value>Month</value>
+                <value>OptExp</value>
+            </iterator>
+            <record name="Trade" copyFrom="CandleBase" eventName="Candle"/>
+        </generator>
+
+        <!-- MiscFactoryImpl:36 -->
+        <record name="Message">
+            <field name="Message" type="serial_object"/>
+        </record>
+
+        <!-- MiscFactoryImpl:38 -->
+        <record name="Configuration">
+            <field name="Version" type="compact_int"/>
+            <field name="Configuration" type="serial_object"/>
+        </record>
+
+        <!-- OptionFactoryImpl:39 -->
+        <record name="Greeks">
+            <index field0="Time" field1="Sequence"/>
+            <field name="Time" type="time"/>
+            <field name="Sequence" type="sequence"/>
+            <field name="GreeksPrice" type="price"><alias name="Greeks.Price"/></field>
+            <field name="Volatility" type="decimal"/>
+            <field name="Delta" type="decimal"/>
+            <field name="Gamma" type="decimal"/>
+            <field name="Theta" type="decimal"/>
+            <field name="Rho" type="decimal"/>
+            <field name="Vega" type="decimal"/>
+        </record>
+
+        <!-- OptionFactoryImpl:49 -->
+        <record name="TheoPrice">
+            <index field0="Time" field1="Sequence"/>
+            <field name="Time" type="time"><alias name="Theo.Time"/></field>
+            <field name="Sequence" type="sequence"><alias name="Theo.Sequence"/></field>
+            <field name="TheoPrice" type="price"><alias name="Theo.Price"/></field>
+            <field name="TheoUnderlyingPrice" type="price"><alias name="Theo.UnderlyingPrice"/></field>
+            <field name="TheoDelta" type="decimal"><alias name="Theo.Delta"/></field>
+            <field name="TheoGamma" type="decimal"><alias name="Theo.Gamma"/></field>
+            <field name="TheoDividend" type="decimal"><alias name="Theo.Dividend"/></field>
+            <field name="TheoInterest" type="decimal"><alias name="Theo.Interest"/></field>
+        </record>
+
+        <!-- OptionFactoryImpl:58 -->
+        <record name="Underlying">
+            <index field0="Time" field1="Sequence"/>
+            <field name="Time" type="time"/>
+            <field name="Sequence" type="sequence"/>
+            <field name="Volatility" type="decimal"/>
+            <field name="FrontVolatility" type="decimal"/>
+            <field name="BackVolatility" type="decimal"/>
+            <field name="CallVolume" type="decimal"/>
+            <field name="PutVolume" type="decimal"/>
+            <field name="PutCallRatio" type="decimal"/>
+        </record>
+
+        <!-- OptionFactoryImpl:67 -->
+        <record name="Series">
+            <index field0="" field1="Index"/>
+            <field name="Index" type="compact_int"/>
+            <field name="Time" type="time"/>
+            <field name="Sequence" type="sequence"/>
+            <field name="Expiration" type="date"/>
+            <field name="Volatility" type="decimal"/>
+            <field name="CallVolume" type="decimal"/>
+            <field name="PutVolume" type="decimal"/>
+            <field name="PutCallRatio" type="decimal"/>
+            <field name="ForwardPrice" type="decimal"/>
+            <field name="Dividend" type="decimal"/>
+            <field name="Interest" type="decimal"/>
+        </record>
+    </records>
+</dxfeed>

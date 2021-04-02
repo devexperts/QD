@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2020 Devexperts LLC
+ * Copyright (C) 2002 - 2021 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -57,7 +57,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
-import java.util.function.BooleanSupplier;
 import javax.net.ssl.X509TrustManager;
 import javax.security.auth.Subject;
 
@@ -105,26 +104,27 @@ public class RMIFunctionalityTest {
         client.getClient().setRequestRunningTimeout(20000); // to make sure tests don't run forever
         channelLogic = new ChannelLogic(type, client, server, null);
         switch (type) {
-        case REGULAR:
-            initPortForOneWaySanding = () ->
-                channelLogic.clientPort = client.getClient().getPort(Subject.getSubject(AccessController.getContext()));
-            break;
-        case CLIENT_CHANNEL:
-            initPortForOneWaySanding = () -> {
-                channelLogic.request = client.getClient().getPort(Subject.getSubject(AccessController.getContext()))
-                    .createRequest(new RMIRequestMessage<>(RMIRequestType.DEFAULT, TestService.OPERATION));
-                channelLogic.clientPort = channelLogic.request.getChannel();
-                channelLogic.request.send();
-                channelLogic.initServerPort();
-            };
-            break;
-        case SERVER_CHANNEL:
-        default:
-            initPortForOneWaySanding = () -> {
-                channelLogic.initServerPort();
-                channelLogic.clientPort = channelLogic.testService.awaitChannel();
-            };
-            break;
+            case REGULAR:
+                initPortForOneWaySanding = () ->
+                    channelLogic.clientPort =
+                        client.getClient().getPort(Subject.getSubject(AccessController.getContext()));
+                break;
+            case CLIENT_CHANNEL:
+                initPortForOneWaySanding = () -> {
+                    channelLogic.request = client.getClient().getPort(Subject.getSubject(AccessController.getContext()))
+                        .createRequest(new RMIRequestMessage<>(RMIRequestType.DEFAULT, TestService.OPERATION));
+                    channelLogic.clientPort = channelLogic.request.getChannel();
+                    channelLogic.request.send();
+                    channelLogic.initServerPort();
+                };
+                break;
+            case SERVER_CHANNEL:
+            default:
+                initPortForOneWaySanding = () -> {
+                    channelLogic.initServerPort();
+                    channelLogic.clientPort = channelLogic.testService.awaitChannel();
+                };
+                break;
         }
     }
 
@@ -290,12 +290,10 @@ public class RMIFunctionalityTest {
             System.getProperties().setProperty("com.devexperts.connector.codec.ssl.protocols", "TLSv1.1");
             CountDownLatch connectedVersion = new CountDownLatch(2);
             CountDownLatch notConnectedVersion = new CountDownLatch(2);
-            client.addEndpointListener(endpoint -> {
-                (endpoint.isConnected() ? connectedVersion : notConnectedVersion).countDown();
-            });
-            server.addEndpointListener(endpoint -> {
-                (endpoint.isConnected() ? connectedVersion : notConnectedVersion).countDown();
-            });
+            client.addEndpointListener(endpoint ->
+                (endpoint.isConnected() ? connectedVersion : notConnectedVersion).countDown());
+            server.addEndpointListener(endpoint ->
+                (endpoint.isConnected() ? connectedVersion : notConnectedVersion).countDown());
             NTU.exportServices(server.getServer(),
                 new RMIServiceImplementation<>(new SummatorImpl(), Summator.class, "summator"),
                 channelLogic);
@@ -334,7 +332,7 @@ public class RMIFunctionalityTest {
         NTU.exportServices(server.getServer(),
             new RMIServiceImplementation<>(new SummatorImpl(), Summator.class, "summator"),
             channelLogic);
-        int port = NTU.connectServer(server, "ssl[isServer=true," + SampleCert.KEY_STORE_CONFIG + "]+" );
+        int port = NTU.connectServer(server, "ssl[isServer=true," + SampleCert.KEY_STORE_CONFIG + "]+");
         NTU.connect(client, "ssl[" + SampleCert.TRUST_STORE_CONFIG + "]+" + NTU.localHost(port));
         try {
             channelLogic.initPorts();
@@ -366,7 +364,7 @@ public class RMIFunctionalityTest {
 
     private static final StackTraceElement RMI_LAYER_SEPARATOR_FRAME =
         new StackTraceElement("com.devexperts.rmi", "<REMOTE-METHOD-INVOCATION>", null, -1);
-        // copied from RMIInvocationHandler
+    // copied from RMIInvocationHandler
 
     @Test
     public void testErrorThrowing() {
@@ -595,16 +593,16 @@ public class RMIFunctionalityTest {
                 requests[i].getBlocking();
             } catch (RMIException e) {
                 switch (e.getType()) {
-                case CANCELLED_BEFORE_EXECUTION:
-                    cancelled++;
-                    // ok;
-                    continue;
-                case CANCELLED_DURING_EXECUTION:
-                    // ok;
-                    continue;
-                default:
-                    i = n - 1;
-                    fail(e.getType() + " " + e.getMessage());
+                    case CANCELLED_BEFORE_EXECUTION:
+                        cancelled++;
+                        // ok;
+                        continue;
+                    case CANCELLED_DURING_EXECUTION:
+                        // ok;
+                        continue;
+                    default:
+                        i = n - 1;
+                        fail(e.getType() + " " + e.getMessage());
                 }
             } finally {
                 if (i == n - 1) {
@@ -711,7 +709,7 @@ public class RMIFunctionalityTest {
         rnd.nextBytes(largeData);
         RMIRequest<Integer> largeReq = channelLogic.clientPort.createRequest(processOp, "large", largeData.clone());
         largeReq.send();
-        assertTrue(waitCondition(10_000, 10, () -> {
+        assertTrue(NTU.waitCondition(10_000, 10, () -> {
             RMIRequestState state = largeReq.getState();
             return state != RMIRequestState.NEW && state != RMIRequestState.WAITING_TO_SEND;
         }));
@@ -726,6 +724,7 @@ public class RMIFunctionalityTest {
 
         largeReq.cancelOrAbort();
     }
+
 
     // --------------------------------------------------
 
@@ -787,7 +786,7 @@ public class RMIFunctionalityTest {
                     log.info("processing request " + reqId + " ...");
                     processingStarted.countDown();
                     if (data.length >= LARGE_SIZE) // make sure we have time to cancel request
-                        waitCondition(5_000, 10, () -> RMITask.current().getState().isCompletedOrCancelling());
+                        NTU.waitCondition(5_000, 10, () -> RMITask.current().getState().isCompletedOrCancelling());
                     return Arrays.hashCode(data);
                 }, LargeRequestProcessor.class),
             channelLogic);
@@ -818,7 +817,7 @@ public class RMIFunctionalityTest {
 
         // cancel all requests once they are sent
         ArrayList<RMIRequest<Integer>> requestsToCancel = new ArrayList<>(requests);
-        assertTrue(waitCondition(10_000, 10, () -> {
+        assertTrue(NTU.waitCondition(10_000, 10, () -> {
             for (Iterator<RMIRequest<Integer>> it = requestsToCancel.iterator(); it.hasNext(); ) {
                 RMIRequest<Integer> request = it.next();
                 RMIRequestState state = request.getState();
@@ -1094,13 +1093,4 @@ public class RMIFunctionalityTest {
         }
     }
 
-    private boolean waitCondition(long timeout, long pollPeriod, BooleanSupplier condition) {
-        long deadline = System.currentTimeMillis() + timeout;
-        while (!condition.getAsBoolean()) {
-            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(pollPeriod));
-            if (System.currentTimeMillis() > deadline)
-                return condition.getAsBoolean();
-        }
-        return true;
-    }
 }

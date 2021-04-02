@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2020 Devexperts LLC
+ * Copyright (C) 2002 - 2021 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,6 +15,7 @@ import com.devexperts.logging.Logging;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.MessageConnectorState;
 import com.devexperts.qd.qtp.QDEndpoint;
+import com.devexperts.qd.qtp.socket.ClientSocketConnector;
 import com.devexperts.qd.qtp.socket.ServerSocketConnector;
 import com.devexperts.qd.qtp.socket.ServerSocketTestHelper;
 import com.devexperts.rmi.RMIEndpoint;
@@ -25,11 +26,15 @@ import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.impl.DXEndpointImpl;
 import com.dxfeed.promise.Promise;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.net.Socket;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 
 /**
@@ -99,6 +104,16 @@ public class NTU {
         }
     }
 
+    public static boolean waitCondition(long timeout, long pollPeriod, BooleanSupplier condition) {
+        long deadline = System.currentTimeMillis() + timeout;
+        while (!condition.getAsBoolean()) {
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(pollPeriod));
+            if (System.currentTimeMillis() > deadline)
+                return condition.getAsBoolean();
+        }
+        return true;
+    }
+
     private static void waitConnected(QDEndpoint qdEndpoint) {
         List<MessageConnector> serverConnectors = qdEndpoint.getConnectors().stream()
             .filter(connector -> connector instanceof ServerSocketConnector)
@@ -119,8 +134,33 @@ public class NTU {
         }
     }
 
+    public static void disconnectClientAbruptly(QDEndpoint endpoint, boolean hard) throws Exception {
+        for (MessageConnector messageConnector : endpoint.getConnectors()) {
+            if (!(messageConnector instanceof ClientSocketConnector))
+                continue;
+            Object handler = getPrivateField(messageConnector, ClientSocketConnector.class, "handler");
+            // disable SocketSource delays
+            Method markForImmediateRestartMethod = handler.getClass().getMethod("markForImmediateRestart");
+            markForImmediateRestartMethod.setAccessible(true);
+            markForImmediateRestartMethod.invoke(handler);
+            if (hard) {
+                // imitate connection failure by closing socket
+                Object threadData = getPrivateField(handler, handler.getClass(), "threadData");
+                Socket socket = (Socket) getPrivateField(threadData, threadData.getClass(), "socket");
+                socket.close();
+            } else {
+                messageConnector.reconnect();
+            }
+        }
+    }
+
+    private static Object getPrivateField(Object object, Class<?> clazz, String fieldName) throws Exception {
+        Field field = clazz.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.get(object);
+    }
+
     private static boolean isEmpty(String s) {
         return s == null || s.isEmpty();
     }
-
 }

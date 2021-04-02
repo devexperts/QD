@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ !++
+ QDS - Quick Data Signalling Library
+ !-
+ Copyright (C) 2002 - 2021 Devexperts LLC
+ !-
+ This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+ If a copy of the MPL was not distributed with this file, You can obtain one at
+ http://mozilla.org/MPL/2.0/.
+ !__
+-->
+<dxfeed xmlns="https://www.dxfeed.com/datascheme"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="https://www.dxfeed.com/datascheme dxfeed-schema.xsd">
+    <enums>
+        <enum name="two" mode="update">
+            <value name="x" mode="update"><doc>Doc override</doc></value>
+            <value name="y" mode="update"><doc>Doc add</doc></value>
+            <value name="q" ord="3"/>
+        </enum>
+        <enum name="three">
+            <value name="foo" ord="0"/>
+            <value name="bar" ord="1"/>
+        </enum>
+    </enums>
+</dxfeed>
