@@ -1,0 +1,297 @@
+<!--
+  !++
+  QDS - Quick Data Signalling Library
+  !-
+  Copyright (C) 2002 - 2021 Devexperts LLC
+  !-
+  This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+  If a copy of the MPL was not distributed with this file, You can obtain one at
+  http://mozilla.org/MPL/2.0/.
+  !__
+-->
+<!DOCTYPE HTML>
+
+<script src="js/angularjs/angularjs-1.6.9.min.js"></script>
+<script>
+    let app = angular.module("restDemoApp", []);
+    app.controller("restDemoController", function ($scope, $http, $location, $httpParamSerializerJQLike) {
+        $scope.serverError = null;
+        $scope.logText = '';
+
+        $scope.session = 'TestSession';
+
+        // Initial subscription
+        $scope.symbols = ['SPX', 'MSFT', 'AAPL'];
+        
+        $scope.restUrl = 'rest';
+        $scope.ipfUrl = 'https://tools.dxfeed.com/ipf';
+        $scope.login = '';
+        $scope.password = '';
+
+        $scope.symbolsSubscribed = 0;
+        $scope.quotesReceived = 0;
+        $scope.tradesReceived = 0;
+        $scope.bytesReceived = 0;
+        $scope.bytesReceivedDisplay = 0;
+        $scope.eventsReceived = 0;
+
+        let tradeSymbolsMap = {};
+        let quoteSymbolsMap = {};
+
+        $scope.uniqueTradeSymbols = 0;
+        $scope.uniqueQuoteSymbols = 0;
+
+        $scope.aggregatedStats = [];
+        initAggregatedStats(0, 'Total');
+        initAggregatedStats(1000, 'In 1 sec');
+        initAggregatedStats(10000, 'In 10 sec');
+
+        this.doEventSourceConnection = function doEventSourceConnection() {
+            let handleError = function (error) {
+                console.log("EventSource error", error);
+                $scope.serverError = JSON.stringify(error);
+                $scope.logText += '\nEventSource error: ' + JSON.stringify(error);
+            }
+            let handleCallback = function (msg) {
+                $scope.$apply(function () {
+                    $scope.eventsReceived++;
+
+                    $scope.aggregatedStats.forEach(stats => {
+                        stats.bytesReceived += msg.data.length;
+                    })
+                    let timeNow = Date.now();
+                    let parser = new DOMParser();
+                    let xmlDoc = parser.parseFromString(msg.data, "text/xml");
+
+                    function xmlRecordsIterator(records, counterInc, symbolMapper) {
+                        for (let i = 0; i < records.length; i++) {
+                            $scope.aggregatedStats.forEach(stats => {
+                                counterInc(stats);
+                            })
+                            let childNodes = records[i].childNodes;
+                            for (let j = 0; j < childNodes.length; j++) {
+                                let cn = childNodes[j];
+                                let name = cn.nodeName;
+                                let value = cn.firstChild ? cn.firstChild.nodeValue : null;
+                                if (name === 'eventSymbol') {
+                                    let symbol = value;
+                                    $scope.aggregatedStats.forEach(stats => {
+                                        symbolMapper(stats, symbol);
+                                    })
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    xmlRecordsIterator(xmlDoc.getElementsByTagName("Quote"), stats => {
+                        stats.quotesReceived++;
+                    }, (stats, symbol) => {
+                        if (!stats.quoteSymbolsMap[symbol]) {
+                            stats.uniqueQuoteSymbols++;
+                        }
+                        stats.quoteSymbolsMap[symbol] = timeNow;
+                    })
+
+                    xmlRecordsIterator(xmlDoc.getElementsByTagName("Trade"), stats => {
+                        stats.tradesReceived++;
+                    }, (stats, symbol) => {
+                        if (!stats.tradeSymbolsMap[symbol]) {
+                            stats.uniqueTradeSymbols++;
+                        }
+                        stats.tradeSymbolsMap[symbol] = timeNow;
+                    })
+
+                    $scope.aggregatedStats.forEach(stats => {
+                        if (timeNow > stats.nextPeriodEnd) {
+                            recalculateAggregatedStats(stats, timeNow);
+                        }
+                    })
+                });
+            }
+            let url = $scope.restUrl + '/eventSource' +
+                '?events=' + 'Quote,Trade' +
+                '&symbols=' + $scope.symbols.join(',') +
+                '&session=' + $scope.session;
+            let source = new EventSource(url);
+            source.addEventListener('error', handleError);
+            source.addEventListener('message', handleCallback, false);
+            $scope.symbolsSubscribed = $scope.symbols.length;
+            $scope.logText += '\nEventSource initialized.';
+        }
+
+        this.loadIpf = function doLoadIpf(url) {
+            this.doEventSourceConnection();
+            let authHeader = 'Basic ' + btoa($scope.login + ':' + $scope.password);
+            console.log("authHeader", authHeader);
+            $scope.logText += '\nLoading IPF';
+            $http.get(url, {headers: {Authorization: authHeader }}).then(response => {
+                console.log("loadIpf response", response);
+                let ipf = response.data;
+                let ipfLines = ipf.split('\n');
+                console.log("ipfLines", ipfLines.length);
+                let symbolBatches = [];
+                let symbols = [];
+                $scope.logText += '\nIPF loaded (' + ipfLines.length + ' lines).';
+                ipfLines.forEach(line => {
+                    if (!line.startsWith("#")) {
+                        let parts = line.split(',');
+                        symbols.push(parts[1]);
+                        if (symbols.length >= 1000) {
+                            console.log('symbols', symbols);
+                            symbolBatches.push(symbols);
+                            symbols = [];
+                        }
+                    }
+                })
+                if (symbols.length > 0) {
+                    console.log('symbols', symbols);
+                    symbolBatches.push(symbols);
+                    symbols = [];
+                }
+                var totalSymbols = 0;
+                symbolBatches.forEach(batch => {
+                    let symbolsString = batch.join(',');
+                    console.log('Subscribing to ', symbolsString)
+                    doAddSubscriptionBatch(symbolsString);
+                    totalSymbols += batch.length;
+                    $scope.symbolsSubscribed += batch.length;
+                })
+                console.log('Total symbols subscribed: ' + totalSymbols);
+                $scope.logText += '\nTotal symbols subscribed: ' + totalSymbols;
+            }, error => {
+                console.log("loadIpf error", error);
+                $scope.serverError = JSON.stringify(error);
+            });
+        }
+
+        function doAddSubscriptionBatch(symbols) {
+            let jsonRequest = {
+                symbols: symbols,
+                events: 'Quote,Trade',
+                session: $scope.session
+            }
+            let data = $httpParamSerializerJQLike(jsonRequest);
+            console.log("Data: ", data);
+            let req = {
+                method: 'POST',
+                url: $scope.restUrl + '/addSubscription',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                data: data
+            }
+            $http(req).then(response => {
+                console.log("addSubscriptionBatch response", response);
+            }, error => {
+                console.log("addSubscriptionBatch error", error);
+                $scope.serverError = error;
+            });
+        }
+
+        function initAggregatedStats(period, title) {
+            let entry = {
+                period: period,
+                title: title,
+
+                tradeSymbolsMap: {},
+                quoteSymbolsMap: {},
+                uniqueQuoteSymbols: 0,
+                uniqueTradeSymbols: 0,
+
+                bytesReceived: 0,
+                quotesReceived: 0,
+                tradesReceived: 0,
+                nextPeriodEnd: 0,
+
+                bytesReceivedDisplay: 0,
+                quotesReceivedDisplay: 0,
+                tradesReceivedDisplay: 0,
+
+                uniqueQuoteSymbolsDisplay: 0,
+                uniqueTradeSymbolsDisplay: 0
+            }
+            $scope.aggregatedStats.push(entry);
+        }
+
+        function recalculateAggregatedStats(entry, timeNow) {
+            entry.nextPeriodEnd = timeNow + entry.period;
+
+            entry.bytesReceivedDisplay = Number(entry.bytesReceived).toLocaleString();
+            entry.quotesReceivedDisplay = entry.quotesReceived;
+            entry.tradesReceivedDisplay = entry.tradesReceived;
+            entry.uniqueQuoteSymbolsDisplay = entry.uniqueQuoteSymbols;
+            entry.uniqueTradeSymbolsDisplay = entry.uniqueTradeSymbols;
+
+            if (!entry.period) {
+                return;
+            }
+            
+            entry.bytesReceived = 0;
+            entry.quotesReceived = 0;
+            entry.tradesReceived = 0;
+            entry.uniqueQuoteSymbols = 0;
+            entry.uniqueTradeSymbols = 0;
+            entry.tradeSymbolsMap = {};
+            entry.quoteSymbolsMap = {};
+        }
+    });
+</script>
+
+<div ng-app="restDemoApp" ng-controller="restDemoController as $ctrl">
+    <hr>
+    <h1>REST Demo: Bulk subscription</h1>
+    <div ng-show="serverError">
+        <div>
+            Error:
+            <pre style="white-space: pre-wrap;">{{ serverError }}</pre>
+        </div>
+    </div>
+
+    <h3>
+        Symbols subscribed: {{ symbolsSubscribed }}
+    </h3>
+    <table>
+        <tr>
+            <th ng-repeat="stats in aggregatedStats">
+                {{ stats.title }}
+            </th>
+        </tr>
+        <tr>
+            <td ng-repeat="stats in aggregatedStats">
+                <div>
+                    <h3>
+                        &mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;
+                        <br>
+                        Total bytes received: {{ stats.bytesReceivedDisplay }}
+                        <br>
+                        Total quotes received: {{ stats.quotesReceivedDisplay }}
+                        <br>
+                        Total trades received: {{ stats.tradesReceivedDisplay }}
+                        <br>
+                        Unique symbols in quotes: {{ stats.uniqueQuoteSymbolsDisplay }}
+                        <br>
+                        Unique symbols in trades: {{ stats.uniqueTradeSymbolsDisplay }}
+                    </h3>
+                </div>
+            </td>
+        </tr>
+    </table>
+    <div>
+        <form>
+            REST base URL: <input ng-model="restUrl" ng-required>
+            <br>
+            IPF URL: <input ng-model="ipfUrl" ng-required>
+            <br>
+            Basic auth: Login <input ng-model="login" ng-required>
+            Password: <input ng-model="password" ng-required>
+            <br>
+            <button ng-disabled="quotesReceived" ng-click="$ctrl.loadIpf(ipfUrl)">Start</button>
+            <br>
+        </form>
+    </div>
+    <div ng-show="logText">
+        <div>
+            Log:
+            <pre style="white-space: pre-wrap;">{{ logText }}</pre>
+        </div>
+    </div>
+</div>

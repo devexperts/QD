@@ -117,7 +117,7 @@ final class SubProvider extends AbstractRecordProvider implements QDStatsContain
     void remove(int key, int rid) {
         SubMatrix sub = this.sub;
         int index = sub.getIndex(key, rid, 0);
-        if (sub.getInt(index + QUEUE_MARK) == 0) // Not found or not in QUEUE.
+        if (sub.getInt(index + QUEUE_MARK) == 0) // Not found or not payload.
             return;
         sub.setInt(index + QUEUE_MARK, 0);
         sub.updateRemovedPayload(rid);
@@ -126,19 +126,23 @@ final class SubProvider extends AbstractRecordProvider implements QDStatsContain
         if (queue_head == index) {
             do {
                 int next = sub.getInt(index + QUEUE_NEXT);
+                // remove from queue (also makes cell "removed")
                 sub.setInt(index + QUEUE_NEXT, 0);
+                sub.clearRemovedCellsTrail(index, QUEUE_NEXT);
                 index = next;
             } while (index > 0 && sub.getInt(index + QUEUE_MARK) == 0);
             queue_head = index;
             if (index < 0)
                 queue_tail = -1;
         }
-        rehashIfNeeded();
+        if (queue_head < 0) // postpone downsize rehashing until queue is empty
+            rehashIfNeeded();
     }
 
     private void rehashIfNeeded() {
         if (sub.needRehash(MAX_SUB_SHIFT))
             rehash();
+        collector.mapper.rehashIfNeeded();
     }
 
     // This method can try to allocate a lot of memory for rehash and die due to OutOfMemoryError.
@@ -305,7 +309,9 @@ final class SubProvider extends AbstractRecordProvider implements QDStatsContain
                     sub.setLong(index + TIME_SUB, 0);
             }
             int next = sub.getInt(index + QUEUE_NEXT);
+            // remove from queue (also makes cell "removed")
             sub.setInt(index + QUEUE_NEXT, 0);
+            sub.clearRemovedCellsTrail(index, QUEUE_NEXT);
             index = next;
 
             // Adjust first/last here to protect from exception in visitor.
@@ -313,13 +319,12 @@ final class SubProvider extends AbstractRecordProvider implements QDStatsContain
             if (index < 0)
                 queue_tail = -1;
         }
-        rehashIfNeeded();
+        if (queue_head < 0) // postpone downsize rehashing until queue is empty
+            rehashIfNeeded();
         return queue_head > 0;
     }
 
     // SYNC: none
-
-
     @Override
     public void setRecordListener(RecordListener listener) {
         if (this.listener == listener)

@@ -11,8 +11,8 @@
  */
 package com.dxfeed.schedule.test;
 
-import com.binarytweed.test.Quarantine;
-import com.binarytweed.test.QuarantiningRunner;
+import com.devexperts.test.isolated.Isolated;
+import com.devexperts.test.isolated.IsolatedRunner;
 import com.dxfeed.schedule.Schedule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -22,8 +22,8 @@ import java.io.IOException;
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertFalse;
 
-@RunWith(QuarantiningRunner.class)
-@Quarantine({"com.dxfeed.schedule"})
+@RunWith(IsolatedRunner.class)
+@Isolated({"com.dxfeed.schedule"})
 public class ScheduleDefaultTest {
     @Test
     public void testDefaults() throws IOException {

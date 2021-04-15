@@ -152,6 +152,37 @@ class SubMatrix extends AbstractMatrix {
             throw new IllegalStateException("Payload size underflow");
     }
 
+    // clear hash-table "removed" elements sequence ending with an empty cell
+    // SYNC: global+local
+    void clearRemovedCellsTrail(int index, int occupiedOffset) {
+        int prevIndex = index - step;
+        if (prevIndex == 0)
+            prevIndex = matrix.length - step;
+        if (cellIsEmpty(prevIndex)) {
+            while (cellIsRemoved(index, occupiedOffset)) {
+                int key = getInt(index + KEY);
+                if ((key & SymbolCodec.VALID_CIPHER) == 0)
+                    mapper.decCounter(key);
+                clearIndexData(index, 0);
+                overallSize--;
+                index += step;
+                if (index == matrix.length)
+                    index = step;
+            }
+        }
+    }
+
+    // cell is removed from QUEUE but still occupies hash-table cell
+    private boolean cellIsRemoved(int index, int occupiedOffset) {
+        return !cellIsEmpty(index) && !isPayload(index) && getInt(index + occupiedOffset) == 0;
+    }
+
+    // cell is completely empty
+    private boolean cellIsEmpty(int index) {
+        return getInt(index + KEY) == 0;
+    }
+
+
     // ========== Maintenance ==========
 
     // This method can try to allocate a lot of memory for rehash and die due to OutOfMemoryError.
@@ -165,6 +196,8 @@ class SubMatrix extends AbstractMatrix {
 
     void rehashTo(SubMatrix dest) {
         startRehash();
+        if (overallSize == 0)
+            return;
         dest.overallSize = payloadSize;
         for (int index = matrix.length; (index -= step) > 0;) {
             int key = matrix[index + KEY];

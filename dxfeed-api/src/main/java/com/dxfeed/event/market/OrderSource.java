@@ -319,6 +319,13 @@ public final class OrderSource extends IndexedEventSource {
      */
     public static final OrderSource SMFE = new OrderSource("SMFE", PUB_ORDER);
 
+    /**
+     * Investors exchange. Record for price level book.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource iex = new OrderSource("iex", PUB_ORDER);
+
     // ATTENTION: Every time a custom OrderSource constant is added run com.dxfeed.api.codegen.ImplCodeGen
     // and commit updated implementation classes.
 

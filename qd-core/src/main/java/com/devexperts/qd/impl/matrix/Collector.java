@@ -441,6 +441,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
             rehashAgentIfNeeded(agent);
             rehashAgentIfNeeded(total);
             refilterStreamBuffersAfterSubscriptionChange(agent);
+            mapper.rehashIfNeeded();
             agent.reducedSub = false;
         }
     }

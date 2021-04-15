@@ -1,3 +1,11 @@
+QDS 3.298:
+
+* [QD-1291] dxLib: Add parameterized test factory for quarantined test
+* [QD-1290] New order source iex
+* [QD-1282] WebAPI Test Client
+* [QD-1284] dxFeed webservice: skip license check for 3rd party JS libraries
+* [QD-1289] Optimize symbol mapping tables on a subscription downsizing
+
 QDS 3.297:
 
 * [QD-1288] InstrumentProfileReader fails on IPF service request with compression

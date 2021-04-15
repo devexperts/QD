@@ -11,8 +11,8 @@
  */
 package com.devexperts.util.test;
 
-import com.binarytweed.test.Quarantine;
-import com.binarytweed.test.QuarantiningRunner;
+import com.devexperts.test.isolated.Isolated;
+import com.devexperts.test.isolated.IsolatedRunner;
 import com.devexperts.util.Indexer;
 import com.devexperts.util.IndexerFunction;
 import org.junit.Test;
@@ -23,8 +23,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertTrue;
 
-@RunWith(QuarantiningRunner.class)
-@Quarantine({"com.devexperts.util"})
+@RunWith(IsolatedRunner.class)
+@Isolated({"com.devexperts.util"})
 public class IndexerInitTest {
 
     @Test

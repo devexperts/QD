@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.297</version>
+        <version>3.298</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -72,18 +72,6 @@
             <groupId>com.devexperts.qd</groupId>
             <artifactId>dxfeed-tools</artifactId>
             <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.binarytweed</groupId>
-            <artifactId>quarantining-test-runner</artifactId>
-            <version>${quarantining-test-runner.version}</version>
-            <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>junit</groupId>
-                    <artifactId>junit</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <!-- Utility classes for testing -->
         <dependency>

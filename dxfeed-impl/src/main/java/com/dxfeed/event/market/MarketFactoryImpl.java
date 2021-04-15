@@ -198,7 +198,7 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         builder.addRequiredField("Profile", "Description", SerialFieldType.UTF_CHAR_ARRAY);
         builder.addOptionalField("Profile", "StatusReason", SerialFieldType.UTF_CHAR_ARRAY, "Profile", "StatusReason", true);
 
-        for (String suffix : SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.suffixes", "|#NTV|#ntv|#NFX|#ESPD|#XNFI|#ICE|#ISE|#DEA|#DEX|#BYX|#BZX|#BATE|#CHIX|#CEUX|#BXTR|#IST|#BI20|#ABE|#FAIR|#GLBX|#glbx|#ERIS|#XEUR|#xeur|#CFE|#C2OX|#SMFE").split("\\|")) {
+        for (String suffix : SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.suffixes", "|#NTV|#ntv|#NFX|#ESPD|#XNFI|#ICE|#ISE|#DEA|#DEX|#BYX|#BZX|#BATE|#CHIX|#CEUX|#BXTR|#IST|#BI20|#ABE|#FAIR|#GLBX|#glbx|#ERIS|#XEUR|#xeur|#CFE|#C2OX|#SMFE|#iex").split("\\|")) {
             String recordName = "Order" + suffix;
             builder.addRequiredField(recordName, "Void", SerialFieldType.VOID, SchemeFieldTime.FIRST_TIME_INT_FIELD);
             builder.addRequiredField(recordName, "Index", SerialFieldType.COMPACT_INT, SchemeFieldTime.SECOND_TIME_INT_FIELD);

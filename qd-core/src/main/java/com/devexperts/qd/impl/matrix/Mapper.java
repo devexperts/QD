@@ -69,7 +69,7 @@ final class Mapper {
 
     // This method can try to allocate a lot of memory for rehash and die due to OutOfMemoryError.
     // SYNC: global
-    private Mapping rehashIfNeeded() {
+    Mapping rehashIfNeeded() {
         Mapping mapping = this.mapping;
         if (mapping.needRehash())
             this.mapping = mapping = mapping.rehash();

@@ -11,8 +11,6 @@
  */
 package com.devexperts.qd.tools.test;
 
-import com.binarytweed.test.Quarantine;
-import com.binarytweed.test.QuarantiningRunner;
 import com.devexperts.io.IOUtil;
 import com.devexperts.io.StreamInput;
 import com.devexperts.qd.DataRecord;
@@ -29,6 +27,8 @@ import com.devexperts.qd.qtp.file.FileWriterImpl;
 import com.devexperts.qd.tools.Tools;
 import com.devexperts.qd.util.Decimal;
 import com.devexperts.test.ThreadCleanCheck;
+import com.devexperts.test.isolated.Isolated;
+import com.devexperts.test.isolated.IsolatedRunner;
 import com.devexperts.util.TimeFormat;
 import com.dxfeed.api.impl.SchemeBuilder;
 import com.dxfeed.api.impl.SchemeProperties;
@@ -56,8 +56,8 @@ import static org.junit.Assert.fail;
  * Test replaces default scheme using global property, so requires isolation.
  */
 @SuppressWarnings("SameParameterValue")
-@RunWith(QuarantiningRunner.class)
-@Quarantine({"com.dxfeed", "com.devexperts.qd"})
+@RunWith(IsolatedRunner.class)
+@Isolated({"com.dxfeed", "com.devexperts.qd"})
 public class DumpTimestampConversionTest {
 
     private static final DataScheme SCHEME = DumpSchemeProvider.getInstance();

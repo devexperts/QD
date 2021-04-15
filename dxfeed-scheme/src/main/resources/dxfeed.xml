@@ -265,6 +265,7 @@
                 <value>CFE</value>
                 <value>C2OX</value>
                 <value>SMFE</value>
+                <value>iex</value>
             </iterator>
             <!-- Simple copy from "OrderBase" -->
             <record name="Order" copyFrom="OrderIcebergBase"/>
