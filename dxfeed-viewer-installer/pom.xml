@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.298</version>
+        <version>3.299</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -30,7 +30,7 @@
         use of ${project.version} here would cause problems during release with jgitflow plugin dependency tracking.
         jgitflow plugin will synchronize this value with main project version during release procedure automatically.
         -->
-        <viewer.version>3.298</viewer.version>
+        <viewer.version>3.299</viewer.version>
     </properties>
 
     <profiles>
@@ -105,8 +105,8 @@
 
             <repositories>
                 <repository>
-                    <id>bintray-dxfeed</id>
-                    <url>https://dl.bintray.com/dxfeed/Maven</url>
+                    <id>dxfeed-open</id>
+                    <url>https://dxfeed.jfrog.io/artifactory/maven-open</url>
                 </repository>
             </repositories>
         </profile>

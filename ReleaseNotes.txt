@@ -1,3 +1,8 @@
+QDS 3.299:
+
+* [QD-1293] Migrate from bintray to artifactory
+* [QD-1295] RMI: Completed RMI tasks stay in connection' queue on disconnect
+
 QDS 3.298:
 
 * [QD-1291] dxLib: Add parameterized test factory for quarantined test

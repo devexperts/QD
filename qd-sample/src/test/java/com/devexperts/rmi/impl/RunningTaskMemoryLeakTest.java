@@ -29,13 +29,14 @@ import org.junit.runner.RunWith;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -59,6 +60,8 @@ public class RunningTaskMemoryLeakTest {
     private DummySupplier proxy;
 
     private AtomicInteger lastRequestId;
+    private List<RMIConnection> serverConnections;
+    private List<RMIConnection> clientConnections;
 
     @Before
     public void setUp() {
@@ -72,14 +75,14 @@ public class RunningTaskMemoryLeakTest {
             .withName("client")
             .withSide(RMIEndpoint.Side.CLIENT)
             .build();
+        serverConnections = null;
+        clientConnections = null;
         server.getServer().setDefaultExecutor(executor);
         client.getClient().setDefaultExecutor(executor);
         client.getClient().setRequestRunningTimeout(10_000);
         oneTaskStarted = new CountDownLatch(1);
         server.getServer().export(new DummySupplierImpl(), DummySupplier.class);
         proxy = client.getClient().getProxy(DummySupplier.class);
-        assertFalse(hasRunningTask(client));
-        assertFalse(hasRunningTask(server));
     }
 
     @After
@@ -169,11 +172,17 @@ public class RunningTaskMemoryLeakTest {
             }
         });
         awaitRunningTasks();
+        assertFalse("Completed task on server", checkServerConnections(RunningTaskMemoryLeakTest::hasCompletedTask));
+        assertFalse("Completed task on client", checkClientConnections(RunningTaskMemoryLeakTest::hasCompletedTask));
     }
 
     private void connect() {
         int port = NTU.connectServer(server);
         NTU.connect(client, NTU.localHost(port));
+        NTU.waitCondition(10_000, 100, () -> client.isConnected());
+        // capture initially open connections
+        serverConnections = getConnections(server);
+        clientConnections = getConnections(client);
     }
 
     /**
@@ -188,16 +197,20 @@ public class RunningTaskMemoryLeakTest {
     }
 
     private void awaitRunningTasks() {
-        for (int i = 0; i < 100; ++i) {
-            if (!hasRunningTask(client) && !hasRunningTask(server)) {
-                return;
-            }
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException ignored) {
-            }
-        }
-        fail("Memory leak on: " + (hasRunningTask(client) ? "client " : "") + (hasRunningTask(server) ? "server" : ""));
+        NTU.waitCondition(10_000, 100, () ->
+            !checkClientConnections(RunningTaskMemoryLeakTest::hasRunningTask) &&
+            !checkServerConnections(RunningTaskMemoryLeakTest::hasRunningTask)
+        );
+        assertFalse("Running task on server", checkServerConnections(RunningTaskMemoryLeakTest::hasRunningTask));
+        assertFalse("Running task on client", checkClientConnections(RunningTaskMemoryLeakTest::hasRunningTask));
+    }
+
+    private boolean checkClientConnections(Predicate<RMIConnection> test) {
+        return connectionsAnyMatch(getConnections(client), test) || connectionsAnyMatch(clientConnections, test);
+    }
+
+    private boolean checkServerConnections(Predicate<RMIConnection> test) {
+        return connectionsAnyMatch(getConnections(server), test) || connectionsAnyMatch(serverConnections, test);
     }
 
     /**
@@ -240,14 +253,24 @@ public class RunningTaskMemoryLeakTest {
         fail(remaining.size() + " of " + promises.size() + " requests was not sent in " + timeout + " ms");
     }
 
-    private boolean hasRunningTask(RMIEndpointImpl endpoint) {
-        for (Iterator<RMIConnection> connections = endpoint.concurrentConnectionsIterator(); connections.hasNext(); ) {
-            RMIConnection connection = connections.next();
-            if (connection.tasksManager.hasRunningTask()) {
-                return true;
-            }
-        }
-        return false;
+    private boolean connectionsAnyMatch(Collection<RMIConnection> connections, Predicate<RMIConnection> test) {
+        if (connections == null)
+            return false;
+        return connections.stream().anyMatch(test);
+    }
+
+    private List<RMIConnection> getConnections(RMIEndpointImpl endpoint) {
+        List<RMIConnection> res = new ArrayList<>();
+        endpoint.concurrentConnectionsIterator().forEachRemaining(res::add);
+        return res;
+    }
+
+    static boolean hasRunningTask(RMIConnection connection) {
+        return connection.tasksManager.hasRunningTask();
+    }
+
+    static boolean hasCompletedTask(RMIConnection connection) {
+        return connection.tasksManager.completedTaskSize() > 0;
     }
 
     private interface DummySupplier {

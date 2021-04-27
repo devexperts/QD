@@ -51,7 +51,7 @@ class TasksManager {
     void notifyTaskCompleted(RMITaskImpl<?> taskImpl) {
         assert taskImpl.isNestedTask();
         runningTasks.remove(taskImpl);
-        if (taskImpl.getRequestMessage().getRequestType() == RMIRequestType.DEFAULT) {
+        if (taskImpl.getRequestMessage().getRequestType() == RMIRequestType.DEFAULT && !connection.closed) {
             completedTasks.add(new RMITaskResponse(taskImpl));
             connection.messageAdapter.rmiMessageAvailable(RMIQueueType.RESPONSE);
         }
@@ -60,7 +60,9 @@ class TasksManager {
     // for top-level tasks
     void notifyTaskCompleted(RMIChannelOwner owner, long channelId) {
         runningTasks.remove(owner, channelId);
-        if (owner.getChannelType() == RMIChannelType.SERVER_CHANNEL && owner.getRequestMessage().getRequestType() == RMIRequestType.DEFAULT) {
+        if (owner.getChannelType() == RMIChannelType.SERVER_CHANNEL &&
+            owner.getRequestMessage().getRequestType() == RMIRequestType.DEFAULT && !connection.closed)
+        {
             completedTasks.add(new RMITaskResponse((RMITaskImpl<?>) owner));
             connection.messageAdapter.rmiMessageAvailable(RMIQueueType.RESPONSE);
         }
@@ -69,7 +71,7 @@ class TasksManager {
 
     //for fast-failed in server
     void notifyTaskCompleted(RMIRequestType type, RMITaskResponse taskImpl) {
-        if (type == RMIRequestType.DEFAULT) {
+        if (type == RMIRequestType.DEFAULT && !connection.closed) {
             completedTasks.add(taskImpl);
             connection.messageAdapter.rmiMessageAvailable(RMIQueueType.RESPONSE);
         }
@@ -77,6 +79,7 @@ class TasksManager {
 
     void close() {
         runningTasks.close();
+        completedTasks.clear();
     }
 
     //if channelId = 0 => channel cancel
@@ -84,10 +87,11 @@ class TasksManager {
         RMITaskImpl<?> task = runningTasks.removeById(requestId, channelId, type);
         if (task == null)
             return;
-        if ((cancellationFlags & RMICancelType.ABORT_RUNNING.getId()) != 0)
+        if ((cancellationFlags & RMICancelType.ABORT_RUNNING.getId()) != 0) {
             task.cancel(RMIExceptionType.CANCELLED_DURING_EXECUTION);
-        else
+        } else {
             task.cancelWithConfirmation();
+        }
     }
 
     void cancelAllTasks(long channelId, int cancellationFlags, RMIChannelType type) {
@@ -95,10 +99,11 @@ class TasksManager {
         if (tasks == null)
             return;
         for (RMITaskImpl<?> task : tasks) {
-            if ((cancellationFlags & RMICancelType.ABORT_RUNNING.getId()) != 0)
+            if ((cancellationFlags & RMICancelType.ABORT_RUNNING.getId()) != 0) {
                 task.cancel(RMIExceptionType.CANCELLED_DURING_EXECUTION);
-            else
+            } else {
                 task.cancelWithConfirmation();
+            }
         }
     }
 
