@@ -392,7 +392,7 @@ public class InstrumentProfileConnection {
                 log.info("Downloading instrument profiles");
                 supportsLive = LIVE_PROP_RESPONSE.equals(connection.getHeaderField(LIVE_PROP_KEY));
                 if (supportsLive)
-                    log.info("Live streaming connection has been open");
+                    log.info("Live updates streaming connection has been open");
                 makeConnected();
                 try (InputStream decompressedIn = StreamCompression.detectCompressionByHeaderAndDecompress(in)) {
                     int count = process(decompressedIn);

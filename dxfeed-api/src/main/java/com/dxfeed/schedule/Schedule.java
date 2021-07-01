@@ -468,6 +468,11 @@ public final class Schedule {
             hour = parse2(def, i);
             minute = parse2(def, i + 2);
             second = def.length() > i + 4 ? parse2(def, i + 4) : 0;
+            if (hour == 24 && minute == 0 && second == 0) {
+                log.warn("Deprecated time spec " + def + " in " + scheduleDefinition + ". Preferred spec: +0000");
+            } else if (hour >= 24 || minute >= 60 || second >= 60) {
+                throw new IllegalArgumentException("illegal time " + def + " in " + scheduleDefinition);
+            }
         }
 
         private int parse2(String s, int pos) {
@@ -572,11 +577,16 @@ public final class Schedule {
                     while (mm.find()) {
                         TimeDef td1 = new TimeDef(scheduleDefinition, mm.group(1));
                         TimeDef td2 = new TimeDef(scheduleDefinition, mm.group(2));
+                        if (td1.compareTo(td2) > 0) {
+                            throw new IllegalArgumentException(
+                                "illegal session period " + mm.group() + " in " + def + " in " + scheduleDefinition);
+                        }
                         if (type == SessionType.NO_TRADING) {
                             dayStart = td1;
                             dayEnd = td2;
-                        } else
+                        } else {
                             s.add(new SessionDef(type, td1, td2));
+                        }
                         type = SessionType.REGULAR;
                     }
                 }

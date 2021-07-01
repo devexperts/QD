@@ -155,6 +155,17 @@ public class ScheduleTest extends TestCase {
         checkException("(tz=GMT;hd=20191224;hds=jntd2020;0=)", "broken hds strategy for ");
     }
 
+    public void testSessionsValidation() {
+        // unordered session bounds
+        checkException("(tz=GMT;0=10000900)", "illegal session period 10000900 in 10000900 in ");
+        // invalid day fields
+        checkException("(tz=GMT;0=10651200)", "illegal time 1065 in ");
+        checkException("(tz=GMT;0=10002500)", "illegal time 2500 in ");
+        checkException("(tz=GMT;0=100000120063)", "illegal time 120063 in ");
+        // unordered sessions
+        checkException("(tz=GMT;0=;1=10001100p09001000)", "illegal session order at 1 for 0:11:0:0 and 0:9:0:0 in ");
+    }
+
     /**
      * Test day and session continuity for US holidays and disabled strategies
      */

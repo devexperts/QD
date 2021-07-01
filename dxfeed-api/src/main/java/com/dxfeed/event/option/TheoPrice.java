@@ -48,6 +48,7 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  * <li>{@link #getIndex() index} - unique per-symbol index of this event;
  * <li>{@link #getTime() time} - timestamp of this event in milliseconds;
  * <li>{@link #getSequence() sequence} - sequence number of this event to distinguish events that have the same {@link #getTime() time};
+ * <li>{@link #getPrice()} () price} - theoretical price;
  * <li>{@link #getUnderlyingPrice() underlyingPrice} - underlying price at the time of theo price computation;
  * <li>{@link #getDelta() delta} - delta of the theoretical price;
  * <li>{@link #getGamma() gamma} -  gamma of the theoretical price;

@@ -1,3 +1,12 @@
+QDS 3.300:
+
+* [QD-1302] New order source for SmallEx exchange: smfe
+* [QD-1304] [Schedule] Schedule allows inconsistent session definitions
+  - added warning in log for deprecated usage of 2400 instead of +0000 in time spec
+* [QD-1303] dxFeed API: TheoPrice javadoc misses price event field description
+* [QD-1300] dxFeed API: Add sample for working with live IPF
+* [QD-1297] New order source MEMX
+
 QDS 3.299:
 
 * [QD-1293] Migrate from bintray to artifactory
