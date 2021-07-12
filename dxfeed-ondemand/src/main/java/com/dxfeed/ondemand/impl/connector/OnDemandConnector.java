@@ -49,7 +49,7 @@ public class OnDemandConnector extends AbstractMessageConnector
     private final ReconnectHelper reconnectHelper;
     private final MarketDataReplay replay = new MarketDataReplay();
 
-    private ReplayConnectionHandler handler; // !=null when active
+    private volatile ReplayConnectionHandler handler; // !=null when active
     private Date time;
     private double speed = 1;
 
@@ -71,7 +71,8 @@ public class OnDemandConnector extends AbstractMessageConnector
             return; // already active
         if (time == null)
             return; // will not start until time is set
-        log.info("Starting OnDemandConnector to " + LogUtil.hideCredentials(getAddress()) + " at " + TimeFormat.DEFAULT.format(time));
+        log.info("Starting OnDemandConnector to " + LogUtil.hideCredentials(getAddress()) + " at " +
+            TimeFormat.DEFAULT.format(time));
         reconnectHelper.setReconnectDelay(getReconnectDelay()); // update reconnect delay
         handler = new ReplayConnectionHandler(this);
         handler.start();
@@ -106,7 +107,8 @@ public class OnDemandConnector extends AbstractMessageConnector
     }
 
     @Override
-    public synchronized MessageConnectorState getState() {
+    public MessageConnectorState getState() {
+        ReplayConnectionHandler handler = this.handler;
         return handler != null ? handler.getConnectionState() : MessageConnectorState.DISCONNECTED;
     }
 
@@ -256,8 +258,9 @@ public class OnDemandConnector extends AbstractMessageConnector
                         return a1.length - a2.length;
                     }
                 });
-                for (InetAddress a : all)
+                for (InetAddress a : all) {
                     appendAddress(resolvedAddress, a.getHostAddress() + port);
+                }
             } catch (UnknownHostException e) {
                 log.warn("Failed to resolve IPs for " + host);
                 appendAddress(resolvedAddress, addr);

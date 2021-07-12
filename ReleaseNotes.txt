@@ -1,3 +1,8 @@
+QDS 3.301:
+
+* [QD-1308] Deadlock between OnDemandConnector and DXEndpointImpl.StateHolder
+* [QD-1210] dxlib: Update log4j2 version to 2.14.1
+
 QDS 3.300:
 
 * [QD-1302] New order source for SmallEx exchange: smfe
