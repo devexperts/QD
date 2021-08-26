@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collector;
 import javax.annotation.Nonnull;
 
@@ -46,8 +47,9 @@ public class IndexedMap<K, V> implements Map<K, V>, Cloneable, Serializable {
     /**
      * Creates new empty map with default identity indexer.
      */
+    @SuppressWarnings("unchecked")
     public static <V> IndexedMap<V, V> createIdentity() {
-        return new IndexedMap<>((IndexerFunction.IdentityKey<V, V>) (v -> v));
+        return new IndexedMap<>((IndexerFunction.IdentityKey<V, V>) IndexerFunction.DEFAULT_IDENTITY_KEY);
     }
 
     /**
@@ -201,8 +203,9 @@ public class IndexedMap<K, V> implements Map<K, V>, Cloneable, Serializable {
      * Returns a {@code Collector} that accumulates the input elements into a new {@code IndexedMap} with default identity indexer.
      * This is an {@link Collector.Characteristics#UNORDERED unordered} Collector.
      */
+    @SuppressWarnings("unchecked")
     public static <V> Collector<V, ?, ? extends IndexedMap<V, V>> collectorIdentity() {
-        return collector((IndexerFunction.IdentityKey<V, V>) (v -> v));
+        return collector((IndexerFunction.IdentityKey<V, V>) IndexerFunction.DEFAULT_IDENTITY_KEY);
     }
 
     /**
@@ -765,6 +768,21 @@ public class IndexedMap<K, V> implements Map<K, V>, Cloneable, Serializable {
         public boolean remove(Object o) {
             return set.removeKey((K) o) != null;
         }
+
+        @Override
+        public boolean removeAll(Collection<?> c) {
+            return set.removeAllKeys(c);
+        }
+
+        @Override
+        public boolean retainAll(Collection<?> c) {
+            return set.retainAllKeys(c);
+        }
+
+        @Override
+        public boolean removeIf(Predicate<? super K> filter) {
+            return set.removeKeyIf(filter);
+        }
     }
 
     private static final class EntrySet<K, V> extends AbstractConcurrentSet<Map.Entry<K, V>> implements Serializable {
@@ -815,6 +833,21 @@ public class IndexedMap<K, V> implements Map<K, V>, Cloneable, Serializable {
                 return false;
             Map.Entry<K, V> e = (Map.Entry<K, V>) o;
             return set.getIndexerFunction().matchesByKey(e.getKey(), e.getValue()) && set.remove(e.getValue());
+        }
+
+        @Override
+        public boolean removeAll(Collection<?> c) {
+            return set.removeAllEntries(c);
+        }
+
+        @Override
+        public boolean retainAll(Collection<?> c) {
+            return set.retainAllEntries(c);
+        }
+
+        @Override
+        public boolean removeIf(Predicate<? super Entry<K, V>> filter) {
+            return set.removeEntryIf(filter);
         }
     }
 }

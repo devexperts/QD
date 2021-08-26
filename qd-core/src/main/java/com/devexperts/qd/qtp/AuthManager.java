@@ -142,7 +142,7 @@ class AuthManager implements PromiseHandler<AuthSession> {
     @Override
     public void promiseDone(Promise<? extends AuthSession> promise) {
         if (promise.hasResult()) {
-            QDLog.log.warn(messageAdapter + " authentication success");
+            QDLog.log.info(messageAdapter + " authentication success");
             messageAdapter.reinitConfiguration(promise.getResult());
             boolean addMask = successSync(promise.getResult());
             if (addMask)

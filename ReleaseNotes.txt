@@ -1,3 +1,10 @@
+QDS 3.302:
+
+* [QD-1277] dxFeed API: Make default Order source to support Full Order Book
+* [QD-1313] QDS: Avoid warning logging for successful events
+* [QD-1311] dxlib: IndexedMap removeAll/retainAll methods on entrySet/keySet behave inconsistently with remove/contains
+* [QD-1310] dxlib: IndexedSet removeAll/retainAll methods behave inconsistently with remove/contains
+
 QDS 3.301:
 
 * [QD-1308] Deadlock between OnDemandConnector and DXEndpointImpl.StateHolder

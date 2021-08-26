@@ -15,7 +15,9 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Predicate;
 import java.util.stream.Collector;
 
 /**
@@ -46,8 +48,9 @@ public class SynchronizedIndexedSet<K, V> extends IndexedSet<K, V> {
     /**
      * Creates new empty set with default identity indexer.
      */
+    @SuppressWarnings("unchecked")
     public static <V> SynchronizedIndexedSet<V, V> createIdentity() {
-        return new SynchronizedIndexedSet<>((IndexerFunction.IdentityKey<V, V>) (v -> v));
+        return new SynchronizedIndexedSet<>((IndexerFunction.IdentityKey<V, V>) IndexerFunction.DEFAULT_IDENTITY_KEY);
     }
 
     /**
@@ -169,8 +172,9 @@ public class SynchronizedIndexedSet<K, V> extends IndexedSet<K, V> {
      * Returns a {@code Collector} that accumulates the input elements into a new {@code SynchronizedIndexedSet} with default identity indexer.
      * This is an {@link Collector.Characteristics#CONCURRENT concurrent} and {@link Collector.Characteristics#UNORDERED unordered} Collector.
      */
+    @SuppressWarnings("unchecked")
     public static <V> Collector<V, ?, ? extends SynchronizedIndexedSet<V, V>> collectorIdentity() {
-        return collector((IndexerFunction.IdentityKey<V, V>) (v -> v));
+        return collector((IndexerFunction.IdentityKey<V, V>) IndexerFunction.DEFAULT_IDENTITY_KEY);
     }
 
     /**
@@ -429,6 +433,70 @@ public class SynchronizedIndexedSet<K, V> extends IndexedSet<K, V> {
     @Override
     public synchronized V removeKey(long key) {
         return super.removeKey(key);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    @Override
+    public synchronized boolean removeIf(Predicate<? super V> filter) {
+        return super.removeIf(filter);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    @Override
+    public synchronized boolean addAll(Collection<? extends V> c) {
+        return super.addAll(c);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    @Override
+    public synchronized boolean removeAll(Collection<?> c) {
+        return super.removeAll(c);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    @Override
+    public synchronized boolean retainAll(Collection<?> c) {
+        return super.retainAll(c);
+    }
+
+    // ========== IndexedMap entrySet / keySet support =======================
+
+    @Override
+    synchronized boolean removeAllEntries(Collection<?> c) {
+        return super.removeAllEntries(c);
+    }
+
+    @Override
+    synchronized boolean retainAllEntries(Collection<?> c) {
+        return super.retainAllEntries(c);
+    }
+
+    @Override
+    synchronized boolean removeEntryIf(Predicate<? super Map.Entry<K, V>> filter) {
+        return super.removeEntryIf(filter);
+    }
+
+    @Override
+    synchronized boolean removeAllKeys(Collection<?> c) {
+        return super.removeAllKeys(c);
+    }
+
+    @Override
+    synchronized boolean retainAllKeys(Collection<?> c) {
+        return super.retainAllKeys(c);
+    }
+
+    @Override
+    synchronized boolean removeKeyIf(Predicate<? super K> filter) {
+        return super.removeKeyIf(filter);
     }
 
     // ========== Internal Implementation - Helper Instance Methods ==========

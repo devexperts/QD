@@ -42,26 +42,23 @@ public final class OrderSource extends IndexedEventSource {
 
     // Estimated cache size for proper balance of built-in and transient sources
     private static volatile int CACHE_SIZE = 100;
-    private static final SynchronizedIndexedSet<Integer, OrderSource> SOURCES_BY_ID = SynchronizedIndexedSet.createInt(OrderSource::id).withCapacity(CACHE_SIZE);
-    private static final SynchronizedIndexedSet<String, OrderSource> SOURCES_BY_NAME = SynchronizedIndexedSet.create(OrderSource::name).withCapacity(CACHE_SIZE);
+    private static final SynchronizedIndexedSet<Integer, OrderSource> SOURCES_BY_ID =
+        SynchronizedIndexedSet.createInt(OrderSource::id).withCapacity(CACHE_SIZE);
+    private static final SynchronizedIndexedSet<String, OrderSource> SOURCES_BY_NAME =
+        SynchronizedIndexedSet.create(OrderSource::name).withCapacity(CACHE_SIZE);
 
-    private static final int TYPE_ORDER = 0;
-    private static final int TYPE_ANALYTIC_ORDER = 1;
-    private static final int TYPE_SPREAD_ORDER = 2;
-    private static final int FLAG_FULL_ORDER_BOOK = 3;
-    private static final int N_TYPES = 4;
-
-    private static final int PUB_ORDER = 1 << TYPE_ORDER;
-    private static final int PUB_ANALYTIC_ORDER = 1 << TYPE_ANALYTIC_ORDER;
-    private static final int PUB_SPREAD_ORDER = 1 << TYPE_SPREAD_ORDER;
-    private static final int FULL_ORDER_BOOK = 1 << FLAG_FULL_ORDER_BOOK;
+    private static final int PUB_ORDER = 0x0001;
+    private static final int PUB_ANALYTIC_ORDER = 0x0002;
+    private static final int PUB_SPREAD_ORDER = 0x0004;
+    private static final int FULL_ORDER_BOOK = 0x0008;
+    private static final int FLAGS_SIZE = 4;
 
     @SuppressWarnings("unchecked")
-    private static final List<OrderSource>[] PUBLISHABLE_LISTS = new List[N_TYPES];
+    private static final List<OrderSource>[] PUBLISHABLE_LISTS = new List[FLAGS_SIZE];
     @SuppressWarnings("unchecked")
-    private static final List<OrderSource>[] PUBLISHABLE_VIEWS = new List[N_TYPES];
+    private static final List<OrderSource>[] PUBLISHABLE_VIEWS = new List[FLAGS_SIZE];
     static {
-        for (int i = 0; i < N_TYPES; i++) {
+        for (int i = 0; i < FLAGS_SIZE; i++) {
             PUBLISHABLE_LISTS[i] = new ArrayList<>();
             PUBLISHABLE_VIEWS[i] = Collections.unmodifiableList(PUBLISHABLE_LISTS[i]);
         }
@@ -123,7 +120,7 @@ public final class OrderSource extends IndexedEventSource {
      * on this source and the corresponding subscription can be observed via {@link DXPublisher}.
      */
     public static final OrderSource DEFAULT = new OrderSource(0, "DEFAULT",
-        PUB_ORDER | PUB_ANALYTIC_ORDER | PUB_SPREAD_ORDER | FLAG_FULL_ORDER_BOOK);
+        PUB_ORDER | PUB_ANALYTIC_ORDER | PUB_SPREAD_ORDER | FULL_ORDER_BOOK);
 
     // ======== BEGIN: Custom OrderSource definitions ========
 
@@ -404,7 +401,7 @@ public final class OrderSource extends IndexedEventSource {
      * <code>{@link AnalyticOrder}.<b>class</b></code>, <code>{@link SpreadOrder}.<b>class</b></code>
      */
     public static List<OrderSource> publishable(Class<? extends OrderBase> eventType) {
-        return PUBLISHABLE_VIEWS[getEventTypeId(eventType)];
+        return PUBLISHABLE_VIEWS[31 - Integer.numberOfLeadingZeros(getEventTypeMask(eventType))];
     }
 
     /**
@@ -413,7 +410,7 @@ public final class OrderSource extends IndexedEventSource {
      * @return a list of publishable order sources that support Full Order Book.
      */
     public static List<OrderSource> fullOrderBook() {
-        return PUBLISHABLE_VIEWS[FLAG_FULL_ORDER_BOOK];
+        return PUBLISHABLE_VIEWS[31 - Integer.numberOfLeadingZeros(FULL_ORDER_BOOK)];
     }
 
     // ========================= private instance fields =========================
@@ -452,7 +449,7 @@ public final class OrderSource extends IndexedEventSource {
 
         CACHE_SIZE = Math.max(CACHE_SIZE, SOURCES_BY_ID.size() * 4);
 
-        for (int i = 0; i < N_TYPES; i++) {
+        for (int i = 0; i < FLAGS_SIZE; i++) {
             if ((pubFlags & (1 << i)) != 0)
                 PUBLISHABLE_LISTS[i].add(this);
         }
@@ -479,7 +476,7 @@ public final class OrderSource extends IndexedEventSource {
      *         <code>{@link Order}.<b>class</b></code>, <code>{@link AnalyticOrder}.<b>class</b></code> and <code>{@link SpreadOrder}.<b>class</b></code>.
      */
     public boolean isPublishable(Class<? extends OrderBase> eventType) {
-        return (pubFlags & (1 << getEventTypeId(eventType))) != 0;
+        return (pubFlags & getEventTypeMask(eventType)) != 0;
     }
 
     /**
@@ -527,13 +524,13 @@ public final class OrderSource extends IndexedEventSource {
         return new String(name, 0, n);
     }
 
-    private static int getEventTypeId(Class<? extends OrderBase> eventType) {
+    private static int getEventTypeMask(Class<? extends OrderBase> eventType) {
         if (eventType == Order.class)
-            return TYPE_ORDER;
+            return PUB_ORDER;
         if (eventType == AnalyticOrder.class)
-            return TYPE_ANALYTIC_ORDER;
+            return PUB_ANALYTIC_ORDER;
         if (eventType == SpreadOrder.class)
-            return TYPE_SPREAD_ORDER;
+            return PUB_SPREAD_ORDER;
         throw new IllegalArgumentException("Invalid order event type: " + eventType);
     }
 

@@ -34,6 +34,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class IndexedSetTest extends TestCase {
     private static final IndexerFunction<String, Integer> STRING_INTEGER_INDEXER =
@@ -91,10 +92,13 @@ public class IndexedSetTest extends TestCase {
         doTestMapCollector(IndexedMap.class, IndexedMap.collectorInt(Object::hashCode), Object::hashCode);
     }
 
-    private <K> void doTestMapCollector(Class mapClass, Collector<Object, ?, ? extends IndexedMap<K, Object>> collector, Function<Object, K> keyFunction) {
+    private <K> void doTestMapCollector(Class mapClass, Collector<Object, ?, ? extends IndexedMap<K, Object>> collector,
+        Function<Object, K> keyFunction)
+    {
         List<Object> list = new ArrayList<>();
-        for (int i = 0; i < 100; i++)
+        for (int i = 0; i < 100; i++) {
             list.add(new Object());
+        }
         IndexedMap<K, Object> map = list.stream().collect(collector);
         assertTrue(map.getClass() == mapClass);
         assertEquals(list.stream().collect(Collectors.toMap(keyFunction, o -> o)), map);
@@ -359,6 +363,196 @@ public class IndexedSetTest extends TestCase {
         assertEquals(cnt3, is2.size());
 
         assertTrue(checkSerial(is2));
+    }
+
+    // it's important that StrItem uses default (identity) equals
+    static class StrItem {
+        public String val;
+        public StrItem(String val) { this.val = val; }
+    }
+
+    static final IndexerFunction<String, StrItem> STR_ITEM_INDEXER = t -> t.val;
+
+
+    static final IndexerFunction<StrItem, StrItem> STR_ITEM_WEIRD_INDEXER = new IndexerFunction<StrItem, StrItem>() {
+        @Override
+        public StrItem getObjectKey(StrItem t) {
+            return t;
+        }
+
+        @Override
+        public int hashCodeByKey(StrItem key) {
+            return (key == null || key.val == null) ? 0 : key.val.hashCode();
+        }
+
+        @Override
+        public boolean matchesByKey(StrItem key, StrItem value) {
+            return (key == null || key.val == null) ?
+                getObjectKey(value).val == null :
+                key.val.equals(getObjectKey(value).val);
+        }
+    };
+
+    public void testRemoveAllShortParam() {
+        // removeAll with parameter collection shorter than set
+        IndexedSet<String, StrItem> set = IndexedSet.create(STR_ITEM_INDEXER);
+        set.add(new StrItem(null));
+        set.add(new StrItem("a"));
+        set.add(new StrItem("b"));
+        set.add(new StrItem("c"));
+        assertTrue(set.removeAll(Arrays.asList(new StrItem(null), new StrItem("a"), new StrItem("b"))));
+        assertEquals(1, set.size());
+        assertTrue(set.containsKey("c"));
+    }
+
+    public void testRemoveAllLongParam() {
+        // removeAll with parameter collection longer than set
+        IndexedSet<String, StrItem> set = IndexedSet.create(STR_ITEM_INDEXER);
+        set.add(new StrItem(null));
+        set.add(new StrItem("a"));
+        set.add(new StrItem("d"));
+        assertTrue(set.removeAll(
+            Arrays.asList(new StrItem(null), new StrItem("a"), new StrItem("b"), new StrItem("c"))));
+        assertEquals(1, set.size());
+        assertTrue(set.containsKey("d"));
+    }
+
+    public void testRemoveAllLongSetParam() {
+        // removeAll with long IndexedSet as parameter
+        IndexedSet<String, StrItem> set = IndexedSet.create(STR_ITEM_INDEXER);
+        set.add(new StrItem(null));
+        set.add(new StrItem("a"));
+        set.add(new StrItem("d"));
+        List<StrItem> c = Arrays.asList(new StrItem(null), new StrItem("a"), new StrItem("b"), new StrItem("c"));
+        assertTrue(set.removeAll(IndexedSet.create(STR_ITEM_INDEXER).withElements(c)));
+        assertEquals(1, set.size());
+        assertTrue(set.containsKey("d"));
+    }
+
+    public void testRetainAll() {
+        IndexedSet<String, StrItem> set = IndexedSet.create(STR_ITEM_INDEXER);
+        set.add(new StrItem(null));
+        set.add(new StrItem("a"));
+        set.add(new StrItem("b"));
+        set.add(new StrItem("c"));
+        assertTrue(set.retainAll(Arrays.asList(new StrItem("b"), new StrItem("d"), new StrItem("e"))));
+        assertEquals(1, set.size());
+        assertTrue(set.containsKey("b"));
+    }
+
+    public void testRetainAllWithSet() {
+        IndexedSet<String, StrItem> set = IndexedSet.create(STR_ITEM_INDEXER);
+        set.add(new StrItem(null));
+        set.add(new StrItem("a"));
+        set.add(new StrItem("b"));
+        set.add(new StrItem("c"));
+        List<StrItem> c = Arrays.asList(new StrItem("b"), new StrItem("d"), new StrItem("e"));
+        assertTrue(set.retainAll(IndexedSet.create(STR_ITEM_INDEXER).withElements(c)));
+        assertEquals(1, set.size());
+        assertTrue(set.containsKey("b"));
+    }
+
+    public void testEntrySetRemoveAllShortParam() {
+        // removeAll with parameter collection shorter than set
+        IndexedMap<String, StrItem> set = IndexedMap.create(STR_ITEM_INDEXER);
+        set.put(new StrItem(null));
+        set.put(new StrItem("a"));
+        set.put(new StrItem("b"));
+        set.put(new StrItem("c"));
+        set.put(new StrItem("d"));
+        Map<String, StrItem> itemMap =
+            Stream.of(new StrItem(null), new StrItem("a"), new StrItem("b"), new StrItem("c"))
+                .collect(Collectors.toMap(STR_ITEM_INDEXER::getObjectKey, i -> i));
+        assertTrue(set.entrySet().removeAll(itemMap.entrySet()));
+        assertEquals(1, set.size());
+        assertTrue(set.containsKey("d"));
+    }
+
+    public void testEntrySetRemoveAllLongParam() {
+        // removeAll with parameter collection longer than set
+        IndexedMap<String, StrItem> set = IndexedMap.create(STR_ITEM_INDEXER);
+        set.put(new StrItem(null));
+        set.put(new StrItem("a"));
+        set.put(new StrItem("d"));
+        Map<String, StrItem> itemMap =
+            Stream.of(new StrItem(null), new StrItem("a"), new StrItem("b"), new StrItem("c"))
+                .collect(Collectors.toMap(STR_ITEM_INDEXER::getObjectKey, i -> i));
+        assertTrue(set.entrySet().removeAll(itemMap.entrySet()));
+        assertEquals(1, set.size());
+        assertTrue(set.containsKey("d"));
+    }
+
+    public void testEntrySetRetainAll() {
+        IndexedMap<String, StrItem> set = IndexedMap.create(STR_ITEM_INDEXER);
+        set.put(new StrItem(null));
+        set.put(new StrItem("a"));
+        set.put(new StrItem("b"));
+        set.put(new StrItem("c"));
+        Map<String, StrItem> itemMap =
+            Stream.of(new StrItem("b"), new StrItem("d"), new StrItem("e"))
+                .collect(Collectors.toMap(STR_ITEM_INDEXER::getObjectKey, i -> i));
+        assertTrue(set.entrySet().retainAll(itemMap.entrySet()));
+        assertEquals(1, set.size());
+        assertTrue(set.containsKey("b"));
+    }
+
+    public void testEntrySetRemoveIf() {
+        IndexedMap<String, StrItem> set = IndexedMap.create(STR_ITEM_INDEXER);
+        set.put(new StrItem(null));
+        set.put(new StrItem("a"));
+        set.put(new StrItem("b"));
+        set.put(new StrItem("c"));
+        assertTrue(set.entrySet().removeIf(entry -> !("b".equals(entry.getKey()))));
+        assertEquals(1, set.size());
+        assertTrue(set.containsKey("b"));
+    }
+
+    public void testKeySetRemoveAllShortParam() {
+        // removeAll with parameter collection shorter than set
+        IndexedMap<StrItem, StrItem> set = IndexedMap.create(STR_ITEM_WEIRD_INDEXER);
+        set.put(new StrItem(null));
+        set.put(new StrItem("a"));
+        set.put(new StrItem("b"));
+        set.put(new StrItem("c"));
+        set.put(new StrItem("d"));
+        assertTrue(set.keySet().removeAll(
+            Arrays.asList(new StrItem(null), new StrItem("a"), new StrItem("b"), new StrItem("c"))));
+        assertEquals(1, set.size());
+        assertTrue(set.containsKey(new StrItem("d")));
+    }
+
+    public void testKeySetRemoveAllLongParam() {
+        // removeAll with parameter collection longer than set
+        IndexedMap<StrItem, StrItem> set = IndexedMap.create(STR_ITEM_WEIRD_INDEXER);
+        set.put(new StrItem(null));
+        set.put(new StrItem("a"));
+        set.put(new StrItem("d"));
+        assertTrue(set.keySet().removeAll(
+            Arrays.asList(new StrItem(null), new StrItem("a"), new StrItem("b"), new StrItem("c"))));
+        assertEquals(1, set.size());
+        assertTrue(set.containsKey(new StrItem("d")));
+    }
+
+    public void testKeySetRetainAll() {
+        IndexedMap<StrItem, StrItem> set = IndexedMap.create(STR_ITEM_WEIRD_INDEXER);
+        set.put(new StrItem(null));
+        set.put(new StrItem("a"));
+        set.put(new StrItem("b"));
+        set.put(new StrItem("c"));
+        assertTrue(set.keySet().retainAll(Arrays.asList(new StrItem("b"), new StrItem("d"), new StrItem("e"))));
+        assertEquals(1, set.size());
+        assertTrue(set.containsKey(new StrItem("b")));
+    }
+
+    public void testKeySetRemoveIf() {
+        IndexedMap<StrItem, StrItem> set = IndexedMap.create(STR_ITEM_WEIRD_INDEXER);
+        set.put(new StrItem(null));
+        set.put(new StrItem("a"));
+        set.put(new StrItem("b"));
+        set.put(new StrItem("c"));
+        assertTrue(set.keySet().removeIf(key -> key == null || !("b".equals(key.val))));
+        assertEquals(1, set.size());
+        assertTrue(set.containsKey(new StrItem("b")));
     }
 
     public void testIdentitySet() {

@@ -55,6 +55,13 @@ public interface IndexerFunction<K, V> extends Serializable {
     @SuppressWarnings("rawtypes")
     public static final IndexerFunction DEFAULT = new DefaultIndexerFunction();
 
+    /**
+     * Default strategy that treats values as their own keys <b>(key&nbsp;==&nbsp;value)</b> and uses object identity
+     * to compare keys (see {@link IdentityKey} for details).
+     */
+    @SuppressWarnings("rawtypes")
+    public static final IdentityKey DEFAULT_IDENTITY_KEY = new DefaultIdentityKey();
+
     // ========== Object Key Operations ==========
 
     /**
@@ -348,6 +355,25 @@ public interface IndexerFunction<K, V> extends Serializable {
 
         private Object readResolve() {
             return IndexerFunction.DEFAULT;
+        }
+    }
+
+    /**
+     * Default identity strategy that treats values as their own keys <b>(key&nbsp;==&nbsp;value)</b>.
+     */
+    @SuppressWarnings("rawtypes")
+    static final class DefaultIdentityKey implements IdentityKey {
+        private static final long serialVersionUID = 0;
+
+        DefaultIdentityKey() {}
+
+        @Override
+        public Object getObjectKey(Object value) {
+            return value;
+        }
+
+        private Object readResolve() {
+            return IndexerFunction.DEFAULT_IDENTITY_KEY;
         }
     }
 

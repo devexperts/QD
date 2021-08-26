@@ -15,6 +15,7 @@ import java.lang.reflect.Array;
 import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -112,6 +113,7 @@ public abstract class AbstractConcurrentSet<E> implements Set<E> {
      * them one-by-one using {@link #contains(Object) contains(element)} method.
      */
     public boolean containsAll(Collection<?> c) {
+        Objects.requireNonNull(c);
         for (Object o : c)
             if (!contains(o))
                 return false;
@@ -126,6 +128,7 @@ public abstract class AbstractConcurrentSet<E> implements Set<E> {
      * them one-by-one using {@link #add(Object) add(element)} method.
      */
     public boolean addAll(Collection<? extends E> c) {
+        Objects.requireNonNull(c);
         boolean modified = false;
         for (E o : c)
             if (add(o))
@@ -141,6 +144,7 @@ public abstract class AbstractConcurrentSet<E> implements Set<E> {
      * then iterates smaller collection and removes elements that need to be removed.
      */
     public boolean removeAll(Collection<?> c) {
+        Objects.requireNonNull(c);
         boolean modified = false;
         if (size() > c.size()) {
             for (Object o : c)
@@ -163,6 +167,7 @@ public abstract class AbstractConcurrentSet<E> implements Set<E> {
      * the specified collection, and removes them if needed using {@link Iterator#remove()} method.
      */
     public boolean retainAll(Collection<?> c) {
+        Objects.requireNonNull(c);
         boolean modified = false;
         for (Iterator<E> it = iterator(); it.hasNext();)
             if (!c.contains(it.next())) {

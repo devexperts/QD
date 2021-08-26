@@ -23,8 +23,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Predicate;
 import java.util.stream.Collector;
 import javax.annotation.Nonnull;
 
@@ -74,8 +76,9 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
     /**
      * Creates new empty set with default identity indexer.
      */
+    @SuppressWarnings("unchecked")
     public static <V> IndexedSet<V, V> createIdentity() {
-        return new IndexedSet<>((IndexerFunction.IdentityKey<V, V>) (v -> v));
+        return new IndexedSet<>((IndexerFunction.IdentityKey<V, V>) IndexerFunction.DEFAULT_IDENTITY_KEY);
     }
 
     /**
@@ -207,8 +210,9 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
      * Returns a {@code Collector} that accumulates the input elements into a new {@code IndexedSet} with default identity indexer.
      * This is an {@link Collector.Characteristics#UNORDERED unordered} Collector.
      */
+    @SuppressWarnings("unchecked")
     public static <V> Collector<V, ?, ? extends IndexedSet<V, V>> collectorIdentity() {
-        return collector((IndexerFunction.IdentityKey<V, V>) (v -> v));
+        return collector((IndexerFunction.IdentityKey<V, V>) IndexerFunction.DEFAULT_IDENTITY_KEY);
     }
 
     /**
@@ -683,6 +687,147 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
         return oldValue;
     }
 
+    /**
+     * Removes all of the elements in the specified collection from this set and
+     * returns <b>true</b> if this operation has decreased the size of this set.
+     * <p>
+     * Elements compared using the set's {@link IndexerFunction}.
+     *
+     * @param  c collection containing elements to be removed from this set
+     * @return <tt>true</tt> if this set changed as a result of the call
+     */
+    @Override
+    public boolean removeAll(Collection<?> c) {
+        Objects.requireNonNull(c);
+        if (isEmpty() || c.isEmpty())
+            return false;
+        boolean modified = false;
+        if (size() < c.size() &&
+            c instanceof IndexedSet && indexer.equals(((IndexedSet<?, ?>) c).getIndexerFunction()))
+        {
+            // optimization for matching collection types
+            for (Iterator<V> it = iterator(); it.hasNext(); ) {
+                if (c.contains(it.next())) {
+                    it.remove();
+                    modified = true;
+                }
+            }
+        } else {
+            for (Object o : c) {
+                if (remove(o))
+                    modified = true;
+            }
+        }
+        return modified;
+    }
+
+    /**
+     * Retains only the elements in this set that are contained in the specified collection.
+     * <p>
+     * Elements compared using the set's {@link IndexerFunction}.
+     * <p>
+     * NOTE: if provided collection is not an {@link IndexedSet} with the same {@link IndexerFunction} this
+     * implementation will create a temporary IndexedSet with provided elements.
+     *
+     * @param  c collection containing elements to be retained in this set
+     * @return <tt>true</tt> if this set changed as a result of the call
+     */
+    @Override
+    public boolean retainAll(Collection<?> c) {
+        Objects.requireNonNull(c);
+        if (isEmpty())
+            return false;
+        if (c.isEmpty()) {
+            clear();
+            return true;
+        }
+        // create temporary set with matching indexer if needed
+        //noinspection rawtypes,unchecked
+        IndexedSet<K, V> retain = c instanceof IndexedSet && indexer.equals(((IndexedSet) c).getIndexerFunction()) ?
+            (IndexedSet) c : new IndexedSet(indexer, c);
+        return retainAllImpl(retain);
+    }
+
+    // ========== IndexedMap entrySet / keySet support =======================
+
+    boolean removeAllEntries(Collection<?> c) {
+        Objects.requireNonNull(c);
+        if (isEmpty() || c.isEmpty())
+            return false;
+        boolean modified = false;
+        for (Object o : c) {
+            if (!(o instanceof Map.Entry))
+                continue;
+            Map.Entry<K, V> e = (Map.Entry<K, V>) o;
+            if (indexer.matchesByKey(e.getKey(), e.getValue()) && remove(e.getValue()))
+                modified = true;
+        }
+        return modified;
+    }
+
+    boolean retainAllEntries(Collection<?> c) {
+        Objects.requireNonNull(c);
+        if (isEmpty())
+            return false;
+        if (c.isEmpty()) {
+            clear();
+            return true;
+        }
+        // create temporary IndexedSet of values that has a chance to match by indexer-defined criteria
+        IndexedSet<K, V> retain = new IndexedSet<>(indexer, c.size());
+        for (Object o : c) {
+            if (!(o instanceof Map.Entry))
+                continue;
+            //noinspection unchecked
+            Map.Entry<K, V> e = (Map.Entry<K, V>) o;
+            if (indexer.matchesByKey(e.getKey(), e.getValue()))
+                retain.add(e.getValue());
+        }
+        return retainAllImpl(retain);
+    }
+
+    boolean removeEntryIf(Predicate<? super Map.Entry<K, V>> filter) {
+        Objects.requireNonNull(filter);
+        return removeIfImpl(filter, entryIterator());
+    }
+
+    boolean removeAllKeys(Collection<?> c) {
+        Objects.requireNonNull(c);
+        if (isEmpty() || c.isEmpty())
+            return false;
+        boolean modified = false;
+        for (Object o : c) {
+            //noinspection unchecked
+            if (removeKey((K) o) != null)
+                modified = true;
+        }
+        return modified;
+    }
+
+    boolean retainAllKeys(Collection<?> c) {
+        Objects.requireNonNull(c);
+        if (isEmpty())
+            return false;
+        if (c.isEmpty()) {
+            clear();
+            return true;
+        }
+        // create temporary IndexedSet of values that shall be retained
+        IndexedSet<K, V> retain = new IndexedSet<>(indexer, c.size());
+        for (Object o : c) {
+            //noinspection unchecked
+            V v = getByKey((K) o);
+            if (v != null)
+                retain.add(v);
+        }
+        return retainAllImpl(retain);
+    }
+
+    boolean removeKeyIf(Predicate<? super K> filter) {
+        Objects.requireNonNull(filter);
+        return removeIfImpl(filter, keyIterator());
+    }
+
     // ========== Internal Implementation - Helper Instance Methods ==========
 
     private V putImpl(Core<K, V> core, V value) {
@@ -722,6 +867,33 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
         else
             throw new ConcurrentModificationException();
         this.core = core; // Atomic volatile write.
+    }
+
+    // generified removeIf
+    private static <T> boolean removeIfImpl(Predicate<? super T> filter, Iterator<T> iterator) {
+        boolean modified = false;
+        while (iterator.hasNext()) {
+            if (filter.test(iterator.next())) {
+                iterator.remove();
+                modified = true;
+            }
+        }
+        return modified;
+    }
+
+    private boolean retainAllImpl(IndexedSet<K, V> retain) {
+        if (retain.isEmpty() && !isEmpty()) {
+            clear();
+            return true;
+        }
+        boolean modified = false;
+        for (Iterator<V> it = iterator(); it.hasNext(); ) {
+            if (!retain.contains(it.next())) {
+                it.remove();
+                modified = true;
+            }
+        }
+        return modified;
     }
 
     private void writeObject(ObjectOutputStream out) throws IOException {
