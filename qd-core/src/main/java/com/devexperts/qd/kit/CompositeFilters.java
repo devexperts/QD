@@ -31,6 +31,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 
 /**
@@ -128,18 +129,24 @@ public class CompositeFilters {
      * Returns filter that accepts only a specified collection of records.
      */
     public static RecordOnlyFilter forRecords(Collection<DataRecord> records) {
-        DataScheme scheme = null;
-        boolean[] accepts = null;
+        // RecordOnlyFilter formally requires a scheme although it probably could work without one.
+        if (records.isEmpty())
+            throw new IllegalArgumentException("At least one record must be specified to derive scheme");
+        DataScheme scheme = records.iterator().next().getScheme();
+        boolean[] accepts = new boolean[scheme.getRecordCount()];
         for (DataRecord record : records) {
-            if (scheme != null && record.getScheme() != scheme)
+            if (record.getScheme() != scheme)
                 throw new IllegalArgumentException("Records from different schemes");
-            if (scheme == null) {
-                scheme = record.getScheme();
-                accepts = new boolean[scheme.getRecordCount()];
-            }
             accepts[record.getId()] = true;
         }
-        return new FastRecordFilter(scheme, accepts == null ? new boolean[0]: accepts);
+        return new FastRecordFilter(scheme, accepts);
+    }
+
+    /**
+     * Returns named token filter that accepts only records accepted by specified predicate filter.
+     */
+    public static RecordOnlyFilter forRecords(DataScheme scheme, String name, Predicate<DataRecord> filter) {
+        return new FastRecordFilter(scheme, name, filter);
     }
 
     /**
@@ -240,7 +247,7 @@ public class CompositeFilters {
             return f; // do not support wrapping of dynamic filters
         switch (f.getKind()) {
         case RECORD_ONLY:
-            return f instanceof FastRecordFilter ? f : new FastRecordFilter(f, warnOnPotentialTypo);
+            return f instanceof FastRecordFilter ? f : new FastRecordFilter(f).warnOnPotentialTypo(warnOnPotentialTypo);
         case SYMBOL_SET:
             return f instanceof SymbolSetFilter ? f : new SymbolSetFilter(f);
         default:
@@ -790,15 +797,23 @@ public class CompositeFilters {
 
         @Override
         public SyntaxPrecedence getSyntaxPrecedence() {
-            return SyntaxPrecedence.OR;
+            return hasShortName() ? SyntaxPrecedence.TOKEN : SyntaxPrecedence.OR;
         }
     }
 
     private static class AndBuilder extends ListBuilder {
+        private boolean nothing;
+
         @Override
         void add(QDFilter other) {
-            if (other == null || other == QDFilter.ANYTHING)
+            if (nothing || other == null || other == QDFilter.ANYTHING)
                 return;
+            if (other == QDFilter.NOTHING) {
+                nothing = true;
+                list.clear();
+                list.add(QDFilter.NOTHING);
+                return;
+            }
             if (other instanceof AndFilter)
                 list.addAll(Arrays.asList(((AndFilter) other).list));
             else

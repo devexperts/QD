@@ -26,6 +26,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.function.Predicate;
 import java.util.stream.Collector;
 import javax.annotation.Nonnull;
@@ -38,6 +39,7 @@ import javax.annotation.Nonnull;
  * <ul>
  * <li> delegation of element identification to external strategy
  * <li> concurrent asynchronous read access
+ * <li> safe publication of added values
  * <li> smaller memory footprint and faster performance
  * </ul>
  *
@@ -758,6 +760,7 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
         for (Object o : c) {
             if (!(o instanceof Map.Entry))
                 continue;
+            //noinspection unchecked
             Map.Entry<K, V> e = (Map.Entry<K, V>) o;
             if (indexer.matchesByKey(e.getKey(), e.getValue()) && remove(e.getValue()))
                 modified = true;
@@ -860,7 +863,7 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
         Core<K, V> core = this.core; // Atomic volatile read.
         if (!concurrent && (checkCore != core || checkModCount != core.getModCount()))
             throw new ConcurrentModificationException();
-        if (core.getAt(lastIndex) == lastValue) // Atomic read.
+        if (core.get(lastIndex) == lastValue) // Atomic read.
             core.removeAt(lastIndex, core.getInitialIndexByValue(lastValue));
         else if (concurrent)
             core.removeValue(lastValue);
@@ -888,7 +891,7 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
         }
         boolean modified = false;
         for (Iterator<V> it = iterator(); it.hasNext(); ) {
-            if (!retain.contains(it.next())) {
+            if (!retain.containsValue(it.next())) {
                 it.remove();
                 modified = true;
             }
@@ -915,7 +918,7 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
     /**
      * Core class to hold all data of {@link IndexedSet}.
      */
-    private static final class Core<K, V> {
+    private static final class Core<K, V> extends AtomicReferenceArray<V> {
         static final int QUALITY_BASE = 6;
         static final Object REMOVED = new Object(); // Marker object for removed values.
 
@@ -923,7 +926,7 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
         static final Core<?, ?> EMPTY_CORE = new Core(value -> null, 0, GOLDEN_RATIO); // Empty core for empty sets.
 
         static {
-            EMPTY_CORE.overallSize = EMPTY_CORE.matrix.length; // Special value to trigger rehash before first 'put' operation.
+            EMPTY_CORE.overallSize = EMPTY_CORE.length(); // Special value to trigger rehash before first 'put' operation.
         }
 
         // 'private' fields and methods of Core class shall be accessed only from within Core class itself.
@@ -931,7 +934,6 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
         private final int magic;
         private final int shift;
         private final IndexerFunction<K, ? super V> indexer;
-        private final V[] matrix;
 
         /**
          * Quality is a complex value that tracks quality of this core's payload,
@@ -948,30 +950,32 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
         private long modCount; // counts structural changes when elements are added or removed (replace is Ok)
         private long amortizedCost; // total cost of amortization of all removed and rehashed values, see unamortizedCost()
 
-        @SuppressWarnings("unchecked")
         Core(IndexerFunction<K, ? super V> indexer, int capacity, int magic) {
+            super((-1 >>> getShift(capacity)) + 1);
             if (indexer == null)
                 throw new NullPointerException("Indexer is null.");
             this.magic = magic;
-            shift = getShift(capacity);
+            this.shift = Integer.numberOfLeadingZeros(length()) + 1;
             this.indexer = indexer;
-            matrix = (V[]) new Object[(-1 >>> shift) + 1];
             quality = QUALITY_BASE + 1; // will rehash when avg_dist > 2, see exceed(...)
         }
 
         /**
-         * Clones specified core. Implemented as constructor to keep {@link #matrix} field final.
+         * Clones specified core. Implemented as constructor.
          */
         Core(Core<K, V> source) {
+            super(source.length());
             magic = source.magic;
             shift = source.shift;
             indexer = source.indexer;
-            matrix = source.matrix.clone();
             quality = source.quality;
             payloadSize = source.payloadSize;
             overallSize = source.overallSize;
             modCount = source.modCount;
             amortizedCost = source.amortizedCost;
+            for (int i = length(); --i >= 0;) {
+                set(i, source.get(i));
+            }
         }
 
         /**
@@ -1011,16 +1015,17 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
             return (quality >>> QUALITY_BASE) + payloadSize;
         }
 
-        private void putValuesIntoEmptyCore(V[] values) {
-            for (int i = values.length; --i >= 0;) {
-                V value = values[i]; // Atomic read.
+        private void putValuesIntoEmptyCore(Core<K, V> source) {
+            for (int i = source.length(); --i >= 0;) {
+                V value = source.get(i); // Atomic read.
                 if (value == null || value == REMOVED)
                     continue;
                 int index = getInitialIndexByValue(value);
                 int initialIndex = index;
-                while (matrix[index] != null)
+                while (get(index) != null) {
                     index = (index - 1) & (-1 >>> shift);
-                matrix[index] = value;
+                }
+                set(index, value);
                 quality += qualityInc(index, initialIndex);
                 payloadSize++;
                 overallSize++;
@@ -1045,12 +1050,12 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
             capacity = Math.min(Math.max(capacity, payloadSize), MAX_CAPACITY);
             long totalCost = amortizedCost + unamortizedCost();
             Core<K, V> result = new Core<>(indexer, capacity, exceed(QUALITY_BASE + 1) ? nextMagic(magic, capacity) : magic);
-            result.putValuesIntoEmptyCore(matrix);
+            result.putValuesIntoEmptyCore(this);
             totalCost += result.unamortizedCost();
             if (result.exceed(QUALITY_BASE + 1)) // only if quality is not very good
                 for (int k = 0; k < 3; k++) {
                     Core<K, V> other = new Core<>(indexer, capacity, nextMagic(magic, capacity));
-                    other.putValuesIntoEmptyCore(matrix);
+                    other.putValuesIntoEmptyCore(this);
                     totalCost += other.unamortizedCost();
                     if (other.quality < result.quality) // lower quality is better
                         result = other;
@@ -1095,8 +1100,9 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
         Core<K, V> clear() {
             if (this == EMPTY_CORE)
                 return this;
-            for (int i = matrix.length; --i >= 0;)
-                matrix[i] = null;
+            for (int i = length(); --i >= 0;) {
+                set(i, null);
+            }
             modCount += payloadSize;
             amortizedCost += unamortizedCost();
             quality = QUALITY_BASE + 1;
@@ -1120,7 +1126,7 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
         V getByValue(V value) {
             int index = getInitialIndexByValue(value);
             V testValue;
-            while ((testValue = matrix[index]) != null) { // Atomic read.
+            while ((testValue = get(index)) != null) { // Atomic read.
                 if (testValue != REMOVED && indexer.matchesByValue(value, testValue))
                     return testValue;
                 index = (index - 1) & (-1 >>> shift);
@@ -1131,7 +1137,7 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
         V getByKey(K key) {
             int index = (indexer.hashCodeByKey(key) * magic) >>> shift;
             V testValue;
-            while ((testValue = matrix[index]) != null) { // Atomic read.
+            while ((testValue = get(index)) != null) { // Atomic read.
                 if (testValue != REMOVED && indexer.matchesByKey(key, testValue))
                     return testValue;
                 index = (index - 1) & (-1 >>> shift);
@@ -1142,7 +1148,7 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
         V getByKey(long key) {
             int index = (indexer.hashCodeByKey(key) * magic) >>> shift;
             V testValue;
-            while ((testValue = matrix[index]) != null) { // Atomic read.
+            while ((testValue = get(index)) != null) { // Atomic read.
                 if (testValue != REMOVED && indexer.matchesByKey(key, testValue))
                     return testValue;
                 index = (index - 1) & (-1 >>> shift);
@@ -1150,7 +1156,6 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
             return null;
         }
 
-        @SuppressWarnings("unchecked")
         V put(V value, boolean replaceOnly) {
             // These are sanity checks - they can be removed once testing completed.
             assert this != EMPTY_CORE : "Putting into EMPTY core.";
@@ -1162,9 +1167,9 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
             int initialIndex = index;
             int removedIndex = -1;
             V testValue;
-            while ((testValue = matrix[index]) != null) { // Atomic read.
+            while ((testValue = get(index)) != null) { // Atomic read.
                 if (testValue != REMOVED && indexer.matchesByValue(value, testValue)) {
-                    matrix[index] = value;
+                    set(index, value);
                     return testValue;
                 }
                 if (testValue == REMOVED && removedIndex < 0)
@@ -1174,10 +1179,11 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
             if (replaceOnly)
                 return null;
             if (removedIndex < 0) {
-                matrix[index] = value;
                 overallSize++;
-            } else
-                matrix[index = removedIndex] = value;
+            } else {
+                index = removedIndex;
+            }
+            set(index, value);
             quality += qualityInc(index, initialIndex);
             payloadSize++;
             modCount++;
@@ -1188,7 +1194,7 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
             int index = getInitialIndexByValue(value);
             int initialIndex = index;
             V testValue;
-            while ((testValue = matrix[index]) != null) { // Atomic read.
+            while ((testValue = get(index)) != null) { // Atomic read.
                 if (testValue != REMOVED && indexer.matchesByValue(value, testValue)) {
                     removeAt(index, initialIndex);
                     return testValue;
@@ -1202,7 +1208,7 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
             int index = (indexer.hashCodeByKey(key) * magic) >>> shift;
             int initialIndex = index;
             V testValue;
-            while ((testValue = matrix[index]) != null) { // Atomic read.
+            while ((testValue = get(index)) != null) { // Atomic read.
                 if (testValue != REMOVED && indexer.matchesByKey(key, testValue)) {
                     removeAt(index, initialIndex);
                     return testValue;
@@ -1216,7 +1222,7 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
             int index = (indexer.hashCodeByKey(key) * magic) >>> shift;
             int initialIndex = index;
             V testValue;
-            while ((testValue = matrix[index]) != null) { // Atomic read.
+            while ((testValue = get(index)) != null) { // Atomic read.
                 if (testValue != REMOVED && indexer.matchesByKey(key, testValue)) {
                     removeAt(index, initialIndex);
                     return testValue;
@@ -1226,22 +1232,14 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
             return null;
         }
 
-        int getMaxIndex() {
-            return matrix.length - 1;
-        }
-
-        V getAt(int index) {
-            return matrix[index];
-        }
-
         @SuppressWarnings("unchecked")
         void removeAt(int index, int initialIndex) {
-            matrix[index] = (V) REMOVED;
+            set(index, (V) REMOVED);
             quality -= qualityInc(index, initialIndex);
             payloadSize--;
-            if (matrix[(index - 1) & (-1 >>> shift)] == null)
-                while (matrix[index] == REMOVED) {
-                    matrix[index] = null;
+            if (get((index - 1) & (-1 >>> shift)) == null)
+                while (get(index) == REMOVED) {
+                    set(index, null);
                     overallSize--;
                     index = (index + 1) & (-1 >>> shift);
                 }
@@ -1257,8 +1255,8 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
             Object[] result = a == null ? new Object[size] : a.length >= size ? a :
                 (Object[]) Array.newInstance(a.getClass().getComponentType(), size);
             int n = 0;
-            for (int i = matrix.length; --i >= 0;) {
-                Object value = matrix[i]; // Atomic read.
+            for (int i = length(); --i >= 0;) {
+                Object value = get(i); // Atomic read.
                 if (value == null || value == REMOVED)
                     continue;
                 if (n >= result.length) {
@@ -1289,8 +1287,8 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
             // if (n > 0) then fixed set with exactly n elements written
             // if (n < 0) then dynamic set with approximately (-n) elements plus marker null element written
             out.writeInt(n);
-            for (int i = matrix.length; --i >= 0;) {
-                Object value = matrix[i]; // Atomic read.
+            for (int i = length(); --i >= 0;) {
+                Object value = get(i); // Atomic read.
                 if (value != null && value != REMOVED && n-- > 0) // Do not write more than n values anyway.
                     out.writeObject(value);
             }
@@ -1321,7 +1319,7 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
         }
 
         IndexedSetStats getStats() {
-            return new IndexedSetStats(payloadSize, matrix.length, quality >>> QUALITY_BASE, amortizedCost + unamortizedCost(), modCount);
+            return new IndexedSetStats(payloadSize, length(), quality >>> QUALITY_BASE, amortizedCost + unamortizedCost(), modCount);
         }
     }
 
@@ -1357,7 +1355,7 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
             this.core = core;
             this.type = type;
             modCount = core.getModCount();
-            nextIndex = core.getMaxIndex() + 1;
+            nextIndex = core.length();
             fillNext();
         }
 
@@ -1365,7 +1363,7 @@ public class IndexedSet<K, V> extends AbstractConcurrentSet<V> implements Clonea
             if (type != VALUE_CONCURRENT)
                 set.checkModification(core, modCount);
             while (--nextIndex >= 0) {
-                nextValue = core.getAt(nextIndex); // Atomic read.
+                nextValue = core.get(nextIndex); // Atomic read.
                 if (nextValue != null && nextValue != Core.REMOVED)
                     return;
             }

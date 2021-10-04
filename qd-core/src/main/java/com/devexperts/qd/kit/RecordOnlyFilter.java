@@ -40,7 +40,7 @@ public abstract class RecordOnlyFilter extends QDFilter {
      */
     public static RecordOnlyFilter valueOf(String spec, DataScheme scheme) {
         if (spec.equals("*") || spec.equals("all"))
-            return new Anything(scheme);
+            return new FastRecordFilter(scheme, ":*", r -> true);
         SubscriptionFilter filter = CompositeFilters.getFactory(scheme).createFilter(spec, QDFilterContext.RECORD_ONLY);
         if (filter instanceof RecordOnlyFilter)
             return (RecordOnlyFilter) filter;
@@ -69,7 +69,7 @@ public abstract class RecordOnlyFilter extends QDFilter {
 
     @Override
     public QDFilter negate() {
-        return new FastRecordFilter(new NotFilter(unwrap()), true);
+        return new FastRecordFilter(new NotFilter(unwrap()));
     }
 
     /**
@@ -102,21 +102,5 @@ public abstract class RecordOnlyFilter extends QDFilter {
     @Override
     public final QDFilter toStableFilter() {
         return this;
-    }
-
-    private static class Anything extends RecordOnlyFilter {
-        private Anything(DataScheme scheme) {
-            super(scheme);
-        }
-
-        @Override
-        public boolean acceptRecord(DataRecord record) {
-            return true;
-        }
-
-        @Override
-        public String toString() {
-            return ":*";
-        }
     }
 }

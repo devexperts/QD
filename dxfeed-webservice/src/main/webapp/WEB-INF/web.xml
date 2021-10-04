@@ -49,7 +49,7 @@
         </init-param>
         <init-param>
             <param-name>transports</param-name>
-            <param-value>org.cometd.websocket.server.WebSocketTransport</param-value>
+            <param-value>com.dxfeed.webservice.comet.WebSocketTransportExtension</param-value>
         </init-param>
         <init-param>
             <param-name>services</param-name>

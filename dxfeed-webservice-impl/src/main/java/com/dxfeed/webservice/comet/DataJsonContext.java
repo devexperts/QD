@@ -16,6 +16,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import org.cometd.bayeux.Message;
 import org.cometd.bayeux.server.ServerMessage;
 import org.cometd.common.JSONContext;
+import org.cometd.server.JSONContextServer;
 import org.cometd.server.ServerMessageImpl;
 
 import java.io.IOException;
@@ -24,7 +25,7 @@ import java.io.Reader;
 import java.text.ParseException;
 import java.util.List;
 
-public class DataJsonContext implements JSONContext.Server, JSONContext.Parser, JSONContext.Generator {
+public class DataJsonContext implements JSONContextServer, JSONContext.Parser, JSONContext.Generator {
     private static final Class<ServerMessageImpl[]> VALUE_TYPE = ServerMessageImpl[].class;
 
     @Override

@@ -170,7 +170,7 @@ public class CompositeFiltersTest extends TestCase {
         checkSame("!*&A", CompositeFilters.makeAnd(
             QDFilter.NOTHING,
             PatternFilter.valueOf("A", null)
-        ), true);
+        ), false);
     }
 
     public void testForRecords() {
@@ -227,6 +227,7 @@ public class CompositeFiltersTest extends TestCase {
         assertEquals(expected, ((RecordOnlyFilter) filter).acceptRecord(record)); // also checks proper filter class
     }
 
+    @SuppressWarnings("SimplifiableJUnitAssertion")
     public void testOptimize() {
         // record filters ordered first (add spaces to the so its longer vs default name)
         checkConversion("         IBM*&:Record1", ":Record1&IBM*");
@@ -239,7 +240,12 @@ public class CompositeFiltersTest extends TestCase {
         checkConversion("         !(:Record2,:Record3,:Record4)", "!:Record2&!:Record3&!:Record4");
         // long chain for ands mixed with any
         checkConversion("         *&:Record1&*&*&MSFT*&:Record[123]&*&:Record[13]&*&IBM*&*", ":Record1&:Record[123]&:Record[13]&MSFT*&IBM*");
-        // wiil optimize to nothing
+        // will optimize to anything
+        assertTrue(CompositeFilters.valueOf("*,:Record1", SCHEME) == QDFilter.ANYTHING);
+        assertTrue(CompositeFilters.valueOf(":Record1,*", SCHEME) == QDFilter.ANYTHING);
+        // will optimize to nothing
+        assertTrue(CompositeFilters.valueOf("!*&:Record1", SCHEME) == QDFilter.NOTHING);
+        assertTrue(CompositeFilters.valueOf(":Record1&!*", SCHEME) == QDFilter.NOTHING);
         checkConversion("*&:Record1&*&*&MSFT&:Record[123]&*&:Record[13]&*&IBM*&*", "!*");
         checkConversion("*&:Record1&*&*&MSFT&:Record[123]&*&:Record[13]&*&IBM&*", "!*");
         // make sure that "all records effectively" is _not_ recognized as anything, but is kept (important for string rep of filters)

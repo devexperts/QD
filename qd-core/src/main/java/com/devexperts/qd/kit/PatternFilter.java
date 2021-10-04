@@ -167,7 +167,7 @@ public final class PatternFilter extends QDFilter {
         if (filter.isNothingPattern())
             return NOTHING;
         if (record)
-            return new RecordPatternFilter(scheme, name, filter);
+            return new FastRecordFilter(scheme, name, r -> filter.acceptString(r.getName())).warnOnPotentialTypo(true);
         return filter;
     }
 
@@ -766,29 +766,5 @@ public final class PatternFilter extends QDFilter {
 
     private static int rollingHash(int hs, long code, int inIndex, int outIndex, int outMultiplier) {
         return 31 * hs + charAtCode(code, inIndex) - outMultiplier * charAtCode(code, outIndex);
-    }
-
-
-    public static final class RecordPatternFilter extends RecordOnlyFilter {
-        private final String name;
-        private final boolean[] accepts;
-
-        RecordPatternFilter(DataScheme scheme, String name, PatternFilter filter) {
-            super(scheme);
-            this.name = name;
-            accepts = new boolean[scheme.getRecordCount()];
-            for (int i = 0; i < accepts.length; i++)
-                accepts[i] = filter.acceptString(scheme.getRecord(i).getName());
-        }
-
-        @Override
-        public boolean acceptRecord(DataRecord record) {
-            int id = record.getId();
-            return id < accepts.length && accepts[id];
-        }
-
-        public String toString() {
-            return name;
-        }
     }
 }

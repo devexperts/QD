@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.302</version>
+    <version>3.303</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -77,6 +77,7 @@
         <module>dxfeed-ondemand</module>
         <module>dxfeed-webservice-impl</module>
         <module>dxlib-benchmark</module>
+        <module>dxlib-jcstress</module>
     </modules>
 
     <dependencies>
@@ -131,20 +132,20 @@
         <javadoc.error.pattern>\*?\s*@author.*</javadoc.error.pattern>
 
         <!-- version of Jetty for all web and servlet modules -->
-        <jetty.version>9.4.18.v20190429</jetty.version>
+        <jetty.version>9.4.42.v20210604</jetty.version>
         <!-- need to be in sync with servlet-api -->
         <servlet-api.version>3.1.0</servlet-api.version>
         <!-- need to be in sync with jetty -->
-        <jasper.version>8.5.40</jasper.version>
+        <jasper.version>8.5.54</jasper.version>
 
         <!-- versions of frameworks and libraries to use -->
         <log4j.version>1.1.3</log4j.version>
         <log4j2.version>2.14.1</log4j2.version>
         <jackson.version>2.9.4</jackson.version>
         <jaxb.version>2.2.7</jaxb.version>
-        <cometd.version>4.0.4</cometd.version>
+        <cometd.version>5.0.8</cometd.version>
         <!-- slf4j: same version as used by cometd above -->
-        <slf4j.version>1.7.26</slf4j.version>
+        <slf4j.version>1.7.30</slf4j.version>
         <aspectj.version>1.8.2</aspectj.version>
         <junit.version>4.12</junit.version>
         <jmh.version>1.21</jmh.version>
@@ -519,7 +520,7 @@
                 <plugin>
                     <groupId>com.samaxes.maven</groupId>
                     <artifactId>minify-maven-plugin</artifactId>
-                    <version>1.6</version>
+                    <version>1.7.6</version>
                 </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>

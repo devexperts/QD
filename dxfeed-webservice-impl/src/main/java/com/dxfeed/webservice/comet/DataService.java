@@ -47,6 +47,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.PostConstruct;
@@ -82,7 +84,7 @@ public class DataService {
 
     // ------------------------ instance ------------------------
 
-    private DXEndpoint sharedEndpoint;
+    private DXEndpointImpl sharedEndpoint;
     private OnDemandService sharedOnDemand;
 
     private final ConcurrentHashMap<ServerSession, SessionState> sessions = new ConcurrentHashMap<>();
@@ -92,8 +94,9 @@ public class DataService {
 
     @PostConstruct
     public void init() {
+        WebSocketTransportExtension.setOverflowHandler(this::toggleMessageProcessingDelaying);
         DXFeedContext.INSTANCE.acquire();
-        sharedEndpoint = DXFeedContext.INSTANCE.getEndpoint();
+        sharedEndpoint = (DXEndpointImpl) DXFeedContext.INSTANCE.getEndpoint();
         sharedOnDemand = OnDemandService.getInstance(sharedEndpoint);
     }
 
@@ -176,6 +179,22 @@ public class DataService {
         return session;
     }
 
+    private void toggleMessageProcessingDelaying(ServerSessionImpl session, boolean delayProcessing) {
+        SessionState state = sessions.get(session);
+        if (state != null) {
+            state.setDelaySubscriptions(delayProcessing);
+        } else {
+            // SessionState (basically an association between QD subscription and CometD transport session)
+            // is initialized after subscription request from the client.
+            //
+            // So under normal operation it is OK to have no SessionState instance for some CometD
+            // ServerSessionImpl instance before subscription happens in this channel.
+            //
+            // This could be a point to check though if something goes wrong, that's why it is logged at debug level.
+            log.debug("SessionState not found for ServerSessionImpl " + session);
+        }
+    }
+
     private class SessionState implements ServerSession.RemoveListener, ServerSession.DeQueueListener,
         ServerSession.MaxQueueListener, ServerSession.Extension, PropertyChangeListener
     {
@@ -231,14 +250,44 @@ public class DataService {
                 onDemand.getEndpoint().close();
             }
             closeSubscriptions();
+            remote.removeExtension(this);
+            remote.removeListener(this);
+            if (!remote.getExtensions().isEmpty()) {
+                log.warn("ServerSession still has extensions after removal: " + remote.getExtensions());
+            }
+            if (sessionImpl != null) {
+                CometReflectionUtil.sessionImplCleanup(sessionImpl);
+                if (!sessionImpl.getListeners().isEmpty()) {
+                    log.warn("ServerSessionImpl still has listeners after removal: " + sessionImpl.getListeners());
+                }
+                synchronized (sessionImpl.getLock()) {
+                    sessionImpl.getQueue().clear();
+                }
+            }
             sessions.remove(remote);
         }
 
-        private void closeSubscriptions() {
+        private void applySubscriptionAction(Consumer<DXFeedSubscription<?>> action) {
             for (DXFeedSubscription<?> sub : regularSubscriptionsMap.values())
-                sub.close();
+                action.accept(sub);
             for (DXFeedSubscription<?> sub : timeSeriesSubscriptionsMap.values())
-                sub.close();
+                action.accept(sub);
+        }
+
+        private void closeSubscriptions() {
+            applySubscriptionAction(DXFeedSubscription::close);
+        }
+
+        private void setDelaySubscriptions(boolean delaySubscriptions) {
+            applySubscriptionAction(sub -> {
+                Executor executor = sub.getExecutor();
+                if (executor instanceof DelayableExecutor) {
+                    DelayableExecutor de = (DelayableExecutor) executor;
+                    de.setDelayProcessing(delaySubscriptions);
+                } else {
+                    log.warn("Not a DelayableExecutor " + executor + " on sub " + sub);
+                }
+            });
         }
 
         private class Listener<T extends EventType<?>> implements DXFeedEventListener<T> {
@@ -253,6 +302,12 @@ public class DataService {
 
             @Override
             public void eventsReceived(List<T> events) {
+                if ((sessionImpl != null) && sessionImpl.isTerminated()) {
+                    log.warn("Received a DXFeed event for terminated session " + sessionImpl.getId());
+                    // For some reason the session removal listener was not called by cometd, running it manually
+                    removed(sessionImpl, false);
+                    return;
+                }
                 int length = events.size();
                 for (int i = 0; i < length; i += messageBatchSize) {
                     // Break list of events into smaller batches
@@ -450,6 +505,7 @@ public class DataService {
             if (sub == null) {
                 sub = feed.createSubscription(eventType);
                 sub.addEventListener(new Listener(eventType, timeSeries));
+                sub.setExecutor(new DelayableExecutor(sharedEndpoint::getOrCreateExecutor));
                 subscriptions.put(eventType, sub);
             }
             return sub;
@@ -474,12 +530,14 @@ public class DataService {
         }
 
         @Override
-        public ServerMessage send(ServerSession session, ServerMessage message) {
+        public ServerMessage send(ServerSession sender, ServerSession session, ServerMessage message) {
             if (message.getData() instanceof DataMessage) {
                 stats.writeEvents += ((DataMessage) message.getData()).getEvents().size();
             }
             if (sessionImpl != null) {
-                stats.regQueueSize(((ServerSessionImpl) remote).getQueue().size());
+                synchronized (sessionImpl.getLock()) {
+                    stats.regQueueSize(((ServerSessionImpl) remote).getQueue().size());
+                }
             }
             stats.lastActiveTime = System.currentTimeMillis();
             stats.write++;
@@ -487,7 +545,7 @@ public class DataService {
         }
 
         @Override
-        public boolean sendMeta(ServerSession session, ServerMessage.Mutable message) {
+        public boolean sendMeta(ServerSession sender, ServerSession session, ServerMessage.Mutable message) {
             stats.writeMeta++;
             return true;
         }

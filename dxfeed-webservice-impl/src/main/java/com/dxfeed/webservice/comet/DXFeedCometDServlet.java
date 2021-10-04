@@ -13,7 +13,7 @@ package com.dxfeed.webservice.comet;
 
 import com.devexperts.qd.monitoring.MonitoringEndpoint;
 import com.devexperts.util.SystemProperties;
-import org.cometd.annotation.AnnotationCometDServlet;
+import org.cometd.annotation.server.AnnotationCometDServlet;
 import org.cometd.bayeux.server.BayeuxServer;
 import org.cometd.server.AbstractServerTransport;
 

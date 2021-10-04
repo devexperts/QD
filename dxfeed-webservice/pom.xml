@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.302</version>
+        <version>3.303</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -86,11 +86,6 @@
 
         <!-- external dependencies (included anyway) -->
         <dependency>
-            <groupId>org.cometd.java</groupId>
-            <artifactId>bayeux-api</artifactId>
-            <version>${cometd.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.cometd.javascript</groupId>
             <artifactId>cometd-javascript-jquery</artifactId>
             <version>${cometd.version}</version>
@@ -98,17 +93,17 @@
         </dependency>
         <dependency>
             <groupId>org.cometd.java</groupId>
-            <artifactId>cometd-java-server</artifactId>
+            <artifactId>cometd-java-api-server</artifactId>
             <version>${cometd.version}</version>
         </dependency>
         <dependency>
             <groupId>org.cometd.java</groupId>
-            <artifactId>cometd-java-annotations</artifactId>
+            <artifactId>cometd-java-annotation-server</artifactId>
             <version>${cometd.version}</version>
         </dependency>
         <dependency>
             <groupId>org.cometd.java</groupId>
-            <artifactId>cometd-java-websocket-javax-server</artifactId>
+            <artifactId>cometd-java-server-websocket-jetty</artifactId>
             <version>${cometd.version}</version>
         </dependency>
         <dependency>
@@ -157,8 +152,9 @@
                             <goal>minify</goal>
                         </goals>
                         <configuration>
+                            <closureLanguageOut>ECMASCRIPT5</closureLanguageOut>
                             <charset>utf-8</charset>
-                            <jsEngine>closure</jsEngine>
+                            <jsEngine>CLOSURE</jsEngine>
                             <webappSourceDir>${project.basedir}</webappSourceDir>
                             <jsSourceDir>/</jsSourceDir>
                             <jsSourceFiles>
@@ -177,8 +173,9 @@
                             <goal>minify</goal>
                         </goals>
                         <configuration>
+                            <closureLanguageOut>ECMASCRIPT5</closureLanguageOut>
                             <charset>utf-8</charset>
-                            <jsEngine>closure</jsEngine>
+                            <jsEngine>CLOSURE</jsEngine>
                             <webappSourceDir>${project.basedir}</webappSourceDir>
                             <jsSourceDir>/</jsSourceDir>
                             <jsSourceFiles>

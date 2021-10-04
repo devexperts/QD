@@ -16,36 +16,58 @@ import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.QDLog;
 
+import java.util.function.Predicate;
+
 /**
  * Fast implementation for {@link RecordOnlyFilter} via boolean array.
  */
 final class FastRecordFilter extends RecordOnlyFilter {
     private final QDFilter delegate;
     private final boolean[] accepts;
+    private final SyntaxPrecedence syntaxPrecedence;
 
     FastRecordFilter(DataScheme scheme, boolean[] accepts) {
         super(scheme);
         this.delegate = null;
         this.accepts = accepts;
+        int acceptedCount = countAccepted();
+        syntaxPrecedence = acceptedCount <= 1 || acceptedCount == scheme.getRecordCount() ?
+            SyntaxPrecedence.TOKEN : SyntaxPrecedence.OR;
     }
 
-    FastRecordFilter(QDFilter delegate, boolean warnOnPotentialTypo) {
+    FastRecordFilter(DataScheme scheme, String name, Predicate<DataRecord> filter) {
+        super(scheme);
+        delegate = null;
+        accepts = new boolean[scheme.getRecordCount()];
+        for (int i = 0; i < accepts.length; i++) {
+            accepts[i] = filter.test(scheme.getRecord(i));
+        }
+        syntaxPrecedence = SyntaxPrecedence.TOKEN;
+        setName(name);
+    }
+
+    FastRecordFilter(QDFilter delegate) {
         super(delegate.getScheme());
         if (delegate.isDynamic())
             throw new IllegalArgumentException("Only static filters are supported");
         this.delegate = delegate;
         int n = getScheme().getRecordCount();
         accepts = new boolean[n];
-        int cnt = 0;
         for (int i = 0; i < n; i++) {
             accepts[i] = delegate.accept(null, getScheme().getRecord(i), 0, null);
-            if (accepts[i])
-                cnt++;
         }
-        if (warnOnPotentialTypo && cnt == 0)
-            QDLog.log.info("WARNING: Filter \"" + delegate + "\" matches no records.");
-        if (warnOnPotentialTypo && cnt == n)
-            QDLog.log.info("WARNING: Filter \"" + delegate + "\" matches all records.");
+        syntaxPrecedence = delegate.getSyntaxPrecedence();
+    }
+
+    FastRecordFilter warnOnPotentialTypo(boolean doWarn) {
+        if (doWarn) {
+            int acceptedCount = countAccepted();
+            if (acceptedCount == 0)
+                QDLog.log.warn("WARNING: Filter \"" + this + "\" matches no records.");
+            if (acceptedCount == getScheme().getRecordCount())
+                QDLog.log.warn("WARNING: Filter \"" + this + "\" matches all records.");
+        }
+        return this;
     }
 
     @Override
@@ -55,7 +77,7 @@ final class FastRecordFilter extends RecordOnlyFilter {
 
     @Override
     public QDFilter negate() {
-        return new FastRecordFilter(delegate == null ? super.negate() : delegate.negate(), false);
+        return new FastRecordFilter(delegate == null ? new NotFilter(this) : delegate.negate());
     }
 
     @Override
@@ -76,26 +98,33 @@ final class FastRecordFilter extends RecordOnlyFilter {
     public String getDefaultName() {
         if (delegate != null)
             return delegate.toString();
+        int acceptedCount = countAccepted();
+        if (acceptedCount == 0)
+            return "!:*";
+        if (acceptedCount == getScheme().getRecordCount())
+            return ":*";
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < accepts.length; i++)
+        for (int i = 0; i < accepts.length; i++) {
             if (accepts[i]) {
                 if (sb.length() > 0)
                     sb.append(',');
                 sb.append(':').append(PatternFilter.quote(getScheme().getRecord(i).getName()));
             }
-        if (sb.length() == 0)
-            sb.append("!:*");
+        }
         return sb.toString();
     }
 
     @Override
     public SyntaxPrecedence getSyntaxPrecedence() {
-        if (delegate != null)
-            return delegate.getSyntaxPrecedence();
+        return syntaxPrecedence;
+    }
+
+    private int countAccepted() {
         int count = 0;
-        for (boolean accept : accepts)
+        for (boolean accept : accepts) {
             if (accept)
                 count++;
-        return count <= 1 ? SyntaxPrecedence.TOKEN : SyntaxPrecedence.OR;
+        }
+        return count;
     }
 }

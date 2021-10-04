@@ -19,11 +19,17 @@ import com.devexperts.qd.SpecificSubscriptionFilter;
 import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.qd.kit.FilterSyntaxException;
 import com.devexperts.qd.kit.PatternFilter;
+import com.devexperts.qd.kit.RecordOnlyFilter;
 import com.devexperts.qd.spi.QDFilterContext;
 import com.devexperts.qd.spi.QDFilterFactory;
 import com.devexperts.services.ServiceProvider;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.StringTokenizer;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 @SuppressWarnings("UnusedDeclaration")
@@ -101,6 +107,8 @@ public class FilterFactoryImpl extends QDFilterFactory {
         "accepts optional symbol namespace like :XCME or :RTSX")
     public static final String FX = "fx";
 
+    private final Map<String, QDFilter> filters = new ConcurrentHashMap<>();
+
     @Override
     public QDFilter createFilter(String spec) {
         return createFilter(spec, QDFilterContext.DEFAULT);
@@ -108,45 +116,45 @@ public class FilterFactoryImpl extends QDFilterFactory {
 
     @Override
     public QDFilter createFilter(String spec, QDFilterContext context) {
-        QDFilter filter = parseCategoryFilter(spec);
+        QDFilter filter = filters.computeIfAbsent(spec, this::parseCategoryFilter);
         if (filter != null)
             return filter;
-        filter = parseSymbolFilter(spec);
+        filter = filters.computeIfAbsent(spec, this::parseSymbolFilter);
         if (filter != null)
             return filter;
-        filter = parseSymbolFilter(spec + SYMBOL_SUFFIX);
+        filter = filters.computeIfAbsent(spec + SYMBOL_SUFFIX, this::parseSymbolFilter);
         if (filter != null && context != QDFilterContext.SYMBOL_SET)
-            return CompositeFilters.makeAnd(filter, parseCategoryFilter(FEED));
+            return CompositeFilters.makeAnd(filter, filters.computeIfAbsent(FEED, this::parseCategoryFilter));
         return filter;
     }
 
-    public QDFilter parseCategoryFilter(String spec) {
+    private QDFilter parseCategoryFilter(String spec) {
         if (spec.equals(CONVRATES))
             return new ConversionRateFilter(getScheme());
         if (spec.equals(NWC))
             return new NWCFilter(getScheme());
         if (spec.equals(CHARTDATA))
-            return CompositeFilters.valueOf(makeFilter(CHARTDATA_RECORDS, ""), spec, getScheme());
+            return makeRecordFilter(spec, CHARTDATA_RECORDS, true, false);
         if (spec.equals(FEED))
-            return CompositeFilters.valueOf(makeFilter(COMPFEED_RECORDS, "") + "," + makeFilter(COMPFEED_RECORDS, "[&][A-Z]"), spec, getScheme());
+            return makeRecordFilter(spec, COMPFEED_RECORDS, true, true);
         if (spec.equals(COMPFEED))
-            return CompositeFilters.valueOf(makeFilter(COMPFEED_RECORDS, ""), spec, getScheme());
+            return makeRecordFilter(spec, COMPFEED_RECORDS, true, false);
         if (spec.equals(REGFEED))
-            return CompositeFilters.valueOf(makeFilter(COMPFEED_RECORDS, "[&][A-Z]"), spec, getScheme());
+            return makeRecordFilter(spec, COMPFEED_RECORDS, false, true);
         return null;
     }
 
-    private static String makeFilter(String records, String suffix) {
-        StringBuilder sb = new StringBuilder();
+    private RecordOnlyFilter makeRecordFilter(String name, String records, boolean composite, boolean regional) {
+        List<QDFilter> patterns = new ArrayList<>();
         for (StringTokenizer st = new StringTokenizer(records, ", "); st.hasMoreTokens();) {
             String recordMask = st.nextToken();
-            if (recordMask.endsWith("*") && !suffix.isEmpty())
-                continue; // these multi-records cannot be "regional"
-            if (sb.length() > 0)
-                sb.append(',');
-            sb.append(':').append(recordMask).append(suffix);
+            if (composite)
+                patterns.add(PatternFilter.valueOf(recordMask, "test", getScheme()));
+            if (regional && !recordMask.endsWith("*")) // these multi-records cannot be "regional"
+                patterns.add(PatternFilter.valueOf(recordMask + "[&][A-Z]", "test", getScheme()));
         }
-        return sb.toString();
+        Predicate<DataRecord> filter = r -> patterns.stream().anyMatch(f -> f.accept(null, null, 0, r.getName()));
+        return CompositeFilters.forRecords(getScheme(), name, filter);
     }
 
     private QDFilter parseSymbolFilter(String spec) throws FilterSyntaxException {
@@ -189,6 +197,7 @@ public class FilterFactoryImpl extends QDFilterFactory {
             super(scheme);
             wildcard = scheme.getCodec().getWildcardCipher();
             this.negated = negated;
+            setName(getDefaultName());
         }
 
         @Override
@@ -270,6 +279,7 @@ public class FilterFactoryImpl extends QDFilterFactory {
             super(scheme);
             wildcard = scheme.getCodec().getWildcardCipher();
             this.negated = negated;
+            setName(getDefaultName());
         }
 
         @Override
@@ -344,6 +354,7 @@ public class FilterFactoryImpl extends QDFilterFactory {
             Pattern regex = Pattern.compile("Quote(&[A-Z])?");
             for (int i = 0; i < accepts.length; i++)
                 accepts[i] = regex.matcher(scheme.getRecord(i).getName()).matches();
+            setName(getDefaultName());
         }
 
         @Override
@@ -401,6 +412,7 @@ public class FilterFactoryImpl extends QDFilterFactory {
         NWCFilter(DataScheme scheme) {
             super(scheme);
             wildcard = scheme.getCodec().getWildcardCipher();
+            setName(getDefaultName());
         }
 
         @Override
