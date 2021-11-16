@@ -35,7 +35,7 @@ class ViewerCellRenderer extends DefaultTableCellRenderer {
     public static final Color EDIT_BG_COLOR = new Color(0xAA8800);
     public static final Color EDIT_FG_COLOR = Color.WHITE;
 
-    public static final Border EMPTY_BORDER = new EmptyBorder(0, 0, 0, 0);
+    public static final Border EMPTY_BORDER = new EmptyBorder(0, 2, 0, 2);
     public static final Border FOCUS_BORDER = new LineBorder(EDIT_BG_COLOR, 2);
 
     public static final int DARK_SCHEME = 0;

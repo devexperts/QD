@@ -13,6 +13,7 @@ package com.dxfeed.news;
 
 import java.io.Serializable;
 
+@Deprecated
 public class NewsFilter implements Serializable {
     private static final long serialVersionUID = 0L;
 

@@ -15,8 +15,7 @@ import com.devexperts.logging.Logging;
 import com.devexperts.util.LogUtil;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.event.market.Quote;
-import com.jtattoo.plaf.acryl.AcrylLookAndFeel;
-import com.jtattoo.plaf.noire.NoireLookAndFeel;
+import com.formdev.flatlaf.intellijthemes.FlatOneDarkIJTheme;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -45,6 +44,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -67,6 +67,8 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIManager;
+import javax.swing.plaf.FontUIResource;
+import javax.swing.text.StyleContext;
 
 public class DXFeedMarketDataPlotter implements Runnable {
     private static final Logging log = Logging.getLogging(DXFeedMarketDataPlotter.class);
@@ -234,40 +236,28 @@ public class DXFeedMarketDataPlotter implements Runnable {
         }
     };
 
-    private static void setNoireTheme() {
-        Properties props = new Properties();
-        props.setProperty("logoString", "");
-        props.setProperty("textShadow", "off");
-        props.setProperty("macStyleWindowDecoration", "on");
-        props.setProperty("menuOpaque", "off");
-
-        NoireLookAndFeel.setCurrentTheme(props);
-
+    private static void setDarkTheme() {
         try {
-            UIManager.setLookAndFeel(new NoireLookAndFeel());
-        } catch (Exception e) {
-            log.error("Cannot set Noire LookAndFeel", e);
-        }
-    }
+            UIManager.setLookAndFeel(new FlatOneDarkIJTheme());
 
-    private static void setAcrylTheme() {
-        Properties props = new Properties();
-        props.setProperty("logoString", "");
-        props.setProperty("macStyleWindowDecoration", "on");
-        props.setProperty("menuOpaque", "off");
-
-        AcrylLookAndFeel.setCurrentTheme(props);
-        try {
-            UIManager.setLookAndFeel(new AcrylLookAndFeel());
+            // Theme tweaks
+            FontUIResource text = (FontUIResource) UIManager.get("defaultFont");
+            Font boldFont = text.deriveFont(Font.BOLD, text.getSize());
+            UIManager.put("defaultFont", new FontUIResource(boldFont));
+            UIManager.put("Component.arrowType", "chevron");
+            UIManager.put("Component.focusWidth", 1);
+            UIManager.put("ScrollBar.width", 16);
+            UIManager.put("ScrollBar.showButtons", true);
+            UIManager.put("Table.intercellSpacing", new Dimension(1, 1));
         } catch (Exception e) {
-            log.error("Cannot set Acryl LookAndFeel", e);
+            log.error("Cannot set LookAndFeel theme", e);
         }
     }
 
     // ==================== Initialization ====================
 
     public static void main(String[] args) {
-        setNoireTheme();
+        setDarkTheme();
         String defaultConfigFile = System.getProperty("user.home") + PROPERTIES_PATH;
         String configFile = (args.length > 0) ? args[0] : defaultConfigFile;
         SwingUtilities.invokeLater(new DXFeedMarketDataPlotter(configFile));
@@ -552,7 +542,8 @@ public class DXFeedMarketDataPlotter implements Runnable {
      *
      * @noinspection ALL
      */
-    private void $$$setupUI$$$() {
+    private void $$$setupUI$$$()
+    {
         tabbedPane = new JTabbedPane();
         final JPanel panel1 = new JPanel();
         panel1.setLayout(new GridBagLayout());
@@ -596,7 +587,8 @@ public class DXFeedMarketDataPlotter implements Runnable {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         panel4.add(toolBar$Separator1, gbc);
         currentTimeLabel = new JLabel();
-        currentTimeLabel.setFont(new Font(currentTimeLabel.getFont().getName(), Font.PLAIN, 10));
+        Font currentTimeLabelFont = this.$$$getFont$$$(null, Font.PLAIN, 10, currentTimeLabel.getFont());
+        if (currentTimeLabelFont != null) currentTimeLabel.setFont(currentTimeLabelFont);
         currentTimeLabel.setText("");
         gbc = new GridBagConstraints();
         gbc.gridx = 1;
@@ -626,7 +618,8 @@ public class DXFeedMarketDataPlotter implements Runnable {
         gbc.fill = GridBagConstraints.BOTH;
         panel3.add(panel5, gbc);
         mpsLabel = new JLabel();
-        mpsLabel.setFont(new Font(mpsLabel.getFont().getName(), Font.PLAIN, 10));
+        Font mpsLabelFont = this.$$$getFont$$$(null, Font.PLAIN, 10, mpsLabel.getFont());
+        if (mpsLabelFont != null) mpsLabel.setFont(mpsLabelFont);
         mpsLabel.setHorizontalAlignment(0);
         mpsLabel.setHorizontalTextPosition(0);
         mpsLabel.setText("");
@@ -653,7 +646,8 @@ public class DXFeedMarketDataPlotter implements Runnable {
         gbc.fill = GridBagConstraints.BOTH;
         panel3.add(panel6, gbc);
         qpsLabel = new JLabel();
-        qpsLabel.setFont(new Font(qpsLabel.getFont().getName(), Font.PLAIN, 10));
+        Font qpsLabelFont = this.$$$getFont$$$(null, Font.PLAIN, 10, qpsLabel.getFont());
+        if (qpsLabelFont != null) qpsLabel.setFont(qpsLabelFont);
         qpsLabel.setHorizontalAlignment(0);
         qpsLabel.setHorizontalTextPosition(0);
         qpsLabel.setText("");
@@ -703,7 +697,8 @@ public class DXFeedMarketDataPlotter implements Runnable {
         addressToolbar = new JToolBar();
         addressToolbar.setBorderPainted(true);
         addressToolbar.setFloatable(false);
-        addressToolbar.setFont(new Font(addressToolbar.getFont().getName(), Font.PLAIN, 9));
+        Font addressToolbarFont = this.$$$getFont$$$(null, Font.PLAIN, 9, addressToolbar.getFont());
+        if (addressToolbarFont != null) addressToolbar.setFont(addressToolbarFont);
         addressToolbar.setRollover(false);
         addressToolbar.putClientProperty("JToolBar.isRollover", Boolean.FALSE);
         gbc = new GridBagConstraints();
@@ -729,13 +724,15 @@ public class DXFeedMarketDataPlotter implements Runnable {
         final JToolBar.Separator toolBar$Separator2 = new JToolBar.Separator();
         addressToolbar.add(toolBar$Separator2);
         final JLabel label1 = new JLabel();
-        label1.setFont(new Font(label1.getFont().getName(), label1.getFont().getStyle(), label1.getFont().getSize()));
+        Font label1Font = this.$$$getFont$$$(null, -1, -1, label1.getFont());
+        if (label1Font != null) label1.setFont(label1Font);
         label1.setText("Subscribe to: ");
         addressToolbar.add(label1);
         subscribedSymbolsEdit = new JTextField();
         subscribedSymbolsEdit.setColumns(0);
         subscribedSymbolsEdit.setEditable(true);
-        subscribedSymbolsEdit.setFont(new Font(subscribedSymbolsEdit.getFont().getName(), subscribedSymbolsEdit.getFont().getStyle(), subscribedSymbolsEdit.getFont().getSize()));
+        Font subscribedSymbolsEditFont = this.$$$getFont$$$(null, -1, -1, subscribedSymbolsEdit.getFont());
+        if (subscribedSymbolsEditFont != null) subscribedSymbolsEdit.setFont(subscribedSymbolsEditFont);
         subscribedSymbolsEdit.setForeground(new Color(-1));
         subscribedSymbolsEdit.setToolTipText("Connection address");
         addressToolbar.add(subscribedSymbolsEdit);
@@ -744,7 +741,30 @@ public class DXFeedMarketDataPlotter implements Runnable {
     /**
      * @noinspection ALL
      */
+    private Font $$$getFont$$$(String fontName, int style, int size, Font currentFont) {
+        if (currentFont == null) return null;
+        String resultName;
+        if (fontName == null) {
+            resultName = currentFont.getName();
+        } else {
+            Font testFont = new Font(fontName, Font.PLAIN, 10);
+            if (testFont.canDisplay('a') && testFont.canDisplay('1')) {
+                resultName = fontName;
+            } else {
+                resultName = currentFont.getName();
+            }
+        }
+        Font font = new Font(resultName, style >= 0 ? style : currentFont.getStyle(), size >= 0 ? size : currentFont.getSize());
+        boolean isMac = System.getProperty("os.name", "").toLowerCase(Locale.ENGLISH).startsWith("mac");
+        Font fontWithFallback = isMac ? new Font(font.getFamily(), font.getStyle(), font.getSize()) : new StyleContext().getFont(font.getFamily(), font.getStyle(), font.getSize());
+        return fontWithFallback instanceof FontUIResource ? fontWithFallback : new FontUIResource(fontWithFallback);
+    }
+
+    /**
+     * @noinspection ALL
+     */
     public JComponent $$$getRootComponent$$$() {
         return tabbedPane;
     }
+
 }

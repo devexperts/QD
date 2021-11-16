@@ -56,6 +56,7 @@ import java.util.List;
  * notification is guaranteed to never be concurrent, even though it may happen from different
  * threads if executor is multi-threaded.
  */
+@Deprecated
 public final class NewsModel {
 
     // ==================== private static fields ====================

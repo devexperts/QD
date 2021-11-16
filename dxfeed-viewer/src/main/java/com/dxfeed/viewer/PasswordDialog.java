@@ -11,10 +11,6 @@
  */
 package com.dxfeed.viewer;
 
-import com.intellij.uiDesigner.core.GridConstraints;
-import com.intellij.uiDesigner.core.GridLayoutManager;
-import com.intellij.uiDesigner.core.Spacer;
-
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -28,6 +24,7 @@ import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.Locale;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -38,10 +35,12 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
-import javax.swing.JToolBar;
 import javax.swing.KeyStroke;
+import javax.swing.border.TitledBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.plaf.FontUIResource;
+import javax.swing.text.StyleContext;
 
 public class PasswordDialog extends JDialog {
     private JPanel contentPane;
@@ -56,9 +55,6 @@ public class PasswordDialog extends JDialog {
     public PasswordDialog() {
         setContentPane(contentPane);
         setModal(true);
-        Dimension buttonDim = new Dimension(80, 30);
-        buttonOK.setPreferredSize(buttonDim);
-        buttonCancel.setPreferredSize(buttonDim);
         setPreferredSize(new Dimension(300, 220));
         getRootPane().setDefaultButton(buttonOK);
 
@@ -204,7 +200,7 @@ public class PasswordDialog extends JDialog {
         contentPane = new JPanel();
         contentPane.setLayout(new GridBagLayout());
         final JPanel panel1 = new JPanel();
-        panel1.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
+        panel1.setLayout(new GridBagLayout());
         GridBagConstraints gbc;
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -212,12 +208,17 @@ public class PasswordDialog extends JDialog {
         gbc.weightx = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
         contentPane.add(panel1, gbc);
-        panel1.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10), null));
-        final Spacer spacer1 = new Spacer();
-        panel1.add(spacer1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        panel1.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10), null, TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         final JPanel panel2 = new JPanel();
         panel2.setLayout(new GridBagLayout());
-        panel1.add(panel2, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
+        gbc.anchor = GridBagConstraints.EAST;
+        gbc.fill = GridBagConstraints.VERTICAL;
+        panel1.add(panel2, gbc);
         buttonOK = new JButton();
         buttonOK.setEnabled(false);
         buttonOK.setText("Connect");
@@ -227,22 +228,17 @@ public class PasswordDialog extends JDialog {
         gbc.weightx = 1.0;
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(0, 0, 0, 10);
         panel2.add(buttonOK, gbc);
         buttonCancel = new JButton();
         buttonCancel.setText("Cancel");
         gbc = new GridBagConstraints();
-        gbc.gridx = 2;
+        gbc.gridx = 1;
         gbc.gridy = 0;
         gbc.weightx = 1.0;
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         panel2.add(buttonCancel, gbc);
-        final JToolBar.Separator toolBar$Separator1 = new JToolBar.Separator();
-        gbc = new GridBagConstraints();
-        gbc.gridx = 1;
-        gbc.gridy = 0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        panel2.add(toolBar$Separator1, gbc);
         final JPanel panel3 = new JPanel();
         panel3.setLayout(new GridBagLayout());
         gbc = new GridBagConstraints();
@@ -252,7 +248,7 @@ public class PasswordDialog extends JDialog {
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
         contentPane.add(panel3, gbc);
-        panel3.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10), null));
+        panel3.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10), null, TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         titleLabel = new JLabel();
         titleLabel.setIcon(new ImageIcon(getClass().getResource("/com/dxfeed/viewer/icons/password.png")));
         titleLabel.setText("Connect to:");
@@ -265,12 +261,13 @@ public class PasswordDialog extends JDialog {
         gbc.anchor = GridBagConstraints.WEST;
         panel3.add(titleLabel, gbc);
         final JLabel label1 = new JLabel();
-        label1.setText("Username: ");
+        label1.setText("Username:");
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 3;
         gbc.weighty = 1.0;
         gbc.anchor = GridBagConstraints.WEST;
+        gbc.insets = new Insets(0, 0, 0, 10);
         panel3.add(label1, gbc);
         final JLabel label2 = new JLabel();
         label2.setText("Password: ");
@@ -279,6 +276,7 @@ public class PasswordDialog extends JDialog {
         gbc.gridy = 4;
         gbc.weighty = 1.0;
         gbc.anchor = GridBagConstraints.WEST;
+        gbc.insets = new Insets(0, 0, 0, 10);
         panel3.add(label2, gbc);
         usernameTextField = new JTextField();
         gbc = new GridBagConstraints();
@@ -298,15 +296,10 @@ public class PasswordDialog extends JDialog {
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         panel3.add(passwordTextField, gbc);
-        final JToolBar.Separator toolBar$Separator2 = new JToolBar.Separator();
-        gbc = new GridBagConstraints();
-        gbc.gridx = 1;
-        gbc.gridy = 3;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        panel3.add(toolBar$Separator2, gbc);
         warningLabel = new JLabel();
         warningLabel.setFocusable(false);
-        warningLabel.setFont(new Font(warningLabel.getFont().getName(), warningLabel.getFont().getStyle(), 10));
+        Font warningLabelFont = this.$$$getFont$$$(null, -1, 10, warningLabel.getFont());
+        if (warningLabelFont != null) warningLabel.setFont(warningLabelFont);
         warningLabel.setForeground(new Color(-4521975));
         warningLabel.setText("Wrong username/password/ipfAddress");
         gbc = new GridBagConstraints();
@@ -320,7 +313,30 @@ public class PasswordDialog extends JDialog {
     /**
      * @noinspection ALL
      */
+    private Font $$$getFont$$$(String fontName, int style, int size, Font currentFont) {
+        if (currentFont == null) return null;
+        String resultName;
+        if (fontName == null) {
+            resultName = currentFont.getName();
+        } else {
+            Font testFont = new Font(fontName, Font.PLAIN, 10);
+            if (testFont.canDisplay('a') && testFont.canDisplay('1')) {
+                resultName = fontName;
+            } else {
+                resultName = currentFont.getName();
+            }
+        }
+        Font font = new Font(resultName, style >= 0 ? style : currentFont.getStyle(), size >= 0 ? size : currentFont.getSize());
+        boolean isMac = System.getProperty("os.name", "").toLowerCase(Locale.ENGLISH).startsWith("mac");
+        Font fontWithFallback = isMac ? new Font(font.getFamily(), font.getStyle(), font.getSize()) : new StyleContext().getFont(font.getFamily(), font.getStyle(), font.getSize());
+        return fontWithFallback instanceof FontUIResource ? fontWithFallback : new FontUIResource(fontWithFallback);
+    }
+
+    /**
+     * @noinspection ALL
+     */
     public JComponent $$$getRootComponent$$$() {
         return contentPane;
     }
+
 }

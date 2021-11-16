@@ -28,6 +28,7 @@ import java.util.Set;
 /**
  * Contains news details including time, title, news source, etc.
  */
+@Deprecated
 public class NewsSummary implements Serializable, Comparable<NewsSummary> {
     private static final long serialVersionUID = 0L;
 

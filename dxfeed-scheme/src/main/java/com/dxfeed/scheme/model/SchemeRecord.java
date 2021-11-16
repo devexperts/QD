@@ -682,6 +682,11 @@ public final class SchemeRecord extends NamedEntity<SchemeRecord> {
         @Override
         void validateState(SchemeModel parent) throws SchemeException {
             super.validateState(parent);
+            if (type == null) {
+                throw new SchemeException(
+                    SchemeException.formatInconsistencyMessage(this, "Field without type"),
+                    getFilesList());
+            }
             if (!parent.hasType(type)) {
                 throw new SchemeException(
                     SchemeException.formatInconsistencyMessage(this, "Unknown type \"" + type + "\""),

@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.303</version>
+    <version>3.304</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -69,7 +69,7 @@
         <module>proto-sample</module>
         <module>dxfeed-codegen</module>
         <module>qd-sample</module>
-        <module>license</module>
+        <module>build-support</module>
         <module>rt-api-builder</module>
         <module>teamcity-version</module>
         <module>dxfeed-codegen-verify</module>
@@ -409,8 +409,8 @@
                         <exclude>**/jquery/jquery-1.9.0.js</exclude>
                         <exclude>**/jquery/jquery-1.9.0.min.js</exclude>
                     </excludes>
-                    <descriptionTemplate>${session.executionRootDirectory}/license/src/main/resources/description.ftl</descriptionTemplate>
-                    <licenseResolver>file:${session.executionRootDirectory}/license/src/main/resources</licenseResolver>
+                    <descriptionTemplate>${session.executionRootDirectory}/build-support/src/main/resources/description.ftl</descriptionTemplate>
+                    <licenseResolver>file:${session.executionRootDirectory}/build-support/src/main/resources</licenseResolver>
                 </configuration>
                 <executions>
                     <execution>

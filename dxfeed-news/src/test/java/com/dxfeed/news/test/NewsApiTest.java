@@ -27,6 +27,7 @@ import com.dxfeed.news.NewsSummary;
 import com.dxfeed.news.impl.NewsNotFoundException;
 import com.dxfeed.news.impl.RemoteNewsService;
 import junit.framework.TestCase;
+import org.junit.Ignore;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,6 +41,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+@Ignore
 public class NewsApiTest extends TestCase {
 
     private RMIEndpoint client;

@@ -368,6 +368,28 @@ public class DXSchemeLoaderRecordsGenTests {
         checkRecordField(r, "D", SerialFieldType.COMPACT_INT);
     }
 
+    /**
+     * QD-1328 regression test: field update shall not require type definition
+     */
+    @Test
+    public void testRecordUpdateWithoutType() {
+        DataScheme s = loader.createDataScheme("ext:" +
+            "resource:records/QD-1328-a.xml," +
+            "resource:records/QD-1328-b.xml"
+        );
+        assertNotNull(s);
+        assertEquals(1, s.getRecordCount());
+
+        DataRecord r;
+        r = s.findRecordByName("one");
+        assertNotNull(r);
+        assertTrue(r.hasTime());
+        checkRecordField(r, "A", SerialFieldType.COMPACT_INT, "AA");
+        checkRecordField(r, "B", SerialFieldType.COMPACT_INT);
+        checkRecordField(r, "C", SerialFieldType.COMPACT_INT);
+    }
+
+
     static void checkRecordField(DataRecord r, String fieldName, SerialFieldType type) {
         checkRecordField(r, fieldName, type, null);
     }

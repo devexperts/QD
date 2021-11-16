@@ -32,8 +32,7 @@ import com.dxfeed.ipf.option.OptionSeries;
 import com.dxfeed.model.market.OrderBookModel;
 import com.dxfeed.model.market.OrderBookModelFilter;
 import com.dxfeed.ondemand.OnDemandService;
-import com.jtattoo.plaf.acryl.AcrylLookAndFeel;
-import com.jtattoo.plaf.noire.NoireLookAndFeel;
+import com.formdev.flatlaf.intellijthemes.FlatOneDarkIJTheme;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -69,6 +68,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -106,10 +106,13 @@ import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.Timer;
 import javax.swing.UIManager;
+import javax.swing.border.TitledBorder;
 import javax.swing.event.TableModelEvent;
+import javax.swing.plaf.FontUIResource;
 import javax.swing.table.TableColumnModel;
+import javax.swing.text.StyleContext;
 
-@SuppressWarnings({"unchecked", "serial"})
+@SuppressWarnings("unchecked")
 public class DXFeedMarketDataViewer implements Runnable {
 
     private static final String PROPERTIES_FILE = "dxviewer.cfg";
@@ -203,7 +206,7 @@ public class DXFeedMarketDataViewer implements Runnable {
     private BarGraphCellRenderer bidSizeGraphRenderer;
     private BarGraphCellRenderer askSizeGraphRenderer;
 
-    private int scheme = ViewerCellRenderer.DEFAULT_SCHEME;
+    private final int scheme = ViewerCellRenderer.DEFAULT_SCHEME;
 
     private final QuoteBoardTableModel quoteBoardTableModel =
         new QuoteBoardTableModel(new SubscriptionChangeListener() {
@@ -346,8 +349,8 @@ public class DXFeedMarketDataViewer implements Runnable {
         final String title = "Accessing IPF service [" + LogUtil.hideCredentials(ipfAddress) + "]";
         boolean firstIteration = true;
         while (true) {
-            c = PasswordDialog
-                .showPasswordDialog(title, c, mainFrame, firstIteration ? null : "Wrong username/password/ipfAddress");
+            c = PasswordDialog.showPasswordDialog(
+                title, c, mainFrame, firstIteration ? null : "Wrong username/password/ipfAddress");
             firstIteration = false;
             if (c != null) {
                 ipfWebServiceCredentials = new Credentials(c.getUsername(), c.getPassword());
@@ -649,7 +652,6 @@ public class DXFeedMarketDataViewer implements Runnable {
         }
     };
 
-
     private final Action replayFromSelectedTimeAndSale = new AbstractAction("Replay from selected time") {
         private static final long serialVersionUID = 1L;
 
@@ -700,42 +702,29 @@ public class DXFeedMarketDataViewer implements Runnable {
         }
     };
 
-    private static void setNoireTheme() {
-        Properties props = new Properties();
-        props.setProperty("logoString", "");
-        props.setProperty("textShadow", "off");
-        props.setProperty("macStyleWindowDecoration", "on");
-        props.setProperty("menuOpaque", "off");
-
-        NoireLookAndFeel.setCurrentTheme(props);
-
+    private static void setDarkTheme() {
         ViewerCellRenderer.INSTANCE.setScheme(ViewerCellRenderer.DARK_SCHEME);
         try {
-            UIManager.setLookAndFeel(new NoireLookAndFeel());
-        } catch (Exception e) {
-            log.error("Cannot set Noire LookAndFeel", e);
-        }
-    }
+            UIManager.setLookAndFeel(new FlatOneDarkIJTheme());
 
-    private static void setAcrylTheme() {
-        Properties props = new Properties();
-        props.setProperty("logoString", "");
-        props.setProperty("macStyleWindowDecoration", "on");
-        props.setProperty("menuOpaque", "off");
-
-        AcrylLookAndFeel.setCurrentTheme(props);
-        ViewerCellRenderer.INSTANCE.setScheme(ViewerCellRenderer.LIGHT_SCHEME);
-        try {
-            UIManager.setLookAndFeel(new AcrylLookAndFeel());
+            // Theme tweaks
+            FontUIResource text = (FontUIResource) UIManager.get("defaultFont");
+            Font boldFont = text.deriveFont(Font.BOLD, text.getSize());
+            UIManager.put("defaultFont", new FontUIResource(boldFont));
+            UIManager.put("Component.arrowType", "chevron");
+            UIManager.put("Component.focusWidth", 1);
+            UIManager.put("ScrollBar.width", 16);
+            UIManager.put("ScrollBar.showButtons", true);
+            UIManager.put("Table.intercellSpacing", new Dimension(1, 1));
         } catch (Exception e) {
-            log.error("Cannot set Acryl LookAndFeel", e);
+            log.error("Cannot set LookAndFeel theme", e);
         }
     }
 
     // ==================== Initialization ====================
 
     public static void main(String[] args) {
-        setNoireTheme();
+        setDarkTheme();
         String defaultConfigFile = System.getProperty("user.home") + PROPERTIES_PATH;
         String configFile = (args.length > 0) ? args[0] : defaultConfigFile;
         SwingUtilities.invokeLater(new DXFeedMarketDataViewer(configFile));
@@ -1569,7 +1558,9 @@ public class DXFeedMarketDataViewer implements Runnable {
         panel3.add(panel4, gbc);
         onDemandConnectionStatusLabel = new JLabel();
         onDemandConnectionStatusLabel.setEnabled(true);
-        onDemandConnectionStatusLabel.setFont(new Font(onDemandConnectionStatusLabel.getFont().getName(), Font.BOLD, 10));
+        Font onDemandConnectionStatusLabelFont = this.$$$getFont$$$(null, Font.BOLD, 10, onDemandConnectionStatusLabel.getFont());
+        if (onDemandConnectionStatusLabelFont != null)
+            onDemandConnectionStatusLabel.setFont(onDemandConnectionStatusLabelFont);
         onDemandConnectionStatusLabel.setText("Label");
         gbc = new GridBagConstraints();
         gbc.gridx = 2;
@@ -1578,7 +1569,8 @@ public class DXFeedMarketDataViewer implements Runnable {
         panel4.add(onDemandConnectionStatusLabel, gbc);
         final JPanel panel5 = new JPanel();
         panel5.setLayout(new GridBagLayout());
-        panel5.setFont(new Font(panel5.getFont().getName(), Font.BOLD, 10));
+        Font panel5Font = this.$$$getFont$$$(null, Font.BOLD, 10, panel5.getFont());
+        if (panel5Font != null) panel5.setFont(panel5Font);
         gbc = new GridBagConstraints();
         gbc.gridx = 5;
         gbc.gridy = 0;
@@ -1586,7 +1578,8 @@ public class DXFeedMarketDataViewer implements Runnable {
         gbc.fill = GridBagConstraints.VERTICAL;
         panel4.add(panel5, gbc);
         currentTimeLabel = new JLabel();
-        currentTimeLabel.setFont(new Font(currentTimeLabel.getFont().getName(), Font.PLAIN, 10));
+        Font currentTimeLabelFont = this.$$$getFont$$$(null, Font.PLAIN, 10, currentTimeLabel.getFont());
+        if (currentTimeLabelFont != null) currentTimeLabel.setFont(currentTimeLabelFont);
         currentTimeLabel.setText("");
         gbc = new GridBagConstraints();
         gbc.gridx = 1;
@@ -1601,7 +1594,8 @@ public class DXFeedMarketDataViewer implements Runnable {
         panel5.add(toolBar$Separator1, gbc);
         tzComboBox = new JComboBox();
         tzComboBox.setEditable(true);
-        tzComboBox.setFont(new Font(tzComboBox.getFont().getName(), Font.PLAIN, 10));
+        Font tzComboBoxFont = this.$$$getFont$$$(null, Font.PLAIN, 10, tzComboBox.getFont());
+        if (tzComboBoxFont != null) tzComboBox.setFont(tzComboBoxFont);
         gbc = new GridBagConstraints();
         gbc.gridx = 3;
         gbc.gridy = 0;
@@ -1619,7 +1613,8 @@ public class DXFeedMarketDataViewer implements Runnable {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         panel4.add(toolBar$Separator2, gbc);
         onDemandUsernameLabel = new JLabel();
-        onDemandUsernameLabel.setFont(new Font(onDemandUsernameLabel.getFont().getName(), Font.PLAIN, 10));
+        Font onDemandUsernameLabelFont = this.$$$getFont$$$(null, Font.PLAIN, 10, onDemandUsernameLabel.getFont());
+        if (onDemandUsernameLabelFont != null) onDemandUsernameLabel.setFont(onDemandUsernameLabelFont);
         onDemandUsernameLabel.setText("");
         gbc = new GridBagConstraints();
         gbc.gridx = 4;
@@ -1628,7 +1623,9 @@ public class DXFeedMarketDataViewer implements Runnable {
         panel4.add(onDemandUsernameLabel, gbc);
         ipfWebConnectionStatusLabel = new JLabel();
         ipfWebConnectionStatusLabel.setEnabled(true);
-        ipfWebConnectionStatusLabel.setFont(new Font(ipfWebConnectionStatusLabel.getFont().getName(), Font.BOLD, 10));
+        Font ipfWebConnectionStatusLabelFont = this.$$$getFont$$$(null, Font.BOLD, 10, ipfWebConnectionStatusLabel.getFont());
+        if (ipfWebConnectionStatusLabelFont != null)
+            ipfWebConnectionStatusLabel.setFont(ipfWebConnectionStatusLabelFont);
         ipfWebConnectionStatusLabel.setText("Label");
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -1636,7 +1633,8 @@ public class DXFeedMarketDataViewer implements Runnable {
         gbc.anchor = GridBagConstraints.WEST;
         panel4.add(ipfWebConnectionStatusLabel, gbc);
         ipfWebUsernameLabel = new JLabel();
-        ipfWebUsernameLabel.setFont(new Font(ipfWebUsernameLabel.getFont().getName(), Font.PLAIN, 10));
+        Font ipfWebUsernameLabelFont = this.$$$getFont$$$(null, Font.PLAIN, 10, ipfWebUsernameLabel.getFont());
+        if (ipfWebUsernameLabelFont != null) ipfWebUsernameLabel.setFont(ipfWebUsernameLabelFont);
         ipfWebUsernameLabel.setText("");
         gbc = new GridBagConstraints();
         gbc.gridx = 1;
@@ -1660,7 +1658,8 @@ public class DXFeedMarketDataViewer implements Runnable {
         gbc.fill = GridBagConstraints.BOTH;
         panel3.add(panel6, gbc);
         mpsLabel = new JLabel();
-        mpsLabel.setFont(new Font(mpsLabel.getFont().getName(), Font.PLAIN, 10));
+        Font mpsLabelFont = this.$$$getFont$$$(null, Font.PLAIN, 10, mpsLabel.getFont());
+        if (mpsLabelFont != null) mpsLabel.setFont(mpsLabelFont);
         mpsLabel.setHorizontalAlignment(0);
         mpsLabel.setHorizontalTextPosition(0);
         mpsLabel.setText("");
@@ -1687,7 +1686,8 @@ public class DXFeedMarketDataViewer implements Runnable {
         gbc.fill = GridBagConstraints.BOTH;
         panel3.add(panel7, gbc);
         qpsLabel = new JLabel();
-        qpsLabel.setFont(new Font(qpsLabel.getFont().getName(), Font.PLAIN, 10));
+        Font qpsLabelFont = this.$$$getFont$$$(null, Font.PLAIN, 10, qpsLabel.getFont());
+        if (qpsLabelFont != null) qpsLabel.setFont(qpsLabelFont);
         qpsLabel.setHorizontalAlignment(0);
         qpsLabel.setHorizontalTextPosition(0);
         qpsLabel.setText("");
@@ -1714,7 +1714,8 @@ public class DXFeedMarketDataViewer implements Runnable {
         gbc.fill = GridBagConstraints.BOTH;
         panel3.add(panel8, gbc);
         tpsLabel = new JLabel();
-        tpsLabel.setFont(new Font(tpsLabel.getFont().getName(), Font.PLAIN, 10));
+        Font tpsLabelFont = this.$$$getFont$$$(null, Font.PLAIN, 10, tpsLabel.getFont());
+        if (tpsLabelFont != null) tpsLabel.setFont(tpsLabelFont);
         tpsLabel.setHorizontalAlignment(0);
         tpsLabel.setHorizontalTextPosition(0);
         tpsLabel.setText("");
@@ -1741,7 +1742,8 @@ public class DXFeedMarketDataViewer implements Runnable {
         gbc.fill = GridBagConstraints.BOTH;
         panel3.add(panel9, gbc);
         spsLabel = new JLabel();
-        spsLabel.setFont(new Font(spsLabel.getFont().getName(), Font.PLAIN, 10));
+        Font spsLabelFont = this.$$$getFont$$$(null, Font.PLAIN, 10, spsLabel.getFont());
+        if (spsLabelFont != null) spsLabel.setFont(spsLabelFont);
         spsLabel.setHorizontalAlignment(0);
         spsLabel.setHorizontalTextPosition(0);
         spsLabel.setText("");
@@ -1768,7 +1770,8 @@ public class DXFeedMarketDataViewer implements Runnable {
         gbc.fill = GridBagConstraints.BOTH;
         panel3.add(panel10, gbc);
         opsLabel = new JLabel();
-        opsLabel.setFont(new Font(opsLabel.getFont().getName(), Font.PLAIN, 10));
+        Font opsLabelFont = this.$$$getFont$$$(null, Font.PLAIN, 10, opsLabel.getFont());
+        if (opsLabelFont != null) opsLabel.setFont(opsLabelFont);
         opsLabel.setHorizontalAlignment(0);
         opsLabel.setHorizontalTextPosition(0);
         opsLabel.setText("");
@@ -1795,7 +1798,8 @@ public class DXFeedMarketDataViewer implements Runnable {
         gbc.fill = GridBagConstraints.BOTH;
         panel3.add(panel11, gbc);
         tspsLabel = new JLabel();
-        tspsLabel.setFont(new Font(tspsLabel.getFont().getName(), Font.PLAIN, 10));
+        Font tspsLabelFont = this.$$$getFont$$$(null, Font.PLAIN, 10, tspsLabel.getFont());
+        if (tspsLabelFont != null) tspsLabel.setFont(tspsLabelFont);
         tspsLabel.setHorizontalAlignment(0);
         tspsLabel.setHorizontalTextPosition(0);
         tspsLabel.setText("");
@@ -1850,7 +1854,7 @@ public class DXFeedMarketDataViewer implements Runnable {
         timeAndSalesScrollPane = new JScrollPane();
         timeAndSalesScrollPane.setPreferredSize(new Dimension(800, 100));
         splitPane3.setRightComponent(timeAndSalesScrollPane);
-        timeAndSalesScrollPane.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.black), null));
+        timeAndSalesScrollPane.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.black), null, TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         timeAndSalesTable = new JTable();
         timeAndSalesScrollPane.setViewportView(timeAndSalesTable);
         final JPanel panel14 = new JPanel();
@@ -1907,7 +1911,8 @@ public class DXFeedMarketDataViewer implements Runnable {
         askTable = new JTable();
         scrollPane3.setViewportView(askTable);
         bookModeLabel = new JLabel();
-        bookModeLabel.setFont(new Font(bookModeLabel.getFont().getName(), Font.PLAIN, 9));
+        Font bookModeLabelFont = this.$$$getFont$$$(null, Font.PLAIN, 9, bookModeLabel.getFont());
+        if (bookModeLabelFont != null) bookModeLabel.setFont(bookModeLabelFont);
         bookModeLabel.setHorizontalAlignment(2);
         bookModeLabel.setText("Book display mode: All orders");
         gbc = new GridBagConstraints();
@@ -1918,7 +1923,8 @@ public class DXFeedMarketDataViewer implements Runnable {
         gbc.fill = GridBagConstraints.VERTICAL;
         panel14.add(bookModeLabel, gbc);
         lotSizeLabel = new JLabel();
-        lotSizeLabel.setFont(new Font(lotSizeLabel.getFont().getName(), Font.PLAIN, 9));
+        Font lotSizeLabelFont = this.$$$getFont$$$(null, Font.PLAIN, 9, lotSizeLabel.getFont());
+        if (lotSizeLabelFont != null) lotSizeLabel.setFont(lotSizeLabelFont);
         lotSizeLabel.setHorizontalAlignment(4);
         lotSizeLabel.setText("Book display lot size: 1");
         gbc = new GridBagConstraints();
@@ -1939,7 +1945,8 @@ public class DXFeedMarketDataViewer implements Runnable {
         addressToolbar = new JToolBar();
         addressToolbar.setBorderPainted(true);
         addressToolbar.setFloatable(false);
-        addressToolbar.setFont(new Font(addressToolbar.getFont().getName(), Font.PLAIN, 9));
+        Font addressToolbarFont = this.$$$getFont$$$(null, Font.PLAIN, 9, addressToolbar.getFont());
+        if (addressToolbarFont != null) addressToolbar.setFont(addressToolbarFont);
         addressToolbar.setRollover(false);
         addressToolbar.putClientProperty("JToolBar.isRollover", Boolean.FALSE);
         gbc = new GridBagConstraints();
@@ -1965,11 +1972,13 @@ public class DXFeedMarketDataViewer implements Runnable {
         final JToolBar.Separator toolBar$Separator3 = new JToolBar.Separator();
         addressToolbar.add(toolBar$Separator3);
         final JLabel label3 = new JLabel();
-        label3.setFont(new Font(label3.getFont().getName(), label3.getFont().getStyle(), label3.getFont().getSize()));
+        Font label3Font = this.$$$getFont$$$(null, -1, -1, label3.getFont());
+        if (label3Font != null) label3.setFont(label3Font);
         label3.setText("Connect to: ");
         addressToolbar.add(label3);
         modeComboBox = new JComboBox();
-        modeComboBox.setFont(new Font(modeComboBox.getFont().getName(), modeComboBox.getFont().getStyle(), modeComboBox.getFont().getSize()));
+        Font modeComboBoxFont = this.$$$getFont$$$(null, -1, -1, modeComboBox.getFont());
+        if (modeComboBoxFont != null) modeComboBox.setFont(modeComboBoxFont);
         modeComboBox.setForeground(new Color(-1));
         final DefaultComboBoxModel defaultComboBoxModel1 = new DefaultComboBoxModel();
         modeComboBox.setModel(defaultComboBoxModel1);
@@ -1978,7 +1987,8 @@ public class DXFeedMarketDataViewer implements Runnable {
         connectionAddressEdit = new JTextField();
         connectionAddressEdit.setColumns(0);
         connectionAddressEdit.setEditable(true);
-        connectionAddressEdit.setFont(new Font(connectionAddressEdit.getFont().getName(), connectionAddressEdit.getFont().getStyle(), connectionAddressEdit.getFont().getSize()));
+        Font connectionAddressEditFont = this.$$$getFont$$$(null, -1, -1, connectionAddressEdit.getFont());
+        if (connectionAddressEditFont != null) connectionAddressEdit.setFont(connectionAddressEditFont);
         connectionAddressEdit.setForeground(new Color(-1));
         connectionAddressEdit.setToolTipText("Connection address");
         addressToolbar.add(connectionAddressEdit);
@@ -1995,29 +2005,34 @@ public class DXFeedMarketDataViewer implements Runnable {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         panel16.add(onDemandToolbar, gbc);
         final JLabel label4 = new JLabel();
-        label4.setFont(new Font(label4.getFont().getName(), label4.getFont().getStyle(), label4.getFont().getSize()));
+        Font label4Font = this.$$$getFont$$$(null, -1, -1, label4.getFont());
+        if (label4Font != null) label4.setFont(label4Font);
         label4.setText("Go to: ");
         onDemandToolbar.add(label4);
         onDemandTimeSpinner = new JSpinner();
-        onDemandTimeSpinner.setFont(new Font(onDemandTimeSpinner.getFont().getName(), onDemandTimeSpinner.getFont().getStyle(), onDemandTimeSpinner.getFont().getSize()));
+        Font onDemandTimeSpinnerFont = this.$$$getFont$$$(null, -1, -1, onDemandTimeSpinner.getFont());
+        if (onDemandTimeSpinnerFont != null) onDemandTimeSpinner.setFont(onDemandTimeSpinnerFont);
         onDemandToolbar.add(onDemandTimeSpinner);
         final JToolBar.Separator toolBar$Separator4 = new JToolBar.Separator();
         onDemandToolbar.add(toolBar$Separator4);
         final JLabel label5 = new JLabel();
-        label5.setFont(new Font(label5.getFont().getName(), label5.getFont().getStyle(), label5.getFont().getSize()));
+        Font label5Font = this.$$$getFont$$$(null, -1, -1, label5.getFont());
+        if (label5Font != null) label5.setFont(label5Font);
         label5.setText("Replay speed:");
         onDemandToolbar.add(label5);
         final JToolBar.Separator toolBar$Separator5 = new JToolBar.Separator();
         onDemandToolbar.add(toolBar$Separator5);
         onDemandSpeedLabel = new JLabel();
         onDemandSpeedLabel.setEnabled(true);
-        onDemandSpeedLabel.setFont(new Font(onDemandSpeedLabel.getFont().getName(), onDemandSpeedLabel.getFont().getStyle(), onDemandSpeedLabel.getFont().getSize()));
+        Font onDemandSpeedLabelFont = this.$$$getFont$$$(null, -1, -1, onDemandSpeedLabel.getFont());
+        if (onDemandSpeedLabelFont != null) onDemandSpeedLabel.setFont(onDemandSpeedLabelFont);
         onDemandSpeedLabel.setText("x 1");
         onDemandToolbar.add(onDemandSpeedLabel);
         final JToolBar.Separator toolBar$Separator6 = new JToolBar.Separator();
         onDemandToolbar.add(toolBar$Separator6);
         onDemandSpeedSlider = new JSlider();
-        onDemandSpeedSlider.setFont(new Font(onDemandSpeedSlider.getFont().getName(), Font.PLAIN, 8));
+        Font onDemandSpeedSliderFont = this.$$$getFont$$$(null, Font.PLAIN, 8, onDemandSpeedSlider.getFont());
+        if (onDemandSpeedSliderFont != null) onDemandSpeedSlider.setFont(onDemandSpeedSliderFont);
         onDemandSpeedSlider.setMajorTickSpacing(1);
         onDemandSpeedSlider.setMaximum(10);
         onDemandSpeedSlider.setMinimum(1);
@@ -2026,11 +2041,33 @@ public class DXFeedMarketDataViewer implements Runnable {
         onDemandSpeedSlider.setPaintTrack(true);
         onDemandSpeedSlider.setSnapToTicks(true);
         onDemandSpeedSlider.setValue(5);
-        onDemandSpeedSlider.putClientProperty("Slider.paintThumbArrowShape", Boolean.TRUE);
         onDemandSpeedSlider.putClientProperty("JSlider.isFilled", Boolean.TRUE);
+        onDemandSpeedSlider.putClientProperty("Slider.paintThumbArrowShape", Boolean.TRUE);
         onDemandToolbar.add(onDemandSpeedSlider);
         mpsLabel.setLabelFor(timeAndSalesScrollPane);
         label3.setLabelFor(modeComboBox);
+    }
+
+    /**
+     * @noinspection ALL
+     */
+    private Font $$$getFont$$$(String fontName, int style, int size, Font currentFont) {
+        if (currentFont == null) return null;
+        String resultName;
+        if (fontName == null) {
+            resultName = currentFont.getName();
+        } else {
+            Font testFont = new Font(fontName, Font.PLAIN, 10);
+            if (testFont.canDisplay('a') && testFont.canDisplay('1')) {
+                resultName = fontName;
+            } else {
+                resultName = currentFont.getName();
+            }
+        }
+        Font font = new Font(resultName, style >= 0 ? style : currentFont.getStyle(), size >= 0 ? size : currentFont.getSize());
+        boolean isMac = System.getProperty("os.name", "").toLowerCase(Locale.ENGLISH).startsWith("mac");
+        Font fontWithFallback = isMac ? new Font(font.getFamily(), font.getStyle(), font.getSize()) : new StyleContext().getFont(font.getFamily(), font.getStyle(), font.getSize());
+        return fontWithFallback instanceof FontUIResource ? fontWithFallback : new FontUIResource(fontWithFallback);
     }
 
     /**

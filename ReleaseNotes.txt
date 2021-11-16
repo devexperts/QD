@@ -1,3 +1,16 @@
+QDS 3.304:
+
+* [QD-1327] Relax qds-monitoring dependency of jmxtools
+  - Important! "com.sun.jdmk:jmxtools" dependency in QD is now "optional" and will not be transitively included by
+    default. Add this dependency manually to include it in your deliverable artifacts.
+* [QD-1331] dxFeed webservice: Stop printing internal connection address on web page
+* [QD-1330] Document licenses for the project dependencies
+* [QD-1332] Replace LAF in dxfeed-viewer
+  - JTattoo LAF is replaced with FlatLaf LAF
+* [QD-1328] [dxScheme] External scheme overlay requires type of updated record's field
+* [QD-1322] dxFeed API: Deprecate News API
+  - News API (dxfeed-news.jar artifact) is deprecated and will be removed in future versions!
+    Please contact dxFeed support if you are still using this API.
 
 QDS 3.303:
 

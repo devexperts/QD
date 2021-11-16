@@ -192,7 +192,7 @@ public class XmlSchemeModelReader extends XmlSchemeModelFormat implements Scheme
         throws SchemeException
     {
         String name = fld.getAttribute(ATT_NAME);
-        String type = fld.getAttribute(ATT_REC_FLD_TYPE);
+        String type = getStringAttr(fld, ATT_REC_FLD_TYPE);
         boolean hasBitfields = embeddedTypes.canHaveBitfields(type);
         Boolean disabled = getBooleanAttr(fld, ATT_DISABLED);
         Boolean compositeOnly = getBooleanAttr(fld, ATT_REC_FLD_COMPOSITE_ONLY);

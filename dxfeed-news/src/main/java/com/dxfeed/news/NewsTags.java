@@ -14,6 +14,7 @@ package com.dxfeed.news;
 /**
  * Common news tags names.
  */
+@Deprecated
 public class NewsTags {
     public static final String SYMBOLS = "Symbols";
     public static final String KEYWORDS = "Keywords";

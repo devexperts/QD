@@ -25,6 +25,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Implementation of the observable list model for news.
  * It holds limited number of news sorted by time starting with the latest news.
  */
+@Deprecated
 class ObservableNewsList extends AbstractList<NewsSummary> implements ObservableListModel<NewsSummary> {
 
     // ==================== private static fields ====================

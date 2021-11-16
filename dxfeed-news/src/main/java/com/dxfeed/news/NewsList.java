@@ -20,6 +20,7 @@ import java.util.List;
  * News list with the last available news key. Last news key is used to not receive duplicate news.
  * @see RemoteNewsService#findNewsForFilter(NewsFilter, NewsKey)
  */
+@Deprecated
 public class NewsList implements Serializable {
     private static final long serialVersionUID = 0L;
 

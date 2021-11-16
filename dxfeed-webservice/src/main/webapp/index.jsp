@@ -10,7 +10,6 @@
   !__
   --%>
 <%@ page import="com.devexperts.qd.QDFactory" %>
-<%@ page import="com.dxfeed.webservice.DXFeedContext" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -22,9 +21,6 @@
 
 <div class="panel">
     <h2><%= QDFactory.getVersion() %></h2>
-    <div>
-        <%= DXFeedContext.INSTANCE.getEndpoint().toString() %>
-    </div>
 </div>
 
 <div class="panel">

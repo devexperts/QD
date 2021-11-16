@@ -16,6 +16,7 @@ import java.io.Serializable;
 /**
  * Container for news full text content along with the summary.
  */
+@Deprecated
 public class News implements Serializable {
     private static final long serialVersionUID = 0L;
 

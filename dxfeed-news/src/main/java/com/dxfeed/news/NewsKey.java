@@ -17,6 +17,7 @@ import java.io.Serializable;
  * Key to uniquely identify news.
  * <p><b>Warning!</b> Do not rely on the internals of this class - it can be changed for implementation needs.
  */
+@Deprecated
 public class NewsKey implements Serializable {
     private static final long serialVersionUID = 0L;
 

@@ -155,22 +155,24 @@ public class JMXEndpoint {
             }
             // create connectors
             List<JmxConnector> jmxConnectors = new ArrayList<>();
-            if (props.containsKey(JMX_HTML_PORT_PROPERTY))
+            if (props.containsKey(JMX_HTML_PORT_PROPERTY)) {
                 try {
                     JmxConnector connector = JmxHtml.init(props);
                     if (connector != null)
                         jmxConnectors.add(connector);
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     QDLog.log.error("Failed to initialize JMX HTML Adaptor", e);
                 }
-            if (props.containsKey(JMX_RMI_PORT_PROPERTY))
+            }
+            if (props.containsKey(JMX_RMI_PORT_PROPERTY)) {
                 try {
                     JmxConnector connector = JmxRmi.init(props);
                     if (connector != null)
                         jmxConnectors.add(connector);
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     QDLog.log.error("Failed to initialize JMX RMI Connector", e);
                 }
+            }
             JMXEndpoint endpoint = new JMXEndpoint(this, jmxConnectors);
             return endpoint;
         }
