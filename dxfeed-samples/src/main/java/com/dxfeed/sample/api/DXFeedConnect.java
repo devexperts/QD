@@ -41,11 +41,13 @@ public class DXFeedConnect {
 
         String[] symbols = parseSymbols(argSymbols);
         try {
-            for (String type : argTypes.split(","))
-                if (argTime != null)
+            for (String type : argTypes.split(",")) {
+                if (argTime != null) {
                     connectTimeSeriesEvent(type, argTime, symbols);
-                else
+                } else {
                     connectEvent(type, symbols);
+                }
+            }
             Thread.sleep(Long.MAX_VALUE);
         } catch (Exception e) {
             e.printStackTrace();
@@ -60,25 +62,26 @@ public class DXFeedConnect {
         for (int i = 0; i < symbolList.length(); i++) {
             char ch = symbolList.charAt(i);
             switch (ch) {
-            case '{': case '(': case '[':
-                parentheses++;
-                sb.append(ch);
-                break;
-            case '}': case ')': case ']':
-                if (parentheses > 0)
-                    parentheses--;
-                sb.append(ch);
-                break;
-            case ',':
-                if (parentheses == 0) {
-                    // not in parenthesis -- comma is a symbol list separator
-                    result.add(sb.toString());
-                    sb.setLength(0);
-                } else
+                case '{': case '(': case '[':
+                    parentheses++;
                     sb.append(ch);
-                break;
-            default:
-                sb.append(ch);
+                    break;
+                case '}': case ')': case ']':
+                    if (parentheses > 0)
+                        parentheses--;
+                    sb.append(ch);
+                    break;
+                case ',':
+                    if (parentheses == 0) {
+                        // not in parenthesis -- comma is a symbol list separator
+                        result.add(sb.toString());
+                        sb.setLength(0);
+                    } else {
+                        sb.append(ch);
+                    }
+                    break;
+                default:
+                    sb.append(ch);
             }
         }
         result.add(sb.toString());
@@ -95,15 +98,17 @@ public class DXFeedConnect {
     private static void connectTimeSeriesEvent(String type, String fromTime, String... symbols) {
         Class<TimeSeriesEvent<?>> eventType = findEventType(type, TimeSeriesEvent.class);
         long from = TimeFormat.DEFAULT.parse(fromTime).getTime();
-        DXFeedTimeSeriesSubscription<TimeSeriesEvent<?>> sub = DXFeed.getInstance().createTimeSeriesSubscription(eventType);
+        DXFeedTimeSeriesSubscription<TimeSeriesEvent<?>> sub =
+            DXFeed.getInstance().createTimeSeriesSubscription(eventType);
         sub.addEventListener(DXFeedConnect::printEvents);
         sub.setFromTime(from);
         sub.addSymbols(symbols);
     }
 
     private static void printEvents(List<?> events) {
-        for (Object event : events)
+        for (Object event : events) {
             System.out.println(event);
+        }
     }
 
     // ---- Utility methods to make this sample generic for use with any event type as specified on command line ----
@@ -128,9 +133,10 @@ public class DXFeedConnect {
 
     private static Map<String, Class<?>> getEventTypesMap(Class<?> baseClass) {
         TreeMap<String, Class<?>> result = new TreeMap<>();
-        for (Class<?> eventType : DXEndpoint.getInstance().getEventTypes())
-            if (baseClass.isAssignableFrom(baseClass))
+        for (Class<?> eventType : DXEndpoint.getInstance().getEventTypes()) {
+            if (baseClass.isAssignableFrom(eventType))
                 result.put(eventType.getSimpleName(), eventType);
+        }
         return result;
     }
 }

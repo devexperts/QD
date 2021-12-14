@@ -70,7 +70,7 @@ import javax.xml.bind.annotation.XmlTransient;
  * {@code TradeETH} event is updated on each trade with the last trade information from post market trading session
  * and total volume and turnover of the pre and post market trading session (excluding the volume and turnover of a regular trading session).
  *
- * Note, that during per and post market sessions, {@link Trade} event also updates, but only its
+ * Note, that during pre- and post-market sessions, {@link Trade} event also updates, but only its
  * {@link Trade#getDayVolumeAsDouble() dayVolumeAsDouble} and {@link Trade#getDayTurnover() dayTurnover} properties change
  * to reflect the overall official volume and turnover as reported by exchanges.
  * During post market trading session, exchanges may correct their official RTH last trading price, which results

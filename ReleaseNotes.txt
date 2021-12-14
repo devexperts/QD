@@ -1,3 +1,10 @@
+QDS 3.305:
+
+* [QD-1367] Update log4j dependency to 2.16.0
+  - signal dependent projects using log4j v2+ for logging to update log4j to avoid CVE-2021-44228 vulnerability
+* [QD-1335] DXFeedConnect sample incorrectly evaluates supported time series event types
+* [QD-1334] dxFeedViewer installer missing required dependencies
+
 QDS 3.304:
 
 * [QD-1327] Relax qds-monitoring dependency of jmxtools
