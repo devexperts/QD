@@ -1,3 +1,12 @@
+QDS 3.306:
+
+* [QD-1336] [Schedule] Add holidays and short days for 2022
+* [QD-1325] Add holidays and shortdays for new countries into default "schedule.properties"
+* [QD-1369] Update log4j dependency to 2.17.0
+  - signal dependent projects using log4j v2+ for logging to update log4j to avoid CVE-2021-45105 vulnerability
+* [QD-1326] Add ability to intersect sets of holidays in Schedule syntax.
+  - New syntax: "...,*US" or "...,*20210101", like minus ("-") but for intersection.
+
 QDS 3.305:
 
 * [QD-1367] Update log4j dependency to 2.16.0

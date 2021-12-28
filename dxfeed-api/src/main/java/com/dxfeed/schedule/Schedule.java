@@ -1044,24 +1044,31 @@ public final class Schedule {
             if (s.isEmpty())
                 continue;
             boolean minus = s.startsWith("-");
-            if (minus)
+            boolean intersect = s.startsWith("*");
+            if (minus || intersect)
                 s = s.substring(1);
             ref = refs.get(s);
             if (ref == null) {
                 try {
                     int d = Integer.parseInt(s);
-                    if (minus)
+                    if (minus) {
                         days.remove(d);
-                    else
+                    } else if (intersect) {
+                        days.removeIf(day -> day != d);
+                    } else {
                         days.add(d);
+                    }
                 } catch (NumberFormatException e) {
                     throw new IllegalArgumentException("cannot find day list " + s + " when parsing " + list);
                 }
             } else {
-                if (minus)
+                if (minus) {
                     days.removeAll(ref);
-                else
+                } else if (intersect) {
+                    days.retainAll(ref);
+                } else {
                     days.addAll(ref);
+                }
             }
         }
         if (days.isEmpty())

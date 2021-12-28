@@ -264,6 +264,87 @@ public class ScheduleTest extends TestCase {
         checkJntdInActionAllPermutations(def, 20201126, 20201130);
     }
 
+    /**
+     * Test hd sets union with default syntax
+     */
+    public void testHdSetsUnion() {
+        String def = "hd=US,CA;0=08001800;td=1234567";
+        assertFalse("US and CA not holiday", gmt(def).getDayByYearMonthDay(20210606).isHoliday());
+        assertTrue("US Holiday", gmt(def).getDayByYearMonthDay(20210118).isHoliday());
+        assertTrue("CA Holiday", gmt(def).getDayByYearMonthDay(20210524).isHoliday());
+        assertTrue("US and CA Holiday", gmt(def).getDayByYearMonthDay(20210215).isHoliday());
+    }
+
+    /**
+     * Test hd sets and days union with default syntax
+     */
+    public void testHdSetsAndDaysUnion() {
+        String def = "hd=US,CA,20211010;0=08001800;td=1234567";
+        assertFalse("US and CA not holiday", gmt(def).getDayByYearMonthDay(20210606).isHoliday());
+        assertTrue("US Holiday", gmt(def).getDayByYearMonthDay(20210118).isHoliday());
+        assertTrue("CA Holiday", gmt(def).getDayByYearMonthDay(20210524).isHoliday());
+        assertTrue("US and CA Holiday", gmt(def).getDayByYearMonthDay(20210215).isHoliday());
+        assertTrue("Custom Holiday", gmt(def).getDayByYearMonthDay(20211010).isHoliday());
+    }
+
+    /**
+     * Test hd sets difference
+     */
+    public void testHdSetsDiff() {
+        String def = "hd=US,-CA;0=08001800;td=1234567";
+        assertFalse("US and CA not holiday", gmt(def).getDayByYearMonthDay(20210606).isHoliday());
+        assertTrue("US Only Holiday", gmt(def).getDayByYearMonthDay(20210118).isHoliday());
+        assertFalse("CA Holiday", gmt(def).getDayByYearMonthDay(20210524).isHoliday());
+        assertFalse("US and CA Holiday", gmt(def).getDayByYearMonthDay(20210215).isHoliday());
+    }
+
+    /**
+     * Test hd sets and days difference
+     */
+    public void testHdSetsDanDaysDiff() {
+        String def = "hd=US,-CA,-20210531;0=08001800;td=1234567";
+        assertFalse("US and CA not holiday", gmt(def).getDayByYearMonthDay(20210606).isHoliday());
+        assertTrue("US Only Holiday", gmt(def).getDayByYearMonthDay(20210118).isHoliday());
+        assertFalse("CA Holiday", gmt(def).getDayByYearMonthDay(20210524).isHoliday());
+        assertFalse("US and CA Holiday", gmt(def).getDayByYearMonthDay(20210215).isHoliday());
+        assertFalse("Custom removed holiday", gmt(def).getDayByYearMonthDay(20210531).isHoliday());
+    }
+
+    /**
+     * Test hd sets intersection
+     */
+    public void testHdSetsIntersect() {
+        String def = "hd=US,*CA;0=08001800;td=1234567";
+        assertFalse("US and CA not holiday", gmt(def).getDayByYearMonthDay(20210606).isHoliday());
+        assertFalse("US Only Holiday", gmt(def).getDayByYearMonthDay(20210118).isHoliday());
+        assertFalse("CA Holiday", gmt(def).getDayByYearMonthDay(20210524).isHoliday());
+        assertTrue("US and CA Holiday", gmt(def).getDayByYearMonthDay(20210215).isHoliday());
+    }
+
+    /**
+     * Test hd sets and days intersect
+     */
+    public void testHdSetsAndDaysIntersect() {
+        String def = "hd=20210101,*US,*CA;0=08001800;td=1234567";
+        assertFalse("US and CA not holiday", gmt(def).getDayByYearMonthDay(20210606).isHoliday());
+        assertFalse("US Only Holiday", gmt(def).getDayByYearMonthDay(20210118).isHoliday());
+        assertFalse("CA Holiday", gmt(def).getDayByYearMonthDay(20210524).isHoliday());
+        assertFalse("US and CA Holiday", gmt(def).getDayByYearMonthDay(20210215).isHoliday());
+        assertTrue("Only one remain holiday", gmt(def).getDayByYearMonthDay(20210101).isHoliday());
+    }
+
+    /**
+     * Test hd sets and days intersect with wrong syntax
+     */
+    public void testHdSetsAndDaysIntersectDay() {
+        String def = "hd=US,CA,*20210101;0=08001800;td=1234567";
+        assertFalse("US and CA not holiday", gmt(def).getDayByYearMonthDay(20210606).isHoliday());
+        assertFalse("US Only Holiday", gmt(def).getDayByYearMonthDay(20210118).isHoliday());
+        assertFalse("CA Holiday", gmt(def).getDayByYearMonthDay(20210524).isHoliday());
+        assertFalse("US and CA Holiday", gmt(def).getDayByYearMonthDay(20210215).isHoliday());
+        assertTrue("Only one remain holiday", gmt(def).getDayByYearMonthDay(20210101).isHoliday());
+    }
+
     // check jntd strategy in action for given holiday; generates all permutations to load days in that order
     private void checkJntdInActionAllPermutations(String def, int holidayYmd, int tradingYmd) {
         // fallback schedule has no holidays and no holiday strategy; use it to clearly see strategy effect
