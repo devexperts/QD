@@ -3,7 +3,7 @@
   !++
   QDS - Quick Data Signalling Library
   !-
-  Copyright (C) 2002 - 2021 Devexperts LLC
+  Copyright (C) 2002 - 2022 Devexperts LLC
   !-
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
   If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.306</version>
+        <version>3.307</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -42,7 +42,9 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <descriptor>dxfeed-bin-assembly.xml</descriptor>
+                    <descriptors>
+                        <descriptor>dxfeed-bin-assembly.xml</descriptor>
+                    </descriptors>
                 </configuration>
             </plugin>
         </plugins>
@@ -92,7 +94,7 @@
         <dependency>
             <groupId>com.sun.jdmk</groupId>
             <artifactId>jmxtools</artifactId>
-            <version>1.2.8</version>
+            <version>${jmxtools.version}</version>
         </dependency>
     </dependencies>
 

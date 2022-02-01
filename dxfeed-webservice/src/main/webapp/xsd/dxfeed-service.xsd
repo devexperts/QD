@@ -9,7 +9,7 @@
   If a copy of the MPL was not distributed with this file, You can obtain one at
   http://mozilla.org/MPL/2.0/.
   !__
-  -->
+-->
 <xs:schema version="1.0" targetNamespace="http://schema.dxfeed.com/event" xmlns:tns="http://schema.dxfeed.com/event" xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
   <xs:include schemaLocation="dxfeed-event.xsd"/>

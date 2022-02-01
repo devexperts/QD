@@ -1,6 +1,6 @@
 DXFEED API SAMPLES
 ==================
-Copyright (C) 2002-2019 Devexperts LLC
+Copyright (C) 2002-2022 Devexperts LLC
 
 This package contains samples for dxFeed API.
 Binaries are in "lib" directory, the sources for samples are in "src" directory.

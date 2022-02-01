@@ -1,3 +1,10 @@
+QDS 3.307:
+
+* [QD-1371] Update build to maven 3.6+
+  - the minimum Maven version required for build promoted to 3.6.0
+* [QD-1372] JMXEndpoint exposes authentication credentials in the log
+* [QD-1370] [build] Git-history based check of copyright headers
+
 QDS 3.306:
 
 * [QD-1336] [Schedule] Add holidays and short days for 2022

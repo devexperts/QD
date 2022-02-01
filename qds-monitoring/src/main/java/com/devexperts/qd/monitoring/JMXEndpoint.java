@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -95,7 +95,7 @@ public class JMXEndpoint {
     }
 
     public static class Builder {
-        private static final Set<String> SUPPORTED_PROPERTIES = new LinkedHashSet<>(Arrays.<String>asList(
+        private static final Set<String> SUPPORTED_PROPERTIES = new LinkedHashSet<>(Arrays.asList(
             JMX_HTML_PORT_PROPERTY,
             JMX_HTML_BIND_PROPERTY,
             JMX_HTML_SSL_PROPERTY,
@@ -150,8 +150,10 @@ public class JMXEndpoint {
         private JMXEndpoint build() {
             // log properties
             for (String key : SUPPORTED_PROPERTIES) {
-                if (props.containsKey(key))
-                    QDLog.log.info("JMXEndpoint with " + key + "=" + props.getProperty(key));
+                if (props.containsKey(key)) {
+                    String v = props.getProperty(key);
+                    QDLog.log.info("JMXEndpoint with " + key + "=" + (JMX_HTML_AUTH_PROPERTY.equals(key) ? "****" : v));
+                }
             }
             // create connectors
             List<JmxConnector> jmxConnectors = new ArrayList<>();

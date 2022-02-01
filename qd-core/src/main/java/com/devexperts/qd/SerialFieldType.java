@@ -22,8 +22,8 @@ import com.devexperts.qd.kit.PlainIntField;
 import com.devexperts.qd.kit.SequenceField;
 import com.devexperts.qd.kit.ShortStringField;
 import com.devexperts.qd.kit.StringField;
-import com.devexperts.qd.kit.TimeSecondsField;
 import com.devexperts.qd.kit.TimeMillisField;
+import com.devexperts.qd.kit.TimeSecondsField;
 import com.devexperts.qd.kit.VoidIntField;
 import com.devexperts.qd.kit.WideDecimalField;
 

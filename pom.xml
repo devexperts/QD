@@ -3,20 +3,20 @@
   !++
   QDS - Quick Data Signalling Library
   !-
-  Copyright (C) 2002 - 2021 Devexperts LLC
+  Copyright (C) 2002 - 2022 Devexperts LLC
   !-
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
   If a copy of the MPL was not distributed with this file, You can obtain one at
   http://mozilla.org/MPL/2.0/.
   !__
-  -->
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.306</version>
+    <version>3.307</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -110,6 +110,8 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.build.timestamp.format>yyyyMMdd-HHmm</maven.build.timestamp.format>
+        <!-- remote path prefix for directories where delivery artifacts will be placed during deploy phase -->
+        <deploy.host.mount>//JAZZ/QD</deploy.host.mount>
 
         <!-- The branch dir is set to deploy snapshot and release file into a separate branch subdirectory -->
         <deploy.branch.dir.suffix />
@@ -149,6 +151,8 @@
         <aspectj.version>1.8.2</aspectj.version>
         <junit.version>4.13.2</junit.version>
         <jmh.version>1.21</jmh.version>
+        <jmxtools.version>1.2.8</jmxtools.version>
+        <mycila-license-maven-plugin.version>3.0</mycila-license-maven-plugin.version>
     </properties>
 
     <profiles>
@@ -159,7 +163,7 @@
                 <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
-                <deploy.dir>//JAZZ/QD/Snapshot${deploy.branch.dir.suffix}</deploy.dir>
+                <deploy.dir>${deploy.host.mount}/Snapshot${deploy.branch.dir.suffix}</deploy.dir>
                 <deploy.suffix>${project.version}-${maven.build.timestamp}</deploy.suffix>
             </properties>
         </profile>
@@ -173,7 +177,7 @@
                 </property>
             </activation>
             <properties>
-                <deploy.dir>//JAZZ/QD/Release${deploy.branch.dir.suffix}</deploy.dir>
+                <deploy.dir>${deploy.host.mount}/Release${deploy.branch.dir.suffix}</deploy.dir>
                 <deploy.suffix>${project.version}</deploy.suffix>
             </properties>
         </profile>
@@ -197,6 +201,7 @@
                     <archive>
                         <addMavenDescriptor>false</addMavenDescriptor>
                         <manifest>
+                            <addBuildEnvironmentEntries>true</addBuildEnvironmentEntries>
                             <addClasspath>true</addClasspath>
                             <classpathLayoutType>custom</classpathLayoutType>
                             <!-- don't include version into class-path attribute -->
@@ -207,6 +212,7 @@
                             <Implementation-Title>${project.name}</Implementation-Title>
                             <Implementation-Version>${deploy.suffix}</Implementation-Version>
                             <Implementation-Vendor>${project.organization.name}</Implementation-Vendor>
+                            <Built-By>${user.name}</Built-By>
                         </manifestEntries>
                     </archive>
                 </configuration>
@@ -214,6 +220,11 @@
             <!-- Attach sources for all modules -->
             <plugin>
                 <artifactId>maven-source-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <addMavenDescriptor>false</addMavenDescriptor>
+                    </archive>
+                </configuration>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -248,7 +259,7 @@
                         <link>http://docs.oracle.com/javase/8/docs/api/</link>
                     </links>
                     <stylesheetfile>${basedir}/../css/stylesheet.css</stylesheetfile>
-                    <additionalparam>-Xdoclint:none</additionalparam>
+                    <doclint>none</doclint>
                     <skip>${javadoc.skip}</skip>
                 </configuration>
             </plugin>
@@ -278,6 +289,9 @@
                 <artifactId>maven-enforcer-plugin</artifactId>
                 <configuration>
                     <rules>
+                        <requireMavenVersion>
+                            <version>[3.6,)</version>
+                        </requireMavenVersion>
                         <DependencyConvergence />
                         <requireJavaVersion>
                             <!-- require 1.8 JDK for compilation -->
@@ -387,6 +401,75 @@
                 </configuration>
             </plugin>
             <plugin>
+                <groupId>com.mycila</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>${mycila-license-maven-plugin.version}</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.mycila</groupId>
+                        <artifactId>license-maven-plugin-git</artifactId>
+                        <version>${mycila-license-maven-plugin.version}</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <aggregate>true</aggregate>
+                    <failIfMissing>true</failIfMissing>
+                    <quiet>false</quiet>
+                    <header>build-support/src/main/resources/MPL-2_0-header.txt</header>
+                    <properties>
+                        <owner>${project.organization.name}</owner>
+                    </properties>
+                    <headerDefinitions>
+                        <headerDefinition>build-support/src/main/resources/header-styles.xml</headerDefinition>
+                    </headerDefinitions>
+                    <mapping>
+                        <java>SLASHSTAR_STYLE</java>
+                        <css>SLASHSTAR_STYLE</css>
+                        <html>MYXML_STYLE</html>
+                        <xml>MYXML_STYLE</xml>
+                        <xsd>MYXML_STYLE</xsd>
+                        <properties>PROPS_STYLE</properties>
+                        <jsp>JSP_STYLE</jsp>
+                    </mapping>
+                    <includes>
+                        <include>**/src/**</include>
+                    </includes>
+                    <useDefaultExcludes>true</useDefaultExcludes>
+                    <excludes>
+                        <exclude>**/*.txt</exclude>
+                        <exclude>**/*.ftl</exclude>
+                        <exclude>**/*.sh</exclude>
+                        <exclude>**/*.bat</exclude>
+                        <exclude>blog/</exclude>
+                        <exclude>**/.*/</exclude>
+                        <exclude>**/overlays/</exclude>
+                        <!-- skip poms to avoid self-update-check issues during release -->
+                        <exclude>**/pom.xml</exclude>
+                        <!-- dxfeed-webservice third-party js libs -->
+                        <exclude>**/angularjs/</exclude>
+                        <exclude>**/flot/</exclude>
+                        <exclude>**/jquery/</exclude>
+                        <exclude>**/mootools/</exclude>
+                        <!-- mute some popular unknown files -->
+                        <exclude>**/*.form</exclude>
+                        <exclude>**/*.log</exclude>
+                        <exclude>**/*.install4j</exclude>
+                    </excludes>
+                </configuration>
+                <inherited>false</inherited>
+                <executions>
+                    <execution>
+                        <id>license-check</id>
+                        <phase>verify</phase>
+                        <inherited>false</inherited>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+<!--
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>license-maven-plugin</artifactId>
                 <configuration>
@@ -421,6 +504,7 @@
                     </execution>
                 </executions>
             </plugin>
+-->
         </plugins>
 
         <!-- Define versions of all plugins -->
@@ -428,79 +512,84 @@
             <plugins>
                 <plugin>
                     <artifactId>maven-clean-plugin</artifactId>
-                    <version>2.4.1</version>
+                    <version>3.1.0</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.1</version>
+                    <version>3.9.0</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>2.19.1</version>
+                    <version>3.0.0-M5</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-assembly-plugin</artifactId>
-                    <version>2.3</version>
+                    <version>3.3.0</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-shade-plugin</artifactId>
-                    <version>2.4.3</version>
+                    <version>3.2.4</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-jar-plugin</artifactId>
-                    <version>2.4</version>
+                    <version>3.2.2</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-source-plugin</artifactId>
-                    <version>2.1.2</version>
+                    <version>3.2.1</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-deploy-plugin</artifactId>
-                    <version>2.7</version>
+                    <version>3.0.0-M2</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-antrun-plugin</artifactId>
-                    <version>1.8</version>
+                    <version>3.0.0</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-scm-plugin</artifactId>
-                    <version>1.9.5</version>
+                    <version>2.0.0-M1</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-release-plugin</artifactId>
-                    <version>2.5.1</version>
+                    <version>3.0.0-M5</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-enforcer-plugin</artifactId>
-                    <version>1.2</version>
+                    <!--The recommended version is 3.0.0, but it has a problem described here:
+                    https://www.mail-archive.com/users@maven.apache.org/msg143338.html
+                    and fixed here: https://github.com/apache/maven-enforcer/pull/102 .
+                    New version with fix is not available, but it's coming soon.
+                    So far previous version 3.0.0-M3 is being used.-->
+                    <version>3.0.0-M3</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-resources-plugin</artifactId>
-                    <version>2.7</version>
+                    <version>3.2.0</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-install-plugin</artifactId>
-                    <version>2.3.1</version>
+                    <version>3.0.0-M1</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-site-plugin</artifactId>
-                    <version>3.0</version>
+                    <version>3.10.0</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>2.9</version>
+                    <version>3.3.1</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-war-plugin</artifactId>
-                    <version>2.3</version>
+                    <version>3.3.2</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-dependency-plugin</artifactId>
-                    <version>2.6</version>
+                    <version>3.2.0</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-plugin-plugin</artifactId>
-                    <version>3.3</version>
+                    <version>3.6.2</version>
                 </plugin>
                 <plugin>
                     <groupId>org.mortbay.jetty</groupId>
@@ -525,17 +614,22 @@
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>jaxb2-maven-plugin</artifactId>
-                    <version>2.2</version>
+                    <version>2.5.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>license-maven-plugin</artifactId>
-                    <version>1.13</version>
+                    <version>2.0.0</version>
                 </plugin>
                 <plugin>
                     <groupId>com.devexperts.qd</groupId>
                     <artifactId>dxfeed-codegen</artifactId>
                     <version>${project.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.sonatype.install4j</groupId>
+                    <artifactId>install4j-maven-plugin</artifactId>
+                    <version>1.1.2</version>
                 </plugin>
             </plugins>
         </pluginManagement>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+  !++
+  QDS - Quick Data Signalling Library
+  !-
+  Copyright (C) 2002 - 2022 Devexperts LLC
+  !-
+  This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+  If a copy of the MPL was not distributed with this file, You can obtain one at
+  http://mozilla.org/MPL/2.0/.
+  !__
+-->
+<additionalHeaders>
+    <myxml_style>
+        <firstLine><![CDATA[<!--]]></firstLine>
+        <beforeEachLine>  </beforeEachLine>
+        <endLine><![CDATA[-->]]></endLine>
+        <!--<afterEachLine></afterEachLine>-->
+        <skipLine><![CDATA[^<(\?xml|(?i)!doctype).*>$]]></skipLine>
+        <firstLineDetectionPattern><![CDATA[(\s|\t)*<!--.*$]]></firstLineDetectionPattern>
+        <lastLineDetectionPattern><![CDATA[.*-->(\s|\t)*$]]></lastLineDetectionPattern>
+        <allowBlankLines>false</allowBlankLines>
+        <isMultiline>true</isMultiline>
+        <padLines>false</padLines>
+    </myxml_style>
+    <jsp_style>
+        <firstLine><![CDATA[<%--]]></firstLine>
+        <beforeEachLine>  </beforeEachLine>
+        <endLine><![CDATA[  --%>]]></endLine>
+        <!--<afterEachLine></afterEachLine>-->
+        <skipLine><![CDATA[^<\?xml.*>$]]></skipLine>
+        <firstLineDetectionPattern><![CDATA[(\s|\t)*<%--.*$]]></firstLineDetectionPattern>
+        <lastLineDetectionPattern><![CDATA[.*--%>(\s|\t)*$]]></lastLineDetectionPattern>
+        <allowBlankLines>false</allowBlankLines>
+        <isMultiline>true</isMultiline>
+        <padLines>false</padLines>
+    </jsp_style>
+    <props_style>
+        <firstLine>###</firstLine>
+        <beforeEachLine># </beforeEachLine>
+        <endLine>###EOL</endLine>
+        <firstLineDetectionPattern>^###$</firstLineDetectionPattern>
+        <lastLineDetectionPattern>^###(EOL)*$</lastLineDetectionPattern>
+        <allowBlankLines>false</allowBlankLines>
+        <isMultiline>false</isMultiline>
+    </props_style>
+</additionalHeaders>

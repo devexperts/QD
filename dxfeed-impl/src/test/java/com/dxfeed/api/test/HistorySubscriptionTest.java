@@ -31,7 +31,6 @@ import com.dxfeed.promise.Promise;
 import junit.framework.TestCase;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 

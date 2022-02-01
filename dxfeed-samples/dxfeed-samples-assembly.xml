@@ -3,16 +3,16 @@
   !++
   QDS - Quick Data Signalling Library
   !-
-  Copyright (C) 2002 - 2021 Devexperts LLC
+  Copyright (C) 2002 - 2022 Devexperts LLC
   !-
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
   If a copy of the MPL was not distributed with this file, You can obtain one at
   http://mozilla.org/MPL/2.0/.
   !__
-  -->
-<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0"
-          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-          xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0 http://maven.apache.org/xsd/assembly-1.1.0.xsd">
+-->
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.1.0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.1.0 http://maven.apache.org/xsd/assembly-2.1.0.xsd">
     <id>assembly</id>
     <formats>
         <format>zip</format>
@@ -20,12 +20,34 @@
 
     <includeBaseDirectory>false</includeBaseDirectory>
 
+    <moduleSets>
+        <moduleSet>
+            <useAllReactorProjects>true</useAllReactorProjects>
+            <includes>
+                <!-- include shaded artifact with manually specified dependencies -->
+                <include>com.devexperts.qd:qds</include>
+                <include>com.devexperts.qd:dxfeed-api</include>
+                <include>com.devexperts.qd:dxlib</include>
+            </includes>
+            <binaries>
+                <includeDependencies>false</includeDependencies>
+                <unpack>false</unpack>
+                <outputDirectory>lib</outputDirectory>
+                <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
+            </binaries>
+        </moduleSet>
+    </moduleSets>
     <dependencySets>
         <dependencySet>
             <unpack>false</unpack>
+            <useTransitiveDependencies>false</useTransitiveDependencies>
             <useProjectArtifact>true</useProjectArtifact>
             <outputDirectory>lib</outputDirectory>
             <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
+            <excludes>
+                <!-- skip shaded artifacts -->
+                <exclude>com.devexperts.qd:qds</exclude>
+            </excludes>
         </dependencySet>
     </dependencySets>
 
@@ -33,6 +55,30 @@
         <fileSet>
             <directory>files</directory>
             <outputDirectory>/</outputDirectory>
+            <excludes>
+                <exclude>*.bat</exclude>
+                <exclude>*.sh</exclude>
+            </excludes>
+            <lineEnding>keep</lineEnding>
+        </fileSet>
+        <!-- force Windows line endings for bat files -->
+        <fileSet>
+            <directory>files</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>*.bat</include>
+            </includes>
+            <lineEnding>windows</lineEnding>
+        </fileSet>
+        <!-- force unix line endings and executable bit for unix launcher -->
+        <fileSet>
+            <directory>files</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>*.sh</include>
+            </includes>
+            <lineEnding>unix</lineEnding>
+            <fileMode>755</fileMode>
         </fileSet>
         <fileSet>
             <directory>src/main/java</directory>
