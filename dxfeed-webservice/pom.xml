@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.307</version>
+        <version>3.308</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -214,7 +214,8 @@
                         <addMavenDescriptor>false</addMavenDescriptor>
                     </archive>
                     <attachClasses>true</attachClasses>
-                    <packagingExcludes>META-INF/maven/**</packagingExcludes>
+                    <!-- SHADED: exclude transitive dependencies used to construct shaded jars qds and dxfeed-api -->
+                    <packagingExcludes>META-INF/maven/**,${shaded.war.excludes}</packagingExcludes>
                     <outputFileNameMapping>@{artifactId}@@{dashClassifier?}@.@{extension}@</outputFileNameMapping>
                     <!-- take web.xml from jspc output -->
                     <webXml>${project.build.directory}/web.xml</webXml>

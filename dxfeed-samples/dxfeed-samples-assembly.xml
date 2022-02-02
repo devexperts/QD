@@ -24,7 +24,7 @@
         <moduleSet>
             <useAllReactorProjects>true</useAllReactorProjects>
             <includes>
-                <!-- include shaded artifact with manually specified dependencies -->
+                <!-- SHADED: include shaded artifact with manually specified dependencies -->
                 <include>com.devexperts.qd:qds</include>
                 <include>com.devexperts.qd:dxfeed-api</include>
                 <include>com.devexperts.qd:dxlib</include>
@@ -45,7 +45,7 @@
             <outputDirectory>lib</outputDirectory>
             <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
             <excludes>
-                <!-- skip shaded artifacts -->
+                <!-- SHADED: skip shaded artifacts -->
                 <exclude>com.devexperts.qd:qds</exclude>
             </excludes>
         </dependencySet>

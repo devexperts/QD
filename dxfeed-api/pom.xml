@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.307</version>
+        <version>3.308</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -36,11 +36,13 @@
             <artifactId>dxlib</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- SHADED: shaded dependencies -->
         <dependency>
             <groupId>com.devexperts.qd</groupId>
             <artifactId>dxfeed-promise</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- SHADED: end -->
         <!-- Utility classes for testing -->
         <dependency>
             <groupId>com.devexperts.qd</groupId>
@@ -143,6 +145,8 @@
                             </transformers>
                             <artifactSet>
                                 <includes>
+                                    <!-- SHADED: shaded dependencies
+                                    Keep in sync with 'shaded.war.excludes' property in parent pom & dependency list -->
                                     <include>com.devexperts.qd:dxfeed-promise</include>
                                 </includes>
                             </artifactSet>

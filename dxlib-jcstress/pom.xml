@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.307</version>
+        <version>3.308</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -51,6 +51,22 @@
                                     <resource>META-INF/TestList</resource>
                                 </transformer>
                             </transformers>
+                            <filters>
+                                <filter>
+                                    <!-- SHADED: shade all dependencies -->
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/MANIFEST.MF</exclude>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <!-- avoid warnings -->
+                                        <exclude>META-INF/AL2.0</exclude>
+                                        <exclude>META-INF/LGPL2.1</exclude>
+                                        <exclude>META-INF/LICENSE</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
                         </configuration>
                     </execution>
                 </executions>
@@ -68,6 +84,7 @@
     </build>
 
     <dependencies>
+        <!-- SHADED: shading all dependencies -->
         <dependency>
             <groupId>org.openjdk.jcstress</groupId>
             <artifactId>jcstress-core</artifactId>

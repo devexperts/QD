@@ -1,3 +1,8 @@
+QDS 3.308:
+
+* [QD-1374] [build] License header checking fails on master branch
+* [QD-1373] Update build to maven 3.6+ [fix war bundles]
+
 QDS 3.307:
 
 * [QD-1371] Update build to maven 3.6+

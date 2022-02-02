@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.307</version>
+        <version>3.308</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -52,6 +52,8 @@
                             </transformers>
                             <artifactSet>
                                 <includes>
+                                    <!-- SHADED: list of shaded dependencies.
+                                    Keep in sync with 'shaded.war.excludes' property in parent pom & dependency list -->
                                     <include>com.devexperts.qd:qd-core</include>
                                     <include>com.devexperts.qd:dxlib-qd-sandbox</include>
                                     <include>com.devexperts.qd:auth</include>
@@ -82,7 +84,7 @@
             <artifactId>dxfeed-api</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- shaded dependencies -->
+        <!-- SHADED: shaded dependencies -->
         <dependency>
             <groupId>com.devexperts.qd</groupId>
             <artifactId>qd-core</artifactId>

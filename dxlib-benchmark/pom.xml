@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.307</version>
+        <version>3.308</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -24,6 +24,7 @@
     <name>dxlib JMH benchmark</name>
 
     <dependencies>
+        <!-- SHADED: shading all dependencies -->
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-core</artifactId>
@@ -70,12 +71,13 @@
                             </transformers>
                             <filters>
                                 <filter>
-                                    <!--
+                                    <!-- SHADED:
                                         Shading signed JARs will fail without this.
                                         http://stackoverflow.com/questions/999489/invalid-signature-file-when-attempting-to-run-a-jar
                                     -->
                                     <artifact>*:*</artifact>
                                     <excludes>
+                                        <exclude>META-INF/MANIFEST.MF</exclude>
                                         <exclude>META-INF/*.SF</exclude>
                                         <exclude>META-INF/*.DSA</exclude>
                                         <exclude>META-INF/*.RSA</exclude>

@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.307</version>
+    <version>3.308</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -132,6 +132,19 @@
         <!-- Most modules don't produce javadoc -->
         <javadoc.skip>true</javadoc.skip>
         <javadoc.error.pattern>\*?\s*@author.*</javadoc.error.pattern>
+        <!-- SHADED: excludes for shaded artifacts when used inside a war. Keep in sync with qds & dxfeed-api poms -->
+        <shaded.war.excludes>
+            WEB-INF/lib/qd-core.jar,
+            WEB-INF/lib/dxlib-qd-sandbox.jar,
+            WEB-INF/lib/auth.jar,
+            WEB-INF/lib/proto.jar,
+            WEB-INF/lib/proto-ssl.jar,
+            WEB-INF/lib/qd-rmi.jar,
+            WEB-INF/lib/dxfeed-impl.jar,
+            WEB-INF/lib/dxfeed-scheme.jar,
+            WEB-INF/lib/dxfeed-ipf-filter.jar,
+            WEB-INF/lib/dxfeed-promise.jar
+        </shaded.war.excludes>
 
         <!-- version of Jetty for all web and servlet modules -->
         <jetty.version>9.4.42.v20210604</jetty.version>
@@ -180,6 +193,120 @@
                 <deploy.dir>${deploy.host.mount}/Release${deploy.branch.dir.suffix}</deploy.dir>
                 <deploy.suffix>${project.version}</deploy.suffix>
             </properties>
+        </profile>
+        <profile>
+            <!-- license checking routines moved out from main execution profile due to general performance impact
+            and some other issues - see [QD-1374] -->
+            <id>license-check</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.mycila</groupId>
+                        <artifactId>license-maven-plugin</artifactId>
+                        <version>${mycila-license-maven-plugin.version}</version>
+                        <dependencies>
+                            <dependency>
+                                <groupId>com.mycila</groupId>
+                                <artifactId>license-maven-plugin-git</artifactId>
+                                <version>${mycila-license-maven-plugin.version}</version>
+                            </dependency>
+                        </dependencies>
+                        <configuration>
+                            <aggregate>true</aggregate>
+                            <failIfMissing>true</failIfMissing>
+                            <quiet>false</quiet>
+                            <header>build-support/src/main/resources/MPL-2_0-header.txt</header>
+                            <properties>
+                                <owner>${project.organization.name}</owner>
+                            </properties>
+                            <headerDefinitions>
+                                <headerDefinition>build-support/src/main/resources/header-styles.xml</headerDefinition>
+                            </headerDefinitions>
+                            <mapping>
+                                <java>SLASHSTAR_STYLE</java>
+                                <css>SLASHSTAR_STYLE</css>
+                                <html>MYXML_STYLE</html>
+                                <xml>MYXML_STYLE</xml>
+                                <xsd>MYXML_STYLE</xsd>
+                                <properties>PROPS_STYLE</properties>
+                                <jsp>JSP_STYLE</jsp>
+                            </mapping>
+                            <includes>
+                                <include>**/src/**</include>
+                            </includes>
+                            <useDefaultExcludes>true</useDefaultExcludes>
+                            <excludes>
+                                <exclude>**/*.txt</exclude>
+                                <exclude>**/*.ftl</exclude>
+                                <exclude>**/*.sh</exclude>
+                                <exclude>**/*.bat</exclude>
+                                <exclude>blog/</exclude>
+                                <exclude>**/.*/</exclude>
+                                <exclude>**/overlays/</exclude>
+                                <!-- skip poms to avoid self-update-check issues during release -->
+                                <exclude>**/pom.xml</exclude>
+                                <!-- dxfeed-webservice third-party js libs -->
+                                <exclude>**/angularjs/</exclude>
+                                <exclude>**/flot/</exclude>
+                                <exclude>**/jquery/</exclude>
+                                <exclude>**/mootools/</exclude>
+                                <!-- mute some popular unknown files -->
+                                <exclude>**/*.form</exclude>
+                                <exclude>**/*.log</exclude>
+                                <exclude>**/*.install4j</exclude>
+                            </excludes>
+                        </configuration>
+                        <inherited>false</inherited>
+                        <executions>
+                            <execution>
+                                <id>license-check</id>
+                                <phase>verify</phase>
+                                <inherited>false</inherited>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <!--
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>license-maven-plugin</artifactId>
+                        <configuration>
+                            <licenseName>mpl-2</licenseName>
+                            <failOnMissingHeader>true</failOnMissingHeader>
+                            <failOnNotUptodateHeader>true</failOnNotUptodateHeader>
+                            <addJavaLicenseAfterPackage>false</addJavaLicenseAfterPackage>
+                            <canUpdateLicense>true</canUpdateLicense>
+                            <canUpdateCopyright>true</canUpdateCopyright>
+                            <canUpdateDescription>true</canUpdateDescription>
+                            <useJavaNoReformatCommentStartTag>false</useJavaNoReformatCommentStartTag>
+                            <sectionDelimiter>!-</sectionDelimiter>
+                            <processStartTag>!++</processStartTag>
+                            <processEndTag>!__</processEndTag>
+                            <excludes>
+                                <exclude>**/*.ftl</exclude>
+                                <exclude>**/*.css</exclude>
+                                <exclude>**/META-INF/services/**</exclude>
+                                <exclude>**/angularjs/angularjs-1.6.9.min.js</exclude>
+                                <exclude>**/jquery/jquery-1.9.0.js</exclude>
+                                <exclude>**/jquery/jquery-1.9.0.min.js</exclude>
+                            </excludes>
+                            <descriptionTemplate>${session.executionRootDirectory}/build-support/src/main/resources/description.ftl</descriptionTemplate>
+                            <licenseResolver>file:${session.executionRootDirectory}/build-support/src/main/resources</licenseResolver>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <phase>process-sources</phase>
+                                <goals>
+                                    <goal>check-file-header</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    -->
+                </plugins>
+            </build>
         </profile>
     </profiles>
 
@@ -400,111 +527,6 @@
                     <redirectTestOutputToFile>true</redirectTestOutputToFile>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>com.mycila</groupId>
-                <artifactId>license-maven-plugin</artifactId>
-                <version>${mycila-license-maven-plugin.version}</version>
-                <dependencies>
-                    <dependency>
-                        <groupId>com.mycila</groupId>
-                        <artifactId>license-maven-plugin-git</artifactId>
-                        <version>${mycila-license-maven-plugin.version}</version>
-                    </dependency>
-                </dependencies>
-                <configuration>
-                    <aggregate>true</aggregate>
-                    <failIfMissing>true</failIfMissing>
-                    <quiet>false</quiet>
-                    <header>build-support/src/main/resources/MPL-2_0-header.txt</header>
-                    <properties>
-                        <owner>${project.organization.name}</owner>
-                    </properties>
-                    <headerDefinitions>
-                        <headerDefinition>build-support/src/main/resources/header-styles.xml</headerDefinition>
-                    </headerDefinitions>
-                    <mapping>
-                        <java>SLASHSTAR_STYLE</java>
-                        <css>SLASHSTAR_STYLE</css>
-                        <html>MYXML_STYLE</html>
-                        <xml>MYXML_STYLE</xml>
-                        <xsd>MYXML_STYLE</xsd>
-                        <properties>PROPS_STYLE</properties>
-                        <jsp>JSP_STYLE</jsp>
-                    </mapping>
-                    <includes>
-                        <include>**/src/**</include>
-                    </includes>
-                    <useDefaultExcludes>true</useDefaultExcludes>
-                    <excludes>
-                        <exclude>**/*.txt</exclude>
-                        <exclude>**/*.ftl</exclude>
-                        <exclude>**/*.sh</exclude>
-                        <exclude>**/*.bat</exclude>
-                        <exclude>blog/</exclude>
-                        <exclude>**/.*/</exclude>
-                        <exclude>**/overlays/</exclude>
-                        <!-- skip poms to avoid self-update-check issues during release -->
-                        <exclude>**/pom.xml</exclude>
-                        <!-- dxfeed-webservice third-party js libs -->
-                        <exclude>**/angularjs/</exclude>
-                        <exclude>**/flot/</exclude>
-                        <exclude>**/jquery/</exclude>
-                        <exclude>**/mootools/</exclude>
-                        <!-- mute some popular unknown files -->
-                        <exclude>**/*.form</exclude>
-                        <exclude>**/*.log</exclude>
-                        <exclude>**/*.install4j</exclude>
-                    </excludes>
-                </configuration>
-                <inherited>false</inherited>
-                <executions>
-                    <execution>
-                        <id>license-check</id>
-                        <phase>verify</phase>
-                        <inherited>false</inherited>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-<!--
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>license-maven-plugin</artifactId>
-                <configuration>
-                    <licenseName>mpl-2</licenseName>
-                    <failOnMissingHeader>true</failOnMissingHeader>
-                    <failOnNotUptodateHeader>true</failOnNotUptodateHeader>
-                    <addJavaLicenseAfterPackage>false</addJavaLicenseAfterPackage>
-                    <canUpdateLicense>true</canUpdateLicense>
-                    <canUpdateCopyright>true</canUpdateCopyright>
-                    <canUpdateDescription>true</canUpdateDescription>
-                    <useJavaNoReformatCommentStartTag>false</useJavaNoReformatCommentStartTag>
-                    <sectionDelimiter>!-</sectionDelimiter>
-                    <processStartTag>!++</processStartTag>
-                    <processEndTag>!__</processEndTag>
-                    <excludes>
-                        <exclude>**/*.ftl</exclude>
-                        <exclude>**/*.css</exclude>
-                        <exclude>**/META-INF/services/**</exclude>
-                        <exclude>**/angularjs/angularjs-1.6.9.min.js</exclude>
-                        <exclude>**/jquery/jquery-1.9.0.js</exclude>
-                        <exclude>**/jquery/jquery-1.9.0.min.js</exclude>
-                    </excludes>
-                    <descriptionTemplate>${session.executionRootDirectory}/build-support/src/main/resources/description.ftl</descriptionTemplate>
-                    <licenseResolver>file:${session.executionRootDirectory}/build-support/src/main/resources</licenseResolver>
-                </configuration>
-                <executions>
-                    <execution>
-                        <phase>process-sources</phase>
-                        <goals>
-                            <goal>check-file-header</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
--->
         </plugins>
 
         <!-- Define versions of all plugins -->
