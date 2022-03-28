@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,7 +12,6 @@
 package com.devexperts.qd.impl.stripe;
 
 import com.devexperts.qd.DataRecord;
-import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
@@ -30,7 +29,6 @@ import com.devexperts.qd.stats.QDStats;
 abstract class StripedCollector<C extends QDCollector> extends AbstractCollector {
     private static final int MAGIC = 0xB46394CD;
 
-    final DataScheme scheme;
     final SymbolCodec codec;
     final int n; // always power of 2
     final int shift;
@@ -38,14 +36,11 @@ abstract class StripedCollector<C extends QDCollector> extends AbstractCollector
     final int wildcard;
 
     boolean enableWildcards;
-    boolean storeEverything;
-    QDFilter storeEverythingFilter = QDFilter.ANYTHING; // @NotNull
 
     StripedCollector(Builder<?> builder, int n) {
         super(builder);
         if ((n < 2) || ((n & (n - 1)) != 0))
             throw new IllegalArgumentException("Striping factor N should a power of 2 and at least 2");
-        this.scheme = builder.getScheme();
         this.codec = scheme.getCodec();
         this.n = n;
         this.shift = 32 - Integer.numberOfTrailingZeros(n);
@@ -69,28 +64,13 @@ abstract class StripedCollector<C extends QDCollector> extends AbstractCollector
     }
 
     @Override
-    public DataScheme getScheme() {
-        return scheme;
-    }
-
-    @Override
-    public boolean isStoreEverything() {
-        return storeEverything;
-    }
-
-    @Override
     public void setStoreEverything(boolean storeEverything) {
-        this.storeEverything = storeEverything;
+        super.setStoreEverything(storeEverything);
         for (int i = 0; i < n; i++) {
             if (storeEverything)
                 collectors()[i].setStoreEverythingFilter(new StoreFilter(i));
             collectors()[i].setStoreEverything(storeEverything);
         }
-    }
-
-    @Override
-    public void setStoreEverythingFilter(SubscriptionFilter filter) {
-        storeEverythingFilter = QDFilter.fromFilter(filter, scheme);
     }
 
     @Override

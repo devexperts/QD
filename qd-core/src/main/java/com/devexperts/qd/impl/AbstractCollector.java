@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.qd.impl;
 
+import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.DataVisitor;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDCollector;
@@ -27,20 +28,32 @@ import java.util.concurrent.Executor;
 
 public abstract class AbstractCollector implements QDCollector {
     protected final QDContract contract;
+    protected final DataScheme scheme;
+    protected boolean storeEverything;
+    protected QDFilter storeEverythingFilter = QDFilter.ANYTHING; // @NotNull
 
     private final QDAgent.Builder agentBuilder;
     private final DistributorBuilder distributorBuilder = new DistributorBuilder();
     private final boolean withEventTimeSequence;
 
+
     protected AbstractCollector(Builder<?> builder) {
         this.contract = builder.getContract();
+        this.scheme = builder.getScheme();
         this.withEventTimeSequence = builder.hasEventTimeSequence();
+        this.storeEverything = builder.isStoreEverything();
+        this.storeEverythingFilter = QDFilter.fromFilter(builder.getStoreEverythingFilter(), scheme);
         this.agentBuilder = new AgentBuilder().withEventTimeSequence(withEventTimeSequence);
     }
 
     @Override
     public final QDContract getContract() {
         return contract;
+    }
+
+    @Override
+    public final DataScheme getScheme() {
+        return scheme;
     }
 
     @Override
@@ -120,17 +133,17 @@ public abstract class AbstractCollector implements QDCollector {
 
     @Override
     public boolean isStoreEverything() {
-        return false;
+        return storeEverything;
     }
 
     @Override
     public void setStoreEverything(boolean storeEverything) {
-        throw new UnsupportedOperationException();
+        this.storeEverything = storeEverything;
     }
 
     @Override
     public void setStoreEverythingFilter(SubscriptionFilter filter) {
-        throw new UnsupportedOperationException();
+        this.storeEverythingFilter = QDFilter.fromFilter(filter, scheme);
     }
 
     @Override

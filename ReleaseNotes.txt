@@ -1,3 +1,10 @@
+
+QDS 3.309:
+
+* [QD-1380] qds-tools: collector option "se" is not working
+* [QD-1194] Leakage in InstrumentProfileCollector
+* [QD-1376] [build] Class names duplicated in "All Classes" list in javadoc
+
 QDS 3.308:
 
 * [QD-1374] [build] License header checking fails on master branch

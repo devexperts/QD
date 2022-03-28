@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -140,21 +140,20 @@ public class QDEndpoint implements Closeable {
             QDCollector.Builder<?> builder = defaultFactory.collectorBuilder(factory.getContract())
                 .withScheme(scheme)
                 .withStats(rootStats.create(factory.getStatsType()))
-                .withEventTimeSequence(withEventTimeSequence);
+                .withEventTimeSequence(withEventTimeSequence)
+                .withStoreEverything(storeEverything);
             QDCollector collector = factory.createCollector(defaultFactory, builder);
             if (this.collectors.containsKey(collector.getContract()))
                 throw new IllegalArgumentException("Cannot have two collectors with " + collector.getContract() + " contract");
             collectors.put(collector.getContract(), collector);
             switch (collector.getContract()) {
             case TICKER:
-                collector.setStoreEverything(storeEverything);
                 ticker = (QDTicker) collector;
                 break;
             case STREAM:
                 stream = (QDStream) collector;
                 break;
             case HISTORY:
-                collector.setStoreEverything(storeEverything);
                 history = (QDHistory) collector;
                 break;
             }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,13 +14,10 @@ package com.devexperts.qd.impl.hash;
 import com.devexperts.qd.DataIntField;
 import com.devexperts.qd.DataObjField;
 import com.devexperts.qd.DataRecord;
-import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDErrorHandler;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.QDTicker;
-import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.impl.AbstractCollector;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordMode;
@@ -40,7 +37,6 @@ import java.util.Set;
 final class HashTicker extends AbstractCollector implements QDTicker {
     private static final int EXAMINE_BATCH_SIZE = 10000;
 
-    private final DataScheme scheme;
     private final DataRecord[] records;
 
     private final QDStats stats;
@@ -52,13 +48,10 @@ final class HashTicker extends AbstractCollector implements QDTicker {
     private final HashSet<HashDistributor> distributors_set = new HashSet<>();
     private HashDistributor[] distributors = new HashDistributor[0]; // Current snapshot of distributors_set.
 
-    private boolean store_everything;
-
     QDErrorHandler error_handler;
 
     HashTicker(Builder<?> builder) {
         super(builder);
-        this.scheme = builder.getScheme();
         this.records = new DataRecord[scheme.getRecordCount()];
         for (int i = records.length; --i >= 0;)
             records[i] = scheme.getRecord(i);
@@ -187,11 +180,6 @@ final class HashTicker extends AbstractCollector implements QDTicker {
     // ========== QDCollector Implementation ==========
 
     @Override
-    public DataScheme getScheme() {
-        return scheme;
-    }
-
-    @Override
     public QDAgent buildAgent(QDAgent.Builder builder) {
         return new HashAgent(this, builder, stats.create(QDStats.SType.AGENT, builder.getKeyProperties()));
     }
@@ -213,23 +201,6 @@ final class HashTicker extends AbstractCollector implements QDTicker {
         if (records[rid] == record)
             return rid;
         throw new IllegalArgumentException("Unknown record.");
-    }
-
-    @Override
-    public boolean isStoreEverything() {
-        return store_everything;
-    }
-
-    @Override
-    public void setStoreEverything(boolean store_everything) {
-        this.store_everything = store_everything;
-        if (store_everything)
-            QDLog.log.error("WARNING: 'store everything' mode is not implemented in hash impl.");
-    }
-
-    @Override
-    public void setStoreEverythingFilter(SubscriptionFilter filter) {
-        // nothing -- ignore
     }
 
     @Override

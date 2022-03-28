@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,7 +12,6 @@
 package com.devexperts.qd.tools.fs;
 
 import com.devexperts.qd.DataRecord;
-import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDErrorHandler;
@@ -59,16 +58,15 @@ public class FilteredStream extends AbstractCollector implements QDStream {
 
     /**
      * Creates new instance of FilteredStream.
+     *
      * @param factory QDFactory to use to create underlying QDTicker and QDStream.
-     * @param scheme DataScheme to use.
-     * @param stats QDStats to use.
+     * @param builder builder to build from
      * @param dataFrequency maximum data outgoing frequency.
      */
     public FilteredStream(QDFactory factory, Builder<?> builder, long dataFrequency) {
         super(builder);
         this.stream = factory.streamBuilder().copyFrom(builder).build();
-        this.ticker = factory.tickerBuilder().copyFrom(builder).build();
-        ticker.setStoreEverything(true);
+        this.ticker = factory.tickerBuilder().copyFrom(builder).withStoreEverything(true).build();
 
         new ExaminingThread(ticker, stream.distributorBuilder().build(), dataFrequency).start();
     }
@@ -81,11 +79,6 @@ public class FilteredStream extends AbstractCollector implements QDStream {
     @Override
     public boolean getEnableWildcards() {
         return stream.getEnableWildcards();
-    }
-
-    @Override
-    public DataScheme getScheme() {
-        return stream.getScheme();
     }
 
     @Override

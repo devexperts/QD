@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -306,7 +306,7 @@ public class FileConnector extends AbstractMessageConnector implements FileConne
     }
 
     @Override
-    @MessageConnectorProperty("Time format (one of \"none\", \"long\", \"text\", or \"event\"), autodetect by default")
+    @MessageConnectorProperty("Time format (one of \"none\", \"long\", \"text\", \"field\", or \"message\"), autodetect by default")
     public synchronized void setTime(TimestampsType time) {
         if (this.time != time) {
             checkTimeAndIgnoreTime(time, ignoreTime);

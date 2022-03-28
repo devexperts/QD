@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -179,7 +179,7 @@ final class SubProvider extends AbstractRecordProvider implements QDStatsContain
     // SYNC: global
     void init() {
         sub = new SubMatrix(collector.mapper, has_time ? 6 : 4, 0, QUEUE_MARK, 0, 0, Hashing.MAX_SHIFT, stats);
-        collector.mapper.incMaxCounter(collector.scheme.getRecordCount());
+        collector.mapper.incMaxCounter(collector.getScheme().getRecordCount());
     }
 
     // SYNC: global
@@ -188,7 +188,7 @@ final class SubProvider extends AbstractRecordProvider implements QDStatsContain
         if (sub != null) {
             sub.close();
             sub = null;
-            collector.mapper.decMaxCounter(collector.scheme.getRecordCount());
+            collector.mapper.decMaxCounter(collector.getScheme().getRecordCount());
         }
     }
 

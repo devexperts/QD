@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -269,11 +269,10 @@ public class OptionCollector extends OptionString implements EndpointOption {
                 public QDCollector createCollector(QDFactory factory, QDCollector.Builder<?> builder) {
                     QDCollector.Builder<QDStream> baseBuilder = factory.streamBuilder()
                         .copyFrom(builder)
-                        .withEventTimeSequence(ts);
+                        .withEventTimeSequence(ts)
+                        .withStoreEverything(se);
                     QDStream stream = (filtered == null) ? baseBuilder.build()
                         : new FilteredStream(factory, builder, TimePeriod.valueOf(filtered).getTime());
-                    if (filtered == null)
-                        stream.setStoreEverything(se);
                     stream.setEnableWildcards(!nwc);
                     return stream;
                 }
@@ -307,8 +306,8 @@ public class OptionCollector extends OptionString implements EndpointOption {
                     QDTicker ticker = factory.tickerBuilder()
                         .copyFrom(builder)
                         .withEventTimeSequence(ts)
+                        .withStoreEverything(se)
                         .build();
-                    ticker.setStoreEverything(se);
                     return ticker;
                 }
 
@@ -339,8 +338,8 @@ public class OptionCollector extends OptionString implements EndpointOption {
                     QDHistory history = factory.historyBuilder()
                         .copyFrom(builder)
                         .withEventTimeSequence(ts)
+                        .withStoreEverything(se)
                         .build();
-                    history.setStoreEverything(se);
                     return history;
                 }
 

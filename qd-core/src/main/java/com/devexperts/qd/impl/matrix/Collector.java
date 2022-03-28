@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,7 +13,6 @@ package com.devexperts.qd.impl.matrix;
 
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataRecord;
-import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
@@ -21,7 +20,6 @@ import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDErrorHandler;
 import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.QDLog;
-import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.impl.AbstractCollector;
 import com.devexperts.qd.impl.matrix.management.CollectorCounters;
@@ -219,7 +217,6 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
 
     final RecordCursorKeeper keeper = new RecordCursorKeeper(); // SYNC: global, Ticker&History, auto-clear on globalLock.unlock()
     final GlobalLock globalLock; // Protects all structural modifications and almost all read/write.
-    final DataScheme scheme;
 
     final Mapper mapper;
     final boolean hasTime;
@@ -234,9 +231,6 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
     private int lastAgentIndex = MIN_AGENT_INDEX;
 
     final DistributorsList distributors = new DistributorsList();
-
-    boolean storeEverything;
-    QDFilter storeEverythingFilter = QDFilter.ANYTHING; // @NotNull
 
     volatile QDErrorHandler errorHandler; // SYNC: none
 
@@ -267,7 +261,6 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
         this.counters = management.createCounters();
 
         this.globalLock = new GlobalLock(management, counters, keeper);
-        this.scheme = builder.getScheme();
         this.mapper = new Mapper(this);
         this.hasTime = hasTime;
         this.records = new DataRecord[scheme.getRecordCount()];
@@ -728,26 +721,6 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
     }
 
     // ========== QDCollector Implementation ==========
-
-    @Override
-    public DataScheme getScheme() {
-        return scheme;
-    }
-
-    @Override
-    public boolean isStoreEverything() {
-        return storeEverything;
-    }
-
-    @Override
-    public void setStoreEverything(boolean storeEverything) {
-        this.storeEverything = storeEverything;
-    }
-
-    @Override
-    public void setStoreEverythingFilter(SubscriptionFilter filter) {
-        this.storeEverythingFilter = QDFilter.fromFilter(filter, scheme);
-    }
 
     boolean shouldStoreEverything(DataRecord record, int cipher, String symbol) {
         return storeEverything && storeEverythingFilter.accept(contract, record, cipher, symbol);

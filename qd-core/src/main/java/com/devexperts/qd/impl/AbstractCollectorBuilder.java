@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,6 +16,7 @@ import com.devexperts.qd.HistorySubscriptionFilter;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
 import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.stats.QDStats;
 
 public abstract class AbstractCollectorBuilder<T extends QDCollector> implements QDCollector.Builder<T> {
@@ -25,6 +26,8 @@ public abstract class AbstractCollectorBuilder<T extends QDCollector> implements
     private QDStats stats;
     private HistorySubscriptionFilter historyFilter;
     private boolean withEventTimeSequence;
+    private boolean storeEverything;
+    private SubscriptionFilter storeEverythingFilter;
 
     protected AbstractCollectorBuilder(QDContract contract) {
         this.contract = contract;
@@ -39,6 +42,8 @@ public abstract class AbstractCollectorBuilder<T extends QDCollector> implements
         stats = other.getStats();
         historyFilter = other.getHistoryFilter();
         withEventTimeSequence = other.hasEventTimeSequence();
+        storeEverything = other.isStoreEverything();
+        storeEverythingFilter = other.getStoreEverythingFilter();
         return this;
     }
 
@@ -93,5 +98,27 @@ public abstract class AbstractCollectorBuilder<T extends QDCollector> implements
     @Override
     public boolean hasEventTimeSequence() {
         return withEventTimeSequence;
+    }
+
+    @Override
+    public QDCollector.Builder<T> withStoreEverything(boolean storeEverything) {
+        this.storeEverything = storeEverything;
+        return this;
+    }
+
+    @Override
+    public boolean isStoreEverything() {
+        return storeEverything;
+    }
+
+    @Override
+    public QDCollector.Builder<T> withStoreEverythingFilter(SubscriptionFilter filter) {
+        storeEverythingFilter = filter;
+        return this;
+    }
+
+    @Override
+    public SubscriptionFilter getStoreEverythingFilter() {
+        return storeEverythingFilter;
     }
 }

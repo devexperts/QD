@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,9 +11,15 @@
  */
 package com.devexperts.qd.tools.test;
 
+import com.devexperts.qd.QDContract;
 import com.devexperts.qd.qtp.QDEndpoint;
 import com.devexperts.qd.tools.OptionCollector;
 import org.junit.Test;
+
+import java.util.function.Consumer;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class OptionCollectorTest {
 
@@ -60,12 +66,37 @@ public class OptionCollectorTest {
         testParser("all-ts", false);
     }
 
-    private void testParser(String testConfiguration, boolean shouldParsed) throws Exception {
+    @Test
+    public void testParserHistoryStoreEverything() {
+        Consumer<QDEndpoint> checkSeEnabled = endpoint -> {
+            assertTrue("storeEverything is not enabled", endpoint.getCollector(QDContract.HISTORY).isStoreEverything());
+        };
+        testParser("all-se", true, checkSeEnabled);
+        testParser("all[se]", true, checkSeEnabled);
+        testParser("history-se", true, checkSeEnabled);
+        testParser("history[se]", true, checkSeEnabled);
+
+        Consumer<QDEndpoint> checkSeDisabled = endpoint -> {
+            assertFalse("storeEverything is enabled", endpoint.getCollector(QDContract.HISTORY).isStoreEverything());
+        };
+
+        testParser("all", true, checkSeDisabled);
+        testParser("history", true, checkSeDisabled);
+    }
+
+    private void testParser(String testConfiguration, boolean shouldParsed) {
+        testParser(testConfiguration, shouldParsed, null);
+    }
+
+    private void testParser(String testConfiguration, boolean shouldParsed, Consumer<QDEndpoint> test) {
         Exception exception = null;
         try {
             OptionCollector optionCollector = new OptionCollector(testConfiguration);
             optionCollector.applyEndpointOption(QDEndpoint.newBuilder());
             QDEndpoint endpoint = optionCollector.createEndpoint("testEndpoint");
+            if (test != null) {
+                test.accept(endpoint);
+            }
             endpoint.close();
         } catch (IllegalArgumentException e) {
             exception = e;
@@ -75,5 +106,4 @@ public class OptionCollectorTest {
         if (!shouldParsed && exception == null)
             throw new AssertionError("IllegalArgumentException expected for \"" + testConfiguration + "\" input");
     }
-
 }

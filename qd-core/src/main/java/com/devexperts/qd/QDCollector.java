@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -133,15 +133,17 @@ public interface QDCollector extends SubscriptionContainer, QDStatsContainer {
      * subscribed on are being stored). When subscription is removed records are not removed from storage
      * (by default they are). Only records that match specified {@link #setStoreEverythingFilter(SubscriptionFilter) filter}
      * are subject to this mode (all records by default).
-     * @throws UnsupportedOperationException when called on {@link QDStream}
+     *
+     * <p>Support of the feature depends on collector implementation.
      */
     public void setStoreEverything(boolean storeEverything);
 
     /**
      * Sets filter that is used for "store everything" mode. Use <code>null</code> (default)
      * to turn off filtering and store all records when "store everything" mode is on.
+     *
+     * <p>Support of the feature depends on collector implementation.
      * @see #setStoreEverything(boolean)
-     * @throws UnsupportedOperationException when called on {@link QDStream} or {@link QDHistory}
      */
     public void setStoreEverythingFilter(SubscriptionFilter filter);
 
@@ -289,6 +291,26 @@ public interface QDCollector extends SubscriptionContainer, QDStatsContainer {
          * Returns true if collector should process event time sequence.
          */
         public boolean hasEventTimeSequence();
+
+        /**
+         * Specifies if collector should work in "story everything" mode.
+         */
+        public Builder<T> withStoreEverything(boolean storeEverything);
+
+        /**
+         * Returns true if collector should work in "story everything" mode.
+         */
+        public boolean isStoreEverything();
+
+        /**
+         * Specifies filter to be used for "story everything" feature.
+         */
+        public Builder<T> withStoreEverythingFilter(SubscriptionFilter filter);
+
+        /**
+         * Returns filter to be used for "story everything" feature.
+         */
+        public SubscriptionFilter getStoreEverythingFilter();
 
         /**
          * Copies properties from others.

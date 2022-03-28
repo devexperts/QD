@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.308</version>
+    <version>3.309</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -457,7 +457,7 @@
                         <id>check-author-string</id>
                         <phase>validate</phase>
                         <configuration>
-                            <target>
+                            <target xmlns:if="ant:if">
                                 <pathconvert pathsep="${line.separator}" property="invalidJavadoc" setonempty="false">
                                     <fileset dir="${project.build.sourceDirectory}" includes="**/*.java" erroronmissingdir="false">
                                         <containsregexp expression="${javadoc.error.pattern}" />
@@ -466,7 +466,7 @@
                                         <containsregexp expression="${javadoc.error.pattern}" />
                                     </fileset>
                                 </pathconvert>
-                                <echo message="Found tag '@author' in javadoc: ${line.separator}${invalidJavadoc}" />
+                                <echo message="Found tag '@author' in javadoc: ${line.separator}${invalidJavadoc}" level="error" if:set="invalidJavadoc" />
                                 <fail message="Found tag '@author' in javadoc" if="invalidJavadoc" />
                             </target>
                         </configuration>
@@ -599,7 +599,8 @@
                 </plugin>
                 <plugin>
                     <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>3.3.1</version>
+                    <!-- Hold plugin on 3.2.0 version until MJAVADOC-700 is resolved (see QD-1376) -->
+                    <version>3.2.0</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-war-plugin</artifactId>

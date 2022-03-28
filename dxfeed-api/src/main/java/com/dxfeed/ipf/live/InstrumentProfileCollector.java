@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -75,7 +75,7 @@ public class InstrumentProfileCollector {
      * <p>Note, that this method stores reference to an instance of a given {@link InstrumentProfile} object
      * inside this collector, unless a protected method
      * {@link #copyInstrumentProfile(InstrumentProfile) copyInstrumentProfile}
-     * is overriden to create a copy.
+     * is overridden to create a copy.
      *
      * @param ip instrument profile.
      */
@@ -102,7 +102,7 @@ public class InstrumentProfileCollector {
      * <p>Note, that this method stores references to instances of {@link InstrumentProfile} objects from
      * a given list inside this collector, unless a protected method
      * {@link #copyInstrumentProfile(InstrumentProfile) copyInstrumentProfile}
-     * is overriden to create a copy.
+     * is overridden to create a copy.
      *
      * @param ips a list of instrument profiles.
      * @param generation a generation tag, may be {@code null}.
@@ -166,27 +166,22 @@ public class InstrumentProfileCollector {
      * @return a concurrent view of the set of instrument profiles.
      */
     public final Iterable<InstrumentProfile> view() {
-        return new Iterable<InstrumentProfile>() {
+        return () -> new Iterator<InstrumentProfile>() {
+            private final Iterator<Entry> entryIterator = entriesBySymbol.concurrentIterator();
+
             @Override
-            public Iterator<InstrumentProfile> iterator() {
-                return new Iterator<InstrumentProfile>() {
-                    private final Iterator<Entry> entryIterator = entriesBySymbol.concurrentIterator();
+            public boolean hasNext() {
+                return entryIterator.hasNext();
+            }
 
-                    @Override
-                    public boolean hasNext() {
-                        return entryIterator.hasNext();
-                    }
+            @Override
+            public InstrumentProfile next() {
+                return entryIterator.next().ip;
+            }
 
-                    @Override
-                    public InstrumentProfile next() {
-                        return entryIterator.next().ip;
-                    }
-
-                    @Override
-                    public void remove() {
-                        throw new UnsupportedOperationException();
-                    }
-                };
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException();
             }
         };
     }
@@ -272,7 +267,7 @@ public class InstrumentProfileCollector {
             log.debug((oldEntry == null ? "Adding " : "Updating ") + debugString(ip) +
                 (oldEntry != null && oldEntry.ip == ip ? " (same instance)" : ""));
         // CONCURRENCY NOTE: The order of numbered operations is important
-        // [0] Create a copy of the instrument (if copyInstrumentProfile is overriden is a subclass)
+        // [0] Create a copy of the instrument (if copyInstrumentProfile is overridden is a subclass)
         //     This captures this instrument profile state in case of its concurrent modifications
         ip = copyInstrumentProfile(ip);
         Entry newEntry = new Entry(symbol, ip);
@@ -294,7 +289,6 @@ public class InstrumentProfileCollector {
         if (oldEntry != null) {
             // [3] mark old entry (linearization for removal of old instrument profile instance)
             oldEntry.old = true;
-            unlinkRemovedEntryImpl(oldEntry);
         }
         return true;
     }
@@ -309,29 +303,12 @@ public class InstrumentProfileCollector {
         linkUpdatedEntryImpl(new Entry(entry.symbol, removed));
         // [2] mark old entry
         entry.old = true;
-        unlinkRemovedEntryImpl(entry);
     }
 
     private void linkUpdatedEntryImpl(Entry entry) {
         Entry oldTail = tail;
         oldTail.next = entry; // new entry linearized in the list here
-        entry.prev = oldTail;
         tail = entry;
-        // if old tail was removed, it needs to be unlinked
-        if (oldTail.old)
-            unlinkRemovedEntryImpl(oldTail);
-    }
-
-    private void unlinkRemovedEntryImpl(Entry entry) {
-        Entry next = entry.next;
-        if (next == null)
-            return; // never unlink tail -- need to preserve an update chain
-        Entry prev = entry.prev;
-        if (prev == null)
-            return; // already unlinked (also true for dummy head)
-        prev.next = next;
-        next.prev = prev;
-        entry.prev = null; // this marks entry as unlinked, just in case
     }
 
     private String debugString(InstrumentProfile ip) {
@@ -344,7 +321,6 @@ public class InstrumentProfileCollector {
         final String symbol;
         final InstrumentProfile ip;
         Object generation; // sync
-        Entry prev; // sync
         volatile Entry next;
         volatile boolean old; // true if this entry was replaced with a fresh, new one
 
