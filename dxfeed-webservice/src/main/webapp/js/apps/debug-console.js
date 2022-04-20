@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,6 +14,8 @@ $(function() {
 
     // set debug log level
     dx.feed.logLevel("debug");
+    // configure send message size
+    dx.feed.maxSendMessageSize(8192);
 
     // install onDemand control listeners
     $("#replayButton").click(function () { dx.feed.replay(new Date("2010-05-06T14:47:48-0500")); });

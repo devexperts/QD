@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -426,6 +426,10 @@
 
         this.logLevel = function (level) {
             config.logLevel = level;
+        };
+
+        this.maxSendMessageSize = function (size) {
+            config.maxSendBayeuxMessageSize = size;
         };
 
         this.setAuthToken = function (token) {
@@ -910,6 +914,11 @@
 
             logLevel : function (level) {
                 endpointImpl.logLevel(level);
+                return feed;
+            },
+
+            maxSendMessageSize : function (size) {
+                endpointImpl.maxSendMessageSize(size);
                 return feed;
             },
 

@@ -1,3 +1,7 @@
+QDS 3.310:
+
+* [QD-1383] dxFeed webservice: Allow to set WebSocket send message size in JavaScript client
+  - added "dx.feed.maxSendMessageSize" setter method (to be called before connecting)
 
 QDS 3.309:
 
