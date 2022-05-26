@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,20 +13,21 @@ package com.dxfeed.ipf.test;
 
 import com.dxfeed.ipf.InstrumentProfile;
 import com.dxfeed.ipf.InstrumentProfileReader;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Unit test for {@link InstrumentProfileReader} class.
  */
-public class InstrumentProfileReaderTest extends TestCase {
-    public InstrumentProfileReaderTest(String s) {
-        super(s);
-    }
+public class InstrumentProfileReaderTest {
 
+    @Test
     public void testSpecial() throws IOException {
         parse2("");
         parse2("\n");
@@ -42,6 +43,7 @@ public class InstrumentProfileReaderTest extends TestCase {
         parse2("# comment\n#\n##\n##COMPLETE");
     }
 
+    @Test
     public void testDefinition() throws IOException {
         parse2("#::=TYPE");
         parse2("#::=TYPE,SYMBOL");
@@ -53,6 +55,7 @@ public class InstrumentProfileReaderTest extends TestCase {
         parse2(s + "\n" + s + "\n" + s);
     }
 
+    @Test
     public void testProfile() throws IOException {
         parse2("#::=TYPE\n\n");
         parse2("#::=TYPE,SYMBOL\n,\n,", "", "", "", "");
@@ -62,8 +65,12 @@ public class InstrumentProfileReaderTest extends TestCase {
         parse2("#STOCK::=TYPE,SYMBOL\nSTOCK,", "STOCK", "");
         parse2("#STOCK::=TYPE,SYMBOL\nSTOCK,IBM", "STOCK", "IBM");
         parse2("#STOCK::=TYPE,SYMBOL\nSTOCK,\nSTOCK,IBM\nSTOCK,AAPL", "STOCK", "", "STOCK", "IBM", "STOCK", "AAPL");
-        parse2("#STOCK::=TYPE,SYMBOL\n#ETF::=TYPE,SYMBOL,DESCRIPTION\nSTOCK,IBM\nETF,AAPL,Apple", "STOCK", "IBM", "ETF", "AAPL");
-        parse2("#STOCK::=TYPE,SYMBOL\n#ETF::=TYPE,SYMBOL,DESCRIPTION,COUNTRY\n#REMOVED::=TYPE,SYMBOL\nSTOCK,IBM\nETF,AAPL,Apple,US\nREMOVED,IBM", "STOCK", "IBM", "ETF", "AAPL", "REMOVED", "IBM");
+        parse2("#STOCK::=TYPE,SYMBOL\n#ETF::=TYPE,SYMBOL,DESCRIPTION\nSTOCK,IBM\nETF,AAPL,Apple",
+            "STOCK", "IBM", "ETF", "AAPL");
+        parse2(
+            "#STOCK::=TYPE,SYMBOL\n#ETF::=TYPE,SYMBOL,DESCRIPTION,COUNTRY\n#REMOVED::=TYPE,SYMBOL\n" +
+            "STOCK,IBM\nETF,AAPL,Apple,US\nREMOVED,IBM",
+            "STOCK", "IBM", "ETF", "AAPL", "REMOVED", "IBM");
     }
 
     private void parse2(String ipf, String... typeSymbolPairs) throws IOException {
@@ -73,8 +80,13 @@ public class InstrumentProfileReaderTest extends TestCase {
     }
 
     private void parse(String ipf, String[] typeSymbolPairs) throws IOException {
-        assertTrue("wrong number of arguments", typeSymbolPairs.length % 2 == 0);
-        List<InstrumentProfile> profiles = new InstrumentProfileReader().read(new ByteArrayInputStream(ipf.getBytes("UTF-8")));
+        assertEquals("wrong number of arguments", 0, typeSymbolPairs.length % 2);
+        List<InstrumentProfile> profiles = new InstrumentProfileReader() {
+            @Override
+            protected void handleIncomplete(String address) {
+                // Skip handling for tests
+            }
+        }.read(new ByteArrayInputStream(ipf.getBytes(StandardCharsets.UTF_8)), "test");
         assertEquals("wrong number of instruments", typeSymbolPairs.length / 2, profiles.size());
         for (int i = 0; i < profiles.size(); i++) {
             InstrumentProfile ip = profiles.get(i);

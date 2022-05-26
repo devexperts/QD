@@ -1,3 +1,22 @@
+QDS 3.311:
+
+* [QD-1389] Deprecate HTTP QD connector (to be removed later)
+  - HTTP connector is deprecated and will be removed in the future.
+    Please contact dxFeed support if you are still using this functionality.
+* [QD-1387] dxFeed webservice: Update jackson library dependency
+* [QD-1385] QDS Tools: Remove CMEParser (support for CME MO.dat IPF)
+* [QD-1344] InstrumentProfileReader has to check completeness of received profiles
+  - NOTE: Instrument Profile Format now expects ##COMPLETE tag at the end of IPF file to check
+    for the completeness of data at the application level!
+  - InstrumentProfileWriter now adds ##COMPLETE tag at the end when writing IPF
+  - InstrumentProfileReader now warns in the log on reading IPF without ##COMPLETE tag
+    JVM parameter "-Dcom.dxfeed.ipf.complete=warn" can be used to control missing complete tag:
+    * "ignore" - do nothing (for backward compatibility)
+    * "warn" - show warning in the log (current default)
+    * "error" - throw exception (will be future default)
+  - IPF files created by QDS instruments tool will have the ##COMPLETE tag
+* [QD-1386] RMI: large payload transfer optimization
+
 QDS 3.310:
 
 * [QD-1383] dxFeed webservice: Allow to set WebSocket send message size in JavaScript client

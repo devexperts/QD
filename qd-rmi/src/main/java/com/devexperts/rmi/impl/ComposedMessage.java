@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -26,9 +26,9 @@ import com.devexperts.util.ThreadLocalPool;
 import java.io.IOException;
 
 class ComposedMessage {
-    static final int MESSAGE_PART_MAX_SIZE =
-        SystemProperties.getIntProperty("com.devexperts.rmi.messagePartMaxSize", 4000);
     static final int RESERVE = 20;
+    static final int MESSAGE_PART_MAX_SIZE = SystemProperties.getIntProperty("com.devexperts.rmi.messagePartMaxSize",
+        ChunkPool.DEFAULT.getChunkSize() - RESERVE);
 
     private static final ChunkPoolWithReserveBytesForHeader CHUNK_POOL =
         new ChunkPoolWithReserveBytesForHeader("com.devexperts.rmi");
@@ -37,7 +37,7 @@ class ComposedMessage {
         new ThreadLocalPool<>("com.devexperts.rmi.Message", 3, 1024);
 
 
-    static  ComposedMessage allocateComposedMessage(MessageType messageType, RMIMessageKind kind, Object object) {
+    static ComposedMessage allocateComposedMessage(MessageType messageType, RMIMessageKind kind, Object object) {
         ComposedMessage result = MESSAGE_POOL.poll();
         if (result == null)
             result = new ComposedMessage();
@@ -100,10 +100,6 @@ class ComposedMessage {
 
     int chunksCount() {
         return chunks.size();
-    }
-
-    long totalChunksLength() {
-        return chunks.getTotalLength();
     }
 
     void flushOutputChunks() {

@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 /**
  * Collects instrument profile updates and provides the live list of instrument profiles.
@@ -50,6 +52,7 @@ public class InstrumentProfileCollector {
 
     private final IndexedSet<String, Entry> entriesBySymbol = IndexedSet.create((IndexerFunction<String, Entry>) entry -> entry.symbol); // sync
     private final CopyOnWriteArrayList<Agent> agents = new CopyOnWriteArrayList<>(); // sync
+    private final Executor agentExecutor = createAgentExecutor();
     private Entry tail = new Entry(); // not-null, sync
 
     private long lastUpdateTime = System.currentTimeMillis();
@@ -199,7 +202,7 @@ public class InstrumentProfileCollector {
             throw new NullPointerException("null listener");
         Agent agent = new Agent(listener);
         agents.add(agent);
-        agent.update();
+        agentExecutor.execute(agent::update);
     }
 
     /**
@@ -248,8 +251,9 @@ public class InstrumentProfileCollector {
     }
 
     private void notifyAgents() {
-        for (Agent agent : agents)
-            agent.update();
+        for (Agent agent : agents) {
+            agentExecutor.execute(agent::update);
+        }
     }
 
     // SYNC(this) required
@@ -375,9 +379,14 @@ public class InstrumentProfileCollector {
             }
         }
 
-        void update() {
-            if (hasNext())
-                listener.instrumentProfilesUpdated(this);
+        private void update() {
+            try {
+                if (hasNext()) {
+                    listener.instrumentProfilesUpdated(this);
+                }
+            } catch (Throwable t) {
+                log.error("Exception in InstrumentProfile update listener", t);
+            }
         }
 
         @Override
@@ -400,6 +409,14 @@ public class InstrumentProfileCollector {
         public void remove() {
             throw new UnsupportedOperationException();
         }
+    }
+
+    protected static Executor createAgentExecutor() {
+        return Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "IPC-Executor");
+            t.setDaemon(true);
+            return t;
+        });
     }
 }
 

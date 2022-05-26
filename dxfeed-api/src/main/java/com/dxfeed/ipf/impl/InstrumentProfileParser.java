@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -27,9 +27,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
- * Parser for Instrument Profile Simple File Format.
+ * Parser for Instrument Profile Format.
  * Please see <b>Instrument Profile Format</b> documentation for complete description.
  */
 public class InstrumentProfileParser implements Closeable {
@@ -64,9 +65,31 @@ public class InstrumentProfileParser implements Closeable {
     private final CSVReader reader;
     private final List<String> tmpFields = new ArrayList<>();
     private String prevF0 = "";
+    
+    private Runnable flushHandler;
+    private Runnable completeHandler;
+    private Function<String, String> internalizer = Function.identity();
 
     public InstrumentProfileParser(InputStream in) {
         reader = new CSVReader(new InputStreamReader(in, StandardCharsets.UTF_8));
+    }
+
+    /** Chained call to set {@link #onFlush()} handler, use {@code null} to remove handler. */
+    public InstrumentProfileParser whenFlush(Runnable command) {
+        flushHandler = command;
+        return this;
+    }
+
+    /** Chained call to set {@link #onComplete()} handler, use {@code null} to remove handler. */
+    public InstrumentProfileParser whenComplete(Runnable command) {
+        completeHandler = command;
+        return this;
+    }
+
+    /** Chained call to set {@link #intern(String) internalizer}, use {@code null} for no internalizing. */
+    public InstrumentProfileParser withIntern(Function<String, String> internFunction) {
+        internalizer = (internFunction == null) ? Function.identity() : internFunction;
+        return this;
     }
 
     @Override
@@ -147,10 +170,11 @@ public class InstrumentProfileParser implements Closeable {
             return;
         }
         reader.readRecord(tmpFields); // readout current line
-        if (f0.equals(Constants.FLUSH_COMMAND))
+        if (f0.equals(Constants.FLUSH_COMMAND)) {
             onFlush();
-        else if (f0.equals(Constants.COMPLETE_COMMAND))
+        } else if (f0.equals(Constants.COMPLETE_COMMAND)) {
             onComplete();
+        }
         // else it is a comment - skip silently
     }
 
@@ -183,10 +207,18 @@ public class InstrumentProfileParser implements Closeable {
     }
 
     protected String intern(String value) {
-        return value;
+        return internalizer.apply(value);
     }
 
-    protected void onFlush() {}
+    protected void onFlush() {
+        if (flushHandler != null) {
+            flushHandler.run();
+        }
+    }
 
-    protected void onComplete() {}
+    protected void onComplete() {
+        if (completeHandler != null) {
+            completeHandler.run();
+        }
+    }
 }

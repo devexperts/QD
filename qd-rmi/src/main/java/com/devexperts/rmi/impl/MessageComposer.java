@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -77,9 +77,9 @@ class MessageComposer {
     private int sequence = 1; // used to number message parts
 
     /*
-    * These variables are set from reader thread in {@link #setRemoteReceiveSet(EnumSet)}
-    * and are checked by message senders in {@link #canEnqueueRequest()} and {@link #completeMessage(ComposedMessage)}.
-    */
+     * These variables are set from reader thread in {@link #setRemoteReceiveSet(EnumSet)}
+     * and are checked by message senders in {@link #canEnqueueRequest()} and {@link #completeMessage(ComposedMessage)}.
+     */
     private volatile boolean canEnqueueRequest;
 
     private volatile boolean supportsComboResponse;
@@ -169,10 +169,11 @@ class MessageComposer {
     private void completeMessageImpl(ComposedMessageQueue queue, ComposedMessage message) {
         message.flushOutputChunks();
         if (message.chunksCount() > 1) { // the message is going to be partitioned
-            if (supportsMessagePart)
+            if (supportsMessagePart) {
                 message.completeMessageParts(sequence++, aux);
-            else
+            } else {
                 message.completeMonolithicMessage();
+            }
         }
         queue.addLast(message);
     }
@@ -227,12 +228,12 @@ class MessageComposer {
     private void messageSentCompletely(ComposedMessage message) {
         if (message.kind() != null) {
             switch (message.kind()) {
-            case DESCRIBE_SUBJECT:
-                subjects.removeOutgoingSubject((Marshalled<?>) message.getObject());
-                break;
-            case DESCRIBE_OPERATION:
-                operations.removeOutgoingOperation((RMIOperation<?>) message.getObject());
-                break;
+                case DESCRIBE_SUBJECT:
+                    subjects.removeOutgoingSubject((Marshalled<?>) message.getObject());
+                    break;
+                case DESCRIBE_OPERATION:
+                    operations.removeOutgoingOperation((RMIOperation<?>) message.getObject());
+                    break;
             }
         }
         if (message.kind().isRequest())
@@ -310,8 +311,9 @@ class MessageComposer {
                 RMIServiceId.writeRMIServiceId(message.output(), serviceDescriptor.getServiceId(), ctx);
                 message.output().writeCompactInt(serviceDescriptor.getDistance());
                 message.output().writeCompactInt(serviceDescriptor.getIntermediateNodes().size());
-                for (EndpointId endpointId : serviceDescriptor.getIntermediateNodes())
+                for (EndpointId endpointId : serviceDescriptor.getIntermediateNodes()) {
                     EndpointId.writeEndpointId(message.output(), endpointId, ctx);
+                }
                 message.output().writeCompactInt(serviceDescriptor.getProperties().size());
                 for (Map.Entry<String, String> propEntry : serviceDescriptor.getProperties().entrySet()) {
                     message.output().writeUTFString(propEntry.getKey());
@@ -324,11 +326,14 @@ class MessageComposer {
         }
     }
 
-    private static void composeRoute(ComposedMessage message, RMIRoute route, JVMId.WriteContext ctx) throws IOException {
+    private static void composeRoute(ComposedMessage message, RMIRoute route, JVMId.WriteContext ctx)
+        throws IOException
+    {
         int size = message.kind().isRequest() ? route.size() - 1 : route.size();
         message.output().writeCompactInt(size);
-        for (int i = 0; i < size; i++)
+        for (int i = 0; i < size; i++) {
             EndpointId.writeEndpointId(message.output(), route.get(i), ctx);
+        }
     }
 
     // ==================== compose legacy (backwards-compatible) messages ====================
@@ -392,28 +397,28 @@ class MessageComposer {
 
     private void enqueueMessage(RMIQueueType type) {
         switch (type) {
-        case REQUEST:
-            enqueueRequest();
-            break;
-        case RESPONSE:
-            enqueueResponse();
-            break;
-        case ADVERTISE:
-            enqueueAdvertise();
-            break;
+            case REQUEST:
+                enqueueRequest();
+                break;
+            case RESPONSE:
+                enqueueResponse();
+                break;
+            case ADVERTISE:
+                enqueueAdvertise();
+                break;
         }
     }
 
     private boolean hasMoreMessages(RMIQueueType type) {
         switch (type) {
-        case REQUEST:
-            return  (canEnqueueRequest && connection.requestsManager.outgoingRequestSize() > 0);
-        case RESPONSE:
-            return  (connection.tasksManager.completedTaskSize() > 0);
-        case ADVERTISE:
-            return  (connection.side.hasServer() && connection.serverDescriptorsManager.descriptorsSize() > 0);
-        default:
-            return false;
+            case REQUEST:
+                return canEnqueueRequest && connection.requestsManager.hasOutgoingRequest();
+            case RESPONSE:
+                return connection.tasksManager.hasCompletedTask();
+            case ADVERTISE:
+                return connection.side.hasServer() && connection.serverDescriptorsManager.hasDescriptor();
+            default:
+                return false;
         }
     }
 
@@ -473,7 +478,7 @@ class MessageComposer {
             return hasMoreWork;
         }
 
-        private boolean hasMoreWork;
+        private final boolean hasMoreWork;
 
         MessageQueueState(boolean hasMoreWork) {
             this.hasMoreWork = hasMoreWork;
@@ -511,10 +516,11 @@ class MessageComposer {
             ComposedMessage message = ComposedMessage.allocateComposedMessage(
                 MessageType.RMI_DESCRIBE_SUBJECT, RMIMessageKind.DESCRIBE_SUBJECT, marshalledSubject);
             int n = freeIds.size();
-            if (n > 0)
+            if (n > 0) {
                 id = freeIds.remove(n - 1);
-            else
+            } else {
                 id = ++counter;
+            }
             try {
                 message.output().writeCompactInt(id);
                 message.output().writeMarshalled(marshalledSubject);

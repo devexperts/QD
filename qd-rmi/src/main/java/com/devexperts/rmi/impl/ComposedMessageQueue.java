@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,51 +11,32 @@
  */
 package com.devexperts.rmi.impl;
 
-import java.util.ArrayList;
+import java.util.ArrayDeque;
 
 /**
- * This class is NOT thread-safe (can be used only with external synchronization) with an exception
- * of {@link #getTotalMessagesSize()} which is safe for use without one.
+ * This class is NOT thread-safe (can be used only with external synchronization).
+ *
+ * Deprecation candidate:
+ * the class is used to provide a total size of messages in queue estimation that was removed due to inefficiency.
+ * For the moment the class doesn't add any functions to the essential deque behavior,
+ * so could be replaced by an appropriate {@link java.util.Deque} implementation lately.
  */
 class ComposedMessageQueue {
-    /**
-     * Total size (in bytes) of all composed messages in the queue. It is being checked
-     * from the message composing thread without synchronization for load-balancing.
-     */
-    private volatile long totalSize;
-
-    // ArrayList here is actually used as a queue (the queue length is very small and thus garbage matters here much more than performance).
-    // This might be replaced by ArrayDeque after migration to java 1.6.
-    private final ArrayList<ComposedMessage> queue = new ArrayList<>();
+    private final ArrayDeque<ComposedMessage> queue = new ArrayDeque<>();
 
     int size() {
         return queue.size();
     }
 
-    /**
-     * Returns total size (in bytes) of all composed messages in the queue.
-     * This method is thread-safe.
-     */
-    long getTotalMessagesSize() {
-        return totalSize;
-    }
-
     void addFirst(ComposedMessage composedMessage) {
-        totalSize += composedMessage.totalChunksLength();
-        queue.add(0, composedMessage);
+        queue.addFirst(composedMessage);
     }
 
     void addLast(ComposedMessage composedMessage) {
-        totalSize += composedMessage.totalChunksLength();
-        queue.add(composedMessage);
+        queue.addLast(composedMessage);
     }
 
     ComposedMessage remove() {
-        if (queue.isEmpty())
-            return null;
-        ComposedMessage result = queue.remove(0);
-        totalSize -= result.totalChunksLength();
-        return result;
+        return queue.pollFirst();
     }
-
 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,20 +13,21 @@ package com.dxfeed.ipf.test;
 
 import com.dxfeed.ipf.InstrumentProfile;
 import com.dxfeed.ipf.InstrumentProfileField;
-import junit.framework.TestCase;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.fail;
 
 /**
  * Unit test for {@link InstrumentProfileField} class.
  */
-public class InstrumentProfileFieldTest extends TestCase {
+public class InstrumentProfileFieldTest {
 
-    public InstrumentProfileFieldTest(String s) {
-        super(s);
-    }
-
+    @Test
     public void testFields() {
         for (InstrumentProfileField field : InstrumentProfileField.values()) {
-            assertTrue(InstrumentProfileField.find(field.name()) == field);
+            assertSame(InstrumentProfileField.find(field.name()), field);
 
             InstrumentProfile ip = new InstrumentProfile();
             assertEquals(field.getField(ip), "");
@@ -35,21 +36,21 @@ public class InstrumentProfileFieldTest extends TestCase {
 
             if (field.isNumericField()) {
                 ip = new InstrumentProfile();
-                assertTrue(field.getNumericField(ip) == 0);
+                assertEquals(0, field.getNumericField(ip), 0.0);
                 field.setField(ip, "");
-                assertTrue(field.getNumericField(ip) == 0);
+                assertEquals(0, field.getNumericField(ip), 0.0);
                 field.setNumericField(ip, 0);
                 assertEquals(field.getField(ip), "");
-                assertTrue(field.getNumericField(ip) == 0);
+                assertEquals(0, field.getNumericField(ip), 0.0);
             } else {
                 try {
                     field.getNumericField(new InstrumentProfile());
                     fail();
-                } catch (Throwable ignored) {}
+                } catch (Exception ignored) {}
                 try {
                     field.setNumericField(new InstrumentProfile(), 0);
                     fail();
-                } catch (Throwable ignored) {}
+                } catch (Exception ignored) {}
             }
 
             try {
@@ -91,7 +92,7 @@ public class InstrumentProfileFieldTest extends TestCase {
                     ip = new InstrumentProfile();
                     field.setNumericField(ip, 123);
                     try {
-                        assertTrue(field.getNumericField(ip) == 123);
+                        assertEquals(123, field.getNumericField(ip), 0.0);
                     } catch (Throwable t) {
                         fail();
                     }

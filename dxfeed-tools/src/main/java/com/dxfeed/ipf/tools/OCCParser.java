@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -73,8 +73,10 @@ import javax.xml.parsers.SAXParserFactory;
  * </pre>
  */
 public class OCCParser extends InstrumentProfileReader {
+
     private static final Logging log = Logging.getLogging(OCCParser.class);
-    private static NumberFormat DECIMAL_FORMAT = new DecimalFormat("0.######", new DecimalFormatSymbols(Locale.US));
+    private static final NumberFormat DECIMAL_FORMAT =
+        new DecimalFormat("0.######", new DecimalFormatSymbols(Locale.US));
 
     private final int bizdate;
     private final boolean osi;
@@ -97,6 +99,7 @@ public class OCCParser extends InstrumentProfileReader {
      *
      * @throws IOException  If an I/O error occurs
      */
+    @SuppressWarnings("deprecation")
     public List<InstrumentProfile> read(InputStream in) throws IOException {
         try {
             InstrumentFileHandler handler = new InstrumentFileHandler();
@@ -104,9 +107,7 @@ public class OCCParser extends InstrumentProfileReader {
             reader.setContentHandler(handler);
             reader.parse(new InputSource(new UncloseableInputStream(in)));
             return handler.getInstrumentProfiles();
-        } catch (ParserConfigurationException e) {
-            log.error("Exception was thrown during OCC file parsing.", e);
-        } catch (SAXException e) {
+        } catch (ParserConfigurationException | SAXException e) {
             log.error("Exception was thrown during OCC file parsing.", e);
         }
         return Collections.emptyList();
@@ -148,11 +149,11 @@ public class OCCParser extends InstrumentProfileReader {
     private static final String NORMAL_INCREMENTS = PriceIncrements.valueOf(new double[] {0.05, 3, 0.10}).getText();
     private static final String PENNY_INCREMENTS = PriceIncrements.valueOf(new double[] {0.01, 3, 0.05}).getText();
 
-    private static enum Type {SERIES, OPTION}
-    private static enum Status {ACTIVE, INACTIVE}
+    private enum Type { SERIES, OPTION }
+    private enum Status { ACTIVE, INACTIVE }
 
     private class InstrumentFileHandler extends DefaultHandler {
-        private final HashMap<String, Series> allSeries = new HashMap<String, Series>();
+        private final HashMap<String, Series> allSeries = new HashMap<>();
 
         private boolean finished;
 
@@ -166,7 +167,7 @@ public class OCCParser extends InstrumentProfileReader {
 
         InstrumentFileHandler() {}
 
-        public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+        public void startElement(String uri, String localName, String qName, Attributes attributes) {
             if (SECURITY_LIST_TAG.equals(qName) || SECURITY_LIST_UPDATE_TAG.equals(qName)) {
                 if (checkReportId(attributes.getValue(REPORT_ID_ATTRIBUTE), qName))
                     type = Type.OPTION;
@@ -243,7 +244,7 @@ public class OCCParser extends InstrumentProfileReader {
             }
         }
 
-        public void endElement(String uri, String local_name, String q_name) throws SAXException {
+        public void endElement(String uri, String local_name, String q_name) {
             if (INSTRUMENT_TAG.equals(q_name)) {
                 if (status == Status.INACTIVE) {
                     if (type == Type.SERIES && series != null)
@@ -283,24 +284,22 @@ public class OCCParser extends InstrumentProfileReader {
             profileKey = null;
         }
 
-        public void endDocument() throws SAXException {
+        public void endDocument() {
             finishProcessing();
 
             log.debug("Reused report ids (" + reusedIds.size() + "): " + reusedIds);
             log.debug("Uniqueness violating report ids (" + conflictIds.size() + "): " + conflictIds);
         }
 
-        private final Map<String, String> idToTag = new HashMap<String, String>(); // report id -> last tag
-        private final Map<String, Set<String>> reusedIds = new LinkedHashMap<String, Set<String>>(); // report id -> used tags
-        private final Set<String> conflictIds = new LinkedHashSet<String>();
+        private final Map<String, String> idToTag = new HashMap<>(); // report id -> last tag
+        private final Map<String, Set<String>> reusedIds = new LinkedHashMap<>(); // report id -> used tags
+        private final Set<String> conflictIds = new LinkedHashSet<>();
 
         private boolean checkReportId(String id, String tag) {
             String oldTag = idToTag.put(id, tag);
             if (oldTag == null)
                 return true;
-            Set<String> tags = reusedIds.get(id);
-            if (tags == null)
-                reusedIds.put(id, tags = new LinkedHashSet<String>(Collections.singleton(oldTag)));
+            Set<String> tags = reusedIds.computeIfAbsent(id, k -> new LinkedHashSet<>(Collections.singleton(oldTag)));
             if (tags.add(tag))
                 return true;
             conflictIds.add(id);
@@ -321,7 +320,7 @@ public class OCCParser extends InstrumentProfileReader {
 
         List<InstrumentProfile> getInstrumentProfiles() {
             finishProcessing();
-            ArrayList<InstrumentProfile> result = new ArrayList<InstrumentProfile>();
+            ArrayList<InstrumentProfile> result = new ArrayList<>();
             for (Series s : allSeries.values())
                 if (s.completed)
                     result.addAll(s.options.values());
@@ -345,7 +344,7 @@ public class OCCParser extends InstrumentProfileReader {
 
     private static class Series {
         final String optionRoot;
-        final HashMap<String, InstrumentProfile> options = new HashMap<String, InstrumentProfile>();
+        final HashMap<String, InstrumentProfile> options = new HashMap<>();
 
         boolean deleted;
         boolean completed;
@@ -357,11 +356,11 @@ public class OCCParser extends InstrumentProfileReader {
         String settlementStyle = "";
         String priceIncrements = "";
 
-        final TreeSet<String> exchangeSet = new TreeSet<String>();
+        final TreeSet<String> exchangeSet = new TreeSet<>();
         String opol = "";
         String exchanges = "";
 
-        final Map<String, Double> underlyingMap = new HashMap<String, Double>();
+        final Map<String, Double> underlyingMap = new HashMap<>();
         String underlying = "";
         double spc;
         String additionalUnderlyings = "";

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -27,12 +27,17 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+/**
+ * @deprecated HTTP connector is deprecated and will be removed in the future.
+ */
+@Deprecated
 public class QDServlet extends HttpServlet {
     private QDServletConfig config;
     private MessageAdapter.Factory messageAdapterFactory;
     private QDStats stats;
 
     public void init() throws ServletException {
+        QDLog.log.warn("WARNING: DEPRECATED use of HTTP connector");
         config = Services.createService(QDServletConfig.class, null,
             getInitParameter(QDServletConfig.class.getName()));
         if (config == null)
@@ -54,6 +59,7 @@ public class QDServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
             boolean newSession = "true".equalsIgnoreCase(request.getHeader(HttpConnector.NEW_CONNECTION_HTTP_PROPERTY));
+            // Relying on existing session if exists. Session invalidation should be maintained in the container.
             HttpSession session = request.getSession(newSession);
             if (session == null)
                 throw new ServletException("Session is not found");
@@ -76,6 +82,7 @@ public class QDServlet extends HttpServlet {
                 TypedMap connectionVariables = new TypedMap();
                 adapter.setConnectionVariables(connectionVariables);
                 connectionVariables.set(TransportConnection.REMOTE_HOST_ADDRESS_KEY, request.getRemoteAddr());
+                //FIXME: CWE 501 Trust Boundary Violation
                 session.setAttribute(connectionId, con = new QDServletConnection(
                     connectionName, adapter, stats, config));
             }

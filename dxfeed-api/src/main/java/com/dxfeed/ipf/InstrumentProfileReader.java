@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,6 +14,9 @@ package com.dxfeed.ipf;
 import com.devexperts.io.StreamCompression;
 import com.devexperts.io.URLInputStream;
 import com.devexperts.io.UncloseableInputStream;
+import com.devexperts.logging.Logging;
+import com.devexperts.util.LogUtil;
+import com.devexperts.util.SystemProperties;
 import com.dxfeed.ipf.impl.InstrumentProfileParser;
 import com.dxfeed.ipf.live.InstrumentProfileConnection;
 
@@ -24,17 +27,30 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Reads instrument profiles from the stream using Simple File Format.
+ * Reads instrument profiles from the stream using Instrument Profile Format (IPF).
  * Please see <b>Instrument Profile Format</b> documentation for complete description.
  * This reader automatically uses data formats as specified in the stream.
  *
+ * <p>This reader is intended for "one time only" usage: create new instances for new IPF reads.
  * <p>Use {@link InstrumentProfileConnection} if support for streaming updates of instrument profiles is needed.
+ *
+ * <p>For backward compatibility reader can be configured with system property "-Dcom.dxfeed.ipf.complete" to control
+ * the strategy for missing "##COMPLETE" tag when reading IPF, possible values are:
+ * <ul>
+ *     <li>{@code warn} - show warning in the log (default)</li>
+ *     <li>{@code error} - throw exception (future default)</li>
+ *     <li>{@code ignore} - do nothing (for backward compatibility)</li>
+ * </ul>
  */
 public class InstrumentProfileReader {
+
+    private static final Logging log = Logging.getLogging(InstrumentProfileReader.class);
+
     private static final String LIVE_PROP_KEY = "X-Live";
     private static final String LIVE_PROP_REQUEST_NO = "no";
 
     private long lastModified;
+    protected boolean wasComplete;
 
     /**
      * Creates instrument profile reader.
@@ -50,6 +66,13 @@ public class InstrumentProfileReader {
     }
 
     /**
+     * Returns {@code true} if IPF was fully read on last {@link #readFromFile} operation.
+     */
+    public boolean wasComplete() {
+        return wasComplete;
+    }
+
+    /**
      * Reads and returns instrument profiles from specified file.
      * This method recognizes data compression formats "zip" and "gzip" automatically.
      * In case of <em>zip</em> the first file entry will be read and parsed as a plain data stream.
@@ -62,11 +85,11 @@ public class InstrumentProfileReader {
      * <p>This is a shortcut for
      * <code>{@link #readFromFile(String, String, String) readFromFile}(address, <b>null</b>, <b>null</b>)</code>.
      *
-     * <p>This operation updates {@link #getLastModified() lastModified}.
+     * <p>This operation updates {@link #getLastModified() lastModified} and {@link #wasComplete() wasComplete}.
      *
      * @param address URL of file to read from
      * @return list of instrument profiles
-     * @throws InstrumentProfileFormatException if input stream does not conform to the Simple File Format
+     * @throws InstrumentProfileFormatException if input stream does not conform to the Instrument Profile Format
      * @throws IOException If an I/O error occurs
      */
     public List<InstrumentProfile> readFromFile(String address) throws IOException {
@@ -84,14 +107,14 @@ public class InstrumentProfileReader {
      * <p>Specified user and password take precedence over authentication information that is supplied to this method
      * as part of URL user info like {@code "http://user:password@host:port/path/file.ipf"}.
      *
-     * <p>This operation updates {@link #getLastModified() lastModified}.
+     * <p>This operation updates {@link #getLastModified() lastModified} and {@link #wasComplete() wasComplete}.
      *
-     * @param address URL of file to read from.
-     * @param user the user name (may be null).
-     * @param password the password (may be null).
-     * @return list of instrument profiles.
-     * @throws InstrumentProfileFormatException if input stream does not conform to the Simple File Format.
-     * @throws IOException If an I/O error occurs.
+     * @param address URL of file to read from
+     * @param user the user name (may be null)
+     * @param password the password (may be null)
+     * @return list of instrument profiles
+     * @throws InstrumentProfileFormatException if input stream does not conform to the Instrument Profile Format
+     * @throws IOException If an I/O error occurs
      */
     public List<InstrumentProfile> readFromFile(String address, String user, String password) throws IOException {
         String url = resolveSourceURL(address);
@@ -100,7 +123,7 @@ public class InstrumentProfileReader {
         try (InputStream in = connection.getInputStream()) {
             URLInputStream.checkConnectionResponseCode(connection);
             lastModified = connection.getLastModified();
-            return readCompressed(in);
+            return read(in, address);
         }
     }
 
@@ -128,56 +151,62 @@ public class InstrumentProfileReader {
     }
 
     /**
-     * Reads and returns instrument profiles from specified stream using specified name to select data compression
-     * format.
-     * <p>
-     * <b>DEPRECATION NOTE:</b> current implementation ignores provided name and falls back to automatic detection of
-     * compressed streams using {@link #readCompressed(InputStream)}. Also multi-file zip archives or zip archives
-     * containing compressed file are not supported since v3.297.
-     *
-     * @throws InstrumentProfileFormatException if input stream does not conform to the Simple File Format
-     * @throws IOException If an I/O error occurs
-     * @see #readCompressed(InputStream)
-     * @deprecated use {@link #readCompressed(InputStream)}, it detects compressed streams automatically.
-     */
-    final public List<InstrumentProfile> read(InputStream in, String name) throws IOException {
-        return readCompressed(in);
-    }
-
-    /**
-     * Reads and returns instrument profiles from specified stream.
+     * Reads and returns instrument profiles from specified stream
      * This method recognizes data compression formats "zip" and "gzip" automatically.
      * In case of <em>zip</em> the first file entry will be read and parsed as a plain data stream.
      * In case of <em>gzip</em> compressed content will be read and processed.
      * In other cases data considered uncompressed and will be parsed as is.
      *
-     * @throws InstrumentProfileFormatException if input stream does not conform to the Simple File Format
+     * <p>This operation updates {@link #wasComplete() wasComplete} flag.
+     *
+     * @param in InputStream to read profiles from
+     * @param address origin of the stream for debugging purposes
+     * @throws InstrumentProfileFormatException if input stream does not conform to the Instrument Profile Format
      * @throws IOException If an I/O error occurs
      */
-    final public List<InstrumentProfile> readCompressed(InputStream in) throws IOException {
-        try (InputStream decompressed =
-             StreamCompression.detectCompressionByHeaderAndDecompress(new UncloseableInputStream(in)))
+    public final List<InstrumentProfile> read(InputStream in, String address) throws IOException {
+        // For backward compatibility with overriders of #read(InputStream) methods
+        wasComplete = true;
+
+        try (InputStream decompressed = StreamCompression.detectCompressionByHeaderAndDecompress(
+            new UncloseableInputStream(in)))
         {
-            return read(decompressed);
+            List<InstrumentProfile> profiles = read(decompressed);
+            if (!wasComplete)
+                handleIncomplete(address);
+            return profiles;
+        } catch (IOException e) {
+            wasComplete = false;
+            throw e;
         }
     }
 
     /**
-     * Reads and returns instrument profiles from specified plain data stream.
-     * For potentially compressed data use {@link #readCompressed} method.
-     *
-     * @throws InstrumentProfileFormatException if input stream does not conform to the Simple File Format
+     * @throws InstrumentProfileFormatException if input stream does not conform to the Instrument Profile Format
      * @throws IOException If an I/O error occurs
+     * @deprecated Use {@link #read(InputStream, String)}
      */
+    @Deprecated
+    public final List<InstrumentProfile> readCompressed(InputStream in) throws IOException {
+        return read(in, "<unknown stream>");
+    }
+
+    /**
+     * @throws InstrumentProfileFormatException if input stream does not conform to the Instrument Profile Format
+     * @throws IOException If an I/O error occurs
+     * @deprecated Use {@link #read(InputStream, String)}.
+     *     This is an extension point only and will be made protected in future.
+     */
+    @Deprecated
     public List<InstrumentProfile> read(InputStream in) throws IOException {
-        // NOTE: The method has been overridden a couple of times to support non-standard data formats.
+        //NOTE: The method has been overridden to support non-standard data formats
+        wasComplete = false;
+
         List<InstrumentProfile> profiles = new ArrayList<>();
-        InstrumentProfileParser parser = new InstrumentProfileParser(in) {
-            @Override
-            protected String intern(String value) {
-                return InstrumentProfileReader.this.intern(value);
-            }
-        };
+        InstrumentProfileParser parser = new InstrumentProfileParser(in)
+            .withIntern(this::intern)
+            .whenComplete(() -> wasComplete = true);
+
         InstrumentProfile ip;
         while ((ip = parser.next()) != null) {
             profiles.add(ip);
@@ -197,4 +226,39 @@ public class InstrumentProfileReader {
         return value;
     }
 
+    private static final String COMPLETE_ERROR = "error";
+    private static final String COMPLETE_WARN = "warn";
+    private static final String COMPLETE_IGNORE = "ignore";
+    private static final String DEFAULT_COMPLETE_STRATEGY = COMPLETE_WARN;
+
+    private static final String COMPLETE_PROPERTY = "com.dxfeed.ipf.complete";
+    private static final String COMPLETE_STRATEGY = initializeCompleteStrategy();
+
+    // Made protected to be overridden in tests - do not use!
+    protected void handleIncomplete(String address) throws InstrumentProfileFormatException {
+        switch (COMPLETE_STRATEGY) {
+            case COMPLETE_ERROR:
+                throw new InstrumentProfileFormatException("##COMPLETE tag is missing in IPF " +
+                    LogUtil.hideCredentials(address));
+            case COMPLETE_WARN:
+                log.warn("##COMPLETE tag is missing in IPF " + LogUtil.hideCredentials(address));
+                break;
+            case COMPLETE_IGNORE:
+            default:
+                // Do nothing
+        }
+    }
+
+    private static String initializeCompleteStrategy() {
+        String value = SystemProperties.getProperty(COMPLETE_PROPERTY, DEFAULT_COMPLETE_STRATEGY);
+        switch (value) {
+            case COMPLETE_ERROR:
+            case COMPLETE_WARN:
+            case COMPLETE_IGNORE:
+                return value;
+            default:
+                log.warn("Unknown value for " + COMPLETE_PROPERTY + " property: " + value);
+                return DEFAULT_COMPLETE_STRATEGY;
+        }
+    }
 }

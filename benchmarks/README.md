@@ -1,25 +1,25 @@
 
-# dxLib benchmarks 
+# QD benchmarks 
 
 The benchmark suite is based on the open source framework JMH (https://openjdk.java.net/projects/code-tools/jmh/).
 
 **Disclaimer** 
 
-Benchmarks provided "as is" and designed to support development of various components and not 
-intended for "official" measurement of dxLib performance.
+Benchmarks are provided "as is" and designed to support development of various components and not 
+intended for "official" measurement of the project components performance.
 
 ## Build
 
 Benchmarks package will be built along with other modules during Maven `package` phase.
 
-A self-contained jar is provided for convenience: `dxlib-benchmark/target/benchmarks.jar`
+A self-contained jar is provided for convenience: `benchmarks/target/benchmarks.jar`
 
 ## Running benchmarks
 
 To run all available benchmarks jast launch provided self-contained jar (use `-h` to discover available options):
 
 ```bash
-java -jar dxlib-benchmark/target/benchmarks.jar [opts]
+java -jar benchmarks/target/benchmarks.jar [opts]
 ```
 
 List of all available benchmarks: `... benchmarks.jar -l`

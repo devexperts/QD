@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -23,7 +23,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 /**
- * Writes instrument profiles to the stream using Simple File Format.
+ * Writes instrument profiles to the stream.
  * Please see <b>Instrument Profile Format</b> documentation for complete description.
  *
  * <p>This writer automatically derives data formats needed to write all meaningful fields.
@@ -81,14 +81,13 @@ public class InstrumentProfileWriter {
     }
 
     /**
-     * Writes specified instrument profiles into specified stream.
+     * Writes specified instrument profiles into specified stream with the {@code "##COMPLETE"} end tag at the end.
      *
      * @throws IOException  If an I/O error occurs
      */
     public void write(OutputStream out, List<InstrumentProfile> profiles) throws IOException {
         InstrumentProfileComposer composer = new InstrumentProfileComposer(out);
         composer.compose(profiles, false);
-        composer.composeNewLine();
+        composer.composeComplete();
     }
-
 }

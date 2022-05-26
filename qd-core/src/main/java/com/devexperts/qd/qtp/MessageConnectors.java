@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -128,7 +128,7 @@ public class MessageConnectors {
      * The individual connector format is one of:
      * <ul>
      * <li><b>http:...</b> or <b>https:...</b> - for HTTP connection. This connector takes precedence
-     * over '/' syntax for multiple address.
+     * over '/' syntax for multiple address. Note that this connector is deprecated and will be removed in the future.
      * See {@link HttpConnector}.
      * <li><b>[tls+][&lt;host&gt;[:&lt;port&gt;],[...,]]&lt;host&gt;:&lt;port&gt;</b> - for client TCP/IP socket.
      * See {@link ClientSocketConnector}.

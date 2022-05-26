@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -43,7 +43,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Connects to an instrument profile URL and reads instrument profiles using Simple File Format with support of
+ * Connects to an instrument profile URL and reads instrument profiles with support of
  * streaming live updates.
  * Please see <b>Instrument Profile Format</b> documentation for complete description.
  *
@@ -341,12 +341,13 @@ public class InstrumentProfileConnection {
         if (stateChangeListeners.isEmpty())
             return;
         PropertyChangeEvent event = new PropertyChangeEvent(this, "state", oldState, newState);
-        for (PropertyChangeListener listener : stateChangeListeners)
+        for (PropertyChangeListener listener : stateChangeListeners) {
             try {
                 listener.propertyChange(event);
             } catch (Throwable t) {
                 log.error("Exception in InstrumentProfileConnection state change listener", t);
             }
+        }
     }
 
     private class Handler implements Runnable {
@@ -358,17 +359,23 @@ public class InstrumentProfileConnection {
 
         @Override
         public void run() {
+            long retryPeriod = 1_000L;
             while (state != InstrumentProfileConnection.State.CLOSED) {
                 try {
                     checkAndDownload();
+
+                    // wait before retrying
+                    Thread.sleep(updatePeriod);
+                } catch (InterruptedException ignored) {
+                    return; // closed
                 } catch (Throwable t) {
                     log.error("Exception while reading instrument profiles", t);
-                }
-                // wait before retrying
-                try {
-                    Thread.sleep(updatePeriod);
-                } catch (InterruptedException e) {
-                    return; // closed
+                    try {
+                        Thread.sleep(retryPeriod);
+                        retryPeriod = Math.min(retryPeriod * 2, updatePeriod);
+                    } catch (InterruptedException ignored) {
+                        return; // closed
+                    }
                 }
             }
         }
@@ -413,17 +420,10 @@ public class InstrumentProfileConnection {
 
         private int process(InputStream in) throws IOException {
             int count = 0;
-            InstrumentProfileParser parser = new InstrumentProfileParser(in) {
-                @Override
-                protected void onFlush() {
-                    flush();
-                }
+            InstrumentProfileParser parser = new InstrumentProfileParser(in)
+                .whenFlush(this::flush)
+                .whenComplete(this::complete);
 
-                @Override
-                protected void onComplete() {
-                    complete();
-                }
-            };
             InstrumentProfile ip;
             while ((ip = parser.next()) != null) {
                 count++;

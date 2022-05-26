@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -28,6 +28,10 @@ import org.eclipse.jetty.util.log.Log;
 import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.util.security.Credential;
 
+/**
+ * @deprecated HTTP connector is deprecated and will be removed in the future.
+ */
+@Deprecated
 public class SampleHttpServer {
 
     public static final String CONTEXT_PATH = "/sample";

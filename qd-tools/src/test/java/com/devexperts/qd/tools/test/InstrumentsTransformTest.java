@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -44,7 +44,8 @@ public class InstrumentsTransformTest extends TestCase {
             "STOCK,ADEL:TR,ADEL KALEMCILIK,TR,XIST,TRY,BIST(name=BIST;tz=Asia/Istanbul;hd=US;sd=US;td=12345;de=+0000;0=0915123014001740),E,N",
             "STOCK,ADESE:TR,ADESE ALISVERIS TICARET,TR,XIST,TRY,BIST(name=BIST;tz=Asia/Istanbul;hd=US;sd=US;td=12345;de=+0000;0=0915123014001740),E,L",
             "STOCK,ADNAC:TR,ADANA CIMENTO (C),TR,XIST,TRY,BIST(name=BIST;tz=Asia/Istanbul;hd=US;sd=US;td=12345;de=+0000;0=0915123014001740),E,N",
-            "STOCK,AEFES:TR,ANADOLU EFES,TR,XIST,TRY,BIST(name=BIST;tz=Asia/Istanbul;hd=US;sd=US;td=12345;de=+0000;0=0915123014001740),E,N");
+            "STOCK,AEFES:TR,ANADOLU EFES,TR,XIST,TRY,BIST(name=BIST;tz=Asia/Istanbul;hd=US;sd=US;td=12345;de=+0000;0=0915123014001740),E,N",
+            "##COMPLETE");
         boolean ok = Tools.invoke("instruments",
             "-r", IN_FILE.toString(),
             "-t", "if (TYPE == \"STOCK\") TYPE = \"BLAHBLAH\";",
@@ -58,7 +59,8 @@ public class InstrumentsTransformTest extends TestCase {
             "BLAHBLAH,ADEL:TR,ADEL KALEMCILIK,TR,XIST,TRY,BIST(name=BIST;tz=Asia/Istanbul;hd=US;sd=US;td=12345;de=+0000;0=0915123014001740),E,N",
             "BLAHBLAH,ADESE:TR,ADESE ALISVERIS TICARET,TR,XIST,TRY,BIST(name=BIST;tz=Asia/Istanbul;hd=US;sd=US;td=12345;de=+0000;0=0915123014001740),E,L",
             "BLAHBLAH,ADNAC:TR,ADANA CIMENTO (C),TR,XIST,TRY,BIST(name=BIST;tz=Asia/Istanbul;hd=US;sd=US;td=12345;de=+0000;0=0915123014001740),E,N",
-            "BLAHBLAH,AEFES:TR,ANADOLU EFES,TR,XIST,TRY,BIST(name=BIST;tz=Asia/Istanbul;hd=US;sd=US;td=12345;de=+0000;0=0915123014001740),E,N");
+            "BLAHBLAH,AEFES:TR,ANADOLU EFES,TR,XIST,TRY,BIST(name=BIST;tz=Asia/Istanbul;hd=US;sd=US;td=12345;de=+0000;0=0915123014001740),E,N",
+            "##COMPLETE");
     }
 
     private void writeFile(File file, String... lines) throws IOException {
@@ -72,7 +74,7 @@ public class InstrumentsTransformTest extends TestCase {
         try (BufferedReader in = new BufferedReader(new FileReader(file))) {
             for (String line : lines)
                 assertEquals(line, in.readLine());
-            assertEquals(null, in.readLine());
+            assertNull(in.readLine());
         }
     }
 }

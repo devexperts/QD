@@ -3,7 +3,7 @@
   !++
   QDS - Quick Data Signalling Library
   !-
-  Copyright (C) 2002 - 2021 Devexperts LLC
+  Copyright (C) 2002 - 2022 Devexperts LLC
   !-
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
   If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,12 +14,12 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.310</version>
+        <version>3.311</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>dxlib-benchmark</artifactId>
+    <artifactId>benchmarks</artifactId>
     <packaging>jar</packaging>
     <name>dxlib JMH benchmark</name>
 
@@ -38,9 +38,18 @@
         </dependency>
         <dependency>
             <groupId>com.devexperts.qd</groupId>
-            <artifactId>dxlib</artifactId>
+            <artifactId>qds</artifactId>
             <version>${project.version}</version>
-            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.devexperts.qd</groupId>
+            <artifactId>qds-file</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.devexperts.qd</groupId>
+            <artifactId>dxfeed-ondemand</artifactId>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 

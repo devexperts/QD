@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,6 +14,7 @@ package com.devexperts.qd.qtp.http;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.io.ChunkPool;
 import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.QDLog;
 import com.devexperts.qd.qtp.AbstractConnectionHandler;
 import com.devexperts.qd.qtp.AbstractMessageConnector;
 import com.devexperts.qd.qtp.MessageConnector;
@@ -28,10 +29,14 @@ import com.devexperts.transport.stats.EndpointStats;
 import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
 
+/**
+ * @deprecated HTTP connector is deprecated and will be removed in the future.
+ */
 @MessageConnectorSummary(
-    info = "Connects to some url by http or https protocol.",
+    info = "Connects to some url by http or https protocol (DEPRECATED).",
     addressFormat = "<url>"
 )
+@Deprecated
 public class HttpConnector extends AbstractMessageConnector
     implements HttpConnectorMBean
 {
@@ -90,6 +95,7 @@ public class HttpConnector extends AbstractMessageConnector
         super(factory);
         if (address == null)
             throw new NullPointerException();
+        QDLog.log.warn("WARNING: DEPRECATED use of HTTP connector to " + LogUtil.hideCredentials(address));
         QDConfig.setDefaultProperties(this, HttpConnectorMBean.class, MessageConnector.class.getName());
         QDConfig.setDefaultProperties(this, HttpConnectorMBean.class, HttpConnector.class.getName());
         this.address = address;
