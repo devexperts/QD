@@ -58,7 +58,6 @@ public class FileConnector extends AbstractMessageConnector implements FileConne
     private MessageType readAs;
     private boolean schemeKnown;
     private MessageType resyncOn;
-    private String fieldReplacer;
 
     private volatile FileReaderHandler handler;
 
@@ -398,20 +397,5 @@ public class FileConnector extends AbstractMessageConnector implements FileConne
     public long getDelayActual() {
         FileReaderHandler handler = this.handler;
         return handler != null ? handler.getDelayActual() : getDelayTime();
-    }
-
-    @Override
-    public synchronized String getFieldReplacer() {
-        return fieldReplacer;
-    }
-
-    @Override
-    @MessageConnectorProperty("Configuration of field replacers")
-    public synchronized void setFieldReplacer(String fieldReplacer) {
-        if (!fieldReplacer.equals(this.fieldReplacer)) {
-            log.info("Setting fieldReplacers=" + fieldReplacer);
-            this.fieldReplacer = fieldReplacer;
-            reconfigure();
-        }
     }
 }

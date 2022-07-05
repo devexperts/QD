@@ -59,6 +59,7 @@ public class MessageConnectors {
     public static final ConfigurationKey<String> FILTER_CONFIGURATION_KEY = ConfigurationKey.create("filter", String.class, "filter for this connection");
     public static final ConfigurationKey<String> USER_CONFIGURATION_KEY = ConfigurationKey.create("user", String.class, "user name for this connection");
     public static final ConfigurationKey<String> PASSWORD_CONFIGURATION_KEY = ConfigurationKey.create("password", String.class, "password for this connection");
+    public static final ConfigurationKey<String> FIELD_REPLACER_CONFIGURATION_KEY = ConfigurationKey.create("fieldReplacer", String.class, "input field replacers for this connection");
     public static final ConfigurationKey<Integer> MAX_CONNECTIONS_CONFIGURATION_KEY = ConfigurationKey.create("maxConnections", Integer.class, "max number of allowed connections");
 
     public static final TypedKey<Socket> SOCKET_KEY = new TypedKey<>();

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -39,13 +39,13 @@ public class FileReaderHandler extends AbstractConnectionHandler<AbstractMessage
         // Note: This connector can be either FileConnector or HttpConnector, thus the following code
         FileReaderParams params = connector instanceof FileReaderParams ?
             (FileReaderParams) connector : new FileReaderParams.Default();
+        MessageAdapter.Factory factory = MessageConnectors.retrieveMessageAdapterFactory(connector.getFactory());
         reader = new FileReader(connector.getAddress(), getConnectionStats(), params) {
             @Override
             protected void onConnected() {
                 makeConnected();
             }
         };
-        MessageAdapter.Factory factory = MessageConnectors.retrieveMessageAdapterFactory(connector.getFactory());
         adapter = factory.createAdapter(params.getStats().getOrCreate(QDStats.SType.CONNECTIONS));
         adapter.start();
         reader.setScheme(adapter.getScheme());

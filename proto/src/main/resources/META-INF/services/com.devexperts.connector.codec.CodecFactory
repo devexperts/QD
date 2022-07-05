@@ -1,1 +1,2 @@
 com.devexperts.connector.codec.shaped.ShapedCodecFactory
+com.devexperts.connector.codec.delayed.DelayedCodecFactory

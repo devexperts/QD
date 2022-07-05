@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -30,6 +30,7 @@ import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.qd.kit.FilterSyntaxException;
 import com.devexperts.qd.qtp.auth.QDAuthRealm;
 import com.devexperts.qd.qtp.auth.QDLoginHandler;
+import com.devexperts.qd.qtp.fieldreplacer.FieldReplacersCache;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TypedMap;
@@ -310,6 +311,13 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
      */
     public QDEndpoint getEndpoint() {
         return endpoint;
+    }
+
+    /**
+     * Field Replacers specification.
+     */
+    public FieldReplacersCache getFieldReplacer() {
+        return null;
     }
 
     /**

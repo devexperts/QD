@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -1248,6 +1248,92 @@ public class HistoryTxTest {
             expectMore(2, 14, TX_PENDING); // this was in TX
             expectJust(1, 16, 0); // and this in TX (conflated to a single update and optimized to end tx)
         }
+    }
+
+    // REGRESSION: Reproduces unlinked records handling error in History.rebuildLastRecordAndRebase (see QD-1391)
+    @Test
+    public void testUnlinkedReturnAfterRebase() {
+        createAgent(0, true);
+        // distribute snapshot
+        distribute(4, 10, SNAPSHOT_BEGIN);
+        distribute(3, 11, 0);
+        distribute(2, 12, 0);
+        distribute(1, 13, 0);
+        distribute(0, 0, SNAPSHOT_END | REMOVE_EVENT); // virtual snapshot end
+        // ---
+        expectMore(4, 10, SNAPSHOT_BEGIN);
+        expectMore(3, 11, 0);
+        expectMore(2, 12, 0);
+
+        distribute(2, 14, TX_PENDING);
+        distribute(1, 15, 0);
+        setSubTime(0); // marks 2 events as UNLINKED and re-sets timeKnown = Long.MAX_VALUE
+        history.forceRebase(agent);
+        setSubTime(0); // checks UNLINKED and fails if they returned (in RecordBuffer.unlinkFrom)
+    }
+
+    // REGRESSION: Reproduces unlinked records handling error in History.rebuildLastRecordAndRebase (see QD-1391)
+    @Test
+    public void testUnlinkedReturnAfterRebase2() {
+        createAgent(0, true);
+        // distribute snapshot
+        distribute(4, 10, SNAPSHOT_BEGIN);
+        distribute(3, 11, 0);
+        distribute(2, 12, 0);
+        distribute(1, 13, 0);
+        distribute(0, 0, SNAPSHOT_END | REMOVE_EVENT); // virtual snapshot end
+        // ---
+        expectMore(4, 10, SNAPSHOT_BEGIN);
+        expectMore(3, 11, 0);
+        expectMore(2, 12, 0);
+        expectMore(1, 13, 0);
+        expectJust(0, 0, SNAPSHOT_END | REMOVE_EVENT); // virtual snapshot end
+
+        // now update two events in transaction
+        distribute(2, 14, TX_PENDING);
+        distribute(1, 15, 0);
+
+        setSubTime(0); // marks 2 events as UNLINKED and re-sets timeKnown = Long.MAX_VALUE
+        history.forceRebase(agent);
+
+        distribute(4, 10, SNAPSHOT_BEGIN); // checks UNLINKED and fails if they returned (in RecordBuffer.unlinkFrom)
+    }
+
+    // REGRESSION: Reproduces unlinked records handling error in History.rebuildLastRecordAndRebase (see QD-1391)
+    @Test
+    public void testUnlinkedReturnAfterRebase3() {
+        createAgent(0, true);
+        // distribute snapshot
+        distribute(4, 10, SNAPSHOT_BEGIN);
+        distribute(3, 11, 0);
+        distribute(2, 12, 0);
+        distribute(1, 13, 0);
+        distribute(0, 0, SNAPSHOT_END | REMOVE_EVENT); // virtual snapshot end
+        // ---
+        expectMore(4, 10, SNAPSHOT_BEGIN);
+        expectMore(3, 11, 0);
+        expectMore(2, 12, 0);
+        expectMore(1, 13, 0);
+        expectJust(0, 0, SNAPSHOT_END | REMOVE_EVENT); // virtual snapshot end
+
+        // now update two events in transaction
+        distribute(2, 14, TX_PENDING);
+        distribute(1, 15, 0);
+
+        setSubTime(0); // marks 2 events as UNLINKED and re-sets timeKnown = Long.MAX_VALUE
+        history.forceRebase(agent);
+
+        if (blocking) {
+            expectMore(2, 14, TX_PENDING);
+            expectMore(1, 15, 0);
+            expectMore(4, 10, SNAPSHOT_BEGIN);
+            expectMore(3, 11, 0);  // <- go up to 3
+        } else {
+            expectMore(4, 10, SNAPSHOT_BEGIN);
+            expectMore(3, 11, 0);   // <- go up to 3
+        }
+        distribute(4, 10, TX_PENDING);
+        retrieveBatch(1); // first retrieval attempt fails in RecordBuffer.flagFrom invoked via makeAgentTxDirty
     }
 
     @Test

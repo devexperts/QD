@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -252,7 +252,7 @@ public class History extends Collector implements QDHistory {
          */
         long currentTime = System.currentTimeMillis();
         SubMatrix tsub = total.sub;
-        for (int tindex = tsub.matrix.length; (tindex -= tsub.step) >= 0;) {
+        for (int tindex = tsub.matrix.length; (tindex -= tsub.step) >= 0; ) {
             // save time by looking only into entries which might contain expired buffer
             if (tsub.getInt(tindex + NEXT_AGENT) != NO_NEXT_AGENT_BUT_STORE_HB)
                 continue;
@@ -411,6 +411,8 @@ public class History extends Collector implements QDHistory {
         // scan buffer and set correct LAST_RECORD
         RecordCursor cursor;
         while ((cursor = agent.buffer.next()) != null) {
+            if (cursor.isUnlinked())
+                continue;
             int key = getKey(cursor.getCipher(), cursor.getSymbol());
             int rid = getRid(cursor.getRecord());
             int aindex = asub.getIndex(key, rid, 0);
@@ -442,8 +444,8 @@ public class History extends Collector implements QDHistory {
     private static final int RETRIEVE_UPDATE = 2;
     private static final int RETRIEVE_NO_CAPACITY = 3;
 
-    @Override
     // returns true if some records still remains in the agent, false if all accumulated records were retrieved.
+    @Override
     boolean retrieveDataImpl(Agent agent, RecordSink sink, boolean snapshotOnly) {
         if (agent.isClosed())
             return false;
@@ -457,10 +459,10 @@ public class History extends Collector implements QDHistory {
         }
         // Check if the status indicates that retrieve is over
         switch (retrieveStatus) {
-        case RETRIEVE_NOTHING_ELSE:
-            return false;
-        case RETRIEVE_NO_CAPACITY:
-            return true;
+            case RETRIEVE_NOTHING_ELSE:
+                return false;
+            case RETRIEVE_NO_CAPACITY:
+                return true;
         }
         assert retrieveStatus == RETRIEVE_SNAPSHOT;
         // Take global lock and retrieve under it (use global lock with priority)
@@ -513,20 +515,20 @@ public class History extends Collector implements QDHistory {
         while (true) {
             result = checkRetrieveStatus(agent, snapshotOnly);
             switch (result) {
-            case RETRIEVE_NOTHING_ELSE:
-                break main_loop; // that's it -- no more snapshots and updates
-            case RETRIEVE_SNAPSHOT:
-                if (retrieveSnapshotBatchFromGlobalHistoryBuffer(agent, sink)) {
-                    result = RETRIEVE_NO_CAPACITY; // no more capacity
-                    break main_loop;
-                }
-                break; // continue main loop
-            case RETRIEVE_UPDATE:
-                if (retrieveUpdateBatchFromLocalAgentBuffer(agent, sink)) {
-                    result = RETRIEVE_NO_CAPACITY; // no more capacity
-                    break main_loop;
-                }
-                break; // continue main loop
+                case RETRIEVE_NOTHING_ELSE:
+                    break main_loop; // that's it -- no more snapshots and updates
+                case RETRIEVE_SNAPSHOT:
+                    if (retrieveSnapshotBatchFromGlobalHistoryBuffer(agent, sink)) {
+                        result = RETRIEVE_NO_CAPACITY; // no more capacity
+                        break main_loop;
+                    }
+                    break; // continue main loop
+                case RETRIEVE_UPDATE:
+                    if (retrieveUpdateBatchFromLocalAgentBuffer(agent, sink)) {
+                        result = RETRIEVE_NO_CAPACITY; // no more capacity
+                        break main_loop;
+                    }
+                    break; // continue main loop
             }
         }
         countRetrieval(agent); // must count retrieval before releasing locks
@@ -535,11 +537,13 @@ public class History extends Collector implements QDHistory {
 
     /**
      * Checks agent variable and returns:
+     * <pre>
      *    RETRIEVE_SNAPSHOT      when it is turn to retrieve item from the head of snapshotQueue,
      *    RETRIEVE_UPDATE        when it is turn to retrieve updates from non-empty local buffer,
      *    RETRIEVE_NOTHING_ELSE  when queue is empty or agent is closed.
+     * </pre>
      * This method performs fair balancing between global/local retrieval to avoid starvation.
-     *
+     * <p>
      * This method can be overridden in test code to force RETRIEVE_SNAPSHOT or RETRIEVE_UPDATE.
      */
     // SYNC: local
@@ -570,6 +574,7 @@ public class History extends Collector implements QDHistory {
     /**
      * Retrieves from local buffer.
      * It is invoked when checkRetrieveStatus returned RETRIEVE_UPDATE.
+     *
      * @return true when there's more data available but sink has ran out of capacity.
      */
     // SYNC: local
@@ -588,6 +593,7 @@ public class History extends Collector implements QDHistory {
     /**
      * Retrieves from global queued item at the top of the queue.
      * It is invoked when checkRetrieveStatus returned RETRIEVE_SNAPSHOT.
+     *
      * @return true when there's more data available but sink has ran out of capacity.
      */
     // SYNC: global+local
@@ -761,14 +767,14 @@ public class History extends Collector implements QDHistory {
             /*
              * (6) Turn on implicit sweep update transaction when anything is sweep-removed by this event
              * or updated record in the previous snapshot (as opposed to extending snapshot).
-             * It is only turned only inside subscription range (of totalTime) and is not turned on
+             * It is turned only inside subscription range (of totalTime) and is not turned on
              * when changes are being performed in "storeEverything" mode below totalTime, because
-             * there will not mechanism to turn this transaction off.
+             * there is no mechanism to turn this transaction off.
              */
             long endRemovePosition = removeBuffer.getLimit();
             if (endRemovePosition != sweepRemovePosition
                 || ((distFlags & UPDATED_RECORD_DIST_FLAG) != 0)
-                    && time < prevSnapshotTime && time > timeTotal && !updatedEverSnapshotTime)
+                && time < prevSnapshotTime && time > timeTotal && !updatedEverSnapshotTime)
             {
                 hb.updateSweepTxOn();
             }
@@ -847,7 +853,7 @@ public class History extends Collector implements QDHistory {
                  *       => need to  deliver SNAPSHOT_SNIP to the agent (if uses history snapshot) or update its known time anyway
                  * 2. agent uses history snapshot and the event
                  *   a) has ended a transaction
-                 *       => the agent must process it to ends its transaction.
+                 *       => the agent must process it to end its transaction.
                  *   b) had began snapshot in HB (for a first time snapshot was seen)
                          => the agent needs to add this event to reset its knowTime and start sending snapshot
                  *   c) had updated snapshot time above sub time of this agent in non-legacy mode
@@ -859,10 +865,11 @@ public class History extends Collector implements QDHistory {
                  * WHEN TIME_SUB UPDATES, THEN TIME_KNOWN IS SET TO LONG.MAX_VALUE.
                  */
                 if (time >= timeSub && // (1)
-                        ((distFlags & (UPDATED_RECORD_DIST_FLAG | UPDATED_SNIP_DIST_FLAG)) != 0) || // (1a, 1b)
-                    agent.useHistorySnapshot() &&
-                        (((distFlags & (TX_END_DIST_FLAG | SEND_SNAPSHOT_DIST_FLAG)) != 0) || // (2a, 2b)
-                            (time < prevSnapshotTime && prevSnapshotTime > timeSub && hb.wasEverSnapshotMode()))) // (2c)
+                    ((distFlags & (UPDATED_RECORD_DIST_FLAG | UPDATED_SNIP_DIST_FLAG)) != 0) || // (1a, 1b)
+                    agent.useHistorySnapshot() && (
+                        ((distFlags & (TX_END_DIST_FLAG | SEND_SNAPSHOT_DIST_FLAG)) != 0) || // (2a, 2b)
+                        (time < prevSnapshotTime && prevSnapshotTime > timeSub && hb.wasEverSnapshotMode()) // (2c)
+                    ))
                 {
                     dist.add(nagent, position, distFlags, rid);
                 }
@@ -960,7 +967,8 @@ public class History extends Collector implements QDHistory {
             long timeKnown = asub.getLong(aindex + TIME_KNOWN);
 
             if (TRACE_LOG)
-                log.trace("processAgentDataUpdate " + historyCursorString(cursor) + ", timeSub=" + timeSub + ", timeKnown=" + timeKnown + " for " + agent);
+                log.trace("processAgentDataUpdate " + historyCursorString(cursor) + ", timeSub=" + timeSub +
+                    ", timeKnown=" + timeKnown + " for " + agent);
 
             assert timeKnown >= timeSub; // this is the key invariant of a history subscription state (NOTE: timeKnown can grow)
             long lastRecordWithBit = asub.getLong(aindex + LAST_RECORD);
@@ -1109,12 +1117,12 @@ public class History extends Collector implements QDHistory {
                 if ((distFlags & TX_END_DIST_FLAG) == 0)
                     continue; // nothing interesting (not update, not TX_END)
                 if (isAgentTxDirty(lastRecordWithBit))
-                    continue; // agent is dirty, so we don't need to delivery non-updating event (there is no tx to end!)
+                    continue; // agent is dirty, so we don't need to deliver non-updating event (there is no tx to end!)
                 /*
                  * Special code to process non-updating TX_END event here when agent is not dirty.
-                 * If there is another record in buffer then we make optimization by using it to end transaction
-                 * (remove TX_PENDING bit on it). Otherwise, we'll need to deliver this event event if it
-                 * did not actually updated anything -- just to end tx.
+                 * If there is another record in buffer, then we make optimization by using it to end transaction
+                 * (remove TX_PENDING bit on it). Otherwise, we'll need to deliver this event even if it
+                 * does not actually update anything -- just to end tx.
                  */
                 if (lastRecordInBuffer) {
                     RecordCursor writeCursor = agent.buffer.writeCursorAtPersistentPosition(lastRecord);
@@ -1216,7 +1224,8 @@ public class History extends Collector implements QDHistory {
                  */
             }
             // initialize with current version and count of 1
-            historySubFlags = (historySubFlags & ~(PROCESS_VERSION_MASK | PENDING_COUNT_MASK)) | curProcessVersion | PENDING_COUNT_INC;
+            historySubFlags =
+                (historySubFlags & ~(PROCESS_VERSION_MASK | PENDING_COUNT_MASK)) | curProcessVersion | PENDING_COUNT_INC;
         } else {
             // already processing -- just increment count
             if ((historySubFlags & PENDING_COUNT_MASK) == PENDING_COUNT_MASK) {
@@ -1233,7 +1242,7 @@ public class History extends Collector implements QDHistory {
     }
 
     // SYNC: local (invoked during 2nd phase)
-    // returns true when when no more pending records left to process
+    // returns true when no more pending records left to process
     private boolean decAgentSubProcessPendingCountAndClear(Distribution dist, SubMatrix sub, int index, int rid) {
         int historySubFlags = sub.getInt(index + HISTORY_SUB_FLAGS);
         if ((historySubFlags & PROCESS_VERSION_MASK) != dist.getCurProcessVersion())
@@ -1268,12 +1277,13 @@ public class History extends Collector implements QDHistory {
 
     // returns updated lastRecordWithBit
     // SYNC: local
-    static long makeAgentTxDirty(Agent agent, SubMatrix asub, int aindex, long lastRecord) {
-        assert !isAgentTxDirty(lastRecord);
+    static long makeAgentTxDirty(Agent agent, SubMatrix asub, int aindex, long lastRecordWithBit) {
+        assert !isAgentTxDirty(lastRecordWithBit);
+        long lastRecord = lastRecordWithBit & ~TX_DIRTY_LAST_RECORD_BIT;
         if (agent.buffer.isInBuffer(lastRecord))
             agent.buffer.flagFromPersistentPosition(lastRecord, TX_PENDING);
         // Set TX_DIRTY flag
-        long lastRecordWithBit = lastRecord | TX_DIRTY_LAST_RECORD_BIT;
+        lastRecordWithBit |= TX_DIRTY_LAST_RECORD_BIT;
         asub.setLong(aindex + LAST_RECORD, lastRecordWithBit);
         return lastRecordWithBit;
     }
@@ -1408,8 +1418,8 @@ public class History extends Collector implements QDHistory {
                 hb.examineDataRangeLTR(record, cipher, symbol, startTime, endTime, sink, keeper, null));
     }
 
-    @Override
     // SYNC: global
+    @Override
     void examineSubDataInternalByIndex(Agent agent, int aindex, RecordSink sink) {
         SubMatrix asub = agent.sub;
         int key = asub.getInt(aindex + KEY);
@@ -1428,7 +1438,7 @@ public class History extends Collector implements QDHistory {
         SubMatrix tsub = total.sub;
         int nExaminedInBatch = 0;
         // iterate over matrix
-        for (int tindex = tsub.matrix.length; (tindex -= tsub.step) >= 0;)
+        for (int tindex = tsub.matrix.length; (tindex -= tsub.step) >= 0; ) {
             if (tsub.isPayload(tindex)) {
                 HistoryBuffer hb = (HistoryBuffer) tsub.getObj(tindex, HISTORY_BUFFER);
                 if (hb == null)
@@ -1451,6 +1461,7 @@ public class History extends Collector implements QDHistory {
                     nExaminedInBatch = 0;
                 }
             }
+        }
         if (nExaminedInBatch > 0)
             sink.flush();
         return false;
@@ -1493,7 +1504,7 @@ public class History extends Collector implements QDHistory {
     @Override
     public boolean examineDataBySubscription(RecordSink sink, RecordSource sub) {
         int nExaminedInBatch = 0;
-        for (RecordCursor subCursor; (subCursor = sub.next()) != null;) {
+        for (RecordCursor subCursor; (subCursor = sub.next()) != null; ) {
             DataRecord record = subCursor.getRecord();
             int cipher = subCursor.getCipher();
             String symbol = subCursor.getSymbol();
@@ -1583,8 +1594,9 @@ public class History extends Collector implements QDHistory {
         StringBuilder sb = new StringBuilder();
         sb.append(cursor.getDecodedSymbol());
         sb.append('@').append(cursor.getTime());
-        for (int i = 2; i < cursor.getIntCount(); i++)
+        for (int i = 2; i < cursor.getIntCount(); i++) {
             sb.append(',').append(cursor.getInt(i));
+        }
         String flags = EventFlag.formatEventFlags(cursor.getEventFlags(), MessageType.HISTORY_DATA);
         if (!flags.isEmpty())
             sb.append(',').append(flags);

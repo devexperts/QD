@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -92,6 +92,7 @@ public class TimeFieldReplacerTest {
         DXEndpoint endpoint = DXEndpoint.newBuilder()
             .withRole(DXEndpoint.Role.PUBLISHER)
             .withProperty(DXEndpoint.DXFEED_WILDCARD_ENABLE_PROPERTY, "true")
+            .withProperty("dxscheme.enabled.ActionTime", "*")
             .build();
         endpoint.connect("tape:" + FILE_WRITE_TO + "[format=" + fileFormat + "]");
 
@@ -103,6 +104,7 @@ public class TimeFieldReplacerTest {
         // 3. Read published events
         endpoint = DXEndpoint.newBuilder()
             .withRole(DXEndpoint.Role.STREAM_FEED)
+            .withProperty("dxscheme.enabled.ActionTime", "*")
             .build();
         DXFeedSubscription<T> sub = endpoint.getFeed().createSubscription((Class<T>) initialEvent.getClass());
         List<T> events = new ArrayList<>();
@@ -146,7 +148,8 @@ public class TimeFieldReplacerTest {
         Order initialEvent = new Order("IBM");
         initialEvent.setOrderSide(Side.BUY);
         initialEvent.setTime(INITIAL_TIME_MILLIS);
-        testEvent(initialEvent, Order::getTime);
+        initialEvent.setActionTime(INITIAL_TIME_MILLIS);
+        testEvent(initialEvent, Order::getTime, Order::getActionTime);
     }
 
     @Test
@@ -154,7 +157,8 @@ public class TimeFieldReplacerTest {
         AnalyticOrder initialEvent = new AnalyticOrder("IBM");
         initialEvent.setOrderSide(Side.BUY);
         initialEvent.setTime(INITIAL_TIME_MILLIS);
-        testEvent(initialEvent, AnalyticOrder::getTime);
+        initialEvent.setActionTime(INITIAL_TIME_MILLIS);
+        testEvent(initialEvent, AnalyticOrder::getTime, AnalyticOrder::getActionTime);
     }
 
     @Test
@@ -162,7 +166,8 @@ public class TimeFieldReplacerTest {
         SpreadOrder initialEvent = new SpreadOrder("IBM");
         initialEvent.setOrderSide(Side.BUY);
         initialEvent.setTime(INITIAL_TIME_MILLIS);
-        testEvent(initialEvent, SpreadOrder::getTime);
+        initialEvent.setActionTime(INITIAL_TIME_MILLIS);
+        testEvent(initialEvent, SpreadOrder::getTime, SpreadOrder::getActionTime);
     }
 
     @Test

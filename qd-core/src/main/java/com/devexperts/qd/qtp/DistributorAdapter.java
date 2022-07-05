@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.qd.qtp;
 
+import com.devexperts.connector.proto.Configurable;
 import com.devexperts.qd.DataConsumer;
 import com.devexperts.qd.DataIterator;
 import com.devexperts.qd.DataScheme;
@@ -27,6 +28,7 @@ import com.devexperts.qd.SubscriptionProvider;
 import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.qd.ng.RecordListener;
 import com.devexperts.qd.ng.RecordProvider;
+import com.devexperts.qd.qtp.fieldreplacer.FieldReplacersCache;
 import com.devexperts.qd.spi.QDFilterContext;
 import com.devexperts.qd.spi.QDFilterFactory;
 import com.devexperts.qd.stats.QDStats;
@@ -63,6 +65,8 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
      * The factory for distributor side of an QD.
      */
     public static class Factory extends MessageAdapter.AbstractFactory {
+        private FieldReplacersCache fieldReplacer = null;
+
         /**
          * Creates new factory. Accepts <code>null</code> parameters.
          */
@@ -95,7 +99,24 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
 
         @Override
         public MessageAdapter createAdapter(QDStats stats) {
-            return new DistributorAdapter(endpoint, ticker, stream, history, getFilter(), stats);
+            return new DistributorAdapter(endpoint, ticker, stream, history, getFilter(), stats, fieldReplacer);
+        }
+
+        /**
+         * Field Replacers specification for input data.
+         */
+        public String getFieldReplacer() {
+            return fieldReplacer == null ? null : fieldReplacer.getSpec();
+        }
+
+        /**
+         * Set Field Replacers configuration for input data.
+         *
+         * @param fieldReplacer field replacers configuration to process input data.
+         */
+        @Configurable(description = "Field Replacers for input connection")
+        public void setFieldReplacer(String fieldReplacer) {
+            this.fieldReplacer = fieldReplacer == null ? null : FieldReplacersCache.valueOf(getScheme(), fieldReplacer);
         }
     }
 
@@ -110,23 +131,36 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
 
     private final RecordListener subListener = new SubListener();
 
+    private final FieldReplacersCache fieldReplacer;
+
     private int phaseAdd;
     private int phaseRemove;
 
 
     // ------------------------- constructors -------------------------
 
-    public DistributorAdapter(QDEndpoint endpoint, QDTicker ticker, QDStream stream, QDHistory history, SubscriptionFilter filter, QDStats stats) {
+    public DistributorAdapter(QDEndpoint endpoint, QDTicker ticker, QDStream stream, QDHistory history,
+            SubscriptionFilter filter, QDStats stats, FieldReplacersCache fieldReplacer)
+    {
         super(endpoint, stats);
         this.scheme = getCommonScheme(ticker, stream, history);
         this.filter = QDFilter.fromFilter(filter, scheme);
+        this.fieldReplacer = fieldReplacer;
         collectors[QDContract.TICKER.ordinal()] = ticker;
         collectors[QDContract.STREAM.ordinal()] = stream;
         collectors[QDContract.HISTORY.ordinal()] = history;
     }
 
-    public DistributorAdapter(QDTicker ticker, QDStream stream, QDHistory history, SubscriptionFilter filter, QDStats stats) {
-        this(null, ticker, stream, history, filter, stats);
+    public DistributorAdapter(QDEndpoint endpoint, QDTicker ticker, QDStream stream, QDHistory history,
+            SubscriptionFilter filter, QDStats stats)
+    {
+        this(endpoint, ticker, stream, history, filter, stats, null);
+    }
+
+    public DistributorAdapter(QDTicker ticker, QDStream stream, QDHistory history, SubscriptionFilter filter,
+            QDStats stats)
+    {
+        this(null, ticker, stream, history, filter, stats, null);
     }
 
     // ------------------------- instance methods -------------------------
@@ -184,6 +218,11 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
             if ((c = collectors[i]) != null && (s = c.getSymbol(chars, offset, length)) != null)
                 return s;
         return null;
+    }
+
+    @Override
+    public FieldReplacersCache getFieldReplacer() {
+        return fieldReplacer;
     }
 
     // ========== Dynamic filters support ==========

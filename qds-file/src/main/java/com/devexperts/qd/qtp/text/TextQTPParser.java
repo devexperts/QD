@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,7 +22,6 @@ import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.qtp.AbstractQTPParser;
 import com.devexperts.qd.qtp.BuiltinFields;
-import com.devexperts.qd.qtp.FieldReplacer;
 import com.devexperts.qd.qtp.HeartbeatPayload;
 import com.devexperts.qd.qtp.MessageConsumer;
 import com.devexperts.qd.qtp.MessageType;
@@ -34,9 +33,6 @@ import com.devexperts.util.TimeFormat;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Consumer;
 
 /**
  * Parses QTP messages in text format from byte stream.
@@ -55,7 +51,6 @@ public class TextQTPParser extends AbstractQTPParser {
     private MessageType lastMessageType;
     private ProtocolDescriptor protocolDescriptor;
     private HeartbeatPayload heartbeatPayload;
-    private final Map<DataRecord, List<Consumer<RecordCursor>>> replacersCache;
 
     /**
      * This field stores information about records that were
@@ -88,7 +83,6 @@ public class TextQTPParser extends AbstractQTPParser {
         lastMessageType = defaultMessageType;
         tokenizer = new LineTokenizer();
         describedRecords = new HashMap<>();
-        replacersCache = new HashMap<>();
     }
 
     public void setDelimiters(TextDelimiters delimiters) {
@@ -265,23 +259,6 @@ public class TextQTPParser extends AbstractQTPParser {
         setEventTimeSequenceIfNeeded(cur);
         replaceFieldIfNeeded(cur);
         return true;
-    }
-
-    private void replaceFieldIfNeeded(RecordCursor cursor) {
-        if (fieldReplacers == null)
-            return;
-        List<Consumer<RecordCursor>> replacers = replacersCache.get(cursor.getRecord());
-        if (replacers == null) {
-            replacers = new ArrayList<>();
-            for (FieldReplacer fieldReplacer : fieldReplacers) {
-                Consumer<RecordCursor> replacer = fieldReplacer.createFieldReplacer(cursor.getRecord());
-                if (replacer != null)
-                    replacers.add(replacer);
-            }
-            replacersCache.put(cursor.getRecord(), replacers);
-        }
-        for (Consumer<RecordCursor> replacer : replacers)
-            replacer.accept(cursor);
     }
 
     private static void trySetEventTime(RecordCursor cursor, String value) {

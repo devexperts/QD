@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,10 +16,10 @@ import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordMode;
+import com.devexperts.qd.qtp.fieldreplacer.FieldReplacersCache;
 import com.devexperts.qd.stats.QDStats;
 
 import java.io.IOException;
-import java.util.List;
 
 /**
  * Base class for classes that parse QTP messages data from byte stream in some format.
@@ -69,9 +69,9 @@ public abstract class AbstractQTPParser {
     protected long eventTimeSequence;
 
     /**
-     * List of field replacers. See {@link FieldReplacer} for more details.
+     * Cache of instantiated field replacers.
      */
-    protected List<FieldReplacer> fieldReplacers;
+    protected FieldReplacersCache fieldReplacers;
 
     // ======================== private instance fields ========================
 
@@ -154,7 +154,7 @@ public abstract class AbstractQTPParser {
         this.eventTimeSequence = eventTimeSequence;
     }
 
-    public void setFieldReplacers(List<FieldReplacer> fieldReplacers) {
+    public void setFieldReplacers(FieldReplacersCache fieldReplacers) {
         this.fieldReplacers = fieldReplacers;
     }
 
@@ -310,5 +310,11 @@ public abstract class AbstractQTPParser {
     protected final void setEventTimeSequenceIfNeeded(RecordCursor cur) {
         if (readEventTimeSequence && eventTimeSequence != 0)
             cur.setEventTimeSequence(eventTimeSequence);
+    }
+
+    protected void replaceFieldIfNeeded(RecordCursor cursor) {
+        if (fieldReplacers == null)
+            return;
+        fieldReplacers.accept(cursor);
     }
 }

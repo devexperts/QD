@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -19,6 +19,7 @@ import com.devexperts.transport.stats.ConnectionStats;
 import com.devexperts.transport.stats.EndpointStats;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public abstract class AbstractMessageConnector implements MessageConnector {
@@ -159,6 +160,23 @@ public abstract class AbstractMessageConnector implements MessageConnector {
         if (this.reconnectDelay != reconnectDelay) {
             log.info("Setting reconnectDelay=" + reconnectDelay);
             this.reconnectDelay = reconnectDelay;
+            reconfigure();
+        }
+    }
+
+    @Override
+    public synchronized String getFieldReplacer() {
+        return factory.getConfiguration(MessageConnectors.FIELD_REPLACER_CONFIGURATION_KEY);
+    }
+
+    @Override
+    @MessageConnectorProperty("Field Replacers for input connection")
+    public synchronized void setFieldReplacer(String fieldReplacer) {
+        String oldValue = getFieldReplacer();
+        if (!Objects.equals(oldValue, fieldReplacer)) {
+            log.info("Setting fieldReplace" + fieldReplacer);
+            factory = factory.clone();
+            factory.setConfiguration(MessageConnectors.FIELD_REPLACER_CONFIGURATION_KEY, fieldReplacer);
             reconfigure();
         }
     }

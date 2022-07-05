@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,6 +16,7 @@ import com.devexperts.connector.proto.TransportConnection;
 import com.devexperts.io.ChunkList;
 import com.devexperts.io.ChunkPool;
 import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDLog;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.TimeMarkUtil;
@@ -52,9 +53,12 @@ class MessageAdapterConnection extends ApplicationConnection<MessageAdapterConne
     MessageAdapterConnection(MessageAdapter adapter, MessageAdapterConnectionFactory factory, TransportConnection transportConnection) {
         super(factory, transportConnection);
         this.adapter = adapter;
-        composer = new ConnectionQTPComposer(adapter.getScheme(), this);
-        parser = new ConnectionQTPParser(adapter.getScheme(), this);
+        final DataScheme scheme = adapter.getScheme();
+        composer = new ConnectionQTPComposer(scheme, this);
+        parser = new ConnectionQTPParser(scheme, this);
         parser.setMixedSubscription(adapter.supportsMixedSubscription());
+        parser.setFieldReplacers(adapter.getFieldReplacer());
+
         heartbeatPeriod = factory.getInitialHeartbeatPeriod().getTime();
         heartbeatDisconnectTime = System.currentTimeMillis() + factory.getHeartbeatTimeout().getTime();
         adapter.setMessageListener(this);

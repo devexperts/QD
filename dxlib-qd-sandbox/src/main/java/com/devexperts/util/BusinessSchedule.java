@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -79,10 +79,12 @@ public abstract class BusinessSchedule {
         "0:20190101,1:20190121,2:20190218,3:20190419,4:20190527,5:20190704,6:20190902,7:20191128,8:20191225," +
         "0:20200101,1:20200120,2:20200217,3:20200410,4:20200525,5:20200703,6:20200907,7:20201126,8:20201225," +
         "0:20210101,1:20210118,2:20210215,3:20210402,4:20210531,5:20210705,6:20210906,7:20211125,8:20211224," +
-        "0:20220101,1:20220117,2:20220221,3:20220415,4:20220530,5:20220704,6:20220905,7:20221124,8:20221226," +
-        "0:20230102,1:20230116,2:20230220,3:20230407,4:20230529,5:20230704,6:20230904,7:20231123,8:20231225," +
+        "0:20220101,1:20220117,2:20220221,3:20220415,4:20220530,9:20220620,5:20220704,6:20220905,7:20221124,8:20221226," +
+        "0:20230102,1:20230116,2:20230220,3:20230407,4:20230529,9:20230619,5:20230704,6:20230904,7:20231123,8:20231225," +
+        "0:20240101,1:20240115,2:20240219,3:20240329,4:20240527,9:20240619,5:20240704,6:20240902,7:20241128,8:20241225," +
+        "0:20250101,1:20250120,2:20250217,3:20250418,4:20250526,9:20250619,5:20250704,6:20250901,7:20251127,8:20251225," +
         "",
-        "H:New Year's Day,Martin Luther King Jr. Day,President's Day,Good Friday,Memorial Day,Independence Day,Labor Day,Thanksgiving Day,Christmas;"
+        "H:New Year's Day,Martin Luther King Jr. Day,President's Day,Good Friday,Memorial Day,Independence Day,Labor Day,Thanksgiving Day,Christmas,Juneteenth;"
     );
 
     public static final BusinessSchedule RU = new BusinessScheduleImpl(

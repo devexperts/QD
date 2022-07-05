@@ -84,9 +84,9 @@ class AgentBuffer implements RecordFilter {
         return buffer.getLimit() - getPositionBase();
     }
 
-    // Rebasing is needed when first_position becomes too large to reliable compare
-    // persistent positions with first position for "isInBuffer" method
-    // (we cannot allow first_position to wrap)
+    // Rebasing is needed when firstPosition becomes too large to reliable compare
+    // persistent positions with firstPosition for "isInBuffer" method
+    // (we cannot allow firstPosition to wrap)
     public boolean needsRebase() {
         int rebaseThreshold = getRebaseThreshold();
         return (int) firstPosition > rebaseThreshold || (int) (firstPosition >> 32) > rebaseThreshold;
@@ -214,12 +214,13 @@ class AgentBuffer implements RecordFilter {
         if (overflowStrategy != QDAgent.BufferOverflowStrategy.DROP_OLDEST)
             return;
         while (buffer.size() > maxBufferSize) {
-            long original_position = buffer.getPosition();
+            long originalPosition = buffer.getPosition();
             RecordCursor cursor = buffer.next();
-            makeDropped(cursor);
+            if (!cursor.isUnlinked()) // do not count unlinked records as dropped
+                makeDropped(cursor);
             stats.updateRemoved(cursor.getRecord().getId());
             buffer.cleanup(cursor);
-            firstPosition += buffer.getPosition() - original_position;
+            firstPosition += buffer.getPosition() - originalPosition;
         }
     }
 
@@ -239,10 +240,13 @@ class AgentBuffer implements RecordFilter {
         lastLogTime = time;
         QDLog.log.error(
             agent.collector.getContract() +
-                " buffer overflow - " + droppedRecords + " records skipped for agent [" +
-                agent.getStats().getFullKeyProperties() + "]." +
-                (lastDroppedRecord == null ? "" : " Last record was " +
-                    agent.collector.getScheme().getCodec().decode(lastDroppedCipher, lastDroppedSymbol) + ":" + lastDroppedRecord.getName()));
+            " buffer overflow - " + droppedRecords + " records skipped for agent [" +
+            agent.getStats().getFullKeyProperties() + "]." +
+            (lastDroppedRecord == null ? "" : " Last record was " +
+                agent.collector.getScheme().getCodec().decode(lastDroppedCipher, lastDroppedSymbol) + ":" +
+                lastDroppedRecord.getName()
+            )
+        );
         agent.collector.counters.countDropped(droppedRecords);
         droppedRecords = 0;
     }

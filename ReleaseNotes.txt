@@ -1,3 +1,14 @@
+
+QDS 3.312:
+
+* [QD-1382] Add field replacer which can assign value of one field to another
+* [QD-1381] Add support for field replacers to all QD connectors
+* [QD-1368] [Connector] Create 'delayed' codec
+  - Output delay is specified with 'delay' parameter (in millis). Optional buffering limit may be defined by
+    'bufferLimit' parameter (in bytes): "delayed[delay=20,bufferLimit=100k]+:7000"
+* [QD-1392] [Schedule] Add new USA holiday Juneteenth
+* [QD-1391] "Already unlinked" IllegalStateException in com.devexperts.qd.ng.RecordBuffer
+
 QDS 3.311:
 
 * [QD-1389] Deprecate HTTP QD connector (to be removed later)

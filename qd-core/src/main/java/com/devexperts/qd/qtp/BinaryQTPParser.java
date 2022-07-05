@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -29,13 +29,10 @@ import com.devexperts.util.IndexerFunction;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 
 import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_DESCRIBE_PROTOCOL;
@@ -419,6 +416,7 @@ public class BinaryQTPParser extends AbstractQTPParser {
                 RecordCursor cur = rr.readRecord(msg, buf, symbolReader.getCipher(), symbolReader.getSymbol(),
                     symbolReader.getEventFlags());
                 setEventTimeSequenceIfNeeded(cur);
+                replaceFieldIfNeeded(cur);
                 long position = msg.totalPosition();
                 if (cur != null) {
                     updateCursorTimeMark(cur);
@@ -483,26 +481,7 @@ public class BinaryQTPParser extends AbstractQTPParser {
 
     // overridden in file analysis tool
     protected BinaryRecordDesc wrapRecordDesc(BinaryRecordDesc desc) {
-        if (fieldReplacers == null || fieldReplacers.isEmpty())
-            return desc;
-        List<Consumer<RecordCursor>> consumers = new ArrayList<>();
-        for (FieldReplacer fieldReplacer : fieldReplacers) {
-            Consumer<RecordCursor> replacer = fieldReplacer.createFieldReplacer(desc.getRecord());
-            if (replacer != null)
-                consumers.add(replacer);
-        }
-        if (consumers.isEmpty())
-            return desc;
-        //noinspection unchecked,SuspiciousToArrayCall
-        Consumer<RecordCursor>[] consumersArray = (Consumer<RecordCursor>[]) consumers.toArray(new Consumer[consumers.size()]);
-        return new BinaryRecordDesc(desc) {
-            @Override
-            protected void readFields(BufferedInput msg, RecordCursor cur, int nDesc) throws IOException {
-                super.readFields(msg, cur, nDesc);
-                for (Consumer<RecordCursor> replacer : consumersArray)
-                    replacer.accept(cur);
-            }
-        };
+        return desc;
     }
 
     protected long readSubscriptionTime(BufferedInput msg) throws IOException {
