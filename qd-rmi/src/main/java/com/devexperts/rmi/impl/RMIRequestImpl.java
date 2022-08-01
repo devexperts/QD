@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -707,7 +707,7 @@ public final class RMIRequestImpl<T> extends RMIRequest<T> implements RMIChannel
             else if (e.getType() == RMIExceptionType.APPLICATION_ERROR) {
                 // the same behavior as in RMIInvocationHandler
                 Throwable cause = e.getCause();
-                RMIRequestInvocationHandler.trimStackTrace(cause);
+                RMIRequestInvocationHandler.extendRemoteStackTrace(cause);
                 promiseNotifier.completeExceptionally(cause);
             } else
                 promiseNotifier.completeExceptionally(e);

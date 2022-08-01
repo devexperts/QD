@@ -1,3 +1,10 @@
+QDS 3.313:
+
+* [QD-1398] Allow custom executor on InstrumentProfileCollector
+  - allow to workaround API breaking change in [QD-1344]
+* [QD-1397] Add types WARRANT & CFD to enum InstrumentProfileType
+* [QD-1396] RMI: NegativeArraySizeException in RMI requests exception handling
+* [QD-1394] QDS Tools: "help instruments" still mention MO.dat format after QD-1385
 
 QDS 3.312:
 

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -427,6 +427,55 @@ public class RMIFunctionalityTest {
         }
     }
 
+    @Test
+    public void testErrorThrowingWithEmptyStacktrace() {
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation<>(new AIOOBEThrowerWithEmptyStacktrace(false), ErrorThrower.class),
+            channelLogic);
+        connectDefault();
+
+        ErrorThrower thrower = channelLogic.clientPort.getProxy(ErrorThrower.class);
+        try {
+            thrower.throwError();
+            fail();
+        } catch (ArrayIndexOutOfBoundsException e) {
+            // Check the stacktrace
+            StackTraceElement[] stackTrace = e.getStackTrace();
+
+            assertEquals(RMI_LAYER_SEPARATOR_FRAME, stackTrace[0]);
+            assertEquals(this.getClass().getName(), stackTrace[1].getClassName());
+            assertEquals("testErrorThrowingWithEmptyStacktrace", stackTrace[1].getMethodName());
+
+            assertStackTraceIsLocal(stackTrace);
+        } catch (Throwable e) {
+            log.info("----------------");
+            e.printStackTrace();
+            fail(e.getMessage());
+        }
+    }
+
+    @Test
+    public void testErrorThrowingWithEmptyStacktraceImmutable() {
+        NTU.exportServices(server.getServer(),
+            new RMIServiceImplementation<>(new AIOOBEThrowerWithEmptyStacktrace(true), ErrorThrower.class),
+            channelLogic);
+        connectDefault();
+
+        ErrorThrower thrower = channelLogic.clientPort.getProxy(ErrorThrower.class);
+        try {
+            thrower.throwError();
+            fail();
+        } catch (ArrayIndexOutOfBoundsException e) {
+            // Check the stacktrace
+            StackTraceElement[] stackTrace = e.getStackTrace();
+            assertEquals(0, stackTrace.length);
+        } catch (Throwable e) {
+            log.info("----------------");
+            e.printStackTrace();
+            fail(e.getMessage());
+        }
+    }
+
     interface WithoutDeclareError {
         void throwError();
     }
@@ -448,6 +497,40 @@ public class RMIFunctionalityTest {
             throw new ArrayIndexOutOfBoundsException();
         }
     }
+
+    public static class AIOOBEThrowerWithEmptyStacktrace implements ErrorThrower {
+
+        private final boolean immutable;
+
+        public AIOOBEThrowerWithEmptyStacktrace(boolean immutable) {
+            this.immutable = immutable;
+        }
+
+        @Override
+        public void throwError() {
+            throw new AIOOBExceptionWithEmptyStacktrace(immutable);
+        }
+    }
+
+    public static class AIOOBExceptionWithEmptyStacktrace extends ArrayIndexOutOfBoundsException {
+        private final boolean immutable;
+
+        public AIOOBExceptionWithEmptyStacktrace(boolean immutable) {
+            this.immutable = immutable;
+        }
+
+        @Override
+        public synchronized Throwable fillInStackTrace() {
+            return this;
+        }
+
+        @Override
+        public void setStackTrace(StackTraceElement[] stackTrace) {
+            if (!immutable)
+                super.setStackTrace(stackTrace);
+        }
+    }
+
 
     private static void assertStackTraceIsLocal(StackTraceElement[] examine) {
         StackTraceElement[] reference = Thread.currentThread().getStackTrace();

@@ -454,7 +454,6 @@ the order they are listed and concatenated into single data set.
 The tool can read several input formats and convert them into IPF format.
 The tool analyses file name to decide what input format is used.
 @br;If file name contains ".xml" then it is considered to be OCC FIXML file.
-@br;If file name contains "mo.dat" then it is considered to be CME MO.dat file.
 @br;Otherwise file is considered to be IPF format file.
 
 The tool supports file compression formats "zip" and "gzip" both for reading and writing.
@@ -475,10 +474,6 @@ Examples:
 @br;This will read zipped OCC FIXML file "thinkorswimseries_2008-05-19.xml.zip",
 transform it according to "occ.transform" program, run data checks and
 write zipped instruments to "occ_2008-05-19.ipf.zip" file.
-
-    Instruments -r mo.dat.zip -t cme.transform -w cme_2008-05-19.ipf.zip
-@br;This will read zipped CME MO.dat file "mo.dat.zip", transform it according to
-"cme.transform" program and write zipped instruments to "cme_2008-05-19.ipf.zip" file.
 
     Instruments -r data.ipf.zip -t 'if (UNDERLYING != "SPX") delete();' -w SPX.ipf
 @br;This will read zipped IPF file "data.ipf.zip", transform it according to

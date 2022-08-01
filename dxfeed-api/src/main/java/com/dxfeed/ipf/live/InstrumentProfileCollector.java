@@ -20,6 +20,7 @@ import com.dxfeed.ipf.InstrumentProfileType;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
@@ -52,7 +53,7 @@ public class InstrumentProfileCollector {
 
     private final IndexedSet<String, Entry> entriesBySymbol = IndexedSet.create((IndexerFunction<String, Entry>) entry -> entry.symbol); // sync
     private final CopyOnWriteArrayList<Agent> agents = new CopyOnWriteArrayList<>(); // sync
-    private final Executor agentExecutor = createAgentExecutor();
+    private volatile Executor executor = createAgentExecutor();
     private Entry tail = new Entry(); // not-null, sync
 
     private long lastUpdateTime = System.currentTimeMillis();
@@ -133,9 +134,7 @@ public class InstrumentProfileCollector {
      * @param generations a set of generation tags.
      */
     public final void removeGenerations(Set<Object> generations) {
-        if (generations == null)
-            throw new NullPointerException();
-        if (generations.isEmpty())
+        if (Objects.requireNonNull(generations, "generations").isEmpty())
             return; // nothing to do
         boolean removed = false;
         synchronized (this) {
@@ -190,19 +189,35 @@ public class InstrumentProfileCollector {
     }
 
     /**
+     * Returns executor for processing instrument profile update notifications.
+     * By default, single-threaded executor is used to process updates asynchronously.
+     *
+     * @return executor for processing instrument profile update notifications.
+     */
+    public Executor getExecutor() {
+        return executor;
+    }
+
+    /**
+     * Changes executor for processing processing instrument profile update notifications.
+     *
+     * @param executor non-null executor for processing instrument profile update notifications.
+     */
+    public void setExecutor(Executor executor) {
+        this.executor = Objects.requireNonNull(executor, "executor");
+    }
+
+    /**
      * Adds listener that is notified about any updates in the set of instrument profiles.
-     * If a set of instrument profiles is not empty, then this listener is immediately
-     * {@link InstrumentProfileUpdateListener#instrumentProfilesUpdated(Iterator) notified}
-     * right from inside this add method.
+     * If a set of instrument profiles is not empty, then this listener will be immediately
+     * {@link InstrumentProfileUpdateListener#instrumentProfilesUpdated(Iterator) notified}.
      *
      * @param listener profile update listener.
      */
     public final void addUpdateListener(InstrumentProfileUpdateListener listener) {
-        if (listener == null)
-            throw new NullPointerException("null listener");
-        Agent agent = new Agent(listener);
+        Agent agent = new Agent(Objects.requireNonNull(listener, "listener"));
         agents.add(agent);
-        agentExecutor.execute(agent::update);
+        executor.execute(agent::update);
     }
 
     /**
@@ -251,16 +266,15 @@ public class InstrumentProfileCollector {
     }
 
     private void notifyAgents() {
+        Executor executor = this.executor; // Atomic read
         for (Agent agent : agents) {
-            agentExecutor.execute(agent::update);
+            executor.execute(agent::update);
         }
     }
 
     // SYNC(this) required
     private boolean updateInstrumentProfileImpl(InstrumentProfile ip, Object generation) {
-        if (ip == null)
-            throw new NullPointerException("null instrument");
-        String symbol = ip.getSymbol();
+        String symbol = Objects.requireNonNull(ip, "ip").getSymbol();
         Entry oldEntry = entriesBySymbol.getByKey(symbol);
         if (oldEntry != null && oldEntry.ip != ip && oldEntry.ip.equals(ip)) {
             // different instance of the same instrument -- just update the generation (no need to notify)
@@ -385,7 +399,7 @@ public class InstrumentProfileCollector {
                     listener.instrumentProfilesUpdated(this);
                 }
             } catch (Throwable t) {
-                log.error("Exception in InstrumentProfile update listener", t);
+                log.error("Exception in InstrumentProfileUpdateListener", t);
             }
         }
 
@@ -419,5 +433,3 @@ public class InstrumentProfileCollector {
         });
     }
 }
-
-

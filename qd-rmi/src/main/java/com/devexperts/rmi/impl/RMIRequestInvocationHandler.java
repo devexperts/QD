@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -44,14 +44,26 @@ class RMIRequestInvocationHandler implements InvocationHandler {
 
     // ==================== private static implementation ====================
 
-    static void trimStackTrace(Throwable cause) {
+    /**
+     * Extend stacktrace of the remote exception {@code cause} with local stack trace, so the client code could see both
+     * local and remote contexts of the exception. Remote and local parts of the stacktrace separated by artificial
+     * stack frame {@link #RMI_LAYER_SEPARATOR_FRAME}.
+     * <p>
+     * The procedure may fail if provided exception doesn't support stack trace substitution, in that case provided
+     * exception will remain unchanged.
+     *
+     * @param cause remote exception to be augmented
+     */
+    static void extendRemoteStackTrace(Throwable cause) {
         // Set the proper stack-trace for the cause.
         StackTraceElement[] remoteStackTrace = cause.getStackTrace();
-        cause.fillInStackTrace();
-        StackTraceElement[] localStackTrace =  cause.getStackTrace();
-        // Two first (topmost) elements of the local stack-trace should be omitted:
+        StackTraceElement[] localStackTrace =  new Throwable().getStackTrace();
+        // Three first (topmost) elements of the local stack-trace should be omitted:
+        // com.devexperts.rmi.impl.RMIRequestInvocationHandler.extendRemoteStackTrace(...)
         // com.devexperts.rmi.impl.RMIInvocationHandler.invoke(RMIInvocationHandler.java:58)
         // $ProxyN.throwError(Unknown Source)
+        if (localStackTrace.length < 4) // something weird happened, maybe unsupported platform
+            return;
         StackTraceElement[] combinedStackTrace =
             new StackTraceElement[remoteStackTrace.length + localStackTrace.length - 2];
         System.arraycopy(remoteStackTrace, 0, combinedStackTrace, 0, remoteStackTrace.length);
@@ -94,7 +106,7 @@ class RMIRequestInvocationHandler implements InvocationHandler {
             } catch (RMIException e) {
                 if (e.getType() == RMIExceptionType.APPLICATION_ERROR) {
                     Throwable cause = e.getCause(); // always not null for APPLICATION_ERROR
-                    trimStackTrace(cause);
+                    extendRemoteStackTrace(cause);
                     throw cause;
                 }
                 throw e;

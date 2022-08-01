@@ -60,6 +60,8 @@ public class InstrumentProfileComposer implements Closeable {
         writeFormats(profiles, skipRemoved);
         writeProfiles(profiles, skipRemoved);
         types.clear();
+        // Force flushing data to downstream
+        writer.flush();
     }
 
     public void composeNewLine() throws IOException {
