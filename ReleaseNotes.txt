@@ -1,3 +1,14 @@
+QDS 3.314:
+
+* [QD-1404] dxFeed API: Add missing fields to Profile event
+  - added fields: beta, earningsPerShare, dividendFrequency, exDividendAmount, exDividendDayId, shares, freeFloat
+* [QD-1406] Add support for arbitrary URLs to onDemand connector
+  - ondemand connector accepts a comma-separated list of endpoint addresses, each represented in a form of full URL
+    or a "host[:port]" format. The latter is equivalent to "http://host:port/MarketDataReplay" URL.
+* [QD-1390] Create symbol range QD filter
+  - added com.devexperts.qd.SymbolStriper class to API (with new filters)
+  - see qds tools "stripers" and "filters" help article for more info
+
 QDS 3.313:
 
 * [QD-1398] Allow custom executor on InstrumentProfileCollector

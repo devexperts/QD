@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -206,15 +206,15 @@ public class ImplCodeGen {
         ctx.delegate("Profile", Profile.class, "Profile").
             inheritDelegateFrom(MARKET_EVENT_DELEGATE).
             inheritMappingFrom(MARKET_EVENT_MAPPING).
-            field("Beta", FieldType.DECIMAL_AS_DOUBLE).optional().
-            field("Eps", FieldType.DECIMAL_AS_DOUBLE).optional().
-            field("DivFreq", FieldType.INT_DECIMAL).optional().
-            field("ExdDivAmount", "ExdDiv.Amount", FieldType.DECIMAL_AS_DOUBLE).optional().
-            field("ExdDivDate", "ExdDiv.Date", FieldType.DATE).optional().
+            map("Beta", FieldType.DECIMAL_AS_DOUBLE).optional().
+            map("EarningsPerShare", "Eps", "Eps", FieldType.DECIMAL_AS_DOUBLE).optional().
+            map("DividendFrequency", "DivFreq", "DivFreq", FieldType.DIV_FREQUENCY).optional().
+            map("ExDividendAmount", "ExdDivAmount", "ExdDiv.Amount", FieldType.DECIMAL_AS_DOUBLE).optional().
+            map("ExDividendDayId", "ExdDivDate", "ExdDiv.Date", FieldType.DATE).optional().
             map("High52WeekPrice", "HighPrice52", "52High.Price", FieldType.PRICE).optional().
             map("Low52WeekPrice", "LowPrice52", "52Low.Price", FieldType.PRICE).optional().
-            field("Shares", FieldType.DECIMAL_AS_LONG).optional().
-            field("FreeFloat", FieldType.DECIMAL_AS_LONG).optional().
+            map("Shares", FieldType.SHARES).optional().
+            map("FreeFloat", FieldType.SHARES).optional().
             map("HighLimitPrice", "HighLimitPrice", FieldType.PRICE).optional().
             map("LowLimitPrice", "LowLimitPrice", FieldType.PRICE).optional().
             map("HaltStartTime", "Halt.StartTime", FieldType.TIME_SECONDS).optional().

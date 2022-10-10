@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -27,7 +27,7 @@ import java.util.Map;
 
 /**
  * Token that specifies and grants access to market data service.
- * The token is signed using shared secret between market data provider and the sponsor firm.
+ * The token is signed using a shared secret between the market data provider and the sponsor firm.
  */
 public class MarketDataToken implements Serializable {
     private static final long serialVersionUID = 0;
@@ -40,20 +40,21 @@ public class MarketDataToken implements Serializable {
 
     /** Configuration parameter for service state, true or false. */
     public static final String SERVICE_ACTIVE = "service_active";
-    /** Configuration parameter for service message to be shown for end-users. */
+    /** Configuration parameter for a service message to be shown for end-users. */
     public static final String SERVICE_MESSAGE = "service_message";
     /** Configuration parameter for minimum serviceable time in a "yyyy-MM-dd HH:mm:ss z" format or as plain long milliseconds. */
     public static final String SERVICE_MIN_TIME = "service_minTime";
     /** Configuration parameter for maximum serviceable time in a "yyyy-MM-dd HH:mm:ss z" format or as plain long milliseconds. */
     public static final String SERVICE_MAX_TIME = "service_maxTime";
-    /** Configuration parameter for a comma-separated list of "host:port" addresses to be used for market data requests. */
+    /** Configuration parameter for a comma-separated list of individual addresses
+     * (each represented by an URL or a "host:port" pair) to be used for market data requests. */
     public static final String SERVICE_ADDRESS = "service_address";
 
     /** Configuration parameter for a contract name. */
     public static final String TOKEN_CONTRACT = "token_contract";
-    /** Configuration parameter for token timeout (how long it remains valid), in milliseconds. */
+    /** Configuration parameter for a token timeout (how long it remains valid), in milliseconds. */
     public static final String TOKEN_TIMEOUT = "token_timeout";
-    /** Configuration parameter for shared secret key. */
+    /** Configuration parameter for a shared secret key. */
     public static final String TOKEN_SECRET = "token_secret";
 
     private final boolean serviceActive;

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -83,6 +83,15 @@ enum FieldType {
         .addAccess(Access.createWithAccessPattern("WideDecimal", "long", "0", "getAsWideDecimal(cursor, %s)", "setAsWideDecimal(cursor, %s, %s)"))
         .setMapper(new DecimalMapper(int.class))
     ),
+    DIV_FREQUENCY(new Builder()
+        .addField(new Field(false, SerialFieldType.COMPACT_INT, true))
+        .addAccess(Access.createWithAccessPattern("", "int", "0", "getAsInt(cursor, %s)", "setAsInt(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Long", "long", "0", "getAsLong(cursor, %s)", "setAsLong(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Double", "double", "Double.NaN", "getAsDouble(cursor, %s)", "setAsDouble(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getAsTinyDecimal(cursor, %s)", "setAsTinyDecimal(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("WideDecimal", "long", "0", "getAsWideDecimal(cursor, %s)", "setAsWideDecimal(cursor, %s, %s)"))
+        .setMapper(new DefaultMapper("Double", double.class))
+    ),
     SIZE(new Builder()
         .addField(new Field(false, SerialFieldType.COMPACT_INT, true, "dxscheme.size"))
         .addAccess(Access.createWithAccessPattern("", "int", "0", "getAsInt(cursor, %s)", "setAsInt(cursor, %s, %s)"))
@@ -94,6 +103,14 @@ enum FieldType {
     ),
     VOLUME(new Builder()
         .addField(new Field(false, SerialFieldType.DECIMAL, true, "dxscheme.volume", "dxscheme.size"))
+        .addAccess(Access.createWithAccessPattern("", "long", "0", "getAsLong(cursor, %s)", "setAsLong(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Double", "double", "Double.NaN", "getAsDouble(cursor, %s)", "setAsDouble(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getAsTinyDecimal(cursor, %s)", "setAsTinyDecimal(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("WideDecimal", "long", "0", "getAsWideDecimal(cursor, %s)", "setAsWideDecimal(cursor, %s, %s)"))
+        .setMapper(new DefaultMapper("Double", double.class))
+    ),
+    SHARES(new Builder()
+        .addField(new Field(false, SerialFieldType.DECIMAL, true, "dxscheme.shares"))
         .addAccess(Access.createWithAccessPattern("", "long", "0", "getAsLong(cursor, %s)", "setAsLong(cursor, %s, %s)"))
         .addAccess(Access.createWithAccessPattern("Double", "double", "Double.NaN", "getAsDouble(cursor, %s)", "setAsDouble(cursor, %s, %s)"))
         .addAccess(Access.createWithAccessPattern("Decimal", "int", "0", "getAsTinyDecimal(cursor, %s)", "setAsTinyDecimal(cursor, %s, %s)"))

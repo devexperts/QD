@@ -184,7 +184,7 @@ public class MessageConnectors {
         List<MessageConnector> result = new ArrayList<>();
         Set<String> usedNames = new HashSet<>();
 
-        if ((addresses.startsWith("("))) {
+        if (addresses.startsWith("(")) {
             for (String s : QDConfig.splitParenthesisSeparatedString(addresses))
                 result.addAll(createConfiguredConnector(s, acFactory, parentStats, base, usedNames));
         } else {

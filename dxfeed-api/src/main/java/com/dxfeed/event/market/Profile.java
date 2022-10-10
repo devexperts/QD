@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,7 +11,9 @@
  */
 package com.dxfeed.event.market;
 
+import com.devexperts.util.DayUtil;
 import com.devexperts.util.TimeFormat;
+import com.devexperts.util.WideDecimal;
 import com.dxfeed.event.LastingEvent;
 
 import javax.xml.bind.annotation.XmlRootElement;
@@ -38,7 +40,14 @@ import javax.xml.bind.annotation.XmlType;
  * <li>{@link #getHighLimitPrice() highLimitPrice} - maximal (high) allowed price;
  * <li>{@link #getLowLimitPrice() lowLimitPrice} - minimal (low) allowed price;
  * <li>{@link #getHigh52WeekPrice() high52WeekPrice} - maximal (high) price in last 52 weeks;
- * <li>{@link #getLow52WeekPrice() low52WeekPrice} - minimal (low) price in last 52 weeks.
+ * <li>{@link #getLow52WeekPrice() low52WeekPrice} - minimal (low) price in last 52 weeks;
+ * <li>{@link #getBeta() beta} - the correlation coefficient of the instrument to the S&amp;P500 index;
+ * <li>{@link #getEarningsPerShare() earningsPerShare} - earnings per share;
+ * <li>{@link #getDividendFrequency() dividendFrequency} - Frequency of cash dividends payments per year (calculated);
+ * <li>{@link #getExDividendAmount() exDividendAmount} - the amount of the last paid dividend;
+ * <li>{@link #getExDividendDayId() exDividendDayId} - identifier of the ex-dividend date;
+ * <li>{@link #getShares() shares} - shares outstanding;
+ * <li>{@link #getFreeFloat() freeFloat} - the number of shares that are available to the public for trade.
  * </ul>
  *
  *
@@ -51,6 +60,9 @@ import javax.xml.bind.annotation.XmlType;
     "description", "shortSaleRestriction", "tradingStatus", "statusReason",
     "haltStartTime", "haltEndTime", "highLimitPrice", "lowLimitPrice",
     "high52WeekPrice", "low52WeekPrice",
+    "beta", "earningsPerShare", "dividendFrequency",
+    "exDividendAmount", "exDividendDayId",
+    "shares", "freeFloat"
 })
 public class Profile extends MarketEvent implements LastingEvent<String> {
     private static final long serialVersionUID = 0;
@@ -83,6 +95,13 @@ public class Profile extends MarketEvent implements LastingEvent<String> {
     private double lowLimitPrice = Double.NaN;
     private double high52WeekPrice = Double.NaN;
     private double low52WeekPrice = Double.NaN;
+    private double beta = Double.NaN;
+    private double earningsPerShare = Double.NaN;
+    private double dividendFrequency = Double.NaN;
+    private double exDividendAmount = Double.NaN;
+    private int exDividendDayId;
+    private double shares = Double.NaN;
+    private double freeFloat = Double.NaN;
     private int flags;
 
     /**
@@ -301,6 +320,120 @@ public class Profile extends MarketEvent implements LastingEvent<String> {
     }
 
     /**
+     * Returns the correlation coefficient of the instrument to the S&amp;P500 index.
+     * @return the correlation coefficient of the instrument to the S&amp;P500 index.
+     */
+    public double getBeta() {
+        return beta;
+    }
+
+    /**
+     * Changes the correlation coefficient of the instrument to the S&amp;P500 index.
+     * @param beta the correlation coefficient of the instrument to the S&amp;P500 index
+     */
+    public void setBeta(double beta) {
+        this.beta = beta;
+    }
+
+    /**
+     * Returns earnings per share (the company’s profits divided by the number of shares).
+     * @return earnings per share
+     */
+    public double getEarningsPerShare() {
+        return earningsPerShare;
+    }
+
+    /**
+     * Changes Earnings per share (the company’s profits divided by the number of shares).
+     * @param earningsPerShare earnings per share
+     */
+    public void setEarningsPerShare(double earningsPerShare) {
+        this.earningsPerShare = earningsPerShare;
+    }
+
+    /**
+     * Returns frequency of cash dividends payments per year (calculated).
+     * @return Frequency of cash dividends payments per year
+     */
+    public double getDividendFrequency() {
+        return dividendFrequency;
+    }
+
+    /**
+     * Changes frequency of cash dividends payments per year.
+     * @param dividendFrequency frequency of cash dividends payments per year
+     */
+    public void setDividendFrequency(double dividendFrequency) {
+        this.dividendFrequency = dividendFrequency;
+    }
+
+    /**
+     * Returns the amount of the last paid dividend.
+     * @return the amount of the last paid dividend
+     */
+    public double getExDividendAmount() {
+        return exDividendAmount;
+    }
+
+    /**
+     * Changes the amount of the last paid dividend.
+     * @param exDividendAmount the amount of the last paid dividend
+     */
+    public void setExDividendAmount(double exDividendAmount) {
+        this.exDividendAmount = exDividendAmount;
+    }
+
+    /**
+     * Returns identifier of the day of the last dividend payment (ex-dividend date).
+     * Identifier of the day is the number of days passed since January 1, 1970.
+     * @return the identifier of the day of the last dividend payment
+     */
+    public int getExDividendDayId() {
+        return exDividendDayId;
+    }
+
+    /**
+     * Changes identifier of the day of the last dividend payment (ex-dividend date).
+     * Identifier of the day is the number of days passed since January 1, 1970.
+     * @param exDividendDayId identifier of the day of the last dividend payment
+     */
+    public void setExDividendDayId(int exDividendDayId) {
+        this.exDividendDayId = exDividendDayId;
+    }
+
+    /**
+     * Returns the number of shares outstanding.
+     * @return shares outstanding
+     */
+    public double getShares() {
+        return shares;
+    }
+
+    /**
+     * Changes the number of shares outstanding.
+     * @param shares shares outstanding.
+     */
+    public void setShares(double shares) {
+        this.shares = shares;
+    }
+
+    /**
+     * Returns free-float - the number of shares outstanding that are available to the public for trade.
+     * @return free-float
+     */
+    public double getFreeFloat() {
+        return freeFloat;
+    }
+
+    /**
+     * Changes free-float - the number of shares outstanding that are available to the public for trade
+     * @param freeFloat the number of shares outstanding that are available to the public for trade
+     */
+    public void setFreeFloat(double freeFloat) {
+        this.freeFloat = freeFloat;
+    }
+
+    /**
      * Returns string representation of this profile event.
      * @return string representation of this profile event.
      */
@@ -324,7 +457,14 @@ public class Profile extends MarketEvent implements LastingEvent<String> {
             ", highLimitPrice=" + highLimitPrice +
             ", lowLimitPrice=" + lowLimitPrice +
             ", high52WeekPrice=" + high52WeekPrice +
-            ", low52WeekPrice=" + low52WeekPrice;
+            ", low52WeekPrice=" + low52WeekPrice +
+            ", beta=" + beta +
+            ", earningsPerShare=" + earningsPerShare +
+            ", dividendFrequency=" + dividendFrequency +
+            ", exDividendAmount=" + exDividendAmount +
+            ", exDividendDay=" + DayUtil.getYearMonthDayByDayId(exDividendDayId) +
+            ", shares=" + WideDecimal.toString(WideDecimal.composeWide(shares)) +
+            ", freeFloat=" + WideDecimal.toString(WideDecimal.composeWide(freeFloat));
     }
 
     // ========================= protected access for delegate =========================

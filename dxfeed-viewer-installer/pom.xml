@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.313</version>
+        <version>3.314</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -30,7 +30,7 @@
         use of ${project.version} here would cause problems during release with jgitflow plugin dependency tracking.
         jgitflow plugin will synchronize this value with main project version during release procedure automatically.
         -->
-        <viewer.version>3.313</viewer.version>
+        <viewer.version>3.314</viewer.version>
     </properties>
 
     <profiles>

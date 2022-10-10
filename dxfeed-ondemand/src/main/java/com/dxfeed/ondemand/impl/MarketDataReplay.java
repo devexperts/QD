@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -29,13 +29,18 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.MalformedURLException;
 import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -53,7 +58,7 @@ public class MarketDataReplay implements Runnable {
 
     private volatile Thread worker;
 
-    private volatile MarketDataToken token = new MarketDataToken(Collections.<String,String>emptyMap(), null);
+    private volatile MarketDataToken token = new MarketDataToken(Collections.<String, String>emptyMap(), null);
     private volatile MarketDataToken badToken; // Last token for which Access Error was received.
     private final Map<String, Long> badAddresses = Collections.synchronizedMap(new HashMap<String, Long>());
     private long badAddressTimeout = 10 * TimeUtil.MINUTE;
@@ -120,8 +125,9 @@ public class MarketDataReplay implements Runnable {
         if (time == current.time)
             return; // nothing changes
         Log.log.info("setTime(" + TimeFormat.DEFAULT.withMillis().format(time) + ")");
-        for (CurrentSegment segment : current.segments)
+        for (CurrentSegment segment : current.segments) {
             segment.restart();
+        }
         current.time = time;
         if (!current.isCurrentInterval(time) && cache != null)
             cache.rebuildCurrentSegments(current);
@@ -136,7 +142,9 @@ public class MarketDataReplay implements Runnable {
         current.subscription.clear();
     }
 
-    /** @deprecated Use {@link #setSubscription(RecordBuffer)} */
+    /**
+     * @deprecated Use {@link #setSubscription(RecordBuffer)}
+     */
     public void setSubscription(SubscriptionBuffer sb) {
         RecordBuffer sub = RecordBuffer.getInstance(RecordMode.SUBSCRIPTION);
         sub.processSubscription(sb);
@@ -207,7 +215,8 @@ public class MarketDataReplay implements Runnable {
             }
         }
         Log.log.info(method + ": " + goodRecords.size() + " records, " + goodSymbols.size() + " symbols" +
-            ", ignored " + badRecords + " " + badSymbols + ", categories:" + MDREventUtil.countCategories(subscription));
+            ", ignored " + badRecords + " " + badSymbols + ", categories:" +
+            MDREventUtil.countCategories(subscription));
         return subscription;
     }
 
@@ -286,49 +295,65 @@ public class MarketDataReplay implements Runnable {
 
         boolean urgent = false;
         ArrayList<Key> requestKeys = new ArrayList<Key>();
-        for (Key key : current.subscription)
+        for (Key key : current.subscription) {
             if (!presentKeys.containsKey(key)) {
                 requestKeys.add(key);
                 if (!expiredKeys.containsKey(key))
                     urgent = true;
             }
+        }
         if (requestKeys.isEmpty())
             return null;
         Collections.sort(requestKeys, Key.COMPARATOR);
 
         ReplayRequest request = new ReplayRequest();
         request.setToken(token);
-        request.setAllowedDelay(urgent ? Math.min((long) ((requestTime - current.time) / current.replaySpeed), 60000) : 60000);
+        request.setAllowedDelay(
+            urgent ? Math.min((long) ((requestTime - current.time) / current.replaySpeed), 60000) : 60000);
         request.setRequestTime(requestTime);
         request.addRequestKeys(requestKeys);
         Log.log.info("Request <" + token.getTokenUser() + "/" + token.getTokenContract() + "> [" + requestKeys.size() +
             " keys at " + TimeFormat.DEFAULT.format(requestTime) + "]" + MDREventUtil.countCategories(requestKeys) +
-            ", urgent " + urgent + ", replay speed " + current.replaySpeed + ", delay " + request.getAllowedDelay() / 1000.0 + " seconds");
+            ", urgent " + urgent + ", replay speed " + current.replaySpeed +
+            ", delay " + request.getAllowedDelay() / 1000.0 + " seconds");
         return request;
     }
 
-    private ByteArrayInput doRequest(ByteArrayOutput request, int addressHash, MarketDataToken token) {
-        ArrayList<String> addresses = new ArrayList<String>(Arrays.asList(token.getServiceAddress().split(",")));
-        if (!addresses.isEmpty() && badAddresses.keySet().containsAll(addresses))
-            badAddresses.clear();
+
+    private ByteArrayInput doRequest(ReplayRequest request) throws IOException {
+        MarketDataToken token = request.getToken();
+        int addressHash = getRequestHash(request);
+        ByteArrayOutput requestBody = request.write();
+        // resolve addresses every time - delegating caching and refreshing strategy to Java runtime.
+        ArrayList<String> addresses = getResolvedAddresses(token.getServiceAddress());
+        if (!addresses.isEmpty() &&
+            (badAddresses.keySet().containsAll(addresses) || badAddresses.size() > addresses.size() * 2))
+        {
+            badAddresses.clear(); // clear badAddresses if it became overpopulated
+        }
         while (!addresses.isEmpty()) {
             String address = addresses.remove(Math.abs(addressHash % addresses.size()));
             Long badTime = badAddresses.get(address);
-            if (badTime != null && badTime > System.currentTimeMillis() - badAddressTimeout)
-                continue;
+            if (badTime != null) {
+                if (badTime > System.currentTimeMillis() - badAddressTimeout)
+                    continue;
+                badAddresses.remove(address, badTime); // clear stale badAddress element
+            }
             HttpURLConnection con = null;
             try {
-                con = prepareConnection(address);
+                con = prepareConnection(request, address);
                 OutputStream output = con.getOutputStream();
-                output.write(request.getBuffer(), 0, request.getPosition());
+                output.write(requestBody.getBuffer(), 0, requestBody.getPosition());
                 output.close();
-                sentBytes.addAndGet(200 + request.getPosition());
+                sentBytes.addAndGet(200 + requestBody.getPosition());
                 InputStream input = con.getInputStream();
                 receivedBytes.addAndGet(100);
                 status = null;
                 return readResponse(input);
             } catch (IOException e) {
-                if (e instanceof NoRouteToHostException || e instanceof ConnectException || e instanceof SocketTimeoutException) {
+                if (e instanceof NoRouteToHostException || e instanceof ConnectException ||
+                    e instanceof SocketTimeoutException)
+                {
                     Log.log.error("Unable to connect to " + LogUtil.hideCredentials(address) + ": " + e);
                     badAddresses.put(address, System.currentTimeMillis());
                     continue;
@@ -353,14 +378,80 @@ public class MarketDataReplay implements Runnable {
         return null;
     }
 
-    private HttpURLConnection prepareConnection(String address) throws IOException {
-        URL url = new URL("http://" + address + "/MarketDataReplay");
+    /**
+     * extract a normalized list of service endpoint URLs from a comma-separated address list:
+     * <ul>
+     *     <li>each element is a complete endpoint URL
+     *     <li>symbolic addresses from token are resolved, multi-address names expanded (one URL for each IP)
+     *     <li>list is ordered and doesn't contain duplicates
+     * </ul>
+     * Note: package-private for tests
+     * @param addressList comma-separated list of addresses represented either as an URL, or a host[:port]
+     * @return a normalized list of URLs
+     */
+    ArrayList<String> getResolvedAddresses(String addressList) {
+        Set<String> resolvedURLs = new LinkedHashSet<>();
+        for (String addr : addressList.split(",")) {
+            URL url = null;
+            try {
+                url = addrToURL(addr);
+                String host = url.getHost();
+                String port = url.getPort() == -1 ? "" : ":" + url.getPort();
+                // log.info("Resolving IPs for " + host);
+                InetAddress[] all = getAllByName(host);
+                Arrays.sort(all, (o1, o2) -> {
+                    byte[] a1 = o1.getAddress();
+                    byte[] a2 = o2.getAddress();
+                    int n = Math.min(a1.length, a2.length);
+                    for (int i = 0; i < n; i++) {
+                        int delta = (a1[i] & 0xff) - (a2[i] & 0xff);
+                        if (delta != 0)
+                            return delta;
+                    }
+                    return a1.length - a2.length;
+                });
+                for (InetAddress iaddr : all) {
+                    String hostAddress = iaddr.getHostAddress();
+                    if (iaddr instanceof Inet6Address)
+                        hostAddress = "[" + hostAddress + "]";
+                    resolvedURLs.add(url.getProtocol() + "://" + hostAddress + port + url.getPath());
+                }
+            } catch (UnknownHostException e) {
+                Log.log.warn("Failed to resolve IPs for " + addr);
+                // keep unresolved URL in case we're behind some proxy
+                resolvedURLs.add(url.toString());
+            } catch (MalformedURLException e) {
+                Log.log.warn("Malformed address element " + addr);
+            }
+        }
+        return new ArrayList<>(resolvedURLs);
+    }
+
+    // introduced for test purposes
+    InetAddress[] getAllByName(String host) throws UnknownHostException {
+        return InetAddress.getAllByName(host);
+    }
+
+    // convert an address element to URL. Package-private for tests
+    static URL addrToURL(String addr) throws MalformedURLException {
+        if (addr.regionMatches(true, 0, "http://", 0, 7) || addr.regionMatches(true, 0, "https://", 0, 8)) {
+            // full URL expected
+            return new URL(addr);
+        } else {
+            // host[:port] expected
+            return new URL("http://" + addr + "/MarketDataReplay");
+        }
+    }
+
+    private HttpURLConnection prepareConnection(ReplayRequest request, String address) throws IOException {
+        URL url = new URL(address);
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
         con.setConnectTimeout(10000);
         con.setReadTimeout(60000);
         con.setRequestMethod("POST");
         con.setRequestProperty("Accept", "application/octet-stream");
         con.setRequestProperty("Content-Type", "application/octet-stream");
+        con.setRequestProperty("X-OnDemand-StartTime", TimeFormat.GMT.asFullIso().format(request.getRequestTime()));
         con.setDoOutput(true);
         return con;
     }
@@ -370,12 +461,14 @@ public class MarketDataReplay implements Runnable {
         ByteArrayInput response = new ByteArrayInput(new byte[10000]);
         response.setLimit(0);
         while (true) {
-            int n = input.read(response.getBuffer(), response.getLimit(), response.getBuffer().length - response.getLimit());
+            int n = input.read(response.getBuffer(), response.getLimit(),
+                response.getBuffer().length - response.getLimit());
             if (n < 0)
                 throw new IOException("Unexpected end of response");
             receivedBytes.addAndGet(n);
             response.setLimit(response.getLimit() + n);
-            if (response.getLimit() - response.getPosition() < ReplayUtil.getCompactLength(response.getBuffer(), response.getPosition()))
+            if (response.getLimit() - response.getPosition() <
+                ReplayUtil.getCompactLength(response.getBuffer(), response.getPosition()))
                 continue;
             int position = response.getPosition();
             int length = response.readCompactInt();
@@ -463,8 +556,9 @@ public class MarketDataReplay implements Runnable {
     // SYNC(this), requires cache != null
     private void readCurrent(RecordBuffer buffer, long time) {
         long usage = cache.nextUsage();
-        for (CurrentSegment segment : current.segments)
+        for (CurrentSegment segment : current.segments) {
             segment.read(buffer, time, usage);
+        }
     }
 
     private void updateReplaySpeed(long time) {
@@ -474,7 +568,8 @@ public class MarketDataReplay implements Runnable {
             prevReplayTime += dt;
             prevReplayMillis += dm;
         } else if (dt >= 1000 && dm >= 1000) {
-            current.replaySpeed = Math.floor((current.replaySpeed + Math.min(Math.max(0.1, (double) dt / dm), 10)) * 50 + 0.5) / 100;
+            current.replaySpeed =
+                Math.floor((current.replaySpeed + Math.min(Math.max(0.1, (double) dt / dm), 10)) * 50 + 0.5) / 100;
             prevReplayTime += dt;
             prevReplayMillis += dm;
         }
@@ -495,30 +590,33 @@ public class MarketDataReplay implements Runnable {
                 Thread.sleep(1000);
             } catch (InterruptedException ignored) {
             }
-        while (Thread.currentThread() == worker)
+        while (Thread.currentThread() == worker) {
             try {
                 MarketDataToken currentToken = token; // Atomic read.
                 if (testMode != null)
                     currentToken = MarketDataAccess.getInstance().createToken("test");
                 if (currentToken != badToken) {
                     ReplayRequest request = prepareRequest(currentToken, false);
-                    //todo prefetch in separate thread, only when current is not fetching and only if current set is defined (i.e. remember Long.MAX_VALUE)
+                    //todo prefetch in separate thread, only when current is not fetching and only
+                    // if current set is defined (i.e. remember Long.MAX_VALUE)
                     if (current.time >= current.endTime - prefetchInterval) {
-                        if (request == null)
+                        if (request == null) {
                             request = prepareRequest(currentToken, true);
-                        else
+                        } else {
                             awaken();
+                        }
                     }
                     if (request != null) {
                         long millis = System.currentTimeMillis();
                         long oldSent = sentBytes.longValue();
                         long oldReceived = receivedBytes.longValue();
-                        ByteArrayInput response = doRequest(request.write(), (int) (request.getRequestTime() / (30 * 60 * 1000)), currentToken);
+                        ByteArrayInput response = doRequest(request);
                         if (response != null) {
                             ArrayList<Segment> newSegments = unpackResponse(response);
                             long size = 0;
-                            for (Segment segment : newSegments)
+                            for (Segment segment : newSegments) {
                                 size += segment.size();
+                            }
                             Log.log.info("Response: " + Log.mb(size) + " in " + newSegments.size() + " segments" +
                                 ", sent " + Log.mb(sentBytes.longValue() - oldSent) +
                                 " received " + Log.mb(receivedBytes.longValue() - oldReceived) +
@@ -538,5 +636,16 @@ public class MarketDataReplay implements Runnable {
                 } catch (InterruptedException ignored) {
                 }
             }
+        }
+    }
+
+    /**
+     * Return a request hash to be used for load-balancing among available servers.
+     *
+     * @param request
+     * @return load-balancing hash
+     */
+    private int getRequestHash(ReplayRequest request) {
+        return (int) (request.getRequestTime() / (30 * 60 * 1000));
     }
 }

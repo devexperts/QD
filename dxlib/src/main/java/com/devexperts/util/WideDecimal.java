@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -70,6 +70,8 @@ public final class WideDecimal extends Number implements Comparable<WideDecimal>
                 if (result * pow10 == significand && result % SCIENTIFIC_MODULO != 0)
                     return result;
             }
+        } else if (rank == BIAS) {
+            return (significand % SCIENTIFIC_MODULO == 0) ? 0 : significand;
         } else {
             // integer number with possible trailing zeroes
             if (BIAS - rank <= EXACT_LONG_POWERS && BIAS - rank <= MAX_TRAILING_ZEROES) {
@@ -258,6 +260,8 @@ public final class WideDecimal extends Number implements Comparable<WideDecimal>
     }
 
     public static long composeWide(double value) {
+        if (value == (long) value)
+            return composeWide((long) value);
         return value >= 0 ? composeNonNegative(value, BIAS) :
             value < 0 ? neg(composeNonNegative(-value, BIAS)) :
             NaN;

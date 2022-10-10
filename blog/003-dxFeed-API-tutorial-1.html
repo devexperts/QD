@@ -132,7 +132,7 @@ only initiates the connection. This method does not block.
 DNS lookup, connection and reconnection process proceeds in the background
 and automatically recovers from any errors it encounters.
 
-<p>The subscription if handled in an asynchronous way, too, so an invocation of
+<p>The subscription is handled in an asynchronous way, too, so an invocation of
 <a href="http://docs.dxfeed.com/dxfeed/api/com/dxfeed/api/DXFeedSubscription.html#addSymbols(java.lang.Object...)">DXFeedSubscription.addSymbols</a>
 method on line 18 only initiates a process to subscribe to specified symbols.
 It does not block and does not throw exceptions. Event listeners get immediate notification when this event is already available

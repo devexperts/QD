@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -42,8 +42,15 @@ public final class ProfileDelegate extends MarketEventDelegateImpl<Profile> {
     @Override
     public Profile getEvent(Profile event, RecordCursor cursor) {
         super.getEvent(event, cursor);
+        event.setBeta(m.getBeta(cursor));
+        event.setEarningsPerShare(m.getEps(cursor));
+        event.setDividendFrequency(m.getDivFreqDouble(cursor));
+        event.setExDividendAmount(m.getExdDivAmount(cursor));
+        event.setExDividendDayId(m.getExdDivDate(cursor));
         event.setHigh52WeekPrice(m.getHighPrice52(cursor));
         event.setLow52WeekPrice(m.getLowPrice52(cursor));
+        event.setShares(m.getSharesDouble(cursor));
+        event.setFreeFloat(m.getFreeFloatDouble(cursor));
         event.setHighLimitPrice(m.getHighLimitPrice(cursor));
         event.setLowLimitPrice(m.getLowLimitPrice(cursor));
         event.setHaltStartTime(m.getHaltStartTimeMillis(cursor));
@@ -57,8 +64,15 @@ public final class ProfileDelegate extends MarketEventDelegateImpl<Profile> {
     @Override
     public RecordCursor putEvent(Profile event, RecordBuffer buf) {
         RecordCursor cursor = super.putEvent(event, buf);
+        m.setBeta(cursor, event.getBeta());
+        m.setEps(cursor, event.getEarningsPerShare());
+        m.setDivFreqDouble(cursor, event.getDividendFrequency());
+        m.setExdDivAmount(cursor, event.getExDividendAmount());
+        m.setExdDivDate(cursor, event.getExDividendDayId());
         m.setHighPrice52(cursor, event.getHigh52WeekPrice());
         m.setLowPrice52(cursor, event.getLow52WeekPrice());
+        m.setSharesDouble(cursor, event.getShares());
+        m.setFreeFloatDouble(cursor, event.getFreeFloat());
         m.setHighLimitPrice(cursor, event.getHighLimitPrice());
         m.setLowLimitPrice(cursor, event.getLowLimitPrice());
         m.setHaltStartTimeMillis(cursor, event.getHaltStartTime());

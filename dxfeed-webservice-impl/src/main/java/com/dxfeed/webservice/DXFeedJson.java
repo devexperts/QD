@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -205,6 +205,7 @@ public class DXFeedJson {
             addSerializer(CandleSymbol.class, new ToStringSerializer());
             addSerializer(IndexedEventSource.class, new ToStringSerializer());
             addSerializer(char.class, new NullSafeCharSerializer());
+            addSerializer(double.class, new DoubleSerializer());
         }
     }
 
@@ -256,6 +257,17 @@ public class DXFeedJson {
         @Override
         public void serialize(Character value, JsonGenerator jgen, SerializerProvider provider) throws IOException {
             jgen.writeString(value == '\0' ? "" : value.toString());
+        }
+    }
+
+    static class DoubleSerializer extends JsonSerializer<Double> {
+        @Override
+        public void serialize(Double value, JsonGenerator jgen, SerializerProvider provider) throws IOException {
+            if (value.longValue() == value) {
+                jgen.writeNumber(value.longValue());
+            } else {
+                jgen.writeNumber(value);
+            }
         }
     }
 }

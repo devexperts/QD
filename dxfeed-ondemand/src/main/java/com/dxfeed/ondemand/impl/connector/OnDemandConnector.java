@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -25,10 +25,6 @@ import com.dxfeed.api.impl.OnDemandConnectorMarker;
 import com.dxfeed.ondemand.impl.MarketDataReplay;
 import com.dxfeed.ondemand.impl.MarketDataToken;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Date;
 import javax.management.AttributeChangeNotification;
 import javax.management.ListenerNotFoundException;
@@ -236,43 +232,7 @@ public class OnDemandConnector extends AbstractMessageConnector
     }
 
     MarketDataToken resolveToken() {
-        StringBuilder resolvedAddress = new StringBuilder();
-        for (String addr : address.split(",")) {
-            int i = addr.lastIndexOf(':');
-            String host = i >= 0 ? addr.substring(0, i) : addr;
-            String port = i >= 0 ? addr.substring(i) : "";
-            try {
-                log.info("Resolving IPs for " + host);
-                InetAddress[] all = InetAddress.getAllByName(host);
-                Arrays.sort(all, new Comparator<InetAddress>() {
-                    @Override
-                    public int compare(InetAddress o1, InetAddress o2) {
-                        byte[] a1 = o1.getAddress();
-                        byte[] a2 = o2.getAddress();
-                        int n = Math.min(a1.length, a2.length);
-                        for (int i = 0; i < n; i++) {
-                            int delta = (a1[i] & 0xff) - (a2[i] & 0xff);
-                            if (delta != 0)
-                                return delta;
-                        }
-                        return a1.length - a2.length;
-                    }
-                });
-                for (InetAddress a : all) {
-                    appendAddress(resolvedAddress, a.getHostAddress() + port);
-                }
-            } catch (UnknownHostException e) {
-                log.warn("Failed to resolve IPs for " + host);
-                appendAddress(resolvedAddress, addr);
-            }
-        }
-        return MarketDataToken.fromUserPassword(getUser(), getPassword(), resolvedAddress.toString());
-    }
-
-    private void appendAddress(StringBuilder resolvedAddress, String addr) {
-        if (resolvedAddress.length() > 0)
-            resolvedAddress.append(",");
-        resolvedAddress.append(addr);
+        return MarketDataToken.fromUserPassword(getUser(), getPassword(), address);
     }
 
     @Override

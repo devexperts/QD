@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,7 +18,9 @@ import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.SpecificSubscriptionFilter;
 import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.qd.kit.FilterSyntaxException;
+import com.devexperts.qd.kit.HashFilter;
 import com.devexperts.qd.kit.PatternFilter;
+import com.devexperts.qd.kit.RangeFilter;
 import com.devexperts.qd.kit.RecordOnlyFilter;
 import com.devexperts.qd.spi.QDFilterContext;
 import com.devexperts.qd.spi.QDFilterFactory;
@@ -62,6 +64,16 @@ public class FilterFactoryImpl extends QDFilterFactory {
 
     @SpecificSubscriptionFilter("accepts regional records forming exchange data feed")
     public static final String REGFEED = "regfeed";
+
+    @SpecificSubscriptionFilter("hash symbol filter of form \"hash<M>of<N>\" " +
+        "(where M and N are integers and M<N and N is a power of 2), " +
+        "accepts symbols that belong to hash group M out of N")
+    public static final String HASH = HashFilter.HASH_FILTER_PREFIX;
+
+    @SpecificSubscriptionFilter("range symbol filter of form \"range_<A>_<B>_\" " +
+        "(where instead of '_' any character from the set of [_0-9a-zA-Z] can be used), " +
+        "accepts symbols that are equal or greater than A and less than B in dictionary order")
+    public static final String RANGE = RangeFilter.RANGE_FILTER_PREFIX;
 
     private static final String SYMBOL_SUFFIX = "symbol";
 
@@ -141,6 +153,10 @@ public class FilterFactoryImpl extends QDFilterFactory {
             return makeRecordFilter(spec, COMPFEED_RECORDS, true, false);
         if (spec.equals(REGFEED))
             return makeRecordFilter(spec, COMPFEED_RECORDS, false, true);
+        if (spec.startsWith(HASH))
+            return HashFilter.valueOf(getScheme(), spec);
+        if (spec.startsWith(RANGE))
+            return RangeFilter.valueOf(getScheme(), spec);
         return null;
     }
 

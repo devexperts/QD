@@ -606,7 +606,7 @@ means one of A, C, D, E, F, I, J, K or L character. '^' as the first symbol insi
 char class means negation, i.e. "[^N-P]" means "all characters except N, O or
 P". It can be used only once at the char class start.
 
-Pattern filters can not contain some special symbols like punctuation marks,
+Pattern filters cannot contain some special symbols like punctuation marks,
 quotes and brackets outside a char class. Lowercase latin letters are forbidden
 at the beginning of a pattern (they are reserved for project-specific filters)
 but they can be quoted using char classes.
@@ -632,6 +632,34 @@ filters are preprocessed effectively and they can be applied quickly not dependi
 on their complexity. Other simple filters (symbol or project-specific) can
 not be composed effectively, so long symbol lists processing for example can slow
 down performance.
+@# -----------------------------------------------------------------------------
+@article Stripers
+
+Stripers are used to split symbol universe into smaller non-intersecting parts.
+This is useful for example to split a large QD tape into several smaller parts
+based on some symbol pattern. Each stripe is described by a corresponding filter.
+
+     'by1'
+@br;Mono striper that puts all symbols into single stripe (identity striper).
+Empty string in striper configuration would default to mono striper.
+
+     'byhash<N>'
+@br;Hash striper that splits into N stripes (N must be a power of 2).
+Each stripe is described by a hash filter, e.g. striper 'byhash4' has 4 stripes
+defined by filters: 'hash0of4', 'hash1of4', 'hash2of4', and 'hash3of4'.
+
+     'byrange_[<Ri>_]+'
+@br;Range striper that splits into stripes described by range filters,
+e.g. striper 'byrange_A_E_F_' has 4 stripes defined by filters:
+'range__A_', 'range_A_E_', 'range_E_F_', and 'range_F__'.
+
+Note that range striper allows only limited set of characters in the pattern,
+namely [_a-zA-Z0-9] (to be safely used in filenames). In addition, unused symbol prefix
+that contains other characters and futures/option/spread prefixes will be removed.
+So, for example, symbols "ES", "/ESU23", "./ESH23C1800", and "=2*/ESU22-/ESU23"
+will all start with "ES" after removing unused prefixes and will fall into
+"range_E_F_" stripe.
+
 @# -----------------------------------------------------------------------------
 @article Time format
 
