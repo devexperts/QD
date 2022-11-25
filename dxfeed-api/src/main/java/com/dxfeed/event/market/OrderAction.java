@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -131,7 +131,7 @@ public enum OrderAction {
      */
     BUST(8);
 
-    private static final OrderAction[] ACTIONS = Util.buildEnumArrayByOrdinal(UNDEFINED, 9);
+    private static final OrderAction[] ACTIONS = Util.buildEnumArrayByOrdinal(UNDEFINED, 16);
 
     /**
      * Returns side by integer code bit pattern.

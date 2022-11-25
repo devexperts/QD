@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -31,7 +31,7 @@ public enum IcebergType {
      */
     SYNTHETIC(2);
 
-    private static final IcebergType[] TYPES = Util.buildEnumArrayByOrdinal(UNDEFINED, 3);
+    private static final IcebergType[] TYPES = Util.buildEnumArrayByOrdinal(UNDEFINED, 4);
 
     /**
      * Returns iceberg type by integer code bit pattern.

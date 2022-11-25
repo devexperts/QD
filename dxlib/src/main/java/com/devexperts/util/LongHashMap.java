@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -273,16 +273,6 @@ public final class LongHashMap<V> extends AbstractLongMap<V> implements Cloneabl
     public V getOrDefault(long key, V defaultValue) {
         V result = getExplicitly(key);
         return (result == NOT_FOUND) ? defaultValue : result;
-    }
-
-    // Implements LongMap#putIfAbsent(long, Object)
-    @Override
-    public V putIfAbsent(long key, V value) {
-        V result = getExplicitly(key);
-        if (result == NOT_FOUND) {
-            result = put(key, value);
-        }
-        return result;
     }
 
     // Implements LongMap#remove(long, Object)

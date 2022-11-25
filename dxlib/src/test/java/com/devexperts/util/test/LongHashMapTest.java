@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,28 +12,137 @@
 package com.devexperts.util.test;
 
 import com.devexperts.util.LongHashMap;
+import com.devexperts.util.LongMap;
 import junit.framework.TestCase;
 import org.junit.Assert;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.function.LongFunction;
+
 public class LongHashMapTest extends TestCase {
 
-    public void testGetOrDefaultIntegerKey() {
-        LongHashMap<Object> map = new LongHashMap<>();
-        Object expected = new Object();
-        Object def = new Object();
-        int key = 42;
-        map.put(key, expected);
-        Object value = map.getOrDefault(key, def);
-        Assert.assertEquals(expected, value);
+    private static final Object NO_VALUE = new Object() {
+        @Override
+        public String toString() {
+            return "NO_VALUE";
+        }
+    };
+    private static final String DEFAULT_INIT = "INIT"; // default initial value for initialized bucket
+    public Map<Long, String> map;
+    public LongMap<String> longMap;
+
+
+    @Override
+    protected void setUp() throws Exception {
+        map = new HashMap<>();
+        longMap = new LongHashMap<>();
     }
 
-    public void testRemoveIntegerKey() {
-        LongHashMap<Object> map = new LongHashMap<>();
-        Object expected = new Object();
-        int key = 42;
-        map.put(key, expected);
-        Object removed = map.remove(key);
-        Assert.assertEquals(expected, removed);
+
+    public void testGetOrDefault() {
+        standardChecks("getOrDefault", k -> map.getOrDefault(k, "B"), k -> longMap.getOrDefault(k, "B"));
+        standardChecks("getOrDefault", k -> map.getOrDefault(k, "B"), k -> longMap.getOrDefault(Long.valueOf(k), "B"));
+    }
+
+    public void testRemoveByKey() {
+        standardChecks("remove", k -> map.remove(k), k -> longMap.remove(k));
+        standardChecks("remove", k -> map.remove(k), k -> longMap.remove(Long.valueOf(k)));
+    }
+
+    public void testComputeIfAbsent() {
+        standardChecks("computeIfAbsent",
+            k -> map.computeIfAbsent(k, lk -> "B"),
+            k -> longMap.computeIfAbsent(k, lk -> "B"));
+        standardChecks("computeIfAbsent",
+            k -> map.computeIfAbsent(k, lk -> "B"),
+            k -> longMap.computeIfAbsent(Long.valueOf(k), lk -> "B"));
+        standardChecks("computeIfAbsent",
+            k -> map.computeIfAbsent(k, lk -> null),
+            k -> longMap.computeIfAbsent(k, lk -> null));
+        standardChecks("computeIfAbsent",
+            k -> map.computeIfAbsent(k, lk -> null),
+            k -> longMap.computeIfAbsent(Long.valueOf(k), lk -> null));
+    }
+
+
+    public void testPutIfAbsent() {
+        standardChecks("putIfAbsent", k -> map.putIfAbsent(k, "B"), k -> longMap.putIfAbsent(k, "B"));
+        standardChecks("putIfAbsent", k -> map.putIfAbsent(k, "B"), k -> longMap.putIfAbsent(Long.valueOf(k), "B"));
+    }
+
+    public void testReplace() {
+        standardChecks("replace", k -> map.replace(k, "B"), k -> longMap.replace(k, "B"));
+        standardChecks("replace", k -> map.replace(k, "B"), k -> longMap.replace(Long.valueOf(k), "B"));
+    }
+
+    public void testReplaceWithCheck() {
+        // check matching
+        checkMethod("replace", 1, "A", k -> map.replace(k, "A", "B"), k -> longMap.replace(k, "A", "B"));
+        checkMethod("replace", 1, "A", k -> map.replace(k, "A", "B"), k -> longMap.replace(Long.valueOf(k), "A", "B"));
+        checkMethod("replace", 2, null, k -> map.replace(k, null, "B"), k -> longMap.replace(k, null, "B"));
+        checkMethod("replace", 2, null, k -> map.replace(k, null, "B"),
+            k -> longMap.replace(Long.valueOf(k), null, "B"));
+
+        // check no match
+        Assert.assertNotEquals(DEFAULT_INIT, "A");
+        standardChecks("replace", k -> map.replace(k, "A", "B"), k -> longMap.replace(k, "A", "B"));
+        standardChecks("replace", k -> map.replace(k, "A", "B"), k -> longMap.replace(Long.valueOf(k), "A", "B"));
+        standardChecksNoNull("replace", k -> map.replace(k, null, "B"), k -> longMap.replace(k, null, "B"));
+        standardChecksNoNull("replace", k -> map.replace(k, null, "B"),
+            k -> longMap.replace(Long.valueOf(k), null, "B"));
+    }
+
+
+    public void testRemoveWithCheck() {
+        // check matching
+        checkMethod("remove", 1, "A", k -> map.remove(k, "A"), k -> longMap.remove(k, "A"));
+        checkMethod("remove", 1, "A", k -> map.remove(k, "A"), k -> longMap.remove(Long.valueOf(k), "A"));
+        checkMethod("remove", 2, null, k -> map.remove(k, null), k -> longMap.remove(k, null));
+        checkMethod("remove", 2, null, k -> map.remove(k, null), k -> longMap.remove(Long.valueOf(k), null));
+
+        // check no match
+        Assert.assertNotEquals(DEFAULT_INIT, "A");
+        standardChecks("remove", k -> map.remove(k, "A"), k -> longMap.remove(k, "A"));
+        standardChecks("remove", k -> map.remove(k, "A"), k -> longMap.remove(Long.valueOf(k), "A"));
+        standardChecksNoNull("remove", k -> map.remove(k, null), k -> longMap.remove(k, null));
+        standardChecksNoNull("remove", k -> map.remove(k, null), k -> longMap.remove(Long.valueOf(k), null));
+    }
+
+
+    public void testCompute() {
+        standardChecks("compute", k -> map.compute(k, (lk, o) -> "B"), k -> longMap.compute(k, (lk, o) -> "B"));
+        standardChecks("compute", k -> map.compute(k, (lk, o) -> "B"),
+            k -> longMap.compute(Long.valueOf(k), (lk, o) -> "B"));
+        standardChecks("compute", k -> map.compute(k, (lk, o) -> null), k -> longMap.compute(k, (lk, o) -> null));
+        standardChecks("compute", k -> map.compute(k, (lk, o) -> null),
+            k -> longMap.compute(Long.valueOf(k), (lk, o) -> null));
+    }
+
+    public void testMerge() {
+        standardChecks("compute", k -> map.merge(k, "B", String::concat), k -> longMap.merge(k, "B", String::concat));
+        standardChecks("compute", k -> map.merge(k, "B", String::concat),
+            k -> longMap.merge(Long.valueOf(k), "B", String::concat));
+        standardChecks("compute", k -> map.merge(k, "B", (a, b) -> null), k -> longMap.merge(k, "B", (a, b) -> null));
+        standardChecks("compute", k -> map.merge(k, "B", (a, b) -> null),
+            k -> longMap.merge(Long.valueOf(k), "B", (a, b) -> null));
+    }
+
+
+    public void testComputeIfPresent() {
+        standardChecks("computeIfPresent",
+            k -> map.computeIfPresent(k, (lk, o) -> "B"),
+            k -> longMap.computeIfPresent(k, (lk, o) -> "B"));
+        standardChecks("computeIfPresent",
+            k -> map.computeIfPresent(k, (lk, o) -> "B"),
+            k -> longMap.computeIfPresent(Long.valueOf(k), (lk, o) -> "B"));
+        standardChecks("computeIfPresent",
+            k -> map.computeIfPresent(k, (lk, o) -> null),
+            k -> longMap.computeIfPresent(k, (lk, o) -> null));
+        standardChecks("computeIfPresent",
+            k -> map.computeIfPresent(k, (lk, o) -> null),
+            k -> longMap.computeIfPresent(Long.valueOf(k), (lk, o) -> null));
     }
 
     public void testForEach() {
@@ -53,61 +162,43 @@ public class LongHashMapTest extends TestCase {
         });
     }
 
-    public void testComputeIfAbsent() {
-        LongHashMap<Object> map = new LongHashMap<>();
-        Object first = new Object();
-        map.put(1L, first);
-        Object def = new Object();
-        Object computed = map.computeIfAbsent(1L, aLong -> def);
-        Assert.assertEquals(first, computed);
-        computed = map.computeIfAbsent(2L, aLong -> def);
-        Assert.assertEquals(def, computed);
+
+    private void standardChecks(String op, Function<Long, Object> mapOp, LongFunction<Object> longMapOp) {
+        standardChecks(op, mapOp, longMapOp, true);
     }
 
-    public void testComputeIfAbsentIntegerKey() {
-        LongHashMap<Object> map = new LongHashMap<>();
-        Object first = new Object();
-        int firstKey = 1;
-        map.put(firstKey, first);
-        Object def = new Object();
-        Object computed = map.computeIfAbsent(firstKey, aLong -> def);
-        Assert.assertEquals(first, computed);
-        computed = map.computeIfAbsent(2L, aLong -> def);
-        Assert.assertEquals(def, computed);
+    private void standardChecksNoNull(String op, Function<Long, Object> mapOp, LongFunction<Object> longMapOp) {
+        standardChecks(op, mapOp, longMapOp, false);
     }
 
-    public void testPutIfAbsent() {
-        LongHashMap<Object> map = new LongHashMap<>();
-        Object first = new Object();
-        map.put(1L, first);
-        Object def = new Object();
-        Object prevValue = map.putIfAbsent(1L, def);
-        Assert.assertEquals(first, prevValue);
-        prevValue = map.putIfAbsent(2L, def);
-        Assert.assertNull(prevValue);
-        Assert.assertEquals(def, map.get(2L));
+    private void standardChecks(String op, Function<Long, Object> mapOp, LongFunction<Object> longMapOp,
+        boolean checkNull)
+    {
+        checkMethod(op, 1, DEFAULT_INIT, mapOp, longMapOp);
+        if (!checkNull)
+            checkMethod(op, 2, null, mapOp, longMapOp);
+        checkMethod(op, 3, NO_VALUE, mapOp, longMapOp);
     }
 
-    public void testPutIfAbsentIntegerKey() {
-        LongHashMap<Object> map = new LongHashMap<>();
-        int key = 42;
-        Object first = new Object();
-        map.put(key, first);
-        Object def = new Object();
-        Object prevValue = map.putIfAbsent(key, def);
-        Assert.assertEquals(first, prevValue);
-    }
+    private void checkMethod(String op, long key, Object init,
+        Function<Long, Object> mapOp, LongFunction<Object> longMapOp)
+    {
+        // ensure that
+        if (init == NO_VALUE) {
+            map.remove(key);
+            longMap.remove(key);
+        } else {
+            map.put(key, (String) init);
+            longMap.put(key, (String) init);
+        }
 
-    public void testComputeIfPresentIntegerKey() {
-        LongHashMap<Object> map = new LongHashMap<>();
-        Object first = new Object();
-        int key = 42;
-        map.put(key, first);
-        Object def = new Object();
-        Object computed = map.computeIfPresent(key, (aLong, o) -> def);
-        Assert.assertEquals(def, computed);
-        key = 43;
-        computed = map.computeIfPresent(key, (aLong, o) -> def);
-        Assert.assertNull(computed);
+        String desc = op + "[key=" + key + ", init=" + init + "]: ";
+        Assert.assertEquals(desc + "setup", map.containsKey(key), longMap.containsKey(key));
+        Assert.assertEquals(desc + "setup", map.get(key), longMap.get(key));
+        Object mapResult = mapOp.apply(key);
+        Object longMapResult = longMapOp.apply(key);
+        Assert.assertEquals(desc + "result", mapResult, longMapResult);
+        Assert.assertEquals(desc + "containsKey", map.containsKey(key), longMap.containsKey(key));
+        Assert.assertEquals(desc + "get", map.get(key), longMap.get(key));
     }
 }

@@ -27,6 +27,7 @@ import com.dxfeed.event.market.impl.AnalyticOrderMapping;
 import com.dxfeed.event.market.impl.BookMapping;
 import com.dxfeed.event.market.impl.FundamentalMapping;
 import com.dxfeed.event.market.impl.MarketMakerMapping;
+import com.dxfeed.event.market.impl.OptionSaleMapping;
 import com.dxfeed.event.market.impl.OrderBaseMapping;
 import com.dxfeed.event.market.impl.OrderMapping;
 import com.dxfeed.event.market.impl.ProfileMapping;
@@ -307,6 +308,23 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             builder.addOptionalField(recordName, "Buyer", SerialFieldType.UTF_CHAR_ARRAY, "TimeAndSale", "Buyer", false);
             builder.addOptionalField(recordName, "Seller", SerialFieldType.UTF_CHAR_ARRAY, "TimeAndSale", "Seller", false);
         }
+
+        builder.addRequiredField("OptionSale", "Void", SerialFieldType.VOID, SchemeFieldTime.FIRST_TIME_INT_FIELD);
+        builder.addRequiredField("OptionSale", "Index", SerialFieldType.COMPACT_INT, SchemeFieldTime.SECOND_TIME_INT_FIELD);
+        builder.addRequiredField("OptionSale", "Time", SerialFieldType.TIME_SECONDS);
+        builder.addRequiredField("OptionSale", "Sequence", SerialFieldType.SEQUENCE);
+        builder.addOptionalField("OptionSale", "TimeNanoPart", SerialFieldType.COMPACT_INT, "OptionSale", "TimeNanoPart", false);
+        builder.addRequiredField("OptionSale", "ExchangeCode", SerialFieldType.UTF_CHAR);
+        builder.addRequiredField("OptionSale", "Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("OptionSale", "Size", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"));
+        builder.addRequiredField("OptionSale", "BidPrice", select(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("OptionSale", "AskPrice", select(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("OptionSale", "ExchangeSaleConditions", SerialFieldType.SHORT_STRING);
+        builder.addRequiredField("OptionSale", "Flags", SerialFieldType.COMPACT_INT);
+        builder.addRequiredField("OptionSale", "UnderlyingPrice", select(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("OptionSale", "Volatility", select(SerialFieldType.DECIMAL));
+        builder.addRequiredField("OptionSale", "Delta", select(SerialFieldType.DECIMAL));
+        builder.addRequiredField("OptionSale", "OptionSymbol", SerialFieldType.UTF_CHAR_ARRAY);
     }
 
     @Override
@@ -348,6 +366,9 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         } else if (record.getMapping(TimeAndSaleMapping.class) != null) {
             result.add(new TimeAndSaleDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
             result.add(new TimeAndSaleDelegate(record, QDContract.HISTORY, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.TIME_SERIES)));
+        } else if (record.getMapping(OptionSaleMapping.class) != null) {
+            result.add(new OptionSaleDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
+            result.add(new OptionSaleDelegate(record, QDContract.HISTORY, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB)));
         }
         return result;
     }
@@ -378,6 +399,8 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             result.add(new OrderByMarketMakerAskDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.WILDCARD)));
         } else if (record.getMapping(TimeAndSaleMapping.class) != null) {
             result.add(new TimeAndSaleDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
+        } else if (record.getMapping(OptionSaleMapping.class) != null) {
+            result.add(new OptionSaleDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
         }
         return result;
     }
@@ -409,6 +432,8 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             return new MarketMakerMapping(record);
         if (baseRecordName.equals("TimeAndSale"))
             return new TimeAndSaleMapping(record);
+        if (baseRecordName.equals("OptionSale"))
+            return new OptionSaleMapping(record);
         return null;
     }
 // END: CODE AUTOMATICALLY GENERATED

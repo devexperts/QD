@@ -42,14 +42,17 @@ import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.AccessController;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.Queue;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -57,6 +60,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.X509TrustManager;
 import javax.security.auth.Subject;
 
@@ -66,6 +70,8 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeNoException;
+import static org.junit.Assume.assumeTrue;
 
 @RunWith(Parameterized.class)
 @Parameterized.UseParametersRunnerFactory(TraceRunnerWithParametersFactory.class)
@@ -257,15 +263,16 @@ public class RMIFunctionalityTest {
     }
 
     @Test
-    public void testWithTLSv11v12() {
+    public void testWithLowTLSversion() {
+        assumeTLSv12v13supported();
         Properties props = System.getProperties();
         try {
             SampleCert.init();
             NTU.exportServices(server.getServer(),
                 new RMIServiceImplementation<>(new SummatorImpl(), Summator.class,
                     "summator"), channelLogic);
-            System.getProperties().setProperty("com.devexperts.connector.codec.ssl.protocols", "TLSv1.1");
-            int port = NTU.connectServer(server, "tls[isServer,protocols=TLSv1.1;TLSv1.2]+");
+            System.getProperties().setProperty("com.devexperts.connector.codec.ssl.protocols", "TLSv1.2");
+            int port = NTU.connectServer(server, "tls[isServer,protocols=TLSv1.3;TLSv1.2]+");
             NTU.connect(client, "tls+" + NTU.localHost(port));
             try {
                 channelLogic.initPorts();
@@ -284,10 +291,11 @@ public class RMIFunctionalityTest {
     public void testWithTLSVersionsMismatch() throws InterruptedException {
         if (channelLogic.type != TestType.REGULAR)
             return;
+        assumeTLSv12v13supported();
         Properties props = System.getProperties();
         try {
             SampleCert.init();
-            System.getProperties().setProperty("com.devexperts.connector.codec.ssl.protocols", "TLSv1.1");
+            System.getProperties().setProperty("com.devexperts.connector.codec.ssl.protocols", "TLSv1.2");
             CountDownLatch connectedVersion = new CountDownLatch(2);
             CountDownLatch notConnectedVersion = new CountDownLatch(2);
             client.addEndpointListener(endpoint ->
@@ -298,7 +306,7 @@ public class RMIFunctionalityTest {
                 new RMIServiceImplementation<>(new SummatorImpl(), Summator.class, "summator"),
                 channelLogic);
             client.getClient().setRequestSendingTimeout(1000);
-            int port = NTU.connectServer(server, "tls[isServer,protocols=TLSv1.2]+");
+            int port = NTU.connectServer(server, "tls[isServer,protocols=TLSv1.3]+");
             NTU.connect(client, "tls+" + NTU.localHost(port));
             try {
                 channelLogic.initPorts();
@@ -326,6 +334,17 @@ public class RMIFunctionalityTest {
             System.setProperties(props);
         }
     }
+
+    private static void assumeTLSv12v13supported() {
+        try {
+            Set<String> protocols =
+                new HashSet<>(Arrays.asList(SSLContext.getDefault().getSupportedSSLParameters().getProtocols()));
+            assumeTrue("TLSv1.3 & TLSv1.2 supported", protocols.contains("TLSv1.3") && protocols.contains("TLSv1.2"));
+        } catch (NoSuchAlgorithmException e) {
+            assumeNoException("No default SSLContext", e);
+        }
+    }
+
 
     @Test
     public void testWithSSL() {

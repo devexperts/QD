@@ -199,7 +199,7 @@ public class InstrumentProfileCollector {
     }
 
     /**
-     * Changes executor for processing processing instrument profile update notifications.
+     * Changes executor for processing instrument profile update notifications.
      *
      * @param executor non-null executor for processing instrument profile update notifications.
      */

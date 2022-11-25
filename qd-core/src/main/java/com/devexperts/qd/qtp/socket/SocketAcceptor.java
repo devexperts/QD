@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import javax.net.ServerSocketFactory;
 
 class SocketAcceptor extends QTPWorkerThread {
@@ -60,7 +61,8 @@ class SocketAcceptor extends QTPWorkerThread {
                 reconnectHelper.sleepBeforeConnection();
                 log.info("Trying to listen at " + LogUtil.hideCredentials(address));
                 try {
-                    serverSocket = this.serverSocket = ServerSocketFactory.getDefault().createServerSocket(port, 0, bindAddress);
+                    serverSocket = this.serverSocket =
+                        ServerSocketFactory.getDefault().createServerSocket(port, 0, bindAddress);
                     //noinspection deprecation
                     ServerSocketTestHelper.completePortPromise(connector.getName(), serverSocket.getLocalPort());
                 } catch (Throwable t) {
@@ -79,7 +81,14 @@ class SocketAcceptor extends QTPWorkerThread {
                 if (isClosed())
                     return;
             }
-            Socket socket = serverSocket.accept();
+            Socket socket;
+            try {
+                socket = serverSocket.accept();
+            } catch (SocketTimeoutException e) {
+                // handle spurious accept timeouts (see QD-1410 and JDK-8237858)
+                log.warn("Unexpected SocketTimeoutException on Socket.accept() was ignored.");
+                continue;
+            }
             if (!connector.isNewConnectionAllowed()) {
                 log.warn("Rejected client socket connection because of maxConnections limit: " +
                     LogUtil.hideCredentials(SocketUtil.getAcceptedSocketAddress(socket)));
@@ -87,7 +96,8 @@ class SocketAcceptor extends QTPWorkerThread {
                 continue;
             }
 
-            log.info("Accepted client socket connection: " + LogUtil.hideCredentials(SocketUtil.getAcceptedSocketAddress(socket)));
+            log.info("Accepted client socket connection: " +
+                LogUtil.hideCredentials(SocketUtil.getAcceptedSocketAddress(socket)));
             SocketHandler handler = new SocketHandler(connector, new ServerSocketSource(socket));
             connector.addHandler(handler);
             handler.setCloseListener(connector.closeListener);

@@ -1,3 +1,16 @@
+QDS 3.315:
+
+* [QD-1407] [Schedule] Update Australian & UK holidays / Add Netherlands
+* [QD-1395] [Schedule] Add SGX holidays and short days 2022
+* [QD-1411] Create OptionSale record
+* [QD-1412] LongHashMap.putIfAbsent shall handle null-values according to specification
+  - BACKWARD-INCOMPATIBLE CHANGE: previous versions treated a (k,v)-pair with v == null as "present" and didn't put
+    a new value. Current implementation will replace a null-value with provided new value.
+    New behavior conforms to initially declared specification and consistent with default java.util.Map behavior
+    for maps allowing null values.
+* [QD-1410] Handle SocketTimeoutException in SocketAcceptor
+* [QD-1408] Use TLS v1.3 and v1.2 for unit tests
+
 QDS 3.314:
 
 * [QD-1404] dxFeed API: Add missing fields to Profile event

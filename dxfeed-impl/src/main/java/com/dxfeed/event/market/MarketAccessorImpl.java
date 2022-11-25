@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -322,6 +322,16 @@ public class MarketAccessorImpl {
         return setTnsType(setTnsValidTick(flags, false), TimeAndSaleType.CANCEL);
     }
 
+    // ========== OptionSale accessor methods ==========
+    // NOTE: for individual flags manipulation use TimeAndSale related methods above.
+
+    public static int getOptionSaleFlags(OptionSale optionSale) {
+        return optionSale.getFlags();
+    }
+
+    public static void setOptionSaleFlags(OptionSale optionSale, int flags) {
+        optionSale.setFlags(flags);
+    }
 
     // ========== Trade accessor methods ==========
 

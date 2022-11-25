@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,6 +18,9 @@ class Util {
 
     @SuppressWarnings("unchecked")
     static <T extends Enum> T[] buildEnumArrayByOrdinal(T def, int length) {
+        // enums over bit mask shall cover the whole range
+        if (Integer.bitCount(length) != 1)
+            throw new IllegalArgumentException("length must be power of 2");
         T[] values = (T[]) def.getClass().getEnumConstants();
         T[] result = Arrays.copyOf(values, length); // just new instance with same class and specified length
         Arrays.fill(result, def);

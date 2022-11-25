@@ -3,7 +3,7 @@
   !++
   QDS - Quick Data Signalling Library
   !-
-  Copyright (C) 2002 - 2021 Devexperts LLC
+  Copyright (C) 2002 - 2022 Devexperts LLC
   !-
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
   If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -335,6 +335,36 @@
             </field>
             <field name="Buyer" type="string" disabled="true"/>
             <field name="Seller" type="string" disabled="true"/>
+        </record>
+
+        <!-- MarketFactoryImpl:312 -->
+        <record name="OptionSale">
+            <index field0="" field1="Index"/>
+            <field name="Index" type="compact_int"/>
+            <field name="Time" type="time"/>
+            <field name="Sequence" type="sequence"/>
+            <field name="TimeNanoPart" type="time_nano_part" disabled="true"/>
+            <field name="ExchangeCode" type="char"/>
+            <field name="Price" type="price"/>
+            <field name="Size" type="volume"/>
+            <field name="BidPrice" type="price"/>
+            <field name="AskPrice" type="price"/>
+            <field name="ExchangeSaleConditions" type="short_string"/>
+            <!-- Flags definition shall be the same, as in TimeAndSale record -->
+            <field name="Flags" type="flags">
+                <bitfields>
+                    <field name="Type" offset="0" size="2"/>
+                    <field name="ValidTick" offset="2" size="1"/>
+                    <field name="ETH" offset="3" size="1"/>
+                    <field name="SpreadLeg" offset="4" size="1"/>
+                    <field name="Side" offset="5" size="2"/>
+                    <field name="TradeThroughExempt" offset="8" size="7"/>
+                </bitfields>
+            </field>
+            <field name="UnderlyingPrice" type="price"/>
+            <field name="Volatility" type="decimal"/>
+            <field name="Delta" type="decimal"/>
+            <field name="OptionSymbol" type="utf_char_array"/>
         </record>
 
         <!-- CandleFactoryImpl:39 -->

@@ -18,6 +18,7 @@ import com.dxfeed.event.candle.DailyCandle;
 import com.dxfeed.event.candle.impl.CandleEventMapping;
 import com.dxfeed.event.market.AnalyticOrder;
 import com.dxfeed.event.market.MarketEventDelegateImpl;
+import com.dxfeed.event.market.OptionSale;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.OrderBase;
 import com.dxfeed.event.market.OrderBaseDelegateImpl;
@@ -422,6 +423,32 @@ public class ImplCodeGen {
             map("Flags", "Flags", FieldType.FLAGS).
             map("Buyer", "Buyer", FieldType.STRING).optional().disabledByDefault().
             map("Seller", "Seller", FieldType.STRING).optional().disabledByDefault().
+            publishable();
+
+        ctx.delegate("OptionSale", OptionSale.class, "OptionSale").
+            inheritDelegateFrom(MARKET_EVENT_DELEGATE).
+            inheritMappingFrom(MARKET_EVENT_MAPPING).
+            withPlainEventFlags().
+            map("Void", FieldType.VOID).time(0).internal().
+            map("Index", FieldType.INDEX).time(1).internal().
+            assign("Index", "((long) #Index#)").
+            injectPutEventCode(
+                "int index = (int) event.getIndex();",
+                "#Index=index#;"
+            ).
+            mapTimeAndSequence().
+            map("TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
+            map("ExchangeCode", FieldType.CHAR).
+            map("Price", FieldType.PRICE).
+            map("Size", FieldType.VOLUME).
+            map("BidPrice", FieldType.PRICE).
+            map("AskPrice", FieldType.PRICE).
+            map("ExchangeSaleConditions", FieldType.SHORT_STRING).
+            map("Flags", FieldType.FLAGS).
+            map("UnderlyingPrice", FieldType.PRICE).
+            map("Volatility", FieldType.DECIMAL_AS_DOUBLE).
+            map("Delta", FieldType.DECIMAL_AS_DOUBLE).
+            map("OptionSymbol", FieldType.STRING).
             publishable();
 
         // This is just a temporary implementation over legacy TradeHistory record. Separate new TimeAndSale record will be used later.
