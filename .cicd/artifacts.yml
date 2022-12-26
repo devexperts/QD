@@ -5,7 +5,6 @@ artifactory:
       - com.devexperts.qd:dxfeed-bin
       - com.devexperts.qd:dxfeed-codegen
       - com.devexperts.qd:dxfeed-impl
-      - com.devexperts.qd:dxfeed-news
       - com.devexperts.qd:dxfeed-ondemand
       - com.devexperts.qd:dxfeed-plotter
       - com.devexperts.qd:dxfeed-promise

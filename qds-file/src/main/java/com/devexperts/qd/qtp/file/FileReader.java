@@ -32,7 +32,6 @@ import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.qtp.ProtocolDescriptor;
 import com.devexperts.qd.qtp.RawDataConsumer;
 import com.devexperts.qd.qtp.fieldreplacer.FieldReplacersCache;
-import com.devexperts.qd.qtp.http.HttpConnector;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.QDConfig;
 import com.devexperts.qd.util.TimeSequenceUtil;
@@ -205,8 +204,6 @@ public class FileReader implements MessageReader {
 
         // ignore ".time" file when reading from HTTP-specified file
         boolean doNotTryToReadTimeFile = false;
-        if (params instanceof HttpConnector)
-            doNotTryToReadTimeFile = true;
 
         this.hasStart = startTime != FileConnector.NA_TIME;
         this.hasDelay = delayTime != FileConnector.NA_TIME;

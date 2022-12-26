@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.315</version>
+        <version>3.316</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -44,13 +44,6 @@
             <artifactId>jmxtools</artifactId>
             <version>${jmxtools.version}</version>
             <optional>true</optional>
-        </dependency>
-        <!-- Need log4j, but only for testing -->
-        <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>${log4j.version}</version>
-            <scope>test</scope>
         </dependency>
         <!-- Utility classes for testing -->
         <dependency>

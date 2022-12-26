@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.rmi.test;
 
+import com.devexperts.logging.LogFormatter;
 import com.devexperts.logging.Logging;
 import com.devexperts.mars.common.MARSNode;
 import com.devexperts.qd.monitoring.JMXEndpoint;
@@ -23,14 +24,17 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.StringReader;
 import java.lang.management.ManagementFactory;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.StreamHandler;
 import java.util.stream.Collectors;
 import javax.management.ObjectName;
 
@@ -61,31 +65,27 @@ public class RMIMonitoringTest {
 
     @Test
     public void testRedundantInit() throws IOException, InterruptedException {
-        String tmpLogFileName = "RMIMonitoringTest.log";
-        new File(tmpLogFileName).delete();
-        Logging.configureLogFile(tmpLogFileName);
+        TempLogCatcher logCatcher = new TempLogCatcher();
+        logCatcher.start();
         try {
-            // this initializes mars
+            // this initializes MARS
             MARSNode.getRoot().subNode("test.fail").setValue("Version 1.0");
-            // this shall reuse initialized mars endpoint
+            // this shall reuse initialized MARS endpoint
             client = RMIEndpoint.createEndpoint();
             String client_port = ":" + getPort(99);
             client.connect(client_port);
             client.close();
         } finally {
             Thread.sleep(500); // wait a bit to let it settle writing to log
-            Logging.configureLogFile(System.getProperty("log.file"));
-            assertNoErrorsAndWarningsInLog(tmpLogFileName);
-            assertTrue(new File(tmpLogFileName).delete());
+            logCatcher.stop();
+            assertNoErrorsAndWarningsInLog(logCatcher.getLog());
         }
     }
 
-    private void assertNoErrorsAndWarningsInLog(String fileName) throws IOException {
-        try (BufferedReader in = new BufferedReader(new FileReader(fileName))) {
-            String line;
-            while ((line = in.readLine()) != null)
-                assertFalse(line, line.startsWith("E ") || line.startsWith("W "));
-        }
+    private void assertNoErrorsAndWarningsInLog(BufferedReader in) throws IOException {
+        String line;
+        while ((line = in.readLine()) != null)
+            assertFalse(line, line.startsWith("E ") || line.startsWith("W "));
     }
 
     @Test
@@ -256,9 +256,7 @@ public class RMIMonitoringTest {
         Set<String> resultingThreads = getCreatedThreads(initialThreads);
 
         // dump all remains
-        System.out.println("Beans:");
         resultingBeans.forEach(System.out::println);
-        System.out.println("Threads:");
         resultingThreads.forEach(System.out::println);
 
         // we should not have anything remaining
@@ -349,5 +347,33 @@ public class RMIMonitoringTest {
         Set<String> createdThreads = getThreadNames();
         createdThreads.removeAll(initialThreads);
         return createdThreads;
+    }
+
+    private static class TempLogCatcher {
+        private final ByteArrayOutputStream out;
+        private final StreamHandler logHandler;
+
+        public TempLogCatcher() {
+            // Initialize dxlib logging
+            // Note that this logging only works for DefaultLogging based java.util.logging!
+            Logging.getLogging("").configureDebugEnabled(true);
+
+            out = new ByteArrayOutputStream();
+            logHandler = new StreamHandler(out, new LogFormatter());
+            logHandler.setLevel(Level.ALL);
+        }
+
+        public void start() {
+            Logger.getLogger("").addHandler(logHandler);
+        }
+
+        public void stop() {
+            Logger.getLogger("").removeHandler(logHandler);
+            logHandler.close();
+        }
+
+        public BufferedReader getLog() {
+            return new BufferedReader(new StringReader(out.toString()));
+        }
     }
 }

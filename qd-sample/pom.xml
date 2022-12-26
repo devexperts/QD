@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.315</version>
+        <version>3.316</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -46,11 +46,6 @@
         <dependency>
             <groupId>com.devexperts.qd</groupId>
             <artifactId>qd-tools</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.devexperts.qd</groupId>
-            <artifactId>qd-servlet</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

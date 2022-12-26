@@ -32,7 +32,6 @@
                 <include>com.devexperts.qd:qds-monitoring</include>
                 <include>com.devexperts.qd:qds-tools</include>
                 <include>com.devexperts.qd:dxfeed-ondemand</include>
-                <include>com.devexperts.qd:dxfeed-news</include>
             </includes>
             <binaries>
                 <unpack>false</unpack>
@@ -52,7 +51,6 @@
                 <include>com.devexperts.qd:qds-monitoring</include>
                 <include>com.devexperts.qd:qds-tools</include>
                 <include>com.devexperts.qd:dxfeed-ondemand</include>
-                <include>com.devexperts.qd:dxfeed-news</include>
             </includes>
             <binaries>
                 <attachmentClassifier>sources</attachmentClassifier>

@@ -523,9 +523,6 @@ For example, address "file:records~.dat" means that we want to seek for
 files like records20080320-154914+0030.dat and connect to them consecutively.
 Corresponding ".time" files are also used in that case (if they exist).
 @# -----------------------------------------------------------------------------
-@article Http
-@messageconnector-summary
-@# -----------------------------------------------------------------------------
 @article ServerSocket
 @messageconnector-summary
 @# -----------------------------------------------------------------------------

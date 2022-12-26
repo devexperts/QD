@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -19,7 +19,6 @@ import org.apache.log4j.RollingFileAppender;
 import org.apache.log4j.spi.LoggingEvent;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
@@ -33,7 +32,7 @@ class Log4jLogging extends DefaultLogging {
     @Override
     Map<String, Exception> configure() {
         if (Category.getCurrentCategories().hasMoreElements() || Category.getRoot().getAllAppenders().hasMoreElements())
-            return Collections.emptyMap(); // do nothing since log4j was already configured
+            return defaultErrors(); // do nothing since log4j was already configured
         return reconfigure(getProperty(Logging.LOG_FILE_PROPERTY, null));
     }
 
@@ -43,8 +42,15 @@ class Log4jLogging extends DefaultLogging {
         return reconfigure(logFile);
     }
 
+    private static Map<String, Exception> defaultErrors() {
+        Map<String, Exception> errors = new LinkedHashMap<>();
+        errors.put(
+            "WARNING: DEPRECATED use of log4j 1.x logging. Migrate to log4j2 or use its bridge to log4j 1.x", null);
+        return errors;
+    }
+
     private static Map<String, Exception> reconfigure(String logFile) {
-        Map<String, Exception> errors = new LinkedHashMap<String, Exception>();
+        Map<String, Exception> errors = defaultErrors();
         Appender appender = null;
         if (logFile != null) {
             try {

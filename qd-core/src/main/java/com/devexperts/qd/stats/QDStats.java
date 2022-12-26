@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -184,8 +184,6 @@ public class QDStats {
         public static final SType STREAM = new SType("Stream", FLAG_COLLECTION_OF_SELF, AGENT, DISTRIBUTOR);
         public static final SType HISTORY = new SType("History", FLAG_COLLECTION_OF_SELF, AGENT, DISTRIBUTOR);
 
-        public static final SType HTTP_CONNECTOR = new SType("HttpConnector", FLAG_RID | FLAG_IO);
-        public static final SType QD_SERVLET = new SType("QDServlet", FLAG_RID | FLAG_IO);
         public static final SType CLIENT_SOCKET_CONNECTOR = new SType("ClientSocketConnector", FLAG_RID | FLAG_IO);
         public static final SType SERVER_SOCKET_CONNECTOR = new SType("ServerSocketConnector", FLAG_RID | FLAG_IO);
         public static final SType CONNECTION = new SType("Connection", FLAG_RID | FLAG_IO);

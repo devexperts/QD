@@ -16,7 +16,6 @@ import com.devexperts.connector.codec.CodecFactory;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.connector.proto.ConfigurationException;
 import com.devexperts.connector.proto.ConfigurationKey;
-import com.devexperts.qd.qtp.http.HttpConnector;
 import com.devexperts.qd.qtp.socket.ClientSocketConnector;
 import com.devexperts.qd.qtp.socket.ServerSocketConnector;
 import com.devexperts.qd.stats.QDStats;
@@ -128,9 +127,6 @@ public class MessageConnectors {
      * Name-value pairs (optional) specify additional bean properties for connectors (see corresponding class definitions).
      * The individual connector format is one of:
      * <ul>
-     * <li><b>http:...</b> or <b>https:...</b> - for HTTP connection. This connector takes precedence
-     * over '/' syntax for multiple address. Note that this connector is deprecated and will be removed in the future.
-     * See {@link HttpConnector}.
      * <li><b>[tls+][&lt;host&gt;[:&lt;port&gt;],[...,]]&lt;host&gt;:&lt;port&gt;</b> - for client TCP/IP socket.
      * See {@link ClientSocketConnector}.
      * <li><b>[tls+]:&lt;port&gt;</b> - for server TCP/IP socket.
@@ -288,7 +284,6 @@ public class MessageConnectors {
         ArrayList<Class<? extends MessageConnector>> result = new ArrayList<>();
         result.add(ClientSocketConnector.class);
         result.add(ServerSocketConnector.class);
-        result.add(HttpConnector.class);
         for (MessageConnectorFactory mcf : Services.createServices(MessageConnectorFactory.class, loader))
             result.add(mcf.getResultingClass());
         return result;
@@ -411,12 +406,6 @@ public class MessageConnectors {
             }
         } catch (MalformedURLException e) {
             // no luck -- continue looking
-        }
-
-        if (address.startsWith(HTTP_PREFIX) || address.startsWith(HTTPS_PREFIX)) {
-            // http address
-            HttpConnector connector = new HttpConnector(acFactory, address);
-            return Collections.singletonList(new ConnectorWithConfig(connector, pa.props, QDStats.SType.HTTP_CONNECTOR));
         }
 
         for (MessageConnectorFactory mcf : Services.createServices(MessageConnectorFactory.class, null)) {

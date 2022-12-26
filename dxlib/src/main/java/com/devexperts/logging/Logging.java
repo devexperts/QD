@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2022 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -195,6 +195,19 @@ public class Logging {
             }
         }
         if (impl == null) {
+            // Initialize Log4j2 first to avoid false positives when log4j-1.2-api bridge is used
+            try {
+                impl = (DefaultLogging) Class.forName("com.devexperts.logging.Log4j2Logging").newInstance();
+                errors.putAll(impl.configure());
+            } catch (Throwable t) {
+                // failed to configure log4j2
+                impl = null;
+                if (!(t instanceof LinkageError) && !(t.getCause() instanceof LinkageError)) {
+                    errors.put("log4j2 link", new IllegalStateException(t));
+                }
+            }
+        }
+        if (impl == null) {
             try {
                 impl = (DefaultLogging) Class.forName("com.devexperts.logging.Log4jLogging").newInstance();
                 errors.putAll(impl.configure());
@@ -204,18 +217,6 @@ public class Logging {
                 // LinkageError means that log4j is not found at all, otherwise it was found but our config is wrong
                 if (!(t instanceof LinkageError) && !(t.getCause() instanceof LinkageError)) {
                     errors.put("log4j link", new IllegalStateException(t));
-                }
-            }
-        }
-        if (impl == null) {
-            try {
-                impl = (DefaultLogging) Class.forName("com.devexperts.logging.Log4j2Logging").newInstance();
-                errors.putAll(impl.configure());
-            } catch (Throwable t) {
-                // failed to configure log4j2
-                impl = null;
-                if (!(t instanceof LinkageError) && !(t.getCause() instanceof LinkageError)) {
-                    errors.put("log4j2 link", new IllegalStateException(t));
                 }
             }
         }
