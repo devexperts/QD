@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -21,18 +21,23 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * Provides API to control access to market data.
  * <p>
  * Before requesting market data the end user first obtains a secure token with a limited lifetime
- * from it's sponsor firm and then uses it when communicating with market data provider.
+ * from its sponsor firm and then uses it when communicating with market data provider.
  * The token is signed using shared secret between market data provider and the sponsor firm.
  * <p>
  */
 public class MarketDataAccess {
+    /** Configuration parameter for banned users. */
+    public static final String DENY_LIST = "deny_list";
+
     private static final MarketDataAccess instance = new MarketDataAccess();
 
     /**
@@ -46,6 +51,7 @@ public class MarketDataAccess {
     // ========== Instance API ==========
 
     private volatile Map configuration = Collections.emptyMap();
+    private volatile Set<String> denyList = Collections.emptySet();
     private volatile Watcher watcher;
 
     /**
@@ -59,6 +65,18 @@ public class MarketDataAccess {
      */
     public void setConfiguration(Map configuration) {
         this.configuration = Collections.unmodifiableMap(new HashMap(configuration));
+        this.denyList = Collections.unmodifiableSet(getDenyList(configuration));
+    }
+
+    private Set<String> getDenyList(Map configuration) {
+        Set<String> result = new HashSet<>();
+        String listString = MarketDataToken.getString(configuration, DENY_LIST, "");
+        for (String user : listString.split(",")) {
+            String user1 = user.trim();
+            if (!user1.isEmpty())
+                result.add(user1);
+        }
+        return result;
     }
 
     /**
@@ -80,10 +98,14 @@ public class MarketDataAccess {
     }
 
     /**
-     * Creates new token for specified user name.
+     * Creates new token for the specified username.
      */
     public MarketDataToken createToken(String user) {
         return new MarketDataToken(configuration, user);
+    }
+
+    public boolean checkAllowed(MarketDataToken token) {
+        return !denyList.contains(token.getTokenUser() + "@" + token.getTokenContract());
     }
 
     /**

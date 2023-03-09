@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -47,7 +47,7 @@ public class MarketDataToken implements Serializable {
     /** Configuration parameter for maximum serviceable time in a "yyyy-MM-dd HH:mm:ss z" format or as plain long milliseconds. */
     public static final String SERVICE_MAX_TIME = "service_maxTime";
     /** Configuration parameter for a comma-separated list of individual addresses
-     * (each represented by an URL or a "host:port" pair) to be used for market data requests. */
+     * (each represented by a URL or a "host:port" pair) to be used for market data requests. */
     public static final String SERVICE_ADDRESS = "service_address";
 
     /** Configuration parameter for a contract name. */
@@ -169,7 +169,7 @@ public class MarketDataToken implements Serializable {
     }
 
     /**
-     * Returns user name for which this token was issued.
+     * Returns username for which this token was issued.
      */
     public String getTokenUser() {
         return tokenUser;

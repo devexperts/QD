@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.dxfeed.ondemand.impl;
 
+import com.devexperts.io.BufferedOutput;
 import com.devexperts.io.ByteArrayInput;
 import com.devexperts.io.ByteArrayOutput;
 import com.devexperts.io.IOUtil;
@@ -22,16 +23,19 @@ import java.io.IOException;
 import java.util.Comparator;
 import java.util.zip.DataFormatException;
 
-class Block extends Key {
+/**
+ * This internal class is public for implementation purposes only.
+ */
+public class Block extends Key {
     private static final Logging log = Logging.getLogging(Block.class);
 
     public static final Comparator<Block> COMPARATOR = new Comparator<Block>() {
         public int compare(Block block1, Block block2) {
             int i = Key.COMPARATOR.compare(block1, block2);
             if (i == 0)
-                i = block1.getStartTime() < block2.getStartTime() ? -1 : block1.getStartTime() > block2.getStartTime() ? 1 : 0;
+                i = Long.compare(block1.getStartTime(), block2.getStartTime());
             if (i == 0)
-                i = block1.getEndTime() < block2.getEndTime() ? -1 : block1.getEndTime() > block2.getEndTime() ? 1 : 0;
+                i = Long.compare(block1.getEndTime(), block2.getEndTime());
             return i;
         }
     };
@@ -179,6 +183,23 @@ class Block extends Key {
             out.writeCompactInt(actualLength);
             out.setPosition(out.getPosition() + actualLength);
         }
+    }
+
+    public void writeBlock(BufferedOutput out, ByteArrayOutput header) throws IOException {
+        if (symbol == null || body == null)
+            throw new NullPointerException();
+        long started = startTime / 1000;
+        long duration = endTime / 1000 - started;
+        header.setPosition(0);
+        header.writeCompactInt(version);
+        header.writeUTFString(symbol);
+        header.writeUTFChar(exchange);
+        header.writeUTFChar(type);
+        header.writeCompactLong(started);
+        header.writeCompactLong(duration);
+        out.writeCompactInt(header.getPosition() + bodyLength);
+        out.write(header.getBuffer(), 0, header.getPosition());
+        out.write(body, bodyOffset, bodyLength);
     }
 
     public String toString() {

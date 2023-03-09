@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,7 +13,9 @@ package com.dxfeed.ondemand.impl;
 
 import com.devexperts.io.ByteArrayInput;
 import com.devexperts.io.ByteArrayOutput;
+import com.devexperts.io.IOUtil;
 import com.devexperts.util.LockFreePool;
+import com.devexperts.util.SystemProperties;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
@@ -24,7 +26,10 @@ import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 import java.util.zip.ZipException;
 
-class ReplayUtil {
+/**
+ * This internal class is public for implementation purposes only.
+ */
+public class ReplayUtil {
 
     public static int getCompactLength(byte[] buffer, int position) {//todo remove it - use Content-Length instead
         int n = 1;
@@ -35,22 +40,34 @@ class ReplayUtil {
 
     // ========== Deflating ==========
 
-    private static final LockFreePool<Deflater> deflaters = new LockFreePool<Deflater>(16);
-    private static final LockFreePool<Inflater> inflaters = new LockFreePool<Inflater>(16);
+    private static final int MAX_BUF = SystemProperties.getIntProperty("com.devexperts.mds.replay.ZipBufferSize", 32_768);
+
+    private static final LockFreePool<Deflater> deflaters = new LockFreePool<>("com.devexperts.mds.replay.deflaters", 16);
+    private static final LockFreePool<Inflater> inflaters = new LockFreePool<>("com.devexperts.mds.replay.inflaters", 16);
     private static final byte[] emptyInput = new byte[0]; // Empty array used to reset input reference and release old one.
     private static final byte[] dummyByte = new byte[1]; // Single dummy byte needed for inflater algorithm.
 
     public static void deflate(byte[] bytes, int offset, int length, int level, ByteArrayOutput out) {
+        IOUtil.checkRange(bytes, offset, length);
         Deflater deflater = deflaters.poll();
         if (deflater == null)
             deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
         try {
             deflater.setLevel(level);
-            deflater.setInput(bytes, offset, length);
-            deflater.finish();
             while (!deflater.finished()) {
-                out.ensureCapacity(out.getPosition() + Math.max(1024, Math.min(length - out.getPosition(), 4096)));
-                int n = deflater.deflate(out.getBuffer(), out.getPosition(), out.getLimit() - out.getPosition());
+                out.ensureCapacity(out.getPosition() + MAX_BUF);
+
+                int bytesRead = (int) deflater.getBytesRead();
+                if (bytesRead == length) {
+                    // Indicate that the input is read completely and allow to complete compression
+                    deflater.finish();
+                }
+                // Set input in chunks limited by MAX_BUF size
+                deflater.setInput(bytes, offset + bytesRead, Math.min(length - bytesRead, MAX_BUF));
+                // Process data to output in chunks limited by MAX_BUF size
+                int n = deflater.deflate(out.getBuffer(), out.getPosition(),
+                    Math.min(out.getLimit() - out.getPosition(), MAX_BUF));
+
                 out.setPosition(out.getPosition() + n);
             }
         } finally {
@@ -62,77 +79,27 @@ class ReplayUtil {
     }
 
     public static void inflate(byte[] bytes, int offset, int length, ByteArrayOutput out) throws DataFormatException {
+        IOUtil.checkRange(bytes, offset, length);
         Inflater inflater = inflaters.poll();
         if (inflater == null)
             inflater = new Inflater(true);
         try {
             int dummyByteUsed = 0;
-            inflater.setInput(bytes, offset, length);
             while (!inflater.finished()) {
-                out.ensureCapacity(out.getPosition() + Math.max(1024, Math.min(length - out.getPosition(), 4096)));
-                int n = inflater.inflate(out.getBuffer(), out.getPosition(), out.getLimit() - out.getPosition());
-                out.setPosition(out.getPosition() + n);
-                if (n == 0 && !inflater.finished()) {
-                    if (inflater.needsInput())
-                        if (dummyByteUsed == 0)
-                            inflater.setInput(dummyByte, 0, dummyByteUsed = 1);
-                        else
-                            throw new DataFormatException("Needs input.");
-                    if (inflater.needsDictionary())
-                        throw new DataFormatException("Needs dictionary.");
-                }
-            }
-            if (inflater.getRemaining() != dummyByteUsed)
-                throw new DataFormatException("Remaining bytes.");
-        } finally {
-            inflater.reset();
-            inflater.setInput(emptyInput); // Reset input reference to release old one.
-            if (!inflaters.offer(inflater))
-                inflater.end();
-        }
-    }
+                out.ensureCapacity(out.getPosition() + MAX_BUF);
 
-    public static int MAX_BUF = 256 * 1024;
-
-    public static void inflateFast(byte[] bytes, int offset, int length, ByteArrayOutput out) throws DataFormatException {
-        if ((offset | length | (offset + length) | (bytes.length - (offset + length))) < 0)
-            throw new IndexOutOfBoundsException();
-        Inflater inflater = inflaters.poll();
-        if (inflater == null)
-            inflater = new Inflater(true);
-        try {
-//          long counts = 0;
-//          long lens = 0;
-//          long remains = 0;
-//          long minRemain = 999999;
-//          long maxRemain = 0;
-            int dummyByteUsed = 0;
-            long inRate = 1;
-            long outRate = 2;
-            while (!inflater.finished()) {
-                int capacity = (int) Math.min(length * outRate / inRate * 1.1 + 32768, MAX_BUF);
-                out.ensureCapacity(out.getPosition() + capacity);
-                capacity = Math.min(capacity, out.getLimit() - out.getPosition());
-                int len = (int) Math.min(capacity * inRate / outRate + 1024, length);
+                // Set input in chunks limited by MAX_BUF size
+                int len = Math.min(length, MAX_BUF);
                 inflater.setInput(bytes, offset, len);
-                int n = inflater.inflate(out.getBuffer(), out.getPosition(), capacity);
-//              f (bytes == dummyByte)
-//                  System.out.println("  Dummy byte inflated to " + n + " bytes");
-//              if (len == length)
-//                  System.out.println("  Last pass: len " + len + ", remains " + inflater.getRemaining() + ", n " + n + ", capacity " + capacity);
-//              else {
-//                  counts++;
-//                  lens += len;
-//                  remains += inflater.getRemaining();
-//                  minRemain = Math.min(minRemain, inflater.getRemaining());
-//                  maxRemain = Math.max(maxRemain, inflater.getRemaining());
-//              }
+                // Process data to output in chunks limited by MAX_BUF size
+                int n = inflater.inflate(out.getBuffer(), out.getPosition(),
+                    Math.min(out.getLimit() - out.getPosition(), MAX_BUF));
                 len -= inflater.getRemaining();
                 offset += len;
                 length -= len;
-                inRate = inRate / 2 + len + 1;
-                outRate = outRate / 2 + n + 1;
+
                 out.setPosition(out.getPosition() + n);
+
                 if (n == 0 && length == 0 && !inflater.finished()) {
                     if (inflater.needsInput())
                         if (dummyByteUsed == 0)
@@ -145,10 +112,6 @@ class ReplayUtil {
             }
             if (inflater.getRemaining() != dummyByteUsed)
                 throw new DataFormatException("Remaining bytes.");
-//          System.out.println("  " + counts + " blocks with " +
-//              lens + " (" + (lens + counts / 2) / Math.max(counts, 1) + ") lengths and " +
-//              remains + " (" + (remains + counts / 2) / Math.max(counts, 1) + ") remains" +
-//              " (" + minRemain + " - " + maxRemain + ")");
         } finally {
             inflater.reset();
             inflater.setInput(emptyInput); // Reset input reference to release old one.
@@ -163,9 +126,10 @@ class ReplayUtil {
             inflate(compressed.getBuffer(), 0, compressed.getPosition(), decompressed);
             if (decompressed.getPosition() != length)
                 return false;
-            for (int i = 0; i < length; i++)
+            for (int i = 0; i < length; i++) {
                 if (decompressed.getBuffer()[i] != bytes[offset + i])
                     return false;
+            }
         } catch (DataFormatException e) {
             return false;
         }
@@ -218,16 +182,18 @@ class ReplayUtil {
         }
         if (in.getLimit() < in.getPosition() + 8)
             throw new IOException("Unexpected end of stream.");
-        inflateFast(in.getBuffer(), in.getPosition(), in.getLimit() - in.getPosition() - 8, out);
+        inflate(in.getBuffer(), in.getPosition(), in.getLimit() - in.getPosition() - 8, out);
     }
 
     // ========== Element (de)serialization ==========
 
-    public static void addGZippedElement(Map<String, ? super ByteArrayOutput> elements, String key, ByteArrayOutput value) throws IOException {
+    public static void addGZippedElement(Map<String, ? super ByteArrayOutput> elements, String key,
+        ByteArrayOutput value) throws IOException
+    {
         if (value.getPosition() > 1000) {
-            ByteArrayOutput compressed = new ByteArrayOutput(value.getPosition() + 1000);
+            ByteArrayOutput compressed = new ByteArrayOutput(value.getPosition() + MAX_BUF);
             gzip(value.getBuffer(), 0, value.getPosition(), 1, compressed);
-            if (value.getPosition() - compressed.getPosition() > Math.max(value.getPosition() / 20,  500)) {
+            if (value.getPosition() - compressed.getPosition() > Math.max(value.getPosition() / 20, 500)) {
                 elements.put(key + ".gz", compressed);
                 return;
             }
@@ -241,7 +207,7 @@ class ReplayUtil {
         byte[] compressed = elements.get(key + ".gz");
         if (compressed == null)
             return new ByteArrayInput();
-        ByteArrayOutput decompressed = new ByteArrayOutput(compressed.length * 2 + 1000);
+        ByteArrayOutput decompressed = new ByteArrayOutput(compressed.length * 2 + MAX_BUF);
         try {
             gunzip(compressed, 0, compressed.length, decompressed);
         } catch (DataFormatException e) {
@@ -281,7 +247,7 @@ class ReplayUtil {
         long version = in.readCompactLong();
         if (version != 2)
             throw new IOException("Unrecognized version: " + version);
-        Map<String, byte[]> elements = new LinkedHashMap<String, byte[]>();
+        Map<String, byte[]> elements = new LinkedHashMap<>();
         int elementCount = in.readCompactInt();
         for (int i = 0; i < elementCount; i++)
             elements.put(in.readUTFString(), in.readByteArray());

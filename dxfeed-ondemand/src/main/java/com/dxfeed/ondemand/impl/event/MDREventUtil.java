@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -93,20 +93,39 @@ public class MDREventUtil {
 
     public static MDREvent createEvent(char type) {
         switch (type) {
-        case 'Q':
-            return new MDRQuote();
-        case 'T':
-            return new MDRTrade();
-        case 'S':
-            return new MDRSummary();
-        case 'P':
-            return new MDRProfile();
-        case 'H':
-            return new MDRTradeHistory();
-        case 'M':
-            return new MDRMarketMaker();
-        default:
-            throw unknownType(type);
+            case 'Q':
+                return new MDRQuote();
+            case 'T':
+                return new MDRTrade();
+            case 'S':
+                return new MDRSummary();
+            case 'P':
+                return new MDRProfile();
+            case 'H':
+                return new MDRTradeHistory();
+            case 'M':
+                return new MDRMarketMaker();
+            default:
+                throw unknownType(type);
+        }
+    }
+
+    public static String getRecordName(char type) {
+        switch (type) {
+            case 'Q':
+                return "Quote";
+            case 'T':
+                return "Trade";
+            case 'S':
+                return "Summary";
+            case 'P':
+                return "Profile";
+            case 'H':
+                return "TimeAndSale";
+            case 'M':
+                return "MarketMaker";
+            default:
+                throw unknownType(type);
         }
     }
 
@@ -115,6 +134,7 @@ public class MDREventUtil {
     // 1st letter: E=Equities, F=Futures, O=Options, Q=Future Options, X=Forex
     // 2nd letter: -=Composite, .=Regional
     // 3rd letter: Q=Quote, T=Trade, S=Summary, P=Profile, H=TradeHistory, M=MarketMaker
+    public static final String TYPES = "QTSPHM";
     public static final int NUMBER_OF_CATEGORIES = 8 * 2 * 8;
     private static final String[] CATEGORY_NAMES = new String[NUMBER_OF_CATEGORIES];
     private static final int[] CATEGORY_TYPE_INDEXES = new int[128];

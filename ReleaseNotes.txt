@@ -1,3 +1,8 @@
+QDS 3.317:
+
+* [QD-1428] dxFeed-OnDemand: Minor performance improvements
+* [QD-1423] [Schedule] Update holidays for 2023
+
 QDS 3.316:
 
 * [QD-1421] [Schedule] Add holidays for 2023
