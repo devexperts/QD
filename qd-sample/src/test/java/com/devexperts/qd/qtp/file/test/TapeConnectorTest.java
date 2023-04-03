@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -41,7 +41,8 @@ public class TapeConnectorTest {
     private static final Path TAPE_FILE = Paths.get(TAPE_FILE_PREFIX + ".qds");
     private static final Path TIME_FILE = Paths.get(TAPE_FILE_PREFIX + ".time");
     private static final String SYMBOL = "Trade";
-    private static final List<Trade> TRADES = Arrays.asList(createTrade(123456789012L), createTrade(123456789013L), createTrade(123456789014L));
+    private static final List<Trade> TRADES = Arrays.asList(
+        createTrade(123456789012L), createTrade(123456789013L), createTrade(123456789014L));
 
     private final String fileFormat;
     private final String timeFormat;

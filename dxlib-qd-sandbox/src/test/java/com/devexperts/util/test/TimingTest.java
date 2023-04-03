@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,7 +12,7 @@
 package com.devexperts.util.test;
 
 import com.devexperts.util.Timing;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.Calendar;
 import java.util.Random;
@@ -23,7 +23,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class TimingTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+public class TimingTest {
     private static final int MS_IN_DAY = 24 * 60 * 60000;
     private static final int OPERATIONS = 50000; // pre-generated random ops
 
@@ -50,8 +53,8 @@ public class TimingTest extends TestCase {
         // Note: Moscow timezone will not pass the test, since it is buggy on days 8122-8123 transition
         //MSK(TimeZone.getTimeZone("Europe/Moscow"), new Timing(TimeZone.getTimeZone("Europe/Moscow")));
 
-        TimeZone timezone;
-        Timing timing;
+        final TimeZone timezone;
+        final Timing timing;
 
         private TestInstance(TimeZone timezone, Timing timing) {
             this.timezone = timezone;
@@ -68,52 +71,54 @@ public class TimingTest extends TestCase {
         final TestInstance ti;
 
         final long time;
-        final int day_id;
-        final long day_start;
-        final long day_end;
-        final int year_month_day_number;
+        final int dayId;
+        final long dayStart;
+        final long dayEnd;
+        final int yearMonthDayNumber;
 
         protected Operation() {
             ti = TestInstance.random();
-            day_id = randomDayId();
+            dayId = randomDayId();
 
-            long utc_time = (long) day_id * MS_IN_DAY;
-            Calendar utc_cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-            utc_cal.setTimeInMillis(utc_time);
-            year_month_day_number =
-                10000 * utc_cal.get(Calendar.YEAR) +
-                100 * (utc_cal.get(Calendar.MONTH) + 1) +
-                utc_cal.get(Calendar.DAY_OF_MONTH);
+            long utcTime = (long) dayId * MS_IN_DAY;
+            Calendar utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+            utcCalendar.setTimeInMillis(utcTime);
+            yearMonthDayNumber =
+                10000 * utcCalendar.get(Calendar.YEAR) +
+                100 * (utcCalendar.get(Calendar.MONTH) + 1) +
+                utcCalendar.get(Calendar.DAY_OF_MONTH);
 
             Calendar cal = Calendar.getInstance(ti.timezone);
-            cal.set(Calendar.YEAR, utc_cal.get(Calendar.YEAR));
-            cal.set(Calendar.MONTH, utc_cal.get(Calendar.MONTH));
-            cal.set(Calendar.DAY_OF_MONTH, utc_cal.get(Calendar.DAY_OF_MONTH));
+            cal.set(Calendar.YEAR, utcCalendar.get(Calendar.YEAR));
+            cal.set(Calendar.MONTH, utcCalendar.get(Calendar.MONTH));
+            cal.set(Calendar.DAY_OF_MONTH, utcCalendar.get(Calendar.DAY_OF_MONTH));
             cal.set(Calendar.HOUR_OF_DAY, cal.getActualMinimum(Calendar.HOUR_OF_DAY));
             cal.set(Calendar.MINUTE, cal.getActualMinimum(Calendar.MINUTE));
             cal.set(Calendar.SECOND, cal.getActualMinimum(Calendar.SECOND));
             cal.set(Calendar.MILLISECOND, cal.getActualMinimum(Calendar.MILLISECOND));
-            day_start = cal.getTimeInMillis();
+            dayStart = cal.getTimeInMillis();
             cal.set(Calendar.HOUR_OF_DAY, cal.getActualMaximum(Calendar.HOUR_OF_DAY));
             cal.set(Calendar.MINUTE, cal.getActualMaximum(Calendar.MINUTE));
             cal.set(Calendar.SECOND, cal.getActualMaximum(Calendar.SECOND));
             cal.set(Calendar.MILLISECOND, cal.getActualMaximum(Calendar.MILLISECOND));
-            day_end = cal.getTimeInMillis();
-            time = day_start + r.nextInt((int) (day_end - day_start + 1));
+            dayEnd = cal.getTimeInMillis();
+            time = dayStart + r.nextInt((int) (dayEnd - dayStart + 1));
         }
 
         abstract Timing.Day invoke();
 
         String getName() {
             String cn = getClass().toString();
-            return cn.substring(cn.lastIndexOf('$') + 1) + ": day=" + day_id + " (" + year_month_day_number + "), " +
-                "[start=" + day_start + ", cur=" + time + ", end=" + day_end + "], " +
+            return cn.substring(cn.lastIndexOf('$') + 1) + ": day=" + dayId + " (" + yearMonthDayNumber + "), " +
+                "[start=" + dayStart + ", cur=" + time + ", end=" + dayEnd + "], " +
                 "tz=" + ti.timezone.getID();
         }
 
         void verify(Timing.Day day) {
-            if (day_id != day.day_id || day_start != day.day_start || day_end != day.day_end || year_month_day_number != day.year_month_day_number)
-                fail(getName());
+            assertEquals(getName(), dayId, day.day_id);
+            assertEquals(getName(), dayStart, day.day_start);
+            assertEquals(getName(), dayEnd, day.day_end);
+            assertEquals(getName(), yearMonthDayNumber, day.year_month_day_number);
         }
 
         void run() {
@@ -125,7 +130,7 @@ public class TimingTest extends TestCase {
         GetById() {}
 
         Timing.Day invoke() {
-            return ti.timing.getById(day_id);
+            return ti.timing.getById(dayId);
         }
     }
 
@@ -133,7 +138,7 @@ public class TimingTest extends TestCase {
         GetByYmd() {}
 
         Timing.Day invoke() {
-            return ti.timing.getByYmd(year_month_day_number);
+            return ti.timing.getByYmd(yearMonthDayNumber);
         }
     }
 
@@ -182,6 +187,7 @@ public class TimingTest extends TestCase {
         }
     }
 
+    @Test
     public void testMutltiThread() throws BrokenBarrierException, InterruptedException, TimeoutException {
         // pre-initialize random ops and test them single-threaded
         for (int i = 0; i < OPERATIONS; i++) {
@@ -209,12 +215,13 @@ public class TimingTest extends TestCase {
             fail("Test failed");
     }
 
+    @Test
     public void testContinuity() {
         for (TestInstance ti : TestInstance.values()) {
             Timing timing = ti.timing;
             Timing.Day prev = timing.getById(-1);
-            for (int day_id = 0; day_id < 30000; day_id++) {
-                Timing.Day cur = timing.getById(day_id);
+            for (int dayId = 0; dayId < 30000; dayId++) {
+                Timing.Day cur = timing.getById(dayId);
                 if (cur.day_start != prev.day_end + 1)
                     fail(ti + ": " + explain(prev) + ", " + explain(cur));
                 prev = cur;
@@ -222,6 +229,7 @@ public class TimingTest extends TestCase {
         }
     }
 
+    @Test
     public void testZoneId() {
         for (TestInstance ti: TestInstance.values()) {
             Timing timing = ti.timing;

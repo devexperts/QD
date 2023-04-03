@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,16 +16,37 @@ import com.devexperts.io.ByteArrayOutput;
 import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.kit.PentaCodec;
 import com.devexperts.qd.util.ShortString;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Random;
 
-public class PentaCodecTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+public class PentaCodecTest {
     private static final PentaCodec CODEC = PentaCodec.INSTANCE;
 
     private static final char[] CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ./$".toCharArray();
 
+    private ByteArrayInput in;
+    private ByteArrayOutput out;
+
+    @Before
+    public void setUp() {
+        out = new ByteArrayOutput(1024);
+        in = new ByteArrayInput(out.getBuffer());
+    }
+
+    @After
+    public void tearDown() {
+        in = null;
+        out = null;
+    }
+
+    @Test
     public void testNull() {
         assertEquals(0, CODEC.encode(null));
         assertEquals(null, CODEC.decode(0));
@@ -37,6 +58,7 @@ public class PentaCodecTest extends TestCase {
         assertEquals(CODEC.encode("*"), CODEC.getWildcardCipher());
     }
 
+    @Test
     public void testPentas() {
         helpTestPentas("");
         char[] c = new char[12];
@@ -61,9 +83,6 @@ public class PentaCodecTest extends TestCase {
         }
     }
 
-    private ByteArrayInput in;
-    private ByteArrayOutput out;
-
     private void helpTestPentas(String s) {
         assert s != null;
         try {
@@ -74,7 +93,7 @@ public class PentaCodecTest extends TestCase {
             String symbol = cipher == 0 ? s : null;
             assertEquals(s, CODEC.decode(cipher, symbol));
             if (s.isEmpty())
-                assertTrue(CODEC.decodeToLong(cipher) == 0);
+                assertEquals(0, CODEC.decodeToLong(cipher));
             else
                 assertEquals(CODEC.decode(cipher), ShortString.decode(CODEC.decodeToLong(cipher)));
             if (cipher != 0) {
@@ -83,8 +102,8 @@ public class PentaCodecTest extends TestCase {
                     int sChar = s.charAt(i);
                     int cipherChar = CODEC.decodeCharAt(cipher, i);
                     int codeChar = (int) ((code >>> ((7 - i) << 3)) & 0xff);
-                    assertTrue(sChar == cipherChar);
-                    assertTrue(sChar == codeChar);
+                    assertEquals(sChar, cipherChar);
+                    assertEquals(sChar, codeChar);
                 }
                 assertEquals(s.hashCode(), CODEC.hashCode(cipher));
             }
@@ -102,17 +121,5 @@ public class PentaCodecTest extends TestCase {
         } catch (IOException e) {
             fail(e.toString());
         }
-    }
-
-    @Override
-    protected void setUp() {
-        out = new ByteArrayOutput(1024);
-        in = new ByteArrayInput(out.getBuffer());
-    }
-
-    @Override
-    protected void tearDown() {
-        in = null;
-        out = null;
     }
 }

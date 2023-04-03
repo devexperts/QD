@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -767,27 +767,30 @@ public class History extends Collector implements QDHistory {
             /*
              * (6) Turn on implicit sweep update transaction when anything is sweep-removed by this event
              * or updated record in the previous snapshot (as opposed to extending snapshot).
-             * It is turned only inside subscription range (of totalTime) and is not turned on
+             * The latter case is turned on only inside subscription range (of totalTime) and is skipped
              * when changes are being performed in "storeEverything" mode below totalTime, because
              * there is no mechanism to turn this transaction off.
              */
             long endRemovePosition = removeBuffer.getLimit();
-            if (endRemovePosition != sweepRemovePosition
-                || ((distFlags & UPDATED_RECORD_DIST_FLAG) != 0)
-                && time < prevSnapshotTime && time > timeTotal && !updatedEverSnapshotTime)
+            if (endRemovePosition != sweepRemovePosition ||
+                ((distFlags & UPDATED_RECORD_DIST_FLAG) != 0 &&
+                    time < prevSnapshotTime && time > timeTotal && !updatedEverSnapshotTime))
             {
                 hb.updateSweepTxOn();
             }
             /*
              * (7) Process snapshot end logic. SNAPSHOT_END flag is IMPLICIT on any event below total subscription time.
              */
-            boolean endedSnapshot = ((eventFlags & SNAPSHOT_SNIP) != 0 || time <= timeTotal)
-                && hb.snapshotEnd();
+            boolean receivedSnapshotEnd = (eventFlags & SNAPSHOT_SNIP) != 0 || time <= timeTotal;
+            if (receivedSnapshotEnd) {
+                hb.snapshotEnd();
+            }
+
             /*
              * (8) Turn off implicit sweep update transaction when either SNAPSHOT_SNIP or an actual snapshot end
              * is received.
              */
-            if (endedSnapshot && hb.updateSweepTxOff()) {
+            if (receivedSnapshotEnd && hb.updateSweepTxOff()) {
                 // mark event that ends transaction (it will have to be processed by agents)
                 distFlags |= TX_END_DIST_FLAG;
             }

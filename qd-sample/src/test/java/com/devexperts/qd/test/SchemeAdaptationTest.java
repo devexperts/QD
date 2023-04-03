@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -47,14 +47,21 @@ import com.devexperts.qd.qtp.socket.ServerSocketConnector;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.Decimal;
 import com.devexperts.test.ThreadCleanCheck;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.awt.Point;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Random;
 
-public class SchemeAdaptationTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+public class SchemeAdaptationTest {
     private static final int SYMBOL_COUNT = 8;
     private static final int GEN_RECORDS = 1000;
     private static final int GEN_FIELDS = 6 * GEN_RECORDS;
@@ -115,7 +122,7 @@ public class SchemeAdaptationTest extends TestCase {
         }
     }
 
-    private int gen_hash = 0;
+    private int genHash = 0;
 
     private interface Task {
         void start();
@@ -129,8 +136,8 @@ public class SchemeAdaptationTest extends TestCase {
         MessageConnector connector = new ServerSocketConnector(new AgentAdapter.Factory(collector), PORT);
         Thread thread = new Thread(this, "Server");
         Random r = new Random(23424);
-        int sub_received_cnt;
-        boolean[] sub_received = new boolean[SYMBOL_COUNT];
+        int subReceivedCount;
+        boolean[] subReceived = new boolean[SYMBOL_COUNT];
 
         Server() {}
 
@@ -157,9 +164,9 @@ public class SchemeAdaptationTest extends TestCase {
                 synchronized (this) {
                     for (int i = 0; i < SYMBOL_COUNT; i++)
                         if (cipher == ciphers[i] && symbol == symbols[i])
-                            if (!sub_received[i]) {
-                                sub_received[i] = true;
-                                sub_received_cnt++;
+                            if (!subReceived[i]) {
+                                subReceived[i] = true;
+                                subReceivedCount++;
                                 notifyAll();
                             }
                 }
@@ -169,29 +176,29 @@ public class SchemeAdaptationTest extends TestCase {
         public void run() {
             try {
                 synchronized (this) {
-                    while (sub_received_cnt < SYMBOL_COUNT)
+                    while (subReceivedCount < SYMBOL_COUNT)
                         wait();
                 }
                 DataBuffer buf = new DataBuffer();
-                int generated_records_cnt = 0;
-                int last_percent = 0;
-                while (generated_records_cnt < GEN_RECORDS) {
-                    int cnt = r.nextInt(Math.min(GEN_RECORDS - generated_records_cnt, GEN_BLOCK_SIZE)) + 1;
+                int generatedRecordsCount = 0;
+                int lastPercent = 0;
+                while (generatedRecordsCount < GEN_RECORDS) {
+                    int cnt = r.nextInt(Math.min(GEN_RECORDS - generatedRecordsCount, GEN_BLOCK_SIZE)) + 1;
                     for (int i = 0; i < cnt; i++) {
                         int j = r.nextInt(SYMBOL_COUNT);
                         buf.visitRecord(SRC_REC, ciphers[j], symbols[j]);
-                        gen_hash *= 13;
+                        genHash *= 13;
                         for (int k = 0; k < SRC_REC.getIntFieldCount(); k++) {
                             DataIntField fld = SRC_REC.getIntField(k);
                             int value = r.nextInt(100000);
                             if (fld.getName().equals(I_CHECK_FLD))
-                                gen_hash += value;
+                                genHash += value;
                             if (fld.getName().equals(D2I_CHECK_FLD)) {
-                                gen_hash += 2 * value;
+                                genHash += 2 * value;
                                 value = Decimal.compose(value);
                             }
                             if (fld.getName().equals(I2D_CHECK_FLD)) {
-                                gen_hash += 3 * value;
+                                genHash += 3 * value;
                             }
                             buf.visitIntField(fld, value);
                         }
@@ -200,13 +207,13 @@ public class SchemeAdaptationTest extends TestCase {
                             Object value = new Point(r.nextInt(1000), r.nextInt(1000));
                             if (fld.getName().equals(S_CHECK_FLD)) {
                                 value = value.toString();
-                                gen_hash += 5 * value.hashCode();
+                                genHash += 5 * value.hashCode();
                             }
                             if (fld.getName().equals(O2B_CHECK_FLD)) {
-                                gen_hash += 7 * value.hashCode();
+                                genHash += 7 * value.hashCode();
                             }
                             if (fld.getName().equals(B2O_CHECK_FLD)) {
-                                gen_hash += 11 * value.hashCode();
+                                genHash += 11 * value.hashCode();
                                 value = IOUtil.objectToBytes(value);
                             }
                             buf.visitObjField(fld, value);
@@ -214,11 +221,11 @@ public class SchemeAdaptationTest extends TestCase {
                     }
                     distributor.processData(buf);
                     Thread.sleep(10);
-                    generated_records_cnt += cnt;
-                    int new_percent = generated_records_cnt * 10 / GEN_RECORDS;
-                    if (new_percent != last_percent) {
-                        System.out.println(new_percent * 10 + "%");
-                        last_percent = new_percent;
+                    generatedRecordsCount += cnt;
+                    int newPercent = generatedRecordsCount * 10 / GEN_RECORDS;
+                    if (newPercent != lastPercent) {
+                        System.out.println(newPercent * 10 + "%");
+                        lastPercent = newPercent;
                     }
                 }
             } catch (InterruptedException e) {
@@ -240,25 +247,26 @@ public class SchemeAdaptationTest extends TestCase {
     }
 
     private class Client implements Task, Runnable, DataListener, DataVisitor {
-        QDStats root_stats = new QDStats(QDStats.SType.ANY, DST_SCHEME);
-        QDCollector collector = QDFactory.getDefaultFactory().createStream(DST_SCHEME, root_stats);
+        QDStats rootStats = new QDStats(QDStats.SType.ANY, DST_SCHEME);
+        QDCollector collector = QDFactory.getDefaultFactory().createStream(DST_SCHEME, rootStats);
         QDAgent agent = collector.agentBuilder().build();
-        MessageConnector connector = new ClientSocketConnector(new DistributorAdapter.Factory(collector), "localhost", PORT);
+        MessageConnector connector = new ClientSocketConnector(
+            new DistributorAdapter.Factory(collector), "localhost", PORT);
         Thread thread = new Thread(this, "Client");
         MARSEndpoint marsEndpoint;
         ConnectorsMonitoringTask monitoring;
         boolean broken;
-        int received_recs;
-        int received_flds;
-        int received_hash;
+        int receivedRecs;
+        int receivedFlds;
+        int receivedHash;
 
         Client() {}
 
         @Override
         public void start() {
-            connector.setStats(root_stats.create(QDStats.SType.CLIENT_SOCKET_CONNECTOR));
+            connector.setStats(rootStats.create(QDStats.SType.CLIENT_SOCKET_CONNECTOR));
             marsEndpoint = MARSEndpoint.newBuilder().acquire();
-            monitoring = new ConnectorsMonitoringTask(null, QDLog.log, root_stats, marsEndpoint.getRoot(),
+            monitoring = new ConnectorsMonitoringTask(null, QDLog.log, rootStats, marsEndpoint.getRoot(),
                 Collections.singletonList(connector));
             connector.start();
             thread.start();
@@ -283,8 +291,8 @@ public class SchemeAdaptationTest extends TestCase {
                 }
             else
                 synchronized (this) {
-                    received_recs++;
-                    received_hash *= 13;
+                    receivedRecs++;
+                    receivedHash *= 13;
                     notifyAll();
                 }
         }
@@ -293,20 +301,20 @@ public class SchemeAdaptationTest extends TestCase {
         public void visitIntField(DataIntField field, int value) {
             if (field.getName().equals(I_CHECK_FLD))
                 synchronized (this) {
-                    received_flds++;
-                    received_hash += value;
+                    receivedFlds++;
+                    receivedHash += value;
                     notifyAll();
                 }
             if (field.getName().equals(D2I_CHECK_FLD))
                 synchronized (this) {
-                    received_flds++;
-                    received_hash += 2 * value;
+                    receivedFlds++;
+                    receivedHash += 2 * value;
                     notifyAll();
                 }
             if (field.getName().equals(I2D_CHECK_FLD))
                 synchronized (this) {
-                    received_flds++;
-                    received_hash += 3 * (int) Decimal.toDouble(value);
+                    receivedFlds++;
+                    receivedHash += 3 * (int) Decimal.toDouble(value);
                     notifyAll();
                 }
         }
@@ -315,15 +323,15 @@ public class SchemeAdaptationTest extends TestCase {
         public void visitObjField(DataObjField field, Object value) {
             if (field.getName().equals(S_CHECK_FLD))
                 synchronized (this) {
-                    received_flds++;
-                    received_hash += 5 * value.hashCode();
+                    receivedFlds++;
+                    receivedHash += 5 * value.hashCode();
                     notifyAll();
                 }
             if (field.getName().equals(O2B_CHECK_FLD))
                 synchronized (this) {
-                    received_flds++;
+                    receivedFlds++;
                     try {
-                        received_hash += 7 * IOUtil.bytesToObject((byte[]) value).hashCode();
+                        receivedHash += 7 * IOUtil.bytesToObject((byte[]) value).hashCode();
                     } catch (IOException e) {
                         fail(e.toString());
                     }
@@ -331,8 +339,8 @@ public class SchemeAdaptationTest extends TestCase {
                 }
             if (field.getName().equals(B2O_CHECK_FLD))
                 synchronized (this) {
-                    received_flds++;
-                    received_hash += 11 * value.hashCode();
+                    receivedFlds++;
+                    receivedHash += 11 * value.hashCode();
                     notifyAll();
                 }
         }
@@ -346,7 +354,7 @@ public class SchemeAdaptationTest extends TestCase {
                 agent.setSubscription(buf);
                 agent.setDataListener(this);
                 synchronized (this) {
-                    while (!broken && received_flds < GEN_FIELDS)
+                    while (!broken && receivedFlds < GEN_FIELDS)
                         wait();
                 }
             } catch (InterruptedException e) {
@@ -357,14 +365,15 @@ public class SchemeAdaptationTest extends TestCase {
         @Override
         public void join() throws InterruptedException {
             thread.join();
-            assertTrue(!broken);
-            assertEquals(received_recs, GEN_RECORDS);
-            assertEquals(received_flds, GEN_FIELDS);
-            assertEquals(received_hash, gen_hash);
+            assertFalse(broken);
+            assertEquals(receivedRecs, GEN_RECORDS);
+            assertEquals(receivedFlds, GEN_FIELDS);
+            assertEquals(receivedHash, genHash);
 
             String rep = monitoring.report();
-            assertTrue(rep, rep.matches("Subscription: 8; Storage: 0; Buffer: 0; Read: ([^;]+); Write: ([^;]+); (.*); CPU: \\d+\\.\\d\\d%\n" +
-                    "    ClientSocket-Distributor localhost:\\d+ \\[1\\] Read: \\1; Write: \\2; \\3"));
+            assertTrue(rep, rep.matches(
+                "Subscription: 8; Storage: 0; Buffer: 0; Read: ([^;]+); Write: ([^;]+); (.*); CPU: \\d+\\.\\d\\d%\n" +
+                "    ClientSocket-Distributor localhost:\\d+ \\[1\\] Read: \\1; Write: \\2; \\3"));
         }
 
         @Override
@@ -375,6 +384,7 @@ public class SchemeAdaptationTest extends TestCase {
         }
     }
 
+    @Test
     public void testSchemeAdaptation() throws InterruptedException {
         Task srv = new Server();
         Task cli = new Client();
@@ -386,13 +396,13 @@ public class SchemeAdaptationTest extends TestCase {
         cli.stop();
     }
 
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         ThreadCleanCheck.before();
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         ThreadCleanCheck.after();
     }
 }

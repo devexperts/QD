@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,20 +12,25 @@
 package com.dxfeed.api.test;
 
 import com.dxfeed.event.market.MarketEventSymbols;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
-public class MarketEventSymbolsTest extends TestCase {
+
+public class MarketEventSymbolsTest {
+
+    @Test
     public void testNull() {
-        assertEquals(null, MarketEventSymbols.getBaseSymbol(null));
+        assertNull(MarketEventSymbols.getBaseSymbol(null));
         assertEquals("SPX", MarketEventSymbols.changeBaseSymbol(null, "SPX"));
         assertEquals(false, MarketEventSymbols.hasExchangeCode(null));
         assertEquals('\0', MarketEventSymbols.getExchangeCode(null));
-        assertEquals(null, MarketEventSymbols.changeExchangeCode(null, '\0'));
+        assertNull(MarketEventSymbols.changeExchangeCode(null, '\0'));
         assertEquals("&D", MarketEventSymbols.changeExchangeCode(null, 'D'));
 
         assertEquals(null, MarketEventSymbols.getAttributeStringByKey(null, "p"));
@@ -39,14 +44,17 @@ public class MarketEventSymbolsTest extends TestCase {
         assertEquals("{=}", MarketEventSymbols.changeAttributeStringByKey(null, "", ""));
     }
 
+    @Test
     public void testEmpty() {
         checkNonAttributedSymbol("");
     }
 
+    @Test
     public void testRegular() {
         checkNonAttributedSymbol("IBM");
     }
 
+    @Test
     public void testBrokenSymbol() {
         checkNonAttributedSymbol("{");
         checkNonAttributedSymbol("}");
@@ -79,6 +87,7 @@ public class MarketEventSymbolsTest extends TestCase {
         assertEquals(s + "{=}", MarketEventSymbols.changeAttributeStringByKey(s, "", ""));
     }
 
+    @Test
     public void testRegional() {
         String s = "GE&N";
         assertEquals("GE", MarketEventSymbols.getBaseSymbol(s));
@@ -100,6 +109,7 @@ public class MarketEventSymbolsTest extends TestCase {
         assertEquals("GE&N{=}", MarketEventSymbols.changeAttributeStringByKey(s, "", ""));
     }
 
+    @Test
     public void testOneAttr() {
         String s = "/ES{tho=true}";
         assertEquals("/ES", MarketEventSymbols.getBaseSymbol(s));
@@ -132,6 +142,7 @@ public class MarketEventSymbolsTest extends TestCase {
         assertEquals("/ES{=,tho=true}", MarketEventSymbols.changeAttributeStringByKey(s, "", ""));
     }
 
+    @Test
     public void testTwoAttrs() {
         String s = "A{c=1,e=3}";
         assertEquals("A", MarketEventSymbols.getBaseSymbol(s));
@@ -178,6 +189,7 @@ public class MarketEventSymbolsTest extends TestCase {
         assertEquals("A{=,c=1,e=3}", MarketEventSymbols.changeAttributeStringByKey(s, "", ""));
     }
 
+    @Test
     public void testSpreadSymbol() {
         assertEquals("", MarketEventSymbols.buildSpreadSymbol(Collections.<String, Double>emptyMap()));
         assertEquals("", MarketEventSymbols.buildSpreadSymbol(spread("A:0")));

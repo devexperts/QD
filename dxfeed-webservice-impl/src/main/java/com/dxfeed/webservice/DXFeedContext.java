@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -98,12 +98,9 @@ public class DXFeedContext {
         // will connect automatically using address from configuration file
         endpoint = newBuilder().build();
         feed = endpoint.getFeed();
-        for (Class<? extends EventType<?>> eventType : endpoint.getEventTypes())
-            if (LastingEvent.class.isAssignableFrom(eventType) ||
-                IndexedEvent.class.isAssignableFrom(eventType))
-            {
-                eventTypes.put(eventType.getSimpleName(), eventType);
-            }
+        for (Class<? extends EventType<?>> eventType : endpoint.getEventTypes()) {
+            eventTypes.put(eventType.getSimpleName(), eventType);
+        }
     }
 
     private void shutdown() {

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,16 +12,22 @@
 package com.devexperts.util.test;
 
 import com.devexperts.util.MathUtil;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.Random;
 
-public class MathUtilTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+
+public class MathUtilTest {
     private static final long P14 = 100000000000000L;
 
+    @Test
     public void testRoundDecimal() {
-        assertFalse(1.1 - 0.2 == 0.9);
-        assertTrue(MathUtil.roundDecimal(1.1 - 0.2) == 0.9);
+        assertNotEquals(0.9, 1.1 - 0.2, 0.0);
+        assertEquals(0.9, MathUtil.roundDecimal(1.1 - 0.2), 0.0);
 
         checkRound(0);
         checkRound(1);
@@ -39,11 +45,11 @@ public class MathUtilTest extends TestCase {
         checkRound(12345.123456789);
         checkRound(-12345.123456789);
 
-        assertEquals(12345.123456789, MathUtil.roundDecimal(12345.1234567894));
-        assertEquals(12345.123456790, MathUtil.roundDecimal(12345.1234567896));
+        assertEquals(12345.123456789, MathUtil.roundDecimal(12345.1234567894), 0.0);
+        assertEquals(12345.123456790, MathUtil.roundDecimal(12345.1234567896), 0.0);
 
-        assertEquals(0.0, MathUtil.roundDecimal(Double.MIN_VALUE));
-        assertEquals(-0.0, MathUtil.roundDecimal(-Double.MIN_VALUE));
+        assertEquals(0.0, MathUtil.roundDecimal(Double.MIN_VALUE), 0.0);
+        assertEquals(-0.0, MathUtil.roundDecimal(-Double.MIN_VALUE), 0.0);
 
         Random r = new Random(20090102);
 
@@ -77,42 +83,46 @@ public class MathUtilTest extends TestCase {
         double v = (double) mantissa / divisor;
         checkRound(v);
         if (mantissa / (P14 / 10) != 0) {
-            assertEquals(v, MathUtil.roundDecimal(v + (r.nextInt(9) - 4) * 0.1 / divisor));
+            assertEquals(v, MathUtil.roundDecimal(v + (r.nextInt(9) - 4) * 0.1 / divisor), 0.0);
         }
     }
 
     private void checkRound(double x) {
-        assertEquals(x, MathUtil.roundDecimal(x));
+        assertEquals(x, MathUtil.roundDecimal(x), 0.0);
     }
 
+    @Test
     public void testIntDivRem() {
         int[] numbers = {Integer.MIN_VALUE, -5, Integer.MAX_VALUE - 10};
-        for (int a : numbers)
-            for (int b : numbers)
-                for (int i = 0; i < 10; i++)
-                    for (int j = 0; j < 10; j++)
+        for (int a : numbers) {
+            for (int b : numbers) {
+                for (int i = 0; i < 10; i++) {
+                    for (int j = 0; j < 10; j++) {
                         checkIntDivRem(a + i, b + j);
+                    }
+                }
+            }
+        }
     }
 
+    @Test
     public void testLongDivRem() {
         long[] numbers = {Long.MIN_VALUE, Integer.MIN_VALUE - 5L, -5, Integer.MAX_VALUE - 5L, Long.MAX_VALUE - 10};
-        for (long a : numbers)
-            for (long b : numbers)
-                for (long i = 0; i < 10; i++)
-                    for (long j = 0; j < 10; j++)
+        for (long a : numbers) {
+            for (long b : numbers) {
+                for (long i = 0; i < 10; i++) {
+                    for (long j = 0; j < 10; j++) {
                         checkLongDivRem(a + i, b + j);
+                    }
+                }
+            }
+        }
     }
 
     private void checkIntDivRem(int a, int b) {
         if (b == 0) {
-            try {
-                MathUtil.div(a, b);
-                fail();
-            } catch (ArithmeticException e) {}
-            try {
-                MathUtil.rem(a, b);
-                fail();
-            } catch (ArithmeticException e) {}
+            assertThrows(ArithmeticException.class, () -> MathUtil.div(a, b));
+            assertThrows(ArithmeticException.class, () -> MathUtil.rem(a, b));
         } else {
             int d = MathUtil.div(a, b);
             int r = MathUtil.rem(a, b);
@@ -128,14 +138,8 @@ public class MathUtilTest extends TestCase {
 
     private void checkLongDivRem(long a, long b) {
         if (b == 0) {
-            try {
-                MathUtil.div(a, b);
-                fail();
-            } catch (ArithmeticException e) {}
-            try {
-                MathUtil.rem(a, b);
-                fail();
-            } catch (ArithmeticException e) {}
+            assertThrows(ArithmeticException.class, () -> MathUtil.div(a, b));
+            assertThrows(ArithmeticException.class, () -> MathUtil.rem(a, b));
         } else {
             long d = MathUtil.div(a, b);
             long r = MathUtil.rem(a, b);

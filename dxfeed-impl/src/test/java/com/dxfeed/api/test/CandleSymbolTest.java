@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,12 +17,17 @@ import com.dxfeed.event.candle.CandlePrice;
 import com.dxfeed.event.candle.CandleSession;
 import com.dxfeed.event.candle.CandleSymbol;
 import com.dxfeed.event.candle.CandleType;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.HashSet;
 import java.util.Set;
 
-public class CandleSymbolTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+public class CandleSymbolTest {
+
+    @Test
     public void testCandlePeriods() {
         assertEquals(CandlePeriod.DAY, CandlePeriod.parse("DAY"));
         assertEquals(CandlePeriod.DAY, CandlePeriod.parse("1DAY"));
@@ -58,6 +63,7 @@ public class CandleSymbolTest extends TestCase {
         }
     }
 
+    @Test
     public void testNormalization() {
         assertEquals("IBM&E", CandleSymbol.valueOf("IBM", CandleExchange.valueOf('E')).toString());
         assertEquals("IBM", CandleSymbol.valueOf("IBM", CandleExchange.COMPOSITE).toString());
@@ -71,7 +77,9 @@ public class CandleSymbolTest extends TestCase {
         assertEquals("IBM{tho=true}", CandleSymbol.valueOf("IBM", CandleSession.REGULAR).toString());
         assertEquals("IBM", CandleSymbol.valueOf("IBM", CandleSession.ANY).toString());
 
-        assertEquals("EUR/USD{=2h,price=bid,source=bank}", CandleSymbol.valueOf("EUR/USD{source=bank}", CandlePrice.BID, CandlePeriod.valueOf(2, CandleType.HOUR)).toString());
-        assertEquals("IBM{=15m,aa=zz,price=bid}", CandleSymbol.valueOf("IBM{aa=zz,price=b}", CandlePeriod.valueOf(15, CandleType.MINUTE)).toString());
+        assertEquals("EUR/USD{=2h,price=bid,source=bank}", CandleSymbol.valueOf(
+            "EUR/USD{source=bank}", CandlePrice.BID, CandlePeriod.valueOf(2, CandleType.HOUR)).toString());
+        assertEquals("IBM{=15m,aa=zz,price=bid}", CandleSymbol.valueOf(
+            "IBM{aa=zz,price=b}", CandlePeriod.valueOf(15, CandleType.MINUTE)).toString());
     }
 }

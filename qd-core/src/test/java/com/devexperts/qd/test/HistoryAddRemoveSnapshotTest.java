@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -27,14 +27,20 @@ import com.devexperts.qd.ng.AbstractRecordSink;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordMode;
-import junit.framework.TestCase;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * This is a test for [QD-695] NullPointerException at AgentQueue.retrieveSnapshotForHistory.
  * NPE was happening when agent has subscription for data item, then incoming data
  * (and subscription goes to snapshot queue), then unsubscription, then subscription again.
  */
-public class HistoryAddRemoveSnapshotTest extends TestCase {
+public class HistoryAddRemoveSnapshotTest {
+
     private static final int VALUE_INDEX = 2;
     private static final DataRecord RECORD = new DefaultRecord(0, "Test", true,
         new DataIntField[] {
@@ -47,8 +53,9 @@ public class HistoryAddRemoveSnapshotTest extends TestCase {
 
     private final QDHistory history = QDFactory.getDefaultFactory().historyBuilder().withScheme(SCHEME).build();
     private final QDDistributor distributor = history.distributorBuilder().build();
-    private QDAgent agent = history.agentBuilder().build();
+    private final QDAgent agent = history.agentBuilder().build();
 
+    @Test
     public void testHistoryAddRemoveSnapshot() {
         // subscribe to two symbols (IBM & MSFT)
         setSubTime("IBM", 0);

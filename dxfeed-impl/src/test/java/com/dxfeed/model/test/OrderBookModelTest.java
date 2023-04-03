@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,7 +22,9 @@ import com.dxfeed.event.market.Quote;
 import com.dxfeed.event.market.Scope;
 import com.dxfeed.event.market.Side;
 import com.dxfeed.model.market.OrderBookModel;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,10 +34,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-/**
- * Unit test for {@link OrderBookModel} class.
- */
-public class OrderBookModelTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+public class OrderBookModelTest {
 
     public static final char Q = 'Q';
     public static final char Z = 'Z';
@@ -51,11 +53,7 @@ public class OrderBookModelTest extends TestCase {
 
     private String symbol = "IBM";
 
-    public OrderBookModelTest(String s) {
-        super(s);
-    }
-
-    @Override
+    @Before
     public void setUp() {
         // single threaded -- execute in place
         DXEndpoint endpoint = DXEndpoint.create(DXEndpoint.Role.LOCAL_HUB).executor(Runnable::run);
@@ -70,11 +68,12 @@ public class OrderBookModelTest extends TestCase {
         model.getSellOrders().addListener(change -> sellQueued++);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         model.close();
     }
 
+    @Test
     public void testLotSize() throws Exception {
         model.setLotSize(100);
 
@@ -103,6 +102,7 @@ public class OrderBookModelTest extends TestCase {
         assertEquals(400, buys.get(0).getSize());
     }
 
+    @Test
     public void testChangeLotSize() throws Exception {
         publisher.publishEvents(Collections.singletonList(compositeBuy(1)));
         assertNBuyChangesQueued(1);
@@ -120,6 +120,7 @@ public class OrderBookModelTest extends TestCase {
         assertEquals(1, buys.get(0).getSize());
     }
 
+    @Test
     public void testChangeLotSize2() throws Exception {
         // See [QD-838] dxFeed API: OrderBookModel incorrectly processes change of lot size
         publisher.publishEvents(Arrays.asList(aggregateBuy(1, 1, Q, MMID), aggregateBuy(2, 0, Q, MMID)));
@@ -138,6 +139,7 @@ public class OrderBookModelTest extends TestCase {
         assertEquals(1, buys.get(0).getSize());
     }
 
+    @Test
     public void testSoleZeroSizeCompositeQuote() throws Exception {
         publisher.publishEvents(Collections.singletonList(compositeBuy(1)));
         assertNBuyChangesQueued(1);
@@ -157,9 +159,10 @@ public class OrderBookModelTest extends TestCase {
 
         assertEquals(1, buys.size());
         assertEquals(0, buys.get(0).getSize());
-        assertEquals(0.0, buys.get(0).getPrice(), 1e-5);
+        assertEquals(0.0, buys.get(0).getPrice(), 0.0);
     }
 
+    @Test
     public void testChangeSymbol() {
         // publish 100 orders for one symbol
         int n = 100;
@@ -181,6 +184,7 @@ public class OrderBookModelTest extends TestCase {
         assertNSellChangesQueued(0);
     }
 
+    @Test
     public void testOrderBookModelIgnoresAnalyticOrder() {
         publisher.publishEvents(Collections.singletonList(analyticOrderBuy(4, 500, Q, MMID)));
         assertNBuyChangesQueued(0);
@@ -198,6 +202,7 @@ public class OrderBookModelTest extends TestCase {
     }
 
     // test a mix of composites, regionals, and orders
+    @Test
     public void testMix() {
         // post composite
         publisher.publishEvents(Collections.singletonList(compositeBuy(1)));
@@ -266,6 +271,7 @@ public class OrderBookModelTest extends TestCase {
 
     // Test correct replacing of buy/sell orders
     // It also tests removing everything with an "empty snapshot" message
+    @Test
     public void testStressBuySellOrders() {
         Random rnd = new Random(1);
         int bookSize = 100;
@@ -313,6 +319,7 @@ public class OrderBookModelTest extends TestCase {
 
     // Test different sources (all publishable ones in scheme)
     // It also tests removing everything via individual "REMOVE_EVENT" messages on each index
+    @Test
     public void testStressSources() {
         Random rnd = new Random(1);
         int bookSize = 100;
@@ -375,6 +382,7 @@ public class OrderBookModelTest extends TestCase {
 
     // Test a mix of composite, regional, aggregate, and order updates (BUY side only)
     // It does not actually check what's going one, but looks for NPEs in tree code
+    @Test
     public void testStressMix() {
         Random rnd = new Random(1);
         int bookSize = 100;

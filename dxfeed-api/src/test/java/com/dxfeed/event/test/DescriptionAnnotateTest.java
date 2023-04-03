@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,13 +13,16 @@ package com.dxfeed.event.test;
 
 import com.devexperts.annotation.Description;
 import com.dxfeed.event.market.Quote;
-import junit.framework.TestCase;
+import org.junit.Test;
+
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Tests that events are successfully annotated with {@link Description}.
  */
-public class DescriptionAnnotateTest extends TestCase {
+public class DescriptionAnnotateTest {
 
+    @Test
     public void testEventsHaveDescriptionAnnotation() {
         Description description = Quote.class.getAnnotation(Description.class);
         assertNotNull(description);

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,29 +18,35 @@ import com.dxfeed.event.candle.CandlePriceLevel;
 import com.dxfeed.event.candle.CandleSession;
 import com.dxfeed.event.candle.CandleSymbol;
 import com.dxfeed.event.candle.CandleType;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.Random;
 
-public class CandleSymbolTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+
+public class CandleSymbolTest {
+
+    @Test
     public void testCandleSymbolParsing() {
         Random rnd = new Random(20131202);
         for (int i = 0; i < 10000; i++) {
             String baseSymbol = randomSymbol(rnd);
             CandleAlignment alignment = randomEnum(rnd, CandleAlignment.values());
-            CandleExchange exchange = rnd.nextBoolean() ? CandleExchange.DEFAULT : CandleExchange.valueOf(randomChar(rnd));
-            CandlePeriod period = CandlePeriod.valueOf((rnd.nextInt(21) - 10) / 10.0, randomEnum(rnd, CandleType.values()));
+            CandleExchange exchange = rnd.nextBoolean() ?
+                CandleExchange.DEFAULT : CandleExchange.valueOf(randomChar(rnd));
+            CandlePeriod period =
+                CandlePeriod.valueOf((rnd.nextInt(21) - 10) / 10.0, randomEnum(rnd, CandleType.values()));
             CandleSession session = randomEnum(rnd, CandleSession.values());
             CandlePriceLevel priceLevel = CandlePriceLevel.valueOf((rnd.nextInt(21)) / 10.0);
-            CandleSymbol candleSymbol0 = CandleSymbol.valueOf(baseSymbol, alignment, exchange, period, session, priceLevel);
-            CandleSymbol candleSymbol1 = CandleSymbol.valueOf(candleSymbol0.toString());
-            assertEquals(baseSymbol, candleSymbol1.getBaseSymbol());
-            assertEquals(alignment, candleSymbol1.getAlignment());
-            assertEquals(exchange, candleSymbol1.getExchange());
-            assertEquals(period, candleSymbol1.getPeriod());
-            assertEquals(session, candleSymbol1.getSession());
-            assertEquals(priceLevel, candleSymbol1.getPriceLevel());
-            assertEquals(candleSymbol0, candleSymbol1);
+            CandleSymbol symbol0 = CandleSymbol.valueOf(baseSymbol, alignment, exchange, period, session, priceLevel);
+            CandleSymbol symbol1 = CandleSymbol.valueOf(symbol0.toString());
+            assertEquals(baseSymbol, symbol1.getBaseSymbol());
+            assertEquals(alignment, symbol1.getAlignment());
+            assertEquals(exchange, symbol1.getExchange());
+            assertEquals(period, symbol1.getPeriod());
+            assertEquals(session, symbol1.getSession());
+            assertEquals(priceLevel, symbol1.getPriceLevel());
+            assertEquals(symbol0, symbol1);
         }
     }
 

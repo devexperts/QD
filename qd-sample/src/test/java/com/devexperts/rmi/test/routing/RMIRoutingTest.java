@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -110,7 +110,8 @@ public class RMIRoutingTest {
         clients.connect(NTU.localHost(muxPorts[0]));
 
 
-        RMIRequest<Double> sum = clients.clients[0].getClient().createRequest(null, DifferentServices.CalculatorService.PLUS, 1.1, 2.1);
+        RMIRequest<Double> sum = clients.clients[0].getClient().createRequest(
+            null, DifferentServices.CalculatorService.PLUS, 1.1, 2.1);
         sum.send();
         try {
             assertEquals(sum.getBlocking(), 3.2, 0);
@@ -122,7 +123,8 @@ public class RMIRoutingTest {
             muxs.servers[1], muxs.servers[0])), sum.getResponseMessage().getRoute());
 
         //ErrorMessage
-        RMIOperation<Double> op = RMIOperation.valueOf("CalculatorService", double.class, "Oops", double.class, double.class);
+        RMIOperation<Double> op =
+            RMIOperation.valueOf("CalculatorService", double.class, "Oops", double.class, double.class);
         sum = clients.clients[0].getClient().createRequest(null, op, 1.1, 2.1);
         sum.send();
         try {
@@ -162,7 +164,8 @@ public class RMIRoutingTest {
         log.info("---- connect ----");
 
         //ResultMessage
-        RMIRequest<Double> sum = clients.clients[0].getClient().createRequest(null, DifferentServices.CalculatorService.PLUS, 1.1, 2.1);
+        RMIRequest<Double> sum = clients.clients[0].getClient().createRequest(
+            null, DifferentServices.CalculatorService.PLUS, 1.1, 2.1);
         sum.send();
         assertRequest(sum, 3.2, Arrays.asList(servers.servers[0], muxs.servers[1], muxs.servers[0]), -1);
         log.info("-----------------------------------------------------");
@@ -178,8 +181,11 @@ public class RMIRoutingTest {
             sum.getBlocking();
             fail();
         } catch (RMIException e) {
-            if (e.getType() != RMIExceptionType.UNKNOWN_SERVICE && e.getType() != RMIExceptionType.REQUEST_SENDING_TIMEOUT)
+            if (e.getType() != RMIExceptionType.UNKNOWN_SERVICE &&
+                e.getType() != RMIExceptionType.REQUEST_SENDING_TIMEOUT)
+            {
                 fail(e.getType().toString());
+            }
         }
     }
 
@@ -242,7 +248,8 @@ public class RMIRoutingTest {
         int result = 0;
         try {
             result = dist.getBlocking();
-            assertRoute(-1, Arrays.asList(servers.servers[0].getEndpointId(), muxs.servers[1].getEndpointId()), dist.getResponseMessage().getRoute());
+            assertRoute(-1, Arrays.asList(servers.servers[0].getEndpointId(),
+                muxs.servers[1].getEndpointId()), dist.getResponseMessage().getRoute());
         } catch (RMIException e) {
             fail(e.getMessage());
         }
@@ -437,7 +444,8 @@ public class RMIRoutingTest {
 
         RMIOperation<List> op = RMIOperation.valueOf("EchoRequestService", List.class, "method");
         RMIRequest<List> req = clients.clients[0].getClient().createRequest(null, op);
-        assertRoute(-1, Collections.singletonList(clients.clients[0].getEndpointId()), req.getRequestMessage().getRoute());
+        assertRoute(-1, Collections.singletonList(clients.clients[0].getEndpointId()),
+            req.getRequestMessage().getRoute());
 
         req.send();
         try {
@@ -464,7 +472,8 @@ public class RMIRoutingTest {
         server.getServer().export(new EchoRequestService());
         int port = NTU.connectServer(server, null, "services=CalculatorService,advertise=all");
         NTU.connect(client, NTU.localHost(port));
-        RMIRequest<Double> sum = client.getClient().createRequest(null, DifferentServices.CalculatorService.PLUS, 1.231, 2.123);
+        RMIRequest<Double> sum = client.getClient().createRequest(
+            null, DifferentServices.CalculatorService.PLUS, 1.231, 2.123);
         assertRequest(sum, 3.354, Collections.singletonList(server),  -1);
         log.info("middle");
 

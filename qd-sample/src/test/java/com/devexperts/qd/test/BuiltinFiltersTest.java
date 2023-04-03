@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,22 +16,31 @@ import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.kit.CompositeFilters;
-import junit.framework.TestCase;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-public class BuiltinFiltersTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+
+public class BuiltinFiltersTest {
     private static final DataScheme SCHEME = QDFactory.getDefaultScheme();
     private static final DataRecord RECORD = SCHEME.findRecordByName("Quote");
 
+    @Rule
+    public TemporaryFolder tempFolder = new TemporaryFolder();
+
+    @Test
     public void testOptFilter() {
         SubscriptionFilter filter = CompositeFilters.getFactory(SCHEME).createFilter("opt");
         assertAccepts(true, filter, ".IBM");
         assertAccepts(false, filter, "IBM");
     }
 
+    @Test
     public void testCompositePatternFilter() {
         SubscriptionFilter filter = CompositeFilters.getFactory(SCHEME).createFilter("I*,MMM");
         assertAccepts(false, filter, ".IBM");
@@ -39,18 +48,15 @@ public class BuiltinFiltersTest extends TestCase {
         assertAccepts(true, filter, "MMM");
     }
 
+    @Test
     public void testIpfFilter() throws IOException {
-        // create temp IPF file
-        File tempIpf = File.createTempFile("temp", ".ipf");
-        PrintWriter out = new PrintWriter(tempIpf);
-        try {
+        // Create temp IPF file
+        File tempIpf = new File(tempFolder.getRoot(), "test.ipf");
+        try (PrintWriter out = new PrintWriter(tempIpf)) {
             out.println("#T::=TYPE,SYMBOL");
             out.println("T,IBM");
             out.println("##COMPLETE");
-        } finally {
-            out.close();
         }
-        tempIpf.deleteOnExit();
 
         // test this IPF file
         SubscriptionFilter filter = CompositeFilters.getFactory(SCHEME).createFilter("ipf[" + tempIpf.toURI() + "]");

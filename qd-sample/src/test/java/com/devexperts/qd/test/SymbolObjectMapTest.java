@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,30 +13,38 @@ package com.devexperts.qd.test;
 
 import com.devexperts.qd.util.SymbolObjectMap;
 import com.devexperts.qd.util.SymbolObjectVisitor;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.HashSet;
 
-public class SymbolObjectMapTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+public class SymbolObjectMapTest {
+
+    @Test
     public void testSimple() {
         // note: it does not test rehashing
         SymbolObjectMap map = SymbolObjectMap.createInstance();
 
-        assertEquals(map.getSymbol(new char[] {'h', 'a', 'b', 'a'}, 0, 4), null);
-        assertEquals(map.getSymbol(new char[] {'q'}, 0, 1), null);
+        assertNull(map.getSymbol(new char[] {'h', 'a', 'b', 'a'}, 0, 4));
+        assertNull(map.getSymbol(new char[] {'q'}, 0, 1));
 
         assertFalse(map.contains(0, "haba"));
         assertFalse(map.contains(-1, null));
         assertFalse(map.contains(-2, null));
         assertFalse(map.contains(-3, null));
 
-        assertEquals(map.put(0, "haba", new Integer(0)), null);
-        assertEquals(map.put(-1, null, new Integer(1)), null);
-        assertEquals(map.put(-2, null, new Integer(2)), null);
+        assertNull(map.put(0, "haba", new Integer(0)));
+        assertNull(map.put(-1, null, new Integer(1)));
+        assertNull(map.put(-2, null, new Integer(2)));
 
         assertEquals(map.getSymbol(new char[] {'h', 'a', 'b', 'a'}, 0, 4), "haba");
-        assertEquals(map.getSymbol(new char[] {'q'}, 0, 1), null);
+        assertNull(map.getSymbol(new char[] {'q'}, 0, 1));
 
         assertTrue(map.contains(0, "haba"));
         assertTrue(map.contains(-1, null));
@@ -48,7 +56,7 @@ public class SymbolObjectMapTest extends TestCase {
         assertEquals(map.get(0, "haba"), new Integer(0));
         assertEquals(map.get(-1, null), new Integer(1));
         assertEquals(map.get(-2, null), new Integer(2));
-        assertEquals(map.get(-3, null), null);
+        assertNull(map.get(-3, null));
 
         assertEquals(map.put(0, "haba", new Integer(10)), new Integer(0));
         assertEquals(map.put(-1, null, new Integer(11)), new Integer(1));
@@ -59,29 +67,30 @@ public class SymbolObjectMapTest extends TestCase {
         assertEquals(map.get(0, "haba"), new Integer(10));
         assertEquals(map.get(-1, null), new Integer(11));
         assertEquals(map.get(-2, null), new Integer(12));
-        assertEquals(map.get(-3, null), null);
+        assertNull(map.get(-3, null));
 
         assertEquals(map.remove(0, "haba"), new Integer(10));
         assertEquals(map.remove(-2, null), new Integer(12));
 
         assertEquals(map.size(), 1);
 
-        assertEquals(map.get(0, "haba"), null);
+        assertNull(map.get(0, "haba"));
         assertEquals(map.get(-1, null), new Integer(11));
-        assertEquals(map.get(-2, null), null);
-        assertEquals(map.get(-3, null), null);
+        assertNull(map.get(-2, null));
+        assertNull(map.get(-3, null));
 
-        assertEquals(map.remove(-3, null), null);
+        assertNull(map.remove(-3, null));
         assertEquals(map.remove(-1, null), new Integer(11));
 
         assertEquals(map.size(), 0);
 
-        assertEquals(map.get(0, "haba"), null);
-        assertEquals(map.get(-1, null), null);
-        assertEquals(map.get(-2, null), null);
-        assertEquals(map.get(-3, null), null);
+        assertNull(map.get(0, "haba"));
+        assertNull(map.get(-1, null));
+        assertNull(map.get(-2, null));
+        assertNull(map.get(-3, null));
     }
 
+    @Test
     public void testChars() {
         // note: it does not test rehashing
         SymbolObjectMap map = SymbolObjectMap.createInstance();
@@ -90,18 +99,18 @@ public class SymbolObjectMapTest extends TestCase {
         int length = 5;
         String symbol = new String(chars, offset, length);
 
-        assertEquals(map.getSymbol(chars, offset, length), null);
-        assertEquals(map.getSymbol(new char[] {'q'}, 0, 1), null);
+        assertNull(map.getSymbol(chars, offset, length));
+        assertNull(map.getSymbol(new char[] {'q'}, 0, 1));
 
         assertFalse(map.contains(0, symbol));
         assertFalse(map.contains(0, chars, offset, length));
         assertFalse(map.contains(0, "haba"));
         assertFalse(map.contains(-3, null));
 
-        assertEquals(map.put(0, chars, offset, length, new Integer(0)), null);
+        assertNull(map.put(0, chars, offset, length, new Integer(0)));
 
         assertEquals(map.getSymbol(chars, offset, length), symbol);
-        assertEquals(map.getSymbol(new char[] {'q'}, 0, 1), null);
+        assertNull(map.getSymbol(new char[] {'q'}, 0, 1));
 
         assertTrue(map.contains(0, symbol));
         assertTrue(map.contains(0, chars, offset, length));
@@ -112,8 +121,8 @@ public class SymbolObjectMapTest extends TestCase {
 
         assertEquals(map.get(0, symbol), new Integer(0));
         assertEquals(map.get(0, chars, offset, length), new Integer(0));
-        assertEquals(map.get(0, "haba"), null);
-        assertEquals(map.get(-3, null), null);
+        assertNull(map.get(0, "haba"));
+        assertNull(map.get(-3, null));
 
         assertEquals(map.put(0, chars, offset, length, new Integer(10)), new Integer(0));
 
@@ -121,39 +130,40 @@ public class SymbolObjectMapTest extends TestCase {
 
         assertEquals(map.get(0, symbol), new Integer(10));
         assertEquals(map.get(0, chars, offset, length), new Integer(10));
-        assertEquals(map.get(0, "haba"), null);
-        assertEquals(map.get(-3, null), null);
+        assertNull(map.get(0, "haba"));
+        assertNull(map.get(-3, null));
 
         assertEquals(map.remove(0, chars, offset, length), new Integer(10));
 
         assertEquals(map.size(), 0);
 
-        assertEquals(map.get(0, symbol), null);
-        assertEquals(map.get(0, chars, offset, length), null);
-        assertEquals(map.get(0, "haba"), null);
-        assertEquals(map.get(-3, null), null);
+        assertNull(map.get(0, symbol));
+        assertNull(map.get(0, chars, offset, length));
+        assertNull(map.get(0, "haba"));
+        assertNull(map.get(-3, null));
 
-        assertEquals(map.remove(-3, null), null);
+        assertNull(map.remove(-3, null));
 
         assertEquals(map.size(), 0);
 
-        assertEquals(map.get(0, symbol), null);
-        assertEquals(map.get(0, chars, offset, length), null);
-        assertEquals(map.get(0, "haba"), null);
-        assertEquals(map.get(-3, null), null);
+        assertNull(map.get(0, symbol));
+        assertNull(map.get(0, chars, offset, length));
+        assertNull(map.get(0, "haba"));
+        assertNull(map.get(-3, null));
     }
 
     private static int CNT = 1000;
 
+    @Test
     public void testComplex() {
         SymbolObjectMap map = SymbolObjectMap.createInstance();
 
         for (int i = 1; i <= CNT; i++) {
-            assertEquals(map.put(-i, null, new Integer(i)), null);
+            assertNull(map.put(-i, null, new Integer(i)));
             assertEquals(map.size(), i);
         }
 
-        final HashMap<Integer, Object> ciphers_to_value = new HashMap<Integer, Object>();
+        final HashMap<Integer, Object> ciphersToValue = new HashMap<Integer, Object>();
 
         assertFalse(map.examineEntries(new SymbolObjectVisitor() {
             public boolean hasCapacity() {
@@ -161,14 +171,14 @@ public class SymbolObjectMapTest extends TestCase {
             }
 
             public void visitEntry(int cipher, String symbol, Object value) {
-                assertNull(ciphers_to_value.put(new Integer(cipher), value));
+                assertNull(ciphersToValue.put(new Integer(cipher), value));
                 assertNull(null, symbol);
             }
         }));
 
-        assertEquals(ciphers_to_value.size(), CNT);
+        assertEquals(ciphersToValue.size(), CNT);
         for (int i = 1; i <= CNT; i++) {
-            assertEquals(new Integer(i), ciphers_to_value.get(new Integer(-i)));
+            assertEquals(new Integer(i), ciphersToValue.get(new Integer(-i)));
         }
 
         for (int i = 1; i <= CNT; i++)
@@ -180,15 +190,16 @@ public class SymbolObjectMapTest extends TestCase {
         }
     }
 
+    @Test
     public void testComplexMapped() {
         SymbolObjectMap map = SymbolObjectMap.createInstance();
 
         for (int i = 1; i <= CNT; i++) {
-            assertEquals(map.put(0, Integer.toString(i), new Integer(i)), null);
+            assertNull(map.put(0, Integer.toString(i), new Integer(i)));
             assertEquals(map.size(), i);
         }
 
-        final HashMap<String, Object> symbols_to_value = new HashMap<String, Object>();
+        final HashMap<String, Object> symbolsToValue = new HashMap<>();
 
         assertFalse(map.examineEntries(new SymbolObjectVisitor() {
             public boolean hasCapacity() {
@@ -197,13 +208,13 @@ public class SymbolObjectMapTest extends TestCase {
 
             public void visitEntry(int cipher, String symbol, Object value) {
                 assertEquals(0, cipher);
-                assertNull(symbols_to_value.put(symbol, value));
+                assertNull(symbolsToValue.put(symbol, value));
             }
         }));
 
-        assertEquals(symbols_to_value.size(), CNT);
+        assertEquals(symbolsToValue.size(), CNT);
         for (int i = 1; i <= CNT; i++) {
-            assertEquals(new Integer(i), symbols_to_value.get(Integer.toString(i)));
+            assertEquals(new Integer(i), symbolsToValue.get(Integer.toString(i)));
         }
 
         for (int i = 1; i <= CNT; i++)
@@ -215,6 +226,7 @@ public class SymbolObjectMapTest extends TestCase {
         }
     }
 
+    @Test
     public void testConcurrentMappedVisiting() {
         final SymbolObjectMap map = SymbolObjectMap.createInstance();
         HashSet<String> expect = new HashSet<String>();

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,34 +12,21 @@
 package com.dxfeed.event.candle.test;
 
 import com.dxfeed.event.candle.CandlePriceLevel;
-import junit.framework.TestCase;
-import org.junit.Assert;
+import org.junit.Test;
 
-public class CandlePriceLevelTest extends TestCase {
+import static org.junit.Assert.assertThrows;
+
+public class CandlePriceLevelTest {
+
+    @Test
     public void testInfiniteAndNegativeValueNotAllowedForCandlePriceLevel() {
-        try {
-            CandlePriceLevel.valueOf(Double.POSITIVE_INFINITY);
-            Assert.fail("Candle price level 'POSITIVE_INFINITY' is not supported");
-        } catch (IllegalArgumentException ignored) {
-            // ignore
-        }
-        try {
-            CandlePriceLevel.valueOf(Double.NEGATIVE_INFINITY);
-            Assert.fail("Candle price level 'NEGATIVE_INFINITY' is not supported");
-        } catch (IllegalArgumentException ignored) {
-            // ignore
-        }
-        try {
-            CandlePriceLevel.valueOf(-1.0);
-            Assert.fail("Candle price level 'NEGATIVE' is not supported");
-        } catch (IllegalArgumentException ignored) {
-            // ignore
-        }
-        try {
-            CandlePriceLevel.valueOf(-0.0);
-            Assert.fail("Candle price level 'NEGATIVE' is not supported");
-        } catch (IllegalArgumentException ignored) {
-            // ignore
-        }
+        assertThrows("Candle price level 'POSITIVE_INFINITY' is not supported", IllegalArgumentException.class,
+            () -> CandlePriceLevel.valueOf(Double.POSITIVE_INFINITY));
+        assertThrows("Candle price level 'NEGATIVE_INFINITY' is not supported", IllegalArgumentException.class,
+            () -> CandlePriceLevel.valueOf(Double.NEGATIVE_INFINITY));
+        assertThrows("Candle price level 'NEGATIVE' is not supported", IllegalArgumentException.class,
+            () -> CandlePriceLevel.valueOf(-1.0));
+        assertThrows("Candle price level 'NEGATIVE' is not supported", IllegalArgumentException.class,
+            () -> CandlePriceLevel.valueOf(-0.0));
     }
 }

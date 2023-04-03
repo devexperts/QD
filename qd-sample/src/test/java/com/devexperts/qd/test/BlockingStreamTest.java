@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,11 +22,14 @@ import com.devexperts.qd.QDStream;
 import com.devexperts.qd.SubscriptionBuffer;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.Random;
 
-public class BlockingStreamTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+public class BlockingStreamTest {
     private static final int SEED = 20130718;
 
     private static final int N = 4;
@@ -40,6 +43,7 @@ public class BlockingStreamTest extends TestCase {
     private final DataScheme scheme = new TestDataScheme(SEED);
     private final QDStream stream = QDFactory.getDefaultFactory().createStream(scheme);
 
+    @Test
     public void testBlockingStream() throws InterruptedException {
         // Prepare processing threads
         Processor[] processors = new Processor[THREADS];

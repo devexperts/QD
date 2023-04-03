@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,22 +17,29 @@ import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.api.DXPublisher;
 import com.dxfeed.event.misc.Message;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class MessageTest extends TestCase {
-    @Override
-    protected void setUp() throws Exception {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+
+public class MessageTest {
+
+    @Before
+    public void setUp() throws Exception {
         ThreadCleanCheck.before();
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         ThreadCleanCheck.after();
     }
 
+    @Test
     public void testMessageConflation() {
         // install custom task queue to delay processing
         final ConcurrentLinkedQueue<Runnable> taskQueue = new ConcurrentLinkedQueue<>();
@@ -68,6 +75,6 @@ public class MessageTest extends TestCase {
         assertEquals("one", receiveQueue.poll().getAttachment());
         assertEquals("two", receiveQueue.poll().getAttachment());
         assertEquals("three", receiveQueue.poll().getAttachment());
-        assertEquals(null, receiveQueue.poll());
+        assertNull(receiveQueue.poll());
     }
 }

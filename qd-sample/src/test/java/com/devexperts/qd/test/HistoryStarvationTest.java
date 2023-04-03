@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -23,14 +23,18 @@ import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.ng.RecordSink;
-import junit.framework.TestCase;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * This test ensures that new subscribers that receive data from global history buffer do no starve and
  * are balanced properly in retrieveData with subscribers that receive data from local buffer.
  * See [QD-518] New history subscribers are starved under load of data updates.
  */
-public class HistoryStarvationTest extends TestCase {
+public class HistoryStarvationTest {
     // Must be in sync with com.devexperts.qd.impl.matrix.impl.RETRIEVE_BATCH_SIZE=100
     private static final int HISTORY_RETRIEVE_BATCH_SIZE = 100;
 
@@ -44,6 +48,7 @@ public class HistoryStarvationTest extends TestCase {
     private static final String SNAPSHOT_SYMBOL2 = "SNAPSHOT2";
     private static final String UPDATED_SYMBOL = "UPDATED";
 
+    @Test
     public void testHistoryStarvation() {
         // make sure that history does not starve in different data update modes
 //      for (int b1 = 1; b1 <= 5; b1++)
@@ -91,18 +96,18 @@ public class HistoryStarvationTest extends TestCase {
             assertEquals(RECORD, cursor.getRecord());
             String symbol = cursor.getDecodedSymbol();
             switch (symbol) {
-            case SNAPSHOT_SYMBOL1:
-                snapshotCount1++;
-                break;
-            case SNAPSHOT_SYMBOL2:
-                snapshotCount2++;
-                break;
-            case UPDATED_SYMBOL:
-                updatedCount++;
-                break;
-            default:
-                fail(symbol);
-                break;
+                case SNAPSHOT_SYMBOL1:
+                    snapshotCount1++;
+                    break;
+                case SNAPSHOT_SYMBOL2:
+                    snapshotCount2++;
+                    break;
+                case UPDATED_SYMBOL:
+                    updatedCount++;
+                    break;
+                default:
+                    fail(symbol);
+                    break;
             }
         }
         int sumCount = snapshotCount1 + snapshotCount2 + updatedCount;
@@ -146,5 +151,4 @@ public class HistoryStarvationTest extends TestCase {
             k--;
         }
     }
-
 }

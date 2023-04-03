@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -39,8 +39,10 @@ public class MiniStressTestWithMultiplexor extends MiniStressTest {
     private final int randomPortAgent = NTU.PORT_00 + 79; // port randomization
 
     void connect() {
-        NTU.connect(first, "(" + NTU.LOCAL_HOST + ":" + randomPortDistributor + ")(" + NTU.LOCAL_HOST + ":" + randomPortAgent + ")");
-        NTU.connect(second, "(" + NTU.LOCAL_HOST + ":" + randomPortDistributor + ")(" + NTU.LOCAL_HOST + ":" + randomPortAgent + ")");
+        NTU.connect(first, "(" + NTU.LOCAL_HOST + ":" + randomPortDistributor + ")" +
+            "(" + NTU.LOCAL_HOST + ":" + randomPortAgent + ")");
+        NTU.connect(second, "(" + NTU.LOCAL_HOST + ":" + randomPortDistributor + ")" +
+            "(" + NTU.LOCAL_HOST + ":" + randomPortAgent + ")");
     }
 
     @Override
@@ -82,9 +84,11 @@ public class MiniStressTestWithMultiplexor extends MiniStressTest {
         Random rnd = new Random();
         for (int i = 0; i < 2 * n; i++) {
             idx.put(i, rnd.nextDouble());
-            requests[i] = first.getClient().getPort(null).createRequest(ExternalService.operation, i, rnd.nextInt(10) + 1, idx.get(i));
+            requests[i] = first.getClient().getPort(null).createRequest(
+                ExternalService.operation, i, rnd.nextInt(10) + 1, idx.get(i));
             idx.put(++i, rnd.nextDouble());
-            requests[i] = second.getClient().getPort(null).createRequest(ExternalService.operation, i, rnd.nextInt(10) + 1, idx.get(i));
+            requests[i] = second.getClient().getPort(null).createRequest(
+                ExternalService.operation, i, rnd.nextInt(10) + 1, idx.get(i));
         }
 
         for (RMIRequest<?> request : requests) {

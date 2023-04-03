@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -37,7 +37,9 @@ import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.event.market.MarketEvent;
 import com.dxfeed.event.market.Quote;
 import com.dxfeed.event.market.Trade;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -46,10 +48,13 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 /**
  * Tests compatibility with a scheme with missing records and records with different ids.
  */
-public class SchemeRemapTest extends TestCase {
+public class SchemeRemapTest {
     private static final char EX = 'X';
     private static final String SYMBOL = "TEST";
     private static final String SYMBOL_EX = SYMBOL + "&" + EX;
@@ -66,19 +71,20 @@ public class SchemeRemapTest extends TestCase {
     private DXEndpoint endpoint;
     private List<MessageConnector> connectors = Collections.emptyList();
 
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         ThreadCleanCheck.before();
         endpoint = DXEndpoint.create();
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         endpoint.close();
         MessageConnectors.stopMessageConnectors(connectors);
         ThreadCleanCheck.after();
     }
 
+    @Test
     public void testSchemeRemap() throws InterruptedException {
         runDataProvider();
         runDataConsumer();
@@ -118,7 +124,7 @@ public class SchemeRemapTest extends TestCase {
         assertTrue(event instanceof Trade);
         Trade trade = (Trade) event;
         assertEquals(SYMBOL_EX, trade.getEventSymbol());
-        assertEquals(95.47, trade.getPrice());
+        assertEquals(95.47, trade.getPrice(), 0.0);
         assertEquals(123, trade.getSize());
         assertEquals(0, queue.size());
     }

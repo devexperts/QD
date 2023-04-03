@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,13 +22,13 @@ import com.devexperts.qd.test.TestDataProvider;
 import com.devexperts.qd.test.TestDataScheme;
 import com.devexperts.util.TimePeriod;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
 import java.lang.reflect.Field;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 public class FileWriterTest {
     private static final String NAME_PREFIX = "FileWriterTest-tape-";
@@ -84,7 +84,9 @@ public class FileWriterTest {
 
     // [QD-771] Tools: FileWriter shall release completed files as time passes.
     @Test
-    public void testFilesAreReleasedAsTimePasses() throws InterruptedException, NoSuchFieldException, IllegalAccessException {
+    public void testFilesAreReleasedAsTimePasses()
+        throws InterruptedException, NoSuchFieldException, IllegalAccessException
+    {
         // Create split
         TimePeriod split = TimePeriod.valueOf("1s");
         // Create file writer
@@ -112,6 +114,6 @@ public class FileWriterTest {
             Thread.sleep(100);
         }
         if (dataOut.get(fileWriter) != null)
-            Assert.fail("File with split period " + split + " wasn't closed in " + waitTime / 1000 + "s");
+            fail("File with split period " + split + " wasn't closed in " + waitTime / 1000 + "s");
     }
 }

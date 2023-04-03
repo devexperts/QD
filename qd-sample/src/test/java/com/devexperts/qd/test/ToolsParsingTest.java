@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,15 +13,18 @@ package com.devexperts.qd.test;
 
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.tools.Tools;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
-public class ToolsParsingTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+
+public class ToolsParsingTest {
     private static final DataScheme SCHEME = new TestDataScheme(20131101);
 
+    @Test
     public void testSymbols() {
         assertSameSet(Arrays.asList("*"), Arrays.asList(Tools.parseSymbols("all", SCHEME)));
         assertSameSet(Arrays.asList("IBM"), Arrays.asList(Tools.parseSymbols("IBM", SCHEME)));
@@ -39,6 +42,6 @@ public class ToolsParsingTest extends TestCase {
     }
 
     private void assertSameSet(List<String> expected, List<String> received) {
-        assertEquals(new HashSet<String>(expected), new HashSet<String>(received));
+        assertEquals(new HashSet<>(expected), new HashSet<>(received));
     }
 }

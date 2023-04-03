@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,30 +12,30 @@
 package com.devexperts.logging.test;
 
 import com.devexperts.logging.LogFormatter;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.TimeZone;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Tests {@link LogFormatter} for configuration file loading and thread name conversion.
  */
 public class StandardLogFormatterTest extends LogFormatterTestBase {
-    public StandardLogFormatterTest() {
-    }
 
-    public StandardLogFormatterTest(String name) {
-        super(name);
-    }
-
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         initLogFormatter();
         formatter = new LogFormatter();
     }
 
-    protected void initLogFormatter() {
-        System.getProperties().setProperty(LogFormatter.CONFIG_FILE_PROPERTY,
+    protected void initLogFormatter() throws Exception {
+        System.setProperty(LogFormatter.CONFIG_FILE_PROPERTY,
             StandardLogFormatterTest.class.getResource("/test.logformatter.properties").toExternalForm());
     }
 
+    @Test
     public void testFormatting() {
         checkResultMatches("NotMatchingThread", "NotMatchingThread");
         checkResultDoesNotMatch("#a", "ABC");
@@ -48,10 +48,12 @@ public class StandardLogFormatterTest extends LogFormatterTestBase {
     /**
      * Usage of incorrect replacement should not broke code and should print thread name as is.
      */
+    @Test
     public void testIncorrectPattern() {
         checkResultMatches("_Thread", "_Thread");
     }
 
+    @Test
     public void testDaylightSwitchFormatting() {
         LogFormatter log = new LogFormatter(TimeZone.getTimeZone("Europe/Moscow"));
         long time = 1269725412345L; // 2010-03-28 - from winter time to summer time
@@ -69,7 +71,7 @@ public class StandardLogFormatterTest extends LogFormatterTestBase {
     }
 
     private void check(LogFormatter log, long time, int hour, String expected) {
-        String s = log.format('D', time + hour * 3600000, "qwe", "asd", "zxc");
+        String s = log.format('D', time + hour * 3600000L, "qwe", "asd", "zxc");
         while (s.charAt(s.length() - 1) < ' ')
             s = s.substring(0, s.length() - 1);
         assertEquals(s, expected);

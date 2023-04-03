@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,24 +14,29 @@ package com.devexperts.util.test;
 import com.devexperts.util.IntComparator;
 import com.devexperts.util.LongComparator;
 import com.devexperts.util.QuickSort;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
 
-public class QuickSortTest extends TestCase {
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+public class QuickSortTest {
     private static final int REPEAT = 20;
     private static final int SIZE = 500;
 
+    @Test
     public void testInteger() {
         unstable = 0;
         for (int i = 0; i < 3; i++) {
-            Comparator<Integer> comparator = i == 0 ? null : i == 1 ? Comparator.naturalOrder() : Comparator.comparing(Integer::intValue);
+            Comparator<Integer> comparator = (i == 0) ? null :
+                (i == 1) ? Comparator.naturalOrder() : Comparator.comparing(Integer::intValue);
             checkWhole(comparator, this::toIntegerList, (a, c) -> QuickSort.sort(a));
             checkRange(comparator, this::toIntegerList, (a, f, t, c) -> QuickSort.sort(a, f, t));
             checkWhole(comparator, this::toIntegerList, QuickSort::sort);
@@ -43,6 +48,7 @@ public class QuickSortTest extends TestCase {
         }
     }
 
+    @Test
     public void testValue() {
         for (unstable = 0; unstable < 5; unstable++) {
             checkWhole((Comparator<Value>) this::compareValue, this::toValueList, QuickSort::sort);
@@ -52,6 +58,7 @@ public class QuickSortTest extends TestCase {
         }
     }
 
+    @Test
     public void testInt() {
         for (unstable = 0; unstable < 5; unstable++) {
             IntComparator comparator = this::compareInt;
@@ -66,6 +73,7 @@ public class QuickSortTest extends TestCase {
         }
     }
 
+    @Test
     public void testLong() {
         for (unstable = 0; unstable < 5; unstable++) {
             LongComparator comparator = this::compareLong;
@@ -137,12 +145,12 @@ public class QuickSortTest extends TestCase {
 
     private int compareLong(long v1, long v2) {
         switch (unstable) {
-        case 0: return Long.compare(v1, v2);
-        case 1: return -1;
-        case 2: return 0;
-        case 3: return 1;
-        case 4: return random.nextInt(3) - 1;
-        default: throw new IllegalArgumentException();
+            case 0: return Long.compare(v1, v2);
+            case 1: return -1;
+            case 2: return 0;
+            case 3: return 1;
+            case 4: return random.nextInt(3) - 1;
+            default: throw new IllegalArgumentException();
         }
     }
 
@@ -185,29 +193,31 @@ public class QuickSortTest extends TestCase {
     }
 
     private <A> void sort(A a, int fromIndex, int toIndex) {
-        if (a instanceof List)
-            Collections.sort(((List) a).subList(fromIndex, toIndex), Comparator.comparing(Number::intValue));
-        else if (a instanceof Number[])
+        if (a instanceof List) {
+            ((List) a).subList(fromIndex, toIndex).sort(Comparator.comparing(Number::intValue));
+        } else if (a instanceof Number[]) {
             Arrays.sort((Number[]) a, fromIndex, toIndex, Comparator.comparing(Number::intValue));
-        else if (a instanceof int[])
+        } else if (a instanceof int[]) {
             Arrays.sort((int[]) a, fromIndex, toIndex);
-        else if (a instanceof long[])
-            Arrays.sort((long[]) a, fromIndex, toIndex);
-        else
+        } else if(a instanceof long[]) {
+            Arrays.sort((long[])a,fromIndex,toIndex);
+        } else {
             fail("unknown container type");
+        }
     }
 
     private <A> void checkEquals(A expected, A actual) {
-        if (expected instanceof List)
+        if (expected instanceof List) {
             assertEquals(expected, actual);
-        else if (expected instanceof Number[])
-            assertTrue(Arrays.equals((Number[]) expected, (Number[]) actual));
-        else if (expected instanceof int[])
-            assertTrue(Arrays.equals((int[]) expected, (int[]) actual));
-        else if (expected instanceof long[])
-            assertTrue(Arrays.equals((long[]) expected, (long[]) actual));
-        else
+        } else if (expected instanceof Number[]) {
+            assertArrayEquals((Number[]) expected, (Number[]) actual);
+        } else if (expected instanceof int[]) {
+            assertArrayEquals((int[]) expected, (int[]) actual);
+        } else if (expected instanceof long[]) {
+            assertArrayEquals((long[]) expected, (long[]) actual);
+        } else {
             fail("unknown container type");
+        }
     }
 
     private static class Value extends Number { // unlike Integer this class is NOT Comparable

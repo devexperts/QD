@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,11 +15,14 @@ import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.Random;
 
-public class RecordBufferCleanupTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+
+public class RecordBufferCleanupTest {
     private static final Random r = new Random(20081221);
     private static final DataScheme SCHEME = new TestDataScheme(20081221);
 
@@ -34,7 +37,7 @@ public class RecordBufferCleanupTest extends TestCase {
                 cur.setInt(j, j + 1);
             }
             for (int j = 0; j < cur.getObjCount(); j++) {
-                assertEquals(cur.getObj(j), null);
+                assertNull(cur.getObj(j));
                 cur.setObj(j, j + 1);
             }
         }
@@ -60,6 +63,7 @@ public class RecordBufferCleanupTest extends TestCase {
         buf.setPosition(savePoisition);
     }
 
+    @Test
     public void testSetLimit() {
         RecordBuffer buf = new RecordBuffer();
         int cnt1 = fillAndCheckClean(buf);
@@ -77,6 +81,7 @@ public class RecordBufferCleanupTest extends TestCase {
         check(limit, 0, cnt3, buf);
     }
 
+    @Test
     public void testRemoveAt() {
         RecordBuffer buf = new RecordBuffer();
         int cnt1 = fillAndCheckClean(buf);

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -25,16 +25,12 @@ import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.kit.DefaultRecord;
 import com.devexperts.qd.kit.DefaultScheme;
 import com.devexperts.qd.kit.PentaCodec;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 /**
  * Reference counting unit test that is known to reproduce DR#4.
  */
-public class RefCountTest extends TestCase {
-    public RefCountTest(String s) {
-        super(s);
-    }
-
+public class RefCountTest {
     private static final SymbolCodec codec = new PentaCodec();
     private static final DataRecord record = new DefaultRecord(0, "Haba", false, null, null);
     private static final DataScheme scheme = new DefaultScheme(codec, new DataRecord[] {record});
@@ -58,6 +54,7 @@ public class RefCountTest extends TestCase {
         return db;
     }
 
+    @Test
     public void testDistributorCloseA() {
         QDTicker ticker = QDFactory.getDefaultFactory().createTicker(scheme);
         ticker.agentBuilder().build().setSubscription(sub(1));
@@ -65,6 +62,7 @@ public class RefCountTest extends TestCase {
             ticker.distributorBuilder().build().close();
     }
 
+    @Test
     public void testDistributorCloseB() {
         QDTicker ticker = QDFactory.getDefaultFactory().createTicker(scheme);
         for (int i = 10; --i >= 0;) {
@@ -73,6 +71,7 @@ public class RefCountTest extends TestCase {
         }
     }
 
+    @Test
     public void testAgentCloseA() {
         QDTicker ticker = QDFactory.getDefaultFactory().createTicker(scheme);
         for (int i = 10; --i >= 0;) {
@@ -82,6 +81,7 @@ public class RefCountTest extends TestCase {
         }
     }
 
+    @Test
     public void testAgentCloseB() {
         QDTicker ticker = QDFactory.getDefaultFactory().createTicker(scheme);
         QDDistributor distributor = ticker.distributorBuilder().build();
@@ -92,6 +92,7 @@ public class RefCountTest extends TestCase {
         }
     }
 
+    @Test
     public void testAgentCloseC() {
         QDTicker ticker = QDFactory.getDefaultFactory().createTicker(scheme);
         QDDistributor distributor = ticker.distributorBuilder().build();
@@ -104,6 +105,7 @@ public class RefCountTest extends TestCase {
         }
     }
 
+    @Test
     public void testTotal() {
         QDTicker ticker = QDFactory.getDefaultFactory().createTicker(scheme);
         QDDistributor distributor = ticker.distributorBuilder().build();
@@ -114,6 +116,7 @@ public class RefCountTest extends TestCase {
         distributor.processData(data(1));
     }
 
+    @Test
     public void testMultipleRecords() {
         DataRecord[] records = new DataRecord[10];
         SubscriptionBuffer sb = new SubscriptionBuffer();

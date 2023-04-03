@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -24,9 +24,9 @@ class TraceListener extends RunListener {
     }
 
     @Override
-    public void testFailure(Failure failure) throws Exception {
-        TraceLogging.logAndStop(TraceRunner.class, "Test stopped with failure: " + failure.getMessage(), failure.getException());
-        dump(failure.getDescription());
+    public void testFailure(Failure f) throws Exception {
+        TraceLogging.logAndStop(TraceRunner.class, "Test stopped with failure: " + f.getMessage(), f.getException());
+        dump(f.getDescription());
     }
 
     @Override

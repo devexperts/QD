@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -23,10 +23,14 @@ import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.util.WideDecimal;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class RecordCursorTest extends TestCase {
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
+public class RecordCursorTest {
+
+    @Test
     public void testWideDecimalFieldToString() {
         DefaultRecord record = new DefaultRecord(0, "Test", false,
             new DataIntField[]{new WideDecimalField(0, "Test.Wd0"), new VoidIntField(1, "Test.Wd0Tail")},

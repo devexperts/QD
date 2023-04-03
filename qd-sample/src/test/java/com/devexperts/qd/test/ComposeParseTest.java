@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -27,43 +27,48 @@ import com.devexperts.qd.qtp.ByteArrayParser;
 import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.qtp.text.TextQTPComposer;
 import com.devexperts.qd.qtp.text.TextQTPParser;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Random;
 
-public class ComposeParseTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+public class ComposeParseTest {
     private static final int REPEAT = 1000;
 
     private static final Random rnd = new Random(20081017);
     private static final DataScheme scheme = new TestDataScheme(rnd.nextLong());
 
-    public ComposeParseTest(String s) {
-        super(s);
-    }
-
+    @Test
     public void testLegacyComposerAndParser() {
         // legacy classes with default parameters do not compose record descriptions and allow records without them.
         checkBufferComposerAndParser(new ByteArrayComposer(scheme), new ByteArrayParser(scheme), false);
     }
 
+    @Test
     public void testComposerAndParserWithDescribe() {
         checkBufferComposerAndParser(new BinaryQTPComposer(scheme, true), new BinaryQTPParser(scheme), false);
     }
 
+    @Test
     public void testTextComposerAndParser() {
         checkBufferComposerAndParser(new TextQTPComposer(scheme), new TextQTPParser(scheme), false);
     }
 
+    @Test
     public void testLegacyComposerAndParserMixed() {
         checkBufferComposerAndParser(new ByteArrayComposer(scheme), new ByteArrayParser(scheme), true);
     }
 
+    @Test
     public void testComposerAndParserMixedWithDescribe() {
         checkBufferComposerAndParser(new BinaryQTPComposer(scheme, true), new BinaryQTPParser(scheme), true);
     }
 
+    @Test
     public void testTextComposerAndParserMixed() {
         checkBufferComposerAndParser(new TextQTPComposer(scheme), new TextQTPParser(scheme), true);
     }
@@ -156,8 +161,9 @@ public class ComposeParseTest extends TestCase {
         }
         parser.parse(cmc);
         // Make sure we've done all the stuff
-        for (Map.Entry<MessageType, TestDataProvider> e : providers1.entrySet())
+        for (Map.Entry<MessageType, TestDataProvider> e : providers1.entrySet()) {
             assertEquals(e.getValue().getRecordsProvidedCount(), providers2.get(e.getKey()).getRecordsProvidedCount());
+        }
         assertEquals(records, cmc.getRecordCounter());
         buf.release();
     }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,7 +20,6 @@ import com.devexperts.rmi.RMIExecutionTask;
 import com.devexperts.rmi.RMIOperation;
 import com.devexperts.rmi.RMIRequest;
 import com.devexperts.rmi.RMIRequestState;
-import com.devexperts.rmi.RuntimeRMIException;
 import com.devexperts.rmi.message.RMIRequestMessage;
 import com.devexperts.rmi.message.RMIRequestType;
 import com.devexperts.rmi.samples.DifferentServices;
@@ -38,9 +37,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.X509TrustManager;
+import javax.security.auth.Subject;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.security.AccessController;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
@@ -60,9 +61,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.X509TrustManager;
-import javax.security.auth.Subject;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -295,7 +293,7 @@ public class RMIFunctionalityTest {
         Properties props = System.getProperties();
         try {
             SampleCert.init();
-            System.getProperties().setProperty("com.devexperts.connector.codec.ssl.protocols", "TLSv1.2");
+            System.setProperty("com.devexperts.connector.codec.ssl.protocols", "TLSv1.2");
             CountDownLatch connectedVersion = new CountDownLatch(2);
             CountDownLatch notConnectedVersion = new CountDownLatch(2);
             client.addEndpointListener(endpoint ->
@@ -381,193 +379,6 @@ public class RMIFunctionalityTest {
 
     // --------------------------------------------------
 
-    private static final StackTraceElement RMI_LAYER_SEPARATOR_FRAME =
-        new StackTraceElement("com.devexperts.rmi", "<REMOTE-METHOD-INVOCATION>", null, -1);
-    // copied from RMIInvocationHandler
-
-    @Test
-    public void testErrorThrowing() {
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(new AIOOBEThrower(), ErrorThrower.class),
-            channelLogic);
-        connectDefault();
-
-        ErrorThrower thrower = channelLogic.clientPort.getProxy(ErrorThrower.class);
-        try {
-            thrower.throwError();
-            fail();
-        } catch (ArrayIndexOutOfBoundsException e) {
-            // Check the stacktrace
-            StackTraceElement[] stackTrace = e.getStackTrace();
-
-            assertEquals(AIOOBEThrower.class.getName(), stackTrace[0].getClassName());
-            assertEquals("throwError", stackTrace[0].getMethodName());
-
-            assertEquals(RMI_LAYER_SEPARATOR_FRAME, stackTrace[1]);
-
-
-            assertEquals(this.getClass().getName().substring(0, stackTrace[2].getClassName().length()),
-                stackTrace[2].getClassName());
-            assertEquals("testErrorThrowing", stackTrace[2].getMethodName());
-
-            assertStackTraceIsLocal(stackTrace);
-        } catch (Throwable e) {
-            log.info("----------------");
-            e.printStackTrace();
-            fail(e.getMessage());
-        }
-    }
-
-    @Test
-    public void testErrorThrowingWithoutDeclare() {
-        NTU.exportServices(server.getServer(),
-            new RMIServiceImplementation<>(new AIOOBEThrowerWithoutDeclare(), WithoutDeclareError.class), channelLogic);
-        connectDefault();
-
-        WithoutDeclareError thrower = channelLogic.clientPort.getProxy(WithoutDeclareError.class);
-        try {
-            thrower.throwError();
-            fail();
-        } catch (ArrayIndexOutOfBoundsException e) {
-            // Check the stacktrace
-            StackTraceElement[] stackTrace = e.getStackTrace();
-
-            assertEquals(AIOOBEThrowerWithoutDeclare.class.getName(), stackTrace[0].getClassName());
-            assertEquals("throwError", stackTrace[0].getMethodName());
-
-            assertEquals(RMI_LAYER_SEPARATOR_FRAME, stackTrace[1]);
-
-            assertEquals(this.getClass().getName().substring(0, stackTrace[2].getClassName().length()),
-                stackTrace[2].getClassName());
-            assertEquals("testErrorThrowingWithoutDeclare", stackTrace[2].getMethodName());
-
-            assertStackTraceIsLocal(stackTrace);
-        } catch (Throwable e) {
-            fail(e.getMessage());
-        }
-    }
-
-    @Test
-    public void testErrorThrowingWithEmptyStacktrace() {
-        NTU.exportServices(server.getServer(),
-            new RMIServiceImplementation<>(new AIOOBEThrowerWithEmptyStacktrace(false), ErrorThrower.class),
-            channelLogic);
-        connectDefault();
-
-        ErrorThrower thrower = channelLogic.clientPort.getProxy(ErrorThrower.class);
-        try {
-            thrower.throwError();
-            fail();
-        } catch (ArrayIndexOutOfBoundsException e) {
-            // Check the stacktrace
-            StackTraceElement[] stackTrace = e.getStackTrace();
-
-            assertEquals(RMI_LAYER_SEPARATOR_FRAME, stackTrace[0]);
-            assertEquals(this.getClass().getName(), stackTrace[1].getClassName());
-            assertEquals("testErrorThrowingWithEmptyStacktrace", stackTrace[1].getMethodName());
-
-            assertStackTraceIsLocal(stackTrace);
-        } catch (Throwable e) {
-            log.info("----------------");
-            e.printStackTrace();
-            fail(e.getMessage());
-        }
-    }
-
-    @Test
-    public void testErrorThrowingWithEmptyStacktraceImmutable() {
-        NTU.exportServices(server.getServer(),
-            new RMIServiceImplementation<>(new AIOOBEThrowerWithEmptyStacktrace(true), ErrorThrower.class),
-            channelLogic);
-        connectDefault();
-
-        ErrorThrower thrower = channelLogic.clientPort.getProxy(ErrorThrower.class);
-        try {
-            thrower.throwError();
-            fail();
-        } catch (ArrayIndexOutOfBoundsException e) {
-            // Check the stacktrace
-            StackTraceElement[] stackTrace = e.getStackTrace();
-            assertEquals(0, stackTrace.length);
-        } catch (Throwable e) {
-            log.info("----------------");
-            e.printStackTrace();
-            fail(e.getMessage());
-        }
-    }
-
-    interface WithoutDeclareError {
-        void throwError();
-    }
-
-    public static class AIOOBEThrowerWithoutDeclare implements WithoutDeclareError {
-        @Override
-        public void throwError() {
-            throw new ArrayIndexOutOfBoundsException();
-        }
-    }
-
-    interface ErrorThrower {
-        void throwError() throws Exception;
-    }
-
-    public static class AIOOBEThrower implements ErrorThrower {
-        @Override
-        public void throwError() {
-            throw new ArrayIndexOutOfBoundsException();
-        }
-    }
-
-    public static class AIOOBEThrowerWithEmptyStacktrace implements ErrorThrower {
-
-        private final boolean immutable;
-
-        public AIOOBEThrowerWithEmptyStacktrace(boolean immutable) {
-            this.immutable = immutable;
-        }
-
-        @Override
-        public void throwError() {
-            throw new AIOOBExceptionWithEmptyStacktrace(immutable);
-        }
-    }
-
-    public static class AIOOBExceptionWithEmptyStacktrace extends ArrayIndexOutOfBoundsException {
-        private final boolean immutable;
-
-        public AIOOBExceptionWithEmptyStacktrace(boolean immutable) {
-            this.immutable = immutable;
-        }
-
-        @Override
-        public synchronized Throwable fillInStackTrace() {
-            return this;
-        }
-
-        @Override
-        public void setStackTrace(StackTraceElement[] stackTrace) {
-            if (!immutable)
-                super.setStackTrace(stackTrace);
-        }
-    }
-
-
-    private static void assertStackTraceIsLocal(StackTraceElement[] examine) {
-        StackTraceElement[] reference = Thread.currentThread().getStackTrace();
-
-        int pos = 0;
-        while (!reference[pos].getMethodName().equals("assertStackTraceIsLocal")) {
-            pos++;
-        }
-
-        int n = reference.length - pos - 2;
-
-        for (int i = 0; i < n; i++) {
-            assertEquals(reference[reference.length - 1 - i], examine[examine.length - 1 - i]);
-        }
-    }
-
-    // --------------------------------------------------
-
     @Test
     public void testServerDisconnect() {
         NTU.exportServices(server.getServer(),
@@ -584,76 +395,6 @@ public class RMIFunctionalityTest {
             }
         } catch (InterruptedException e) {
             fail(e.getMessage());
-        }
-    }
-
-    // --------------------------------------------------
-
-    @Test
-    public void testRMIExceptionDeclared() {
-        RemoteThrower impl = new RemoteThrower();
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(impl, Declared.class, "declared"),
-            channelLogic);
-        connectDefault();
-        Declared de = channelLogic.clientPort.getProxy(Declared.class, "declared");
-        try {
-            de.generateDeclared();
-            fail();
-        } catch (Throwable t) {
-            checkRMIException(t);
-        }
-    }
-
-    @Test
-    public void testRMIExceptionUndeclared() {
-        RemoteThrower impl = new RemoteThrower();
-
-        NTU.exportServices(server.getServer(), new RMIServiceImplementation<>(impl, Undeclared.class, "undeclared"),
-            channelLogic);
-        connectDefault();
-        Undeclared un = channelLogic.clientPort.getProxy(Undeclared.class, "undeclared");
-        try {
-            un.generateUndeclared();
-            fail();
-        } catch (Throwable t) {
-            if (!(t instanceof RuntimeRMIException)) {
-                fail(t.getMessage());
-            }
-            checkRMIException(t.getCause());
-        }
-    }
-
-    private void checkRMIException(Throwable t) {
-        if (!(t instanceof RMIException))
-            fail(t.toString());
-        assertEquals(RMIExceptionType.DISCONNECTION, ((RMIException) t).getType());
-    }
-
-    interface Declared {
-        void generateDeclared() throws RMIException;
-    }
-
-    interface Undeclared {
-        void generateUndeclared();
-    }
-
-    public class RemoteThrower implements Declared, Undeclared {
-        @Override
-        public void generateDeclared() {
-            client.disconnect();
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException ignore) {
-            }
-        }
-
-        @Override
-        public void generateUndeclared() {
-            client.disconnect();
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException ignore) {
-            }
         }
     }
 
@@ -723,7 +464,6 @@ public class RMIFunctionalityTest {
     }
 
     // --------------------------------------------------
-
 
     public static class CompletingPing implements RMICommonTest.Ping {
         final Queue<WeakReference<RMITask>> rmiTasks = new ConcurrentLinkedQueue<>();
@@ -826,7 +566,6 @@ public class RMIFunctionalityTest {
 
         largeReq.cancelOrAbort();
     }
-
 
     // --------------------------------------------------
 
@@ -1125,51 +864,6 @@ public class RMIFunctionalityTest {
     }
 
     // --------------------------------------------------
-
-    @Test
-    public void testUndeclaredException() {
-        ImplNewService impl = new ImplNewService();
-        NTU.exportServices(server.getServer(),
-            new RMIServiceImplementation<>(impl, NewService.class, "undeclaredException"), channelLogic);
-        connectDefault();
-        OldService un = channelLogic.clientPort.getProxy(OldService.class, "undeclaredException");
-        try {
-            un.generate();
-            fail();
-        } catch (Throwable t) {
-            if (!(t instanceof UndeclaredThrowableException))
-                fail(t.getMessage());
-            StackTraceElement[] stackTrace = t.getCause().getStackTrace();
-            assertEquals(ImplNewService.class.getName(), stackTrace[0].getClassName());
-            assertEquals("generate", stackTrace[0].getMethodName());
-
-            assertEquals(RMI_LAYER_SEPARATOR_FRAME, stackTrace[1]);
-
-            assertEquals(this.getClass().getName().substring(0, stackTrace[2].getClassName().length()),
-                stackTrace[2].getClassName());
-            assertEquals("testUndeclaredException", stackTrace[2].getMethodName());
-            assertStackTraceIsLocal(stackTrace);
-        }
-    }
-
-    @SuppressWarnings("unused")
-    interface NewService {
-        void generate() throws ClassNotFoundException;
-    }
-
-    @SuppressWarnings("InterfaceNeverImplemented")
-    interface OldService {
-        void generate();
-    }
-
-    public static class ImplNewService implements NewService {
-        @Override
-        public void generate() throws ClassNotFoundException {
-            throw new ClassNotFoundException();
-        }
-    }
-
-    // --------------------------------------------------
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Test
     public void testCancelExecutionTaskBeforeRunning() {
@@ -1194,5 +888,4 @@ public class RMIFunctionalityTest {
             fail();
         }
     }
-
 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -28,14 +28,17 @@ import com.dxfeed.event.candle.CandlePeriod;
 import com.dxfeed.event.candle.CandleSymbol;
 import com.dxfeed.event.candle.CandleType;
 import com.dxfeed.promise.Promise;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-public class HistorySubscriptionTest extends TestCase {
+import static org.junit.Assert.assertEquals;
 
+public class HistorySubscriptionTest {
+
+    @Test
     public void testEmptySubscription() {
         // tests [QD-1230] and [QD-1232] - absence of phantom subscription if not actually subscribed
         QDFactory.getDefaultScheme();
@@ -57,7 +60,9 @@ public class HistorySubscriptionTest extends TestCase {
         return CandleSymbol.valueOf("S" + i, CandlePeriod.valueOf(1, CandleType.MINUTE));
     }
 
-    private boolean checkEmptySub(boolean storeEverything, boolean promise, boolean subscribe, boolean publish, int size) {
+    private boolean checkEmptySub(
+        boolean storeEverything, boolean promise, boolean subscribe, boolean publish, int size)
+    {
         System.out.println("testing storeEverything " + storeEverything +
             ", promise " + promise + ", subscribe " + subscribe + ", publish " + publish + ", size " + size);
 

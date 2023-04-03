@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -19,33 +19,40 @@ import com.devexperts.qd.SubscriptionBuffer;
 import com.devexperts.qd.SubscriptionContainer;
 import com.devexperts.qd.impl.matrix.MatrixFactory;
 import com.devexperts.qd.ng.RecordBuffer;
+import org.junit.Test;
 
 import java.util.Random;
 import java.util.Set;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Basic tests of {@link QDTicker} functionality.
  */
 public class TickerTest extends QDTestBase {
-    private Random rnd = new Random();
+    private final Random rnd = new Random();
 
     private static final int REPEAT_ONE = 2;
     private static final int REPEAT_TWO = 50;
     private static final int LARGE = 5000;
     private static final int REPEAT_TWO_SMALL = 2;
 
-    public TickerTest(String s) {
-        super(s);
+    public TickerTest(String matrixType) {
+        super(matrixType);
     }
 
-    @TestHash
-    @TestStriped
+    @Test
     public void testTicker() {
         doTestTicker(qdf);
     }
 
-    @TestStriped
+    @Test
     public void testTickerStress() {
+        assumeTrue(isMatrix() || isStriped());
         TestDataScheme scheme = new TestDataScheme(rnd.nextLong());
         QDTicker ticker = new MatrixFactory().createTicker(scheme);
         Tweaks.setTickerStress(scheme);
@@ -53,8 +60,7 @@ public class TickerTest extends QDTestBase {
         Tweaks.setTickerDefaults(scheme);
     }
 
-    @TestHash
-    @TestStriped
+    @Test
     public void testTickerLarge() {
         doTestTickerLarge(qdf);
     }
@@ -68,66 +74,70 @@ public class TickerTest extends QDTestBase {
     }
 
     private void doTestTicker(QDTicker ticker) {
-        long provider_seed = rnd.nextLong();
-        TestSubscriptionProvider sub_provider1 = new TestSubscriptionProvider(ticker.getScheme(), provider_seed);
-        TestSubscriptionProvider sub_provider2 = new TestSubscriptionProvider(ticker.getScheme(), provider_seed);
-        TestDataProvider data_provider = new TestDataProvider(ticker.getScheme(), provider_seed);
-        doTestTicker(ticker, sub_provider1, sub_provider2, data_provider, REPEAT_TWO);
+        long providerSeed = rnd.nextLong();
+        TestSubscriptionProvider subProvider1 = new TestSubscriptionProvider(ticker.getScheme(), providerSeed);
+        TestSubscriptionProvider subProvider2 = new TestSubscriptionProvider(ticker.getScheme(), providerSeed);
+        TestDataProvider dataProvider = new TestDataProvider(ticker.getScheme(), providerSeed);
+        doTestTicker(ticker, subProvider1, subProvider2, dataProvider, REPEAT_TWO);
     }
 
     private void doTestTickerLarge(QDFactory factory) {
         QDTicker ticker = factory.createTicker(new TestDataScheme(rnd.nextLong()));
-        long provider_seed = rnd.nextLong();
-        TestSubscriptionProvider sub_provider1 = new TestSubscriptionProvider(ticker.getScheme(), provider_seed, LARGE, true);
-        TestSubscriptionProvider sub_provider2 = new TestSubscriptionProvider(ticker.getScheme(), provider_seed, LARGE, true);
-        TestDataProvider data_provider = new TestDataProvider(ticker.getScheme(), provider_seed, LARGE);
-        doTestTicker(ticker, sub_provider1, sub_provider2, data_provider, REPEAT_TWO_SMALL);
+        long providerSeed = rnd.nextLong();
+        TestSubscriptionProvider subProvider1 =
+            new TestSubscriptionProvider(ticker.getScheme(), providerSeed, LARGE, true);
+        TestSubscriptionProvider subProvider2 =
+            new TestSubscriptionProvider(ticker.getScheme(), providerSeed, LARGE, true);
+        TestDataProvider dataProvider = new TestDataProvider(ticker.getScheme(), providerSeed, LARGE);
+        doTestTicker(ticker, subProvider1, subProvider2, dataProvider, REPEAT_TWO_SMALL);
     }
 
-    private void doTestTicker(QDTicker ticker, TestSubscriptionProvider sub_provider1, TestSubscriptionProvider sub_provider2, TestDataProvider data_provider, int rep) {
-        SubscriptionBuffer sub_buffer = new SubscriptionBuffer();
-        SubscriptionMap current_sub = new SubscriptionMap(ticker.getScheme());
-        SubscriptionMap delta_sub_orig = new SubscriptionMap(ticker.getScheme());
-        SubscriptionMap delta_sub_actual = new SubscriptionMap(ticker.getScheme());
-        SubscriptionMap delta_sub_expect = new SubscriptionMap(ticker.getScheme());
-        SubscriptionMap delta_sub_empty = new SubscriptionMap(ticker.getScheme());
-        SubscriptionMap examine_sub = new SubscriptionMap(ticker.getScheme());
-        RecordBuffer data_buffer = new RecordBuffer();
-        for (int repeat_one = 0; repeat_one < REPEAT_ONE; repeat_one++) {
+    private void doTestTicker(QDTicker ticker, TestSubscriptionProvider subProvider1,
+        TestSubscriptionProvider subProvider2, TestDataProvider dataProvider, int rep)
+    {
+        SubscriptionBuffer subBuffer = new SubscriptionBuffer();
+        SubscriptionMap currentSub = new SubscriptionMap(ticker.getScheme());
+        SubscriptionMap deltaSubOrig = new SubscriptionMap(ticker.getScheme());
+        SubscriptionMap deltaSubActual = new SubscriptionMap(ticker.getScheme());
+        SubscriptionMap deltaSubExpect = new SubscriptionMap(ticker.getScheme());
+        SubscriptionMap deltaSubEmpty = new SubscriptionMap(ticker.getScheme());
+        SubscriptionMap examineSub = new SubscriptionMap(ticker.getScheme());
+        RecordBuffer dataBuffer = new RecordBuffer();
+        for (int repeatOne = 0; repeatOne < REPEAT_ONE; repeatOne++) {
             QDAgent agent = ticker.agentBuilder().build();
             QDDistributor distributor = ticker.distributorBuilder().build();
-            for (int repeat_two = 0; repeat_two < rep; repeat_two++) {
-                String pass = (repeat_one + 1) + "/" + REPEAT_ONE + ":" + (repeat_two + 1) + "/" + rep;
+            for (int repeatTwo = 0; repeatTwo < rep; repeatTwo++) {
+                String pass = (repeatOne + 1) + "/" + REPEAT_ONE + ":" + (repeatTwo + 1) + "/" + rep;
                 // add subscription to agent
-                sub_provider1.retrieveSubscription(sub_buffer);
-                agent.addSubscription(sub_buffer);
+                subProvider1.retrieveSubscription(subBuffer);
+                agent.addSubscription(subBuffer);
                 // retrieve subscription from distributor (and compare with expected)
-                distributor.getAddedSubscriptionProvider().retrieveSubscription(delta_sub_actual);
-                sub_provider2.retrieveSubscription(delta_sub_orig);
-                delta_sub_expect.addAll(delta_sub_orig);
-                delta_sub_expect.removeAll(current_sub);
-                assertEquals(pass + ": delta_sub - distributor (add)", delta_sub_expect, delta_sub_actual);
-                delta_sub_actual.clear();
-                distributor.getRemovedSubscriptionProvider().retrieveSubscription(delta_sub_actual);
-                assertEquals(pass + ": delta_sub - distributor (remove)", delta_sub_empty, delta_sub_actual);
-                delta_sub_actual.clear();
+                distributor.getAddedSubscriptionProvider().retrieveSubscription(deltaSubActual);
+                subProvider2.retrieveSubscription(deltaSubOrig);
+                deltaSubExpect.addAll(deltaSubOrig);
+                deltaSubExpect.removeAll(currentSub);
+                assertSubEquals(pass + ": delta_sub - distributor (add)", deltaSubExpect, deltaSubActual);
+                deltaSubActual.clear();
+                distributor.getRemovedSubscriptionProvider().retrieveSubscription(deltaSubActual);
+                assertSubEquals(pass + ": delta_sub - distributor (remove)", deltaSubEmpty, deltaSubActual);
+                deltaSubActual.clear();
                 // feed data into distributor
-                data_provider.retrieveData(data_buffer);
-                distributor.processData(data_buffer);
+                dataProvider.retrieveData(dataBuffer);
+                distributor.processData(dataBuffer);
                 // retrieve data from agent
-                agent.retrieveData(delta_sub_actual);
-                assertTrue(pass + "delta_sub - agent from data only", delta_sub_orig.containsAll(delta_sub_actual));
-                //assertEquals(pass + ": delta_sub - agent", delta_sub_expect, delta_sub_actual);
-                delta_sub_actual.clear();
+                agent.retrieveData(deltaSubActual);
+                assertTrue(pass + "delta_sub - agent from data only", deltaSubOrig.containsAll(deltaSubActual));
+                //assertEquals(pass + ": delta_sub - agent", deltaSubExpect, deltaSubActual);
+                deltaSubActual.clear();
                 // update current subscription
-                current_sub.addAll(delta_sub_expect);
-                delta_sub_expect.clear();
-                delta_sub_orig.clear();
+                currentSub.addAll(deltaSubExpect);
+                deltaSubExpect.clear();
+                deltaSubOrig.clear();
                 // check "SubscriptionContainer" information about agent and ticker
-                assertSubscription(ticker, current_sub, examine_sub);
-                assertSubscription(agent, current_sub, examine_sub);
+                assertSubscription(ticker, currentSub, examineSub);
+                assertSubscription(agent, currentSub, examineSub);
             }
-            if (repeat_one % 2 == 0) {
+            if (repeatOne % 2 == 0) {
                 agent.close();
                 distributor.close();
             } else {
@@ -135,38 +145,38 @@ public class TickerTest extends QDTestBase {
                 agent.close();
             }
             // Clear structures
-            current_sub.clear();
+            currentSub.clear();
         }
     }
 
-    private void assertSubscription(SubscriptionContainer sc, SubscriptionMap sub, SubscriptionMap examine_sub) {
+    private void assertSubscription(SubscriptionContainer sc, SubscriptionMap sub, SubscriptionMap examineSub) {
         assertEquals("sub size", sub.getSubscriptionSize(), sc.getSubscriptionSize());
-        examine_sub.clear();
-        assertFalse("examined everything", sc.examineSubscription(examine_sub));
-        assertEquals("same sub", sub, examine_sub);
+        examineSub.clear();
+        assertFalse("examined everything", sc.examineSubscription(examineSub));
+        assertSubEquals("same sub", sub, examineSub);
     }
 
     /**
      * Specialized assertEquals for {@link SubscriptionMap} objects.
      */
-    private static void assertEquals(String msg, SubscriptionMap expected, SubscriptionMap actual) {
+    private static void assertSubEquals(String msg, SubscriptionMap expected, SubscriptionMap actual) {
         if (!expected.equals(actual)) {
             StringBuilder sb = new StringBuilder();
             sb.append(msg);
-            SubscriptionMap expected_left = new SubscriptionMap(expected);
-            expected_left.removeAll(actual);
-            if (!expected_left.isEmpty()) {
+            SubscriptionMap expectedLeft = new SubscriptionMap(expected);
+            expectedLeft.removeAll(actual);
+            if (!expectedLeft.isEmpty()) {
                 sb.append(": ");
-                Set<String> symbols = expected_left.getSymbols();
+                Set<String> symbols = expectedLeft.getSymbols();
                 sb.append(symbols);
                 sb.append(" symbols were expected but not found: ");
                 sb.append(symbols);
             }
-            SubscriptionMap actual_left = new SubscriptionMap(actual);
-            actual_left.removeAll(expected);
-            if (!actual_left.isEmpty()) {
+            SubscriptionMap actualLeft = new SubscriptionMap(actual);
+            actualLeft.removeAll(expected);
+            if (!actualLeft.isEmpty()) {
                 sb.append(": ");
-                Set<String> symbols = actual_left.getSymbols();
+                Set<String> symbols = actualLeft.getSymbols();
                 sb.append(" symbols were actually received but were not expected: ");
                 sb.append(symbols);
             }

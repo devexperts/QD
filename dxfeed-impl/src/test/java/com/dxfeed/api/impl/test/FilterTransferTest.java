@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -21,14 +21,19 @@ import com.dxfeed.api.DXPublisher;
 import com.dxfeed.api.impl.DXEndpointImpl;
 import com.dxfeed.api.osub.WildcardSymbol;
 import com.dxfeed.event.market.Trade;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Collections;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
-public class FilterTransferTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+public class FilterTransferTest {
     private static final int PORT = 25899;
     private static final String CLIENT_FILTER = "[AC]*";
     private static final String SERVER_FILTER = "[AB]*";
@@ -51,11 +56,13 @@ public class FilterTransferTest extends TestCase {
 
     private DXFeedSubscription<Trade> sub;
 
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         ThreadCleanCheck.before();
-        server =  DXEndpoint.newBuilder().withProperty(DXFEED_WILDCARD_ENABLE, "true").withRole(DXEndpoint.Role.PUBLISHER).build();
-        client = DXEndpoint.newBuilder().withProperty(DXFEED_WILDCARD_ENABLE, "true").withRole(DXEndpoint.Role.FEED).build();
+        server =  DXEndpoint.newBuilder()
+            .withProperty(DXFEED_WILDCARD_ENABLE, "true").withRole(DXEndpoint.Role.PUBLISHER).build();
+        client = DXEndpoint.newBuilder()
+            .withProperty(DXFEED_WILDCARD_ENABLE, "true").withRole(DXEndpoint.Role.FEED).build();
         server.connect(SERVER_FILTER + "@:" + PORT);
         client.connect(CLIENT_FILTER +"@localhost:" + PORT);
         publisher = server.getPublisher();
@@ -68,13 +75,14 @@ public class FilterTransferTest extends TestCase {
         sub.addEventListener(tradesReceived::addAll);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         client.close();
         server.close();
         ThreadCleanCheck.after();
     }
 
+    @Test
     public void testFilters() throws InterruptedException {
         // subscribe to wildcard
         sub.addSymbols(WildcardSymbol.ALL);
@@ -112,6 +120,4 @@ public class FilterTransferTest extends TestCase {
         }
         return sum;
     }
-
-
 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,11 +20,17 @@ import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.qd.kit.SymbolSetFilter;
 import com.devexperts.qd.util.SymbolSet;
 import com.devexperts.util.InvalidFormatException;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class SymbolListFiltersTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+
+public class SymbolListFiltersTest {
     private static final DataScheme SCHEME = QDFactory.getDefaultScheme();
 
+    @Test
     public void testSymbolList() {
         assertSymbolList("IBM", "IBM");
         assertNotSymbolList("IBM*");
@@ -61,22 +67,19 @@ public class SymbolListFiltersTest extends TestCase {
     private void assertSymbolList(String spec, String... symbols) {
         SymbolSetFilter filter = SymbolSetFilter.valueOf(spec, SCHEME);
         assertEquals(QDFilter.Kind.SYMBOL_SET, filter.getKind());
-        assertTrue(filter instanceof SymbolSetFilter); // all symbol sets shall be implemented by SymbolSetFilter
         SymbolSet set = filter.getSymbolSet();
+        assertNotNull(set);
         assertEquals(symbols.length, set.size());
         for (String symbol : symbols)
             assertTrue(symbol, set.contains(SCHEME.getCodec().encode(symbol), symbol));
     }
 
     private void assertNotSymbolList(String spec) {
-        try {
-            SymbolSetFilter.valueOf(spec, SCHEME);
-            fail("Should not be supported: " + spec);
-        } catch (InvalidFormatException e) {
-            // Ok
-        }
+        assertThrows("Should not be supported: " + spec, InvalidFormatException.class,
+            () -> SymbolSetFilter.valueOf(spec, SCHEME));
     }
 
+    @Test
     public void testToString() {
         checkToString("IBM", "+IBM", "-MSFT", "-GOOG", "-TEST");
         checkToString("IBM,MSFT", "+IBM", "+MSFT", "-GOOG", "-TEST");
@@ -97,9 +100,9 @@ public class SymbolListFiltersTest extends TestCase {
         for (String symbolSpec : testSymbols) {
             boolean accepts;
             switch (symbolSpec.charAt(0)) {
-            case '+': accepts = true; break;
-            case '-': accepts = false; break;
-            default: throw new AssertionError();
+                case '+': accepts = true; break;
+                case '-': accepts = false; break;
+                default: throw new AssertionError();
             }
             String symbol = symbolSpec.substring(1);
             int cipher = code.encode(symbol);

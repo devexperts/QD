@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -28,7 +28,7 @@ public class TestSubscriptionProvider extends AbstractRecordProvider {
     private final boolean fixedRecordCnt;
     private final String[] symbols;
 
-    private int records_provided_count;
+    private int recordsProvidedCount;
 
     TestSubscriptionProvider(DataScheme scheme, long seed) {
         this(scheme, seed, null);
@@ -57,8 +57,8 @@ public class TestSubscriptionProvider extends AbstractRecordProvider {
 
     @Override
     public boolean retrieve(RecordSink sink) {
-        int cnt = fixedRecordCnt ? recordCnt : rnd.nextInt(recordCnt) + 1;
-        for (int record_no = 0; record_no < cnt; record_no++) {
+        int count = fixedRecordCnt ? recordCnt : rnd.nextInt(recordCnt) + 1;
+        for (int recordNumber = 0; recordNumber < count; recordNumber++) {
             DataRecord record = scheme.getRecord(rnd.nextInt(scheme.getRecordCount()));
             String symbol;
             if (symbols == null) {
@@ -70,7 +70,7 @@ public class TestSubscriptionProvider extends AbstractRecordProvider {
                 symbol = symbols[rnd.nextInt(symbols.length)];
             int cipher = scheme.getCodec().encode(symbol);
             sink.visitRecord(record, cipher, cipher == 0 ? symbol : null, 0);
-            records_provided_count++;
+            recordsProvidedCount++;
         }
         return false;
     }
@@ -82,6 +82,6 @@ public class TestSubscriptionProvider extends AbstractRecordProvider {
     }
 
     public int getRecordsProvidedCount() {
-        return records_provided_count;
+        return recordsProvidedCount;
     }
 }

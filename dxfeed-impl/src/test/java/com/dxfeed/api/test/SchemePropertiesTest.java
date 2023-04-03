@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -43,8 +43,8 @@ public class SchemePropertiesTest extends AbstractDXPublisherTest {
     @Parameterized.Parameters(name = "{0}")
     public static Iterable<Object[]> parameters() {
         return Arrays.asList(new Object[][] {
-            {true},
-            {false}
+            { true },
+            { false }
         });
     }
 
@@ -67,8 +67,10 @@ public class SchemePropertiesTest extends AbstractDXPublisherTest {
         quote.setBidTime(NANO_TIME / 1_000_000 - 1);
         quote.setTimeNanoPart((int) (NANO_TIME % 1_000_000));
         testGetLastEvent(Quote.class, quote, new Quote(), (publishedEvent, receivedEvent) -> {
-            assertEquals(withNanoTime ? NANO_TIME : (NANO_TIME / 1_000_000_000) * 1_000_000_000, receivedEvent.getTimeNanos());
-            assertEquals(withNanoTime ? NANO_TIME / 1_000_000 : (NANO_TIME / 1_000_000_000) * 1_000, receivedEvent.getTime());
+            long expectedNanos = withNanoTime ? NANO_TIME : (NANO_TIME / 1_000_000_000) * 1_000_000_000;
+            assertEquals(expectedNanos, receivedEvent.getTimeNanos());
+            long expectedTime = withNanoTime ? NANO_TIME / 1_000_000 : (NANO_TIME / 1_000_000_000) * 1_000;
+            assertEquals(expectedTime, receivedEvent.getTime());
         });
     }
 }

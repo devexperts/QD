@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,23 +15,25 @@ import com.devexperts.qd.samplecert.SampleCert;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.test.NTU;
 import com.devexperts.test.ThreadCleanCheck;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * This test ensures that threads do not leak when establishing non-SSL connection to SSL endpoint.
  * See QD-531.
  */
-public class SSLMismatchTest extends TestCase {
+public class SSLMismatchTest {
 
     private RMIEndpoint server;
     private RMIEndpoint client;
 
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         ThreadCleanCheck.before();
     }
 
-    @Override
+    @After
     public void tearDown() {
         if (server != null)
             server.close();
@@ -40,6 +42,7 @@ public class SSLMismatchTest extends TestCase {
         ThreadCleanCheck.after();
     }
 
+    @Test
     public void testThreadLeak() throws InterruptedException {
         SampleCert.init();
         server = RMIEndpoint.createEndpoint();

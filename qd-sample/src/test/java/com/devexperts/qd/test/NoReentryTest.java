@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -26,20 +26,24 @@ import com.devexperts.qd.QDTicker;
 import com.devexperts.qd.SubscriptionBuffer;
 import com.devexperts.qd.SubscriptionProvider;
 import com.devexperts.qd.ng.RecordBuffer;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class NoReentryTest extends TestCase {
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+public class NoReentryTest {
     private static final DataScheme SCHEME = new TestDataScheme(20091005);
     private static final int SYM_A = SCHEME.getCodec().encode("A");
     private static final DataRecord RECORD = SCHEME.getRecord(0);
 
+    @Test
     public void testPotentialDeadLock() {
         QDTicker ticker = QDFactory.getDefaultFactory().createTicker(SCHEME);
-        final boolean[] seen_exception = new boolean[1];
+        final boolean[] seenException = new boolean[1];
         ticker.setErrorHandler(new QDErrorHandler() {
             public void handleDataError(DataProvider provider, Throwable t) {
                 if (t instanceof IllegalStateException)
-                    seen_exception[0] = true;
+                    seenException[0] = true;
                 else
                     fail(t.toString());
             }
@@ -79,6 +83,6 @@ public class NoReentryTest extends TestCase {
         buf.add(RECORD, SYM_A, null);
         dist.processData(buf);
 
-        assertTrue(seen_exception[0]);
+        assertTrue(seenException[0]);
     }
 }

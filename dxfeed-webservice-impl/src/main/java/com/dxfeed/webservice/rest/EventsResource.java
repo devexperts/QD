@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -245,6 +245,16 @@ public class EventsResource {
                             symbolMap.resolveEventSymbolMapping(et, sym), src));
                     }
                 }
+            } else {
+                /**
+                 * As a result, if no events of a particular type are received,
+                 * the GET-method will return a TIMED_OUT error.
+                 * To activate this logic, we include a Promise with a null result
+                 * that is triggered in the {@link EventRequestHandler#buildResponse(String)} method.
+                 */
+                Promise fail = new Promise();
+                fail.complete(null);
+                promiseList.add(fail);
             }
         }
     }
@@ -306,6 +316,14 @@ public class EventsResource {
                             eventsList.addAll(events);
                     }
                 }
+            } else {
+                /**
+                 * Method returns ok: true - events were received, false - NOT_SUBSCRIBED.
+                 * In cases where events are not supported by GET methods, it is not possible to confirm the success of
+                 * a subscription. Therefore, we throw an exception to prevent any potential confusion for clients
+                 * attempting to verify their subscription status.
+                 */
+                throw getNotSupported(evt);
             }
         }
         return ok;
@@ -450,6 +468,8 @@ public class EventsResource {
                         }
                     }
                 }
+            } else {
+                symbols.addAll(conn.symbolMap.resolveEventSymbolMappings(et, symbolList));
             }
             if (subOp == SubOp.ADD_SUB)
                 sub.addSymbols(symbols);
@@ -462,6 +482,11 @@ public class EventsResource {
     @Nonnull
     private HttpErrorException unknownEventType(String evt) {
         return new HttpErrorException(HttpServletResponse.SC_BAD_REQUEST, "Unknown event type: " + evt);
+    }
+
+    @Nonnull
+    private HttpErrorException getNotSupported(String evt) {
+        return new HttpErrorException(HttpServletResponse.SC_BAD_REQUEST, "GET method not supported for event type: " + evt);
     }
 
     @Nonnull

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,7 +15,7 @@ import com.devexperts.io.Chunk;
 import com.devexperts.io.ChunkList;
 import com.devexperts.io.ChunkPool;
 
-import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 class TrackingChunkPool extends ChunkPool {
     TrackingChunkPool() {
@@ -64,5 +64,4 @@ class TrackingChunkPool extends ChunkPool {
         checkCounters(gc, rc, gl, rl);
         clearCounters();
     }
-
 }

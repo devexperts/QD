@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,9 +13,12 @@ package com.devexperts.util.test;
 
 import com.devexperts.util.TypedKey;
 import com.devexperts.util.TypedMap;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class TypedMapTest extends TestCase {
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+public class TypedMapTest {
 
     private static final TypedKey<Boolean> KEY1 = new TypedKey<>("toBe");
     private static final TypedKey<Boolean> KEY2 = new TypedKey<>("notToBe");
@@ -25,6 +28,7 @@ public class TypedMapTest extends TestCase {
 
     private static final TypedKey<Boolean> UNNAMED_KEY = new TypedKey<>();
 
+    @Test
     public void testNamedKeysToString() {
         TypedMap map = new TypedMap();
         map.set(KEY1, true);
@@ -34,17 +38,19 @@ public class TypedMapTest extends TestCase {
         assertTrue(map.toString().contains("notToBe=false"));
     }
 
+    @Test
     public void testSameNamedKeysString() {
         TypedMap map = new TypedMap();
         map.set(TRUE_KEY, true);
         map.set(FALSE_KEY, false);
 
         assertTrue(map.get(TRUE_KEY));
-        assertTrue(!map.get(FALSE_KEY));
+        assertFalse(map.get(FALSE_KEY));
         assertTrue(map.toString().contains("key=true"));
         assertTrue(map.toString().contains("key=false"));
     }
 
+    @Test
     public void testUnnamedKeysString() {
         TypedMap map = new TypedMap();
         map.set(UNNAMED_KEY, true);

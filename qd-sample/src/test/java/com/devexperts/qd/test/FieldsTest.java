@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,15 +12,20 @@
 package com.devexperts.qd.test;
 
 import com.devexperts.qd.kit.ByteArrayField;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-import java.util.Arrays;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
-public class FieldsTest extends TestCase {
+public class FieldsTest {
     private final ByteArrayField baf = new ByteArrayField(0, "Test.Test");
 
+    @Test
     public void testByteArray() {
-        assertEquals(null, baf.toString(null));
+        assertNull(baf.toString(null));
         assertEquals("0x", baf.toString(new byte[0]));
         assertEquals("0x1F", baf.toString(new byte[] { 0x1f }));
         assertEquals("0xABCDEF0123456789", baf.toString(new byte[] {
@@ -48,7 +53,7 @@ public class FieldsTest extends TestCase {
 
     private void assertEBA(byte[] a, Object o) {
         byte[] b = (byte[]) o;
-        assertTrue(Arrays.equals(a, b));
+        assertArrayEquals(a, b);
         assertTrue(baf.equals(a, o));
     }
 }

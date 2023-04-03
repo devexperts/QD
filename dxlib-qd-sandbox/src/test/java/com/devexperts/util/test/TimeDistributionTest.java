@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,19 +12,24 @@
 package com.devexperts.util.test;
 
 import com.devexperts.util.TimeDistribution;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.Random;
 
 import static com.devexperts.util.TimeDistribution.Precision.HIGH;
 import static com.devexperts.util.TimeDistribution.Precision.LOW;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
-public class TimeDistributionTest extends TestCase {
+public class TimeDistributionTest {
+
+    @Test
     public void testEmptyDistribution() {
         assertEquals("0", new TimeDistribution(HIGH).toString());
         assertEquals("0", new TimeDistribution(LOW).toString());
     }
 
+    @Test
     public void testOneStrings() {
         assertEquals("1, avg=0ns; min=0ns [0ns - 0ns - 0ns] max=1ns", getOne(0));
         assertEquals("1, avg=1ns; min=1ns [1ns - 1ns - 1ns] max=2ns", getOne(1));
@@ -56,15 +61,18 @@ public class TimeDistributionTest extends TestCase {
         assertEquals("1, avg=20min; min=10min [20min - 20min - 20min] max=inf", getOne(1200000000000L));
     }
 
+    @Test
     public void testTwoStrings() {
         assertEquals("2, avg=2us; min=1us [1us - 2.98us - 3us] max=3.01us", getTwo(1000, 3000));
         assertEquals("2, avg=502ms; min=999us [1ms - 998ms - 1s] max=1.01s", getTwo(1000000L, 1000000000L));
     }
 
+    @Test
     public void testLowPrecision() {
         checkPrecision(TimeDistribution.Precision.LOW, 0.07);
     }
 
+    @Test
     public void testHighPrecision() {
         checkPrecision(TimeDistribution.Precision.HIGH, 0.01);
     }
@@ -76,9 +84,12 @@ public class TimeDistributionTest extends TestCase {
             long nanos = randomNanos(rnd);
             TimeDistribution td = new TimeDistribution(p);
             td.addMeasurement(nanos);
-            double error = nanos == 0 ? Math.abs(td.getAverageNanos()) : (double) Math.abs(nanos - td.getAverageNanos()) / nanos;
-            if (error > maxError)
-                fail("Failed precision for " + nanos + " (" + TimeDistribution.formatNanos(nanos) + " with error of " + error);
+            double error = nanos == 0 ? Math.abs(td.getAverageNanos()) :
+                (double) Math.abs(nanos - td.getAverageNanos()) / nanos;
+            if (error > maxError) {
+                fail("Failed precision for " + nanos + " (" + TimeDistribution.formatNanos(nanos) +
+                    " with error of " + error);
+            }
         }
     }
 

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,52 +12,27 @@
 package com.devexperts.logging.test;
 
 import com.devexperts.logging.LogFormatter;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
+import static org.junit.Assert.assertNotNull;
 
 public class ConfigLogFormatterTest extends StandardLogFormatterTest {
-    protected void initLogFormatter() {
-        final URL file_url = ConfigLogFormatterTest.class.getResource("/test.logformatter.properties");
-        final File config_file = new File(file_url.getFile());
-        final File temp_file;
-        FileInputStream is = null;
-        FileOutputStream os = null;
-        try {
-            temp_file = File.createTempFile("test.logformatter", ".configuration");
-            temp_file.deleteOnExit();
-            is = new FileInputStream(config_file);
-            os = new FileOutputStream(temp_file);
-            byte[] buf = new byte[1024];
-            int count;
-            while ((count = is.read(buf)) != -1) {
-                os.write(buf, 0, count);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } finally {
-            if (is != null)
-                try {
-                    is.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            if (os != null)
-                try {
-                    os.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-        }
 
-        try {
-            System.getProperties().setProperty(LogFormatter.CONFIG_FILE_PROPERTY, temp_file.toURL().toString());
-        } catch (MalformedURLException e) {
-            fail(e.toString());
-        }
+    @Rule
+    public TemporaryFolder tempFolder = new TemporaryFolder();
+
+    protected void initLogFormatter() throws Exception {
+        final URL fileUrl = ConfigLogFormatterTest.class.getResource("/test.logformatter.properties");
+        assertNotNull(fileUrl);
+
+        File logConfig = new File(tempFolder.getRoot(), "log.properties");
+        Files.copy(Paths.get(fileUrl.toURI()), logConfig.toPath());
+        System.setProperty(LogFormatter.CONFIG_FILE_PROPERTY, logConfig.toURI().toString());
     }
 }

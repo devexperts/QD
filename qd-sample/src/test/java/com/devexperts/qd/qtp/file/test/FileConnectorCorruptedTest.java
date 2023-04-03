@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -77,7 +77,8 @@ public class FileConnectorCorruptedTest {
             "=Quote\tEventSymbol\tBidPrice\tAskPrice",
             "Quote\tMSFT\t50\t51");
         BlockingQueue<String> symbols = new ArrayBlockingQueue<>(10);
-        connector = FileConnectorTestUtils.initFileConnector(null, symbols, FILE_PREFIX + "~" + FILE_SUFFIX, TimeFormat.GMT.parse(TIME_1));
+        connector = FileConnectorTestUtils.initFileConnector(null, symbols,
+            FILE_PREFIX + "~" + FILE_SUFFIX, TimeFormat.GMT.parse(TIME_1));
         // Wait and check for all received symbols.
         assertEquals("IBM", symbols.poll(1, TimeUnit.SECONDS));
         assertEquals("MSFT", symbols.poll(1, TimeUnit.SECONDS));
@@ -89,16 +90,22 @@ public class FileConnectorCorruptedTest {
     public void testSkipCorruptedBinaryFileAndGoNext() throws IOException, InterruptedException {
         // Create data files.
         writeBinaryFile(FILE_1,
-            "0x02 0x00 Quote 0x02 BidPrice 0x08 AskPrice 0x08", // describe Quote record
-            "0x0f 0xfc IBM 0x00 0x17 0x86 0x59", // stream data from IBM with bid=100 ask=101
-            "0x0f 0xfc TEST 0x00 0x17 0x86 0x59 0x00" // corrupted stream data for TEST with bid=100 ask=101 (extra 0x00 byte in message)
+            // describe Quote record
+            "0x02 0x00 Quote 0x02 BidPrice 0x08 AskPrice 0x08",
+            // stream data from IBM with bid=100 ask=101
+            "0x0f 0xfc IBM 0x00 0x17 0x86 0x59",
+            // corrupted stream data for TEST with bid=100 ask=101 (extra 0x00 byte in message)
+            "0x0f 0xfc TEST 0x00 0x17 0x86 0x59 0x00"
         );
         writeBinaryFile(FILE_2,
-            "0x02 0x00 Quote 0x02 BidPrice 0x08 AskPrice 0x08", // describe Quote record
-            "0x0f 0xfc MSFT 0x00 0x80 0x58 0x83 0x39" // stream data from MSFT with bid=50 ask=51
+            // describe Quote record
+            "0x02 0x00 Quote 0x02 BidPrice 0x08 AskPrice 0x08",
+            // stream data from MSFT with bid=50 ask=51
+            "0x0f 0xfc MSFT 0x00 0x80 0x58 0x83 0x39"
         );
         BlockingQueue<String> symbols = new ArrayBlockingQueue<>(10);
-        connector = FileConnectorTestUtils.initFileConnector(null, symbols, FILE_PREFIX + "~" + FILE_SUFFIX, TimeFormat.GMT.parse(TIME_1));
+        connector = FileConnectorTestUtils.initFileConnector(null, symbols,
+            FILE_PREFIX + "~" + FILE_SUFFIX, TimeFormat.GMT.parse(TIME_1));
         // Wait and check for all received symbols.
         assertEquals("IBM", symbols.poll(1, TimeUnit.SECONDS));
         assertEquals("MSFT", symbols.poll(1, TimeUnit.SECONDS));

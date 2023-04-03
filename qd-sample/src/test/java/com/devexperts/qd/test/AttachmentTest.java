@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,46 +22,56 @@ import com.devexperts.qd.impl.stripe.StripedFactory;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordMode;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.Random;
 
-public class AttachmentTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+
+public class AttachmentTest {
     private static final TestDataScheme SCHEME = new TestDataScheme(20140702, TestDataScheme.Type.HAS_TIME_AND_VALUE);
     private static final DataRecord RECORD = SCHEME.getRecord(0);
     private static final String SYMBOL = "ATT";
     private static final int CIPHER = SCHEME.getCodec().encode(SYMBOL);
 
+    @Test
     public void testTicker() {
         check(QDFactory.getDefaultFactory().createTicker(SCHEME), false);
     }
 
+    @Test
     public void testStream() {
         check(QDFactory.getDefaultFactory().createStream(SCHEME), false);
     }
 
+    @Test
     public void testHistory() {
         check(QDFactory.getDefaultFactory().createHistory(SCHEME), false);
     }
 
+    @Test
     public void testStripedTicker() {
         check(new StripedFactory(4).createTicker(SCHEME), false);
     }
 
+    @Test
     public void testStripedStream() {
         check(new StripedFactory(4).createStream(SCHEME), false);
     }
 
+    @Test
     public void testStripedHistory() {
         check(new StripedFactory(4).createHistory(SCHEME), false);
     }
 
+    @Test
     public void testWildcardStream() {
         QDStream stream = QDFactory.getDefaultFactory().createStream(SCHEME);
         stream.setEnableWildcards(true);
         check(stream, true);
     }
 
+    @Test
     public void testWildcardStripedStream() {
         QDStream stream = new StripedFactory(4).createStream(SCHEME);
         stream.setEnableWildcards(true);
@@ -137,10 +147,10 @@ public class AttachmentTest extends TestCase {
         agent.closeAndExamineDataBySubscription(dataOut);
         int expectedSize;
         switch (collector.getContract()) {
-        case TICKER: expectedSize = 1; break;
-        case STREAM: expectedSize = 0; break;
-        case HISTORY: expectedSize = 2; break;
-        default: throw new AssertionError();
+            case TICKER: expectedSize = 1; break;
+            case STREAM: expectedSize = 0; break;
+            case HISTORY: expectedSize = 2; break;
+            default: throw new AssertionError();
         }
         assertEquals(expectedSize, dataOut.size());
         for (int i = 0; i < expectedSize; i++)

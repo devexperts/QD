@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,12 +17,15 @@ import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDHistory;
 import com.devexperts.qd.SubscriptionBuffer;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class BadSubTest extends TestCase {
+import static org.junit.Assert.fail;
+
+public class BadSubTest {
     private static final DataScheme SCHEME = new TestDataScheme(20070707);
     private static final DataScheme SCHEME2 = new TestDataScheme(20070707);
 
+    @Test
     public void testHistoryNoHistory() {
         QDHistory history = QDFactory.getDefaultFactory().createHistory(SCHEME);
         QDAgent agent = history.agentBuilder().build();
@@ -32,21 +35,23 @@ public class BadSubTest extends TestCase {
         try {
             agent.setSubscription(sb);
             fail("should throw IllegalArgumentException");
-        } catch (IllegalArgumentException e) {
-            // expected
+        } catch (IllegalArgumentException expected) {
         }
 
         agent.close(); // should complete normally
     }
 
+    @Test
     public void testTickerWrongScheme() {
         checkWrongScheme(QDFactory.getDefaultFactory().createTicker(SCHEME));
     }
 
+    @Test
     public void testStreamWrongScheme() {
         checkWrongScheme(QDFactory.getDefaultFactory().createStream(SCHEME));
     }
 
+    @Test
     public void testHistoryWrongScheme() {
         checkWrongScheme(QDFactory.getDefaultFactory().createHistory(SCHEME));
     }
@@ -59,8 +64,7 @@ public class BadSubTest extends TestCase {
         try {
             agent.setSubscription(sb);
             fail("should throw IllegalArgumentException");
-        } catch (IllegalArgumentException e) {
-            // expected
+        } catch (IllegalArgumentException expected) {
         }
 
         agent.close(); // should complete normally

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -197,7 +197,8 @@ public class RMIChannelTest {
         final int percentStat = 5;
         final AtomicInteger complete = new AtomicInteger(0);
         RMIRequest<Double> request = client.getClient().createRequest(null,
-            RMIOperation.valueOf(MULTIPLICATIONS_SERVICE_NAME, double.class, "MULT", double.class, int.class, int.class), 0d, 1000000, percentStat);
+            RMIOperation.valueOf(MULTIPLICATIONS_SERVICE_NAME, double.class, "MULT", double.class, int.class, int.class),
+            0d, 1000000, percentStat);
         request.getChannel().addChannelHandler(new RMIService<Void>(CHANNEL_HANDLER) {
             @Override
             public void processTask(RMITask<Void> task) {
@@ -479,7 +480,8 @@ public class RMIChannelTest {
         @Override
         public void openChannel(RMITask<String> task) {
             if (task.getOperation().getMethodName().contains("Client")) {
-                RMIRequest<String> request = task.getChannel().createRequest(RMIOperation.valueOf(ChannelHandler.NAME, String.class, "method"));
+                RMIRequest<String> request = task.getChannel().createRequest(
+                    RMIOperation.valueOf(ChannelHandler.NAME, String.class, "method"));
                 request.setListener(req -> log.info("server channel request listener"));
                 request.send();
             } else if (task.getOperation().getMethodName().equals("resultResponseServerCheck")) {
@@ -557,7 +559,8 @@ public class RMIChannelTest {
         final CountDownLatch processChannelLatch = new CountDownLatch(1);
         final int percentStat = 1;
         final RMIRequest<Double> request = client.getClient().createRequest(null,
-            RMIOperation.valueOf(MULTIPLICATIONS_SERVICE_NAME, double.class, "MULT", double.class, int.class, int.class), 0d, 1000000, percentStat);
+            RMIOperation.valueOf(MULTIPLICATIONS_SERVICE_NAME, double.class, "MULT", double.class, int.class, int.class),
+            0d, 1000000, percentStat);
         final AtomicInteger process = new AtomicInteger(0);
         request.getChannel().addChannelHandler(new RMIService<Object>("*") {
             @Override
@@ -608,12 +611,14 @@ public class RMIChannelTest {
         final CountDownLatch processChannelLatch = new CountDownLatch(1);
         final int percentStat = 10;
         final RMIRequest<Double> request = client.getClient().createRequest(null,
-            RMIOperation.valueOf(MULTIPLICATIONS_SERVICE_NAME, double.class, "MULT", double.class, int.class, int.class), 0d, 10000000, percentStat);
+            RMIOperation.valueOf(MULTIPLICATIONS_SERVICE_NAME, double.class, "MULT", double.class, int.class, int.class),
+            0d, 10000000, percentStat);
         final AtomicInteger process = new AtomicInteger(0);
         request.getChannel().addChannelHandler(new RMIService<Object>("*") {
             @Override
             public void processTask(RMITask<Object> task) {
-                log.info("Client side channel: 1 step (percent = " + task.getRequestMessage().getParameters().getObject()[0] + ")");
+                log.info("Client side channel: 1 step (percent = " +
+                    task.getRequestMessage().getParameters().getObject()[0] + ")");
                 assertEquals(task.getOperation(), MULTIPLICATION_PROGRESS_OPERATION);
                 RMIRequestMessage<?> message = task.getRequestMessage();
                 int percent = (int) message.getParameters().getObject()[0];
@@ -646,8 +651,10 @@ public class RMIChannelTest {
 
     private static final String POWER_SERVICE_NAME = "calculationPower";
     private static final String SERVER_CHANNEL = "ServerChannel";
-    private static final RMIOperation<Void> SERVER_UPDATE_OPERATION = RMIOperation.valueOf(SERVER_CHANNEL, Void.class, "update", long.class);
-    private static final RMIOperation<Void> SERVER_STOP_OPERATION = RMIOperation.valueOf(SERVER_CHANNEL, Void.class, "stop", long.class, boolean.class);
+    private static final RMIOperation<Void> SERVER_UPDATE_OPERATION =
+        RMIOperation.valueOf(SERVER_CHANNEL, Void.class, "update", long.class);
+    private static final RMIOperation<Void> SERVER_STOP_OPERATION =
+        RMIOperation.valueOf(SERVER_CHANNEL, Void.class, "stop", long.class, boolean.class);
 
     private final RMIService<Long> powerService = new RMIService<Long>(POWER_SERVICE_NAME) {
         volatile long factor;
@@ -1091,8 +1098,9 @@ public class RMIChannelTest {
         void process(boolean forServerChannelRequest, boolean cancelBeforeSend);
     }
 
-    private static class ChannelRequestCancelCheckerImpl implements ChannelRequestCancelChecker, RMIChannelSupport<Void> {
-
+    private static class ChannelRequestCancelCheckerImpl
+        implements ChannelRequestCancelChecker, RMIChannelSupport<Void>
+    {
         @SuppressWarnings("InnerClassFieldHidesOuterClassField")
         private static class ChannelHandler extends RMIService<Void> {
             static ChannelHandler handler = new ChannelHandler();
@@ -1162,5 +1170,4 @@ public class RMIChannelTest {
                 LockSupport.park();
         }
     }
-
 }

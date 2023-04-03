@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,6 +13,10 @@ package com.devexperts.logging.test;
 
 import com.devexperts.logging.LogFormatter;
 import com.devexperts.logging.Logging;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,6 +26,10 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests that {@link com.devexperts.logging.DxFeedPatternLayout} works as layout with {@link java.util.logging}
@@ -34,15 +42,14 @@ public class JavaUtilLoggingCompatibilityTest extends LogFormatterTestBase {
     private static final Level ERROR = Level.SEVERE;
     private static final Level TRACE = Level.FINEST;
 
-    private static File logFile;
-    public static final File BUILD_TEST_DIR = new File("build/test/");
+    @Rule
+    public TemporaryFolder tempFolder = new TemporaryFolder();
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
+    private File logFile;
 
-        System.getProperties().setProperty(Logging.LOG_CLASS_NAME, "com.devexperts.logging.DefaultLogging");
+    @Before
+    public void setUp() throws Exception {
+        System.setProperty(Logging.LOG_CLASS_NAME, "com.devexperts.logging.DefaultLogging");
         initLogFormatter();
 
         // init default levels from external configuration
@@ -50,32 +57,21 @@ public class JavaUtilLoggingCompatibilityTest extends LogFormatterTestBase {
             LogManager.getLogManager().readConfiguration(cfgIS);
         }
 
-        // Create log file in folder that will be eventually cleared - "deleteOnExit" does not work for log files.
-        BUILD_TEST_DIR.mkdirs();
-        File logFileBase = File.createTempFile("test.", ".log", BUILD_TEST_DIR);
-        logFileBase.delete();
-
-        Logging.configureLogFile(logFileBase.getPath());
+        File logBase = new File(tempFolder.getRoot(), "test.log");
+        Logging.configureLogFile(logBase.getPath());
         // Logging.configureLogFile with java.util.logging creates rotating java.util.logging.FileHandler with count 2.
         // By design of java.util.logging.FileHandler, it will append '.<count>' to the end of a target file name if
         // another place is not specified with '%g' placeholder
-        logFile = new File(logFileBase.getPath() + ".0");
+        logFile = new File(logBase.getPath() + ".0");
         assertTrue(logFile.exists());
     }
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    @Override
-    protected void tearDown() throws Exception {
-        super.tearDown();
-        if (logFile.exists())
-            logFile.delete();
-    }
-
     protected void initLogFormatter() {
-        System.getProperties().setProperty(LogFormatter.CONFIG_FILE_PROPERTY,
+        System.setProperty(LogFormatter.CONFIG_FILE_PROPERTY,
             JavaUtilLoggingCompatibilityTest.class.getResource("/test.logformatter.properties").toExternalForm());
     }
 
+    @Test
     public void testJavaUtilLogging() throws IOException {
         Logger logger = Logger.getLogger(JavaUtilLoggingCompatibilityTest.class.getName());
         String javaRuntimeVersion =
@@ -95,23 +91,27 @@ public class JavaUtilLoggingCompatibilityTest extends LogFormatterTestBase {
         assertTrue("Exception stack trace not found in log file", content.contains("\tat " + getClass().getName()));
     }
 
+    @Test
     public void testDevexpertsLogging() throws IOException {
         Logging log = Logging.getLogging(JavaUtilLoggingCompatibilityTest.class);
         log.configureDebugEnabled(true);
-        final String test_message = "Test com.devexperts.logging message";
-        log.debug(test_message);
+        final String testMessage = "Test com.devexperts.logging message";
+        log.debug(testMessage);
         log.debug("error", new IllegalArgumentException());
-        log.debug(test_message);
+        log.debug(testMessage);
 
         final String content = loadFile(logFile);
-        assertTrue("'" + test_message + "' not found in log file", content.contains(test_message));
+        assertTrue("'" + testMessage + "' not found in log file", content.contains(testMessage));
         assertTrue("Exception not found in log file", content.contains(IllegalArgumentException.class.getName()));
         assertTrue("Exception stack trace not found in log file", content.contains("\tat " + getClass().getName()));
     }
 
+    @Test
     public void testConfigureDebugEnabled() throws IOException {
         goTestConfigureDebugEnbled(true);
     }
+
+    @Test
     public void testConfigureDebugDisabled() throws IOException {
         goTestConfigureDebugEnbled(false);
     }

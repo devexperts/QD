@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -25,7 +25,7 @@ import com.devexperts.qd.SubscriptionProvider;
 import com.devexperts.qd.impl.hash.HashFactory;
 import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.qd.kit.PatternFilter;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.Date;
 import java.util.EnumSet;
@@ -34,28 +34,34 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.Set;
 
+import static org.junit.Assert.assertEquals;
+
 /**
  * Tests that subscription is consistently represented by a sequence of add/remove subscription
  * events despite the order of initialization of added/removed subscription providers.
  * It also installs agent and distributor filters in 50% of cases and checks that those filters
  * are properly applied to subscription.
  */
-public class SubConsistencyTest extends TestCase {
+public class SubConsistencyTest {
     private static final Random RND = new Random(20101221);
     private static final DataScheme SCHEME = new TestDataScheme(RND.nextLong(), TestDataScheme.Type.HAS_TIME);
 
+    @Test
     public void testHashTicker() {
         check(new HashFactory().createTicker(SCHEME));
     }
 
+    @Test
     public void testTicker() {
         check(QDFactory.getDefaultFactory().createTicker(SCHEME));
     }
 
+    @Test
     public void testStream() {
         check(QDFactory.getDefaultFactory().createStream(SCHEME));
     }
 
+    @Test
     public void testHistory() {
         check(QDFactory.getDefaultFactory().createHistory(SCHEME));
     }
@@ -88,12 +94,12 @@ public class SubConsistencyTest extends TestCase {
         int r = 0;
         for (DistOp op : ops) {
             switch (op) {
-            case GET_ADDED: a = 1; break;
-            case LISTEN_ADDED: if (a != 1) return false; a = 2; break;
-            case RETRIEVE_ADDED: if (a != 2) return false; break;
-            case GET_REMOVED: r = 1; break;
-            case LISTEN_REMOVED: if (r != 1) return false; r = 2; break;
-            case RETRIEVE_REMOVED: if (r != 2) return false; break;
+                case GET_ADDED: a = 1; break;
+                case LISTEN_ADDED: if (a != 1) return false; a = 2; break;
+                case RETRIEVE_ADDED: if (a != 2) return false; break;
+                case GET_REMOVED: r = 1; break;
+                case LISTEN_REMOVED: if (r != 1) return false; r = 2; break;
+                case RETRIEVE_REMOVED: if (r != 2) return false; break;
             }
         }
         return true;
@@ -165,7 +171,8 @@ public class SubConsistencyTest extends TestCase {
             }},
         LISTEN_ADDED {
             public void invoke(Runner runner) {
-                runner.distributor.getAddedSubscriptionProvider().setSubscriptionListener(new Listener(runner, Type.ADD));
+                runner.distributor.getAddedSubscriptionProvider().setSubscriptionListener(
+                    new Listener(runner, Type.ADD));
             }},
         RETRIEVE_ADDED {
             public void invoke(Runner runner) {
@@ -177,7 +184,8 @@ public class SubConsistencyTest extends TestCase {
             }},
         LISTEN_REMOVED {
             public void invoke(Runner runner) {
-                runner.distributor.getRemovedSubscriptionProvider().setSubscriptionListener(new Listener(runner, Type.REMOVE));
+                runner.distributor.getRemovedSubscriptionProvider().setSubscriptionListener(
+                    new Listener(runner, Type.REMOVE));
             }},
         RETRIEVE_REMOVED {
             public void invoke(Runner runner) {
@@ -236,8 +244,8 @@ public class SubConsistencyTest extends TestCase {
         }
 
         private SubscriptionFilter randomFilter() {
-            return RND.nextBoolean() ? null :
-                CompositeFilters.makeNot(PatternFilter.valueOf("" + (char) ('A' + RND.nextInt('Z' - 'A')) + "*", SCHEME));
+            return RND.nextBoolean() ? null : CompositeFilters.makeNot(
+                PatternFilter.valueOf("" + (char) ('A' + RND.nextInt('Z' - 'A')) + "*", SCHEME));
         }
 
         public void run() {
@@ -272,12 +280,13 @@ public class SubConsistencyTest extends TestCase {
         private void checkExpectedSub(Set<Sub> sub, SubscriptionFilter filter) {
             Set<Sub> expectedSub = new HashSet<Sub>(coreSub);
             expectedSub.addAll(extraSub);
-            if (filter != null)
+            if (filter != null) {
                 for (Iterator<Sub> it = expectedSub.iterator(); it.hasNext();) {
                     Sub item = it.next();
                     if (!filter.acceptRecord(item.record, SCHEME.getCodec().encode(item.symbol), item.symbol))
                         it.remove();
                 }
+            }                
             assertEquals(expectedSub, sub);
         }
 

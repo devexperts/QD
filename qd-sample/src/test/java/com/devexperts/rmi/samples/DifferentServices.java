@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -58,10 +58,14 @@ public class DifferentServices {
 
         static final String NAME = "CalculatorService";
 
-        public static final RMIOperation<Double> PLUS = RMIOperation.valueOf(NAME, double.class, "PLUS", double.class, double.class);
-        static final RMIOperation<Double> MULT = RMIOperation.valueOf(NAME, double.class, "MULT", double.class, double.class);
-        static final RMIOperation<Double> DIVIDE = RMIOperation.valueOf(NAME, double.class, "divide", double.class, double.class);
-        static final RMIOperation<Double> SIN = RMIOperation.valueOf(NAME, double.class, "SIN", double.class);
+        public static final RMIOperation<Double> PLUS =
+            RMIOperation.valueOf(NAME, double.class, "PLUS", double.class, double.class);
+        static final RMIOperation<Double> MULT =
+            RMIOperation.valueOf(NAME, double.class, "MULT", double.class, double.class);
+        static final RMIOperation<Double> DIVIDE =
+            RMIOperation.valueOf(NAME, double.class, "divide", double.class, double.class);
+        static final RMIOperation<Double> SIN =
+            RMIOperation.valueOf(NAME, double.class, "SIN", double.class);
 
         public CalculatorService() {
             super(NAME);
@@ -102,7 +106,8 @@ public class DifferentServices {
 
         private static final String NAME = "IntegralCalculatorService";
 
-        public static final RMIOperation<Double> CALC = RMIOperation.valueOf(NAME, double.class, "CALC", double.class, double.class, Function.class);
+        public static final RMIOperation<Double> CALC =
+            RMIOperation.valueOf(NAME, double.class, "CALC", double.class, double.class, Function.class);
 
         IntegralCalculatorService() {
             super(NAME);
@@ -141,8 +146,10 @@ public class DifferentServices {
         private RMITask<Double> sumTask;
         private static final String NAME = "someService";
 
-        private static final RMIOperation<Double> sum = RMIOperation.valueOf(NAME, double.class, "sum");
-        private static final RMIOperation<Double> sumAndSet = RMIOperation.valueOf(NAME, double.class, "sumAndSet", double.class, double.class);
+        private static final RMIOperation<Double> sum =
+            RMIOperation.valueOf(NAME, double.class, "sum");
+        private static final RMIOperation<Double> sumAndSet =
+            RMIOperation.valueOf(NAME, double.class, "sumAndSet", double.class, double.class);
 
         SomeService() {
             super(NAME);

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,12 +12,14 @@
 package com.devexperts.test;
 
 import com.devexperts.logging.Logging;
-import org.junit.Assert;
 
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import javax.annotation.Nonnull;
+
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
 /**
  * Testing utility class to be used in tests to verify that all threads created by the test have terminated
@@ -51,7 +53,7 @@ public class ThreadCleanCheck {
     public static void after() {
         Data before = BEFORE.get();
         log.info("======== Done " + before.description + " ========");
-        Assert.assertNotNull(before);
+        assertNotNull(before);
         // wait some time for threads to (maybe) shutdown
         long curTime = System.currentTimeMillis();
         long limitTime = curTime + WAIT_TIME;
@@ -69,13 +71,13 @@ public class ThreadCleanCheck {
                     t.setStackTrace(thread.getStackTrace());
                     log.error("-------- Leaked thread " + thread, t);
                 }
-                Assert.fail("Leaked threads");
+                fail("Leaked threads");
             }
             // join first one
             try {
                 leaked.iterator().next().join(remTime);
             } catch (InterruptedException e) {
-                Assert.fail("Wait interrupted");
+                fail("Wait interrupted");
             }
             curTime = System.currentTimeMillis();
         }

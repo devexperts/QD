@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -35,9 +35,12 @@ import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.qtp.ProtocolOption;
 import com.devexperts.qd.qtp.text.TextQTPComposer;
 import com.devexperts.qd.qtp.text.TextQTPParser;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class RemoveEventTimeTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
+public class RemoveEventTimeTest {
     private static final DataRecord RECORD = new DefaultRecord(0, "TradeHistory", true, new DataIntField[] {
         new CompactIntField(0, "TradeHistory.Time"),
         new CompactIntField(1, "TradeHistory.Sequence"),
@@ -48,6 +51,7 @@ public class RemoveEventTimeTest extends TestCase {
     private static final String SYMBOL1 = "SYMBOL1";
     private static final String SYMBOL2 = "SYMBOL2";
 
+    @Test
     public void testBinary() {
         BinaryQTPComposer composer = new BinaryQTPComposer(SCHEME, true);
         BinaryQTPParser parser = new BinaryQTPParser(SCHEME);
@@ -55,6 +59,7 @@ public class RemoveEventTimeTest extends TestCase {
         check(composer, parser);
     }
 
+    @Test
     public void testBinaryWithEventTimeFields() {
         BinaryQTPComposer composer = new BinaryQTPComposer(SCHEME, true);
         BinaryQTPParser parser = new BinaryQTPParser(SCHEME);
@@ -63,6 +68,7 @@ public class RemoveEventTimeTest extends TestCase {
         check(composer, parser);
     }
 
+    @Test
     public void testText() {
         TextQTPComposer composer = new TextQTPComposer(SCHEME);
         TextQTPParser parser = new TextQTPParser(SCHEME);
@@ -70,6 +76,7 @@ public class RemoveEventTimeTest extends TestCase {
         check(composer, parser);
     }
 
+    @Test
     public void testTextWithTimeFields() {
         TextQTPComposer composer = new TextQTPComposer(SCHEME);
         TextQTPParser parser = new TextQTPParser(SCHEME);
@@ -115,11 +122,11 @@ public class RemoveEventTimeTest extends TestCase {
 
     private void assertData(RecordBuffer buf, String symbol, int flags, int time, int sequence) {
         RecordCursor cursor = buf.next();
+        assertNotNull(cursor);
         assertEquals(0, cursor.getCipher());
         assertEquals(symbol, cursor.getSymbol());
         assertEquals(flags, cursor.getEventFlags());
         assertEquals(time, cursor.getInt(0));
         assertEquals(sequence, cursor.getInt(1));
     }
-
 }

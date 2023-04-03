@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -26,9 +26,11 @@ import com.devexperts.qd.kit.DefaultRecord;
 import com.devexperts.qd.kit.DefaultScheme;
 import com.devexperts.qd.kit.PentaCodec;
 import com.devexperts.qd.tools.RandomRecordsProvider;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class PartialRetrieveTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+
+public class PartialRetrieveTest {
     private static final int REPEAT = 100;
     private static final int MAX_RECORDS_PROVIDE = 100;
     private static final int MAX_RECORDS_RETRIEVE = 10;
@@ -47,23 +49,22 @@ public class PartialRetrieveTest extends TestCase {
         });
     }
 
-    public PartialRetrieveTest(String s) {
-        super(s);
-    }
-
+    @Test
     public void testHistoryPartialRetrieve() {
         testPartialRetrieve(QDFactory.getDefaultFactory().createHistory(SCHEME), true);
     }
 
+    @Test
     public void testStreamPartialRetrieve() {
         testPartialRetrieve(QDFactory.getDefaultFactory().createStream(SCHEME), true);
     }
 
+    @Test
     public void testTickerPartialRetrieve() {
         testPartialRetrieve(QDFactory.getDefaultFactory().createTicker(SCHEME), false);
     }
 
-    private void testPartialRetrieve(QDCollector collector, boolean check_size) {
+    private void testPartialRetrieve(QDCollector collector, boolean checkSize) {
         QDDistributor distributor = collector.distributorBuilder().build();
         QDAgent agent = collector.agentBuilder().build();
 
@@ -74,31 +75,31 @@ public class PartialRetrieveTest extends TestCase {
 
         DataProvider provider = new RandomRecordsProvider(record, new String[] { TEST_SYMBOL }, MAX_RECORDS_PROVIDE);
 
-        int size_provided = 0;
-        int size_retrieved = 0;
+        int sizeProvided = 0;
+        int sizeRetrieved = 0;
 
         for (int repeat = 0; repeat < REPEAT; repeat++) {
             // Provide data
-            DataBuffer provider_buffer = new DataBuffer();
-            provider.retrieveData(provider_buffer);
-            size_provided += provider_buffer.size();
-            distributor.processData(provider_buffer);
+            DataBuffer providerBuffer = new DataBuffer();
+            provider.retrieveData(providerBuffer);
+            sizeProvided += providerBuffer.size();
+            distributor.processData(providerBuffer);
 
             // Retrive in small chunks -- should not fail!!!
-            DataBuffer retrieve_buffer = new DataBuffer() {
+            DataBuffer retrieveBuffer = new DataBuffer() {
                 public boolean hasCapacity() {
                     return size() < MAX_RECORDS_RETRIEVE;
                 }
             };
-            agent.retrieveData(retrieve_buffer);
-            size_retrieved += retrieve_buffer.size();
+            agent.retrieveData(retrieveBuffer);
+            sizeRetrieved += retrieveBuffer.size();
         }
 
         // Retrieve rest & check
         DataBuffer buf = new DataBuffer();
         agent.retrieveData(buf);
-        size_retrieved += buf.size();
-        if (check_size)
-            assertEquals(size_retrieved, size_provided);
+        sizeRetrieved += buf.size();
+        if (checkSize)
+            assertEquals(sizeRetrieved, sizeProvided);
     }
 }

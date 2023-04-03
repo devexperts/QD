@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -19,7 +19,6 @@ import com.devexperts.rmi.task.RMIServiceDescriptor;
 import com.devexperts.rmi.task.RMIServiceId;
 import com.devexperts.services.ServiceProvider;
 import com.dxfeed.promise.Promise;
-import org.junit.Assert;
 
 import java.util.List;
 import java.util.Map;
@@ -29,6 +28,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+
+import static org.junit.Assert.fail;
 
 // Set order to be much greater than the order of the default factory
 // We only enable this factory in certain tests by disabling the default one.
@@ -71,7 +72,7 @@ public class TestRMILoadBalancerFactory implements RMILoadBalancerFactory {
             .filter(balancer -> balancer.balanceCount.get() > 0)
             .collect(Collectors.toList());
         if (!didBalancing.isEmpty()) {
-            Assert.fail((isClient ? "Client" : "Server") + " balancers participated in balancing: " + didBalancing);
+            fail((isClient ? "Client" : "Server") + " balancers participated in balancing: " + didBalancing);
         }
     }
 
@@ -80,7 +81,7 @@ public class TestRMILoadBalancerFactory implements RMILoadBalancerFactory {
             .filter(balancer -> !balancer.closed)
             .collect(Collectors.toList());
         if (!notClosed.isEmpty()) {
-            Assert.fail("Some of the balancers were not closed: " + notClosed);
+            fail("Some of the balancers were not closed: " + notClosed);
         }
     }
 
@@ -99,7 +100,6 @@ public class TestRMILoadBalancerFactory implements RMILoadBalancerFactory {
             .collect(Collectors.toList());
         return notClosed.isEmpty();
     }
-
 
     private class TestLoadBalancer implements RMILoadBalancer {
         volatile boolean closed = false;

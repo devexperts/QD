@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -204,7 +204,8 @@ public class RMIAsynchronousTest {
         } catch (RMIException e) {
             fail(e.getMessage());
         }
-        log.info("testWaitingService timeWork on Server = " + req1.getNonBlocking() + ", timeWork on Client = " + waitedTime);
+        log.info("testWaitingService timeWork on Server = " + req1.getNonBlocking() +
+            ", timeWork on Client = " + waitedTime);
         assertTrue(req1.getNonBlocking() <= waitedTime);
     }
 
@@ -300,7 +301,8 @@ public class RMIAsynchronousTest {
         server.getServer().export(privateEndpoint.getClient().getService("*"));
         connectWithForwarding(true);
         service.update();
-        log.info("client = " + client + ", server = " + server + ", private = " + privateEndpoint + ", remote = " + remoteEndpoint);
+        log.info("client = " + client + ", server = " + server + ", private = " + privateEndpoint +
+            ", remote = " + remoteEndpoint);
 
         log.info(" -------------------------------------------------------------- ");
         callForward(clientPort, service, startTime);
@@ -308,7 +310,9 @@ public class RMIAsynchronousTest {
     }
 
     @SuppressWarnings("unchecked")
-    static void callForward(RMIClientPort clientPort, CancellationCount service, long startTime) throws InterruptedException {
+    static void callForward(RMIClientPort clientPort, CancellationCount service, long startTime)
+        throws InterruptedException
+    {
         RMIRequest<Void> req1 = clientPort.createRequest(CancellationCount.factCancellation, 10.0);
         req1.send();
         assertTrue(service.startedWait.await(10, TimeUnit.SECONDS));
@@ -337,7 +341,7 @@ public class RMIAsynchronousTest {
 
     private static class FirstCount implements CountService {
         final AtomicInteger count = new AtomicInteger();
-        final int INCREMENT_PARAMETER = 1;
+        final static int INCREMENT_PARAMETER = 1;
 
         @Override
         public int getCount() {
@@ -352,7 +356,7 @@ public class RMIAsynchronousTest {
 
     private static class SecondCount implements CountService {
         final AtomicInteger count = new AtomicInteger();
-        final int INCREMENT_PARAMETER = 2;
+        final static int INCREMENT_PARAMETER = 2;
 
         @Override
         public int getCount() {
@@ -456,10 +460,12 @@ public class RMIAsynchronousTest {
             } else if (task.getOperation().equals(EXECUTE)) {
                 task.setCancelListener(task1 -> {
                     log.info("MON = " + mon);
-                    if (task1.getState() == RMITaskState.SUCCEEDED)
+                    if (task1.getState() == RMITaskState.SUCCEEDED) {
                         mon.complete(System.currentTimeMillis() - start);
-                    else
-                        mon.completeExceptionally((Exception) (task1.getResponseMessage().getMarshalledResult().getObject()));
+                    } else {
+                        mon.completeExceptionally((Exception)
+                            (task1.getResponseMessage().getMarshalledResult().getObject()));
+                    }
                     COMPLETE_EXECUTE.countDown();
                 });
                 START_EXECUTE.countDown();

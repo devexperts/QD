@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,7 +16,7 @@ import com.devexperts.util.IndexedSet;
 import com.devexperts.util.Indexer;
 import com.devexperts.util.IndexerFunction;
 import com.devexperts.util.SynchronizedIndexedSet;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -36,7 +36,13 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class IndexedSetTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+public class IndexedSetTest {
     private static final IndexerFunction<String, Integer> STRING_INTEGER_INDEXER =
         (IndexerFunction<String, Integer> & Serializable) Object::toString;
     private static final IndexerFunction.LongKey<String> LONG_STRING_INDEXER =
@@ -44,6 +50,7 @@ public class IndexedSetTest extends TestCase {
     private static final IndexerFunction.IdentityKey<String, String> STRING_IDENTITY_INDEXER =
         (IndexerFunction.IdentityKey<String, String> & Serializable) String::toString;
 
+    @Test
     public void testIndexerFunction() {
         IndexedSet<Class<?>, Object> set = IndexedSet.create(Object::getClass);
         set.add("HABA");
@@ -52,6 +59,7 @@ public class IndexedSetTest extends TestCase {
         assertTrue(set.containsKey(Integer.class));
     }
 
+    @Test
     public void testLongIndexerFunction() {
         IndexedSet<Long, Long> set = IndexedSet.createLong(Long::longValue);
         set.add(1L);
@@ -60,6 +68,7 @@ public class IndexedSetTest extends TestCase {
         assertTrue(set.containsKey(2L));
     }
 
+    @Test
     public void testIntIndexerFunction() {
         IndexedSet<Integer, Integer> set = IndexedSet.createInt(Integer::intValue);
         set.add(1);
@@ -68,6 +77,7 @@ public class IndexedSetTest extends TestCase {
         assertTrue(set.containsKey(2));
     }
 
+    @Test
     public void testCollector() {
         doTestCollector(IndexedSet.class, IndexedSet.collector());
         doTestCollector(IndexedSet.class, IndexedSet.collector(Object::toString));
@@ -77,33 +87,35 @@ public class IndexedSetTest extends TestCase {
         doTestCollector(SynchronizedIndexedSet.class, SynchronizedIndexedSet.collectorInt(Object::hashCode));
     }
 
-    private void doTestCollector(Class setClass, Collector<Object, ?, ? extends IndexedSet<?, Object>> collector) {
+    private void doTestCollector(Class<?> setClass, Collector<Object, ?, ? extends IndexedSet<?, Object>> collector) {
         List<Object> list = new ArrayList<>();
         for (int i = 0; i < 100; i++)
             list.add(new Object());
         IndexedSet<?, Object> set = list.stream().collect(collector);
-        assertTrue(set.getClass() == setClass);
+        assertSame(set.getClass(), setClass);
         assertEquals(new HashSet<>(list), new HashSet<>(set));
     }
 
+    @Test
     public void testMapCollector() {
         doTestMapCollector(IndexedMap.class, IndexedMap.collector(), o -> o);
         doTestMapCollector(IndexedMap.class, IndexedMap.collector(Object::toString), Object::toString);
         doTestMapCollector(IndexedMap.class, IndexedMap.collectorInt(Object::hashCode), Object::hashCode);
     }
 
-    private <K> void doTestMapCollector(Class mapClass, Collector<Object, ?, ? extends IndexedMap<K, Object>> collector,
-        Function<Object, K> keyFunction)
+    private <K> void doTestMapCollector(Class<?> mapClass,
+        Collector<Object, ?, ? extends IndexedMap<K, Object>> collector, Function<Object, K> keyFunction)
     {
         List<Object> list = new ArrayList<>();
         for (int i = 0; i < 100; i++) {
             list.add(new Object());
         }
         IndexedMap<K, Object> map = list.stream().collect(collector);
-        assertTrue(map.getClass() == mapClass);
+        assertSame(map.getClass(), mapClass);
         assertEquals(list.stream().collect(Collectors.toMap(keyFunction, o -> o)), map);
     }
 
+    @Test
     public void testBoxedLongs() {
         IndexedSet<Long, Long> set = new IndexedSet<>();
         set.add(1L);
@@ -114,6 +126,7 @@ public class IndexedSetTest extends TestCase {
         assertTrue(set.containsValue(2L));
     }
 
+    @Test
     public void testBoxedLongKeys() {
         IndexedSet<Long, Long[]> set = IndexedSet.createLong((Long[] value) -> value[0]);
         set.add(new Long[] {1L});
@@ -124,7 +137,8 @@ public class IndexedSetTest extends TestCase {
         assertTrue(set.containsValue(new Long[]{2L}));
     }
 
-    @SuppressWarnings({"RedundantStringConstructorCall", "StringEquality"})
+    @SuppressWarnings({"StringEquality"})
+    @Test
     public void testIdentityFunction() {
         IndexedSet<String, String> set = IndexedSet.create((IndexerFunction.IdentityKey<String,String>) (s -> s));
         String s1 = "ONE";
@@ -139,6 +153,7 @@ public class IndexedSetTest extends TestCase {
     }
 
     @SuppressWarnings("deprecation")
+    @Test
     public void testDefaultIndexer() {
         assertTrue("IndexerFunction.DEFAULT != null", IndexerFunction.DEFAULT != null);
         assertTrue("Indexer.DEFAULT != null", Indexer.DEFAULT != null);
@@ -146,6 +161,7 @@ public class IndexedSetTest extends TestCase {
         // assertTrue("Indexer.DEFAULT == IndexerFunction.DEFAULT", Indexer.DEFAULT == IndexerFunction.DEFAULT);
     }
 
+    @Test
     public void testNull() {
         IndexedSet<Object, Object[]> set = IndexedSet.create((Object[] value) -> value[0]);
 
@@ -180,6 +196,7 @@ public class IndexedSetTest extends TestCase {
         }
     }
 
+    @Test
     public void testConcurrentModification() {
         doTestConcurrentModification(IndexedSet.create(STRING_INTEGER_INDEXER));
         doTestConcurrentModification(SynchronizedIndexedSet.create(STRING_INTEGER_INDEXER));
@@ -190,17 +207,18 @@ public class IndexedSetTest extends TestCase {
             // This cycle should never throw ConcurrentModificationException
             is.put(i);
             for (Integer v : is)
-                //noinspection UnnecessaryBoxing,BoxingBoxedValue,CachedNumberConstructorCall
+                // noinspection BoxingBoxedValue
                 is.put(new Integer(v));
         }
     }
 
+    @Test
     public void testPutIfAbsent() {
         doTestPutIfAbsent(IndexedSet.create(STRING_INTEGER_INDEXER));
         doTestPutIfAbsent(SynchronizedIndexedSet.create(STRING_INTEGER_INDEXER));
     }
 
-    @SuppressWarnings({"UnnecessaryBoxing", "CachedNumberConstructorCall", "NumberEquality"})
+    @SuppressWarnings({"UnnecessaryBoxing", "NumberEquality"})
     private void doTestPutIfAbsent(IndexedSet<String, Integer> is) {
         Integer v1 = new Integer(42);
         Integer v2 = new Integer(42);
@@ -219,6 +237,7 @@ public class IndexedSetTest extends TestCase {
         assertTrue(is.size() == 1);
     }
 
+    @Test
     public void testSimpleOps() {
         doTestSimpleOps(IndexedSet.create(STRING_INTEGER_INDEXER));
         doTestSimpleOps(SynchronizedIndexedSet.create(STRING_INTEGER_INDEXER));
@@ -271,6 +290,7 @@ public class IndexedSetTest extends TestCase {
         assertTrue(im.keySet().equals(hm.keySet()));
     }
 
+    @Test
     public void testBig() {
         doTestBig(IndexedSet.createLong(LONG_STRING_INDEXER));
         doTestBig(SynchronizedIndexedSet.createLong(LONG_STRING_INDEXER));
@@ -373,7 +393,6 @@ public class IndexedSetTest extends TestCase {
 
     static final IndexerFunction<String, StrItem> STR_ITEM_INDEXER = t -> t.val;
 
-
     static final IndexerFunction<StrItem, StrItem> STR_ITEM_WEIRD_INDEXER = new IndexerFunction<StrItem, StrItem>() {
         @Override
         public StrItem getObjectKey(StrItem t) {
@@ -393,6 +412,7 @@ public class IndexedSetTest extends TestCase {
         }
     };
 
+    @Test
     public void testRemoveAllShortParam() {
         // removeAll with parameter collection shorter than set
         IndexedSet<String, StrItem> set = IndexedSet.create(STR_ITEM_INDEXER);
@@ -405,6 +425,7 @@ public class IndexedSetTest extends TestCase {
         assertTrue(set.containsKey("c"));
     }
 
+    @Test
     public void testRemoveAllLongParam() {
         // removeAll with parameter collection longer than set
         IndexedSet<String, StrItem> set = IndexedSet.create(STR_ITEM_INDEXER);
@@ -417,6 +438,7 @@ public class IndexedSetTest extends TestCase {
         assertTrue(set.containsKey("d"));
     }
 
+    @Test
     public void testRemoveAllLongSetParam() {
         // removeAll with long IndexedSet as parameter
         IndexedSet<String, StrItem> set = IndexedSet.create(STR_ITEM_INDEXER);
@@ -429,6 +451,7 @@ public class IndexedSetTest extends TestCase {
         assertTrue(set.containsKey("d"));
     }
 
+    @Test
     public void testRetainAll() {
         IndexedSet<String, StrItem> set = IndexedSet.create(STR_ITEM_INDEXER);
         set.add(new StrItem(null));
@@ -440,6 +463,7 @@ public class IndexedSetTest extends TestCase {
         assertTrue(set.containsKey("b"));
     }
 
+    @Test
     public void testRetainAllWithSet() {
         IndexedSet<String, StrItem> set = IndexedSet.create(STR_ITEM_INDEXER);
         set.add(new StrItem(null));
@@ -452,6 +476,7 @@ public class IndexedSetTest extends TestCase {
         assertTrue(set.containsKey("b"));
     }
 
+    @Test
     public void testEntrySetRemoveAllShortParam() {
         // removeAll with parameter collection shorter than set
         IndexedMap<String, StrItem> set = IndexedMap.create(STR_ITEM_INDEXER);
@@ -468,6 +493,7 @@ public class IndexedSetTest extends TestCase {
         assertTrue(set.containsKey("d"));
     }
 
+    @Test
     public void testEntrySetRemoveAllLongParam() {
         // removeAll with parameter collection longer than set
         IndexedMap<String, StrItem> set = IndexedMap.create(STR_ITEM_INDEXER);
@@ -482,6 +508,7 @@ public class IndexedSetTest extends TestCase {
         assertTrue(set.containsKey("d"));
     }
 
+    @Test
     public void testEntrySetRetainAll() {
         IndexedMap<String, StrItem> set = IndexedMap.create(STR_ITEM_INDEXER);
         set.put(new StrItem(null));
@@ -496,6 +523,7 @@ public class IndexedSetTest extends TestCase {
         assertTrue(set.containsKey("b"));
     }
 
+    @Test
     public void testEntrySetRemoveIf() {
         IndexedMap<String, StrItem> set = IndexedMap.create(STR_ITEM_INDEXER);
         set.put(new StrItem(null));
@@ -507,6 +535,7 @@ public class IndexedSetTest extends TestCase {
         assertTrue(set.containsKey("b"));
     }
 
+    @Test
     public void testKeySetRemoveAllShortParam() {
         // removeAll with parameter collection shorter than set
         IndexedMap<StrItem, StrItem> set = IndexedMap.create(STR_ITEM_WEIRD_INDEXER);
@@ -521,6 +550,7 @@ public class IndexedSetTest extends TestCase {
         assertTrue(set.containsKey(new StrItem("d")));
     }
 
+    @Test
     public void testKeySetRemoveAllLongParam() {
         // removeAll with parameter collection longer than set
         IndexedMap<StrItem, StrItem> set = IndexedMap.create(STR_ITEM_WEIRD_INDEXER);
@@ -533,6 +563,7 @@ public class IndexedSetTest extends TestCase {
         assertTrue(set.containsKey(new StrItem("d")));
     }
 
+    @Test
     public void testKeySetRetainAll() {
         IndexedMap<StrItem, StrItem> set = IndexedMap.create(STR_ITEM_WEIRD_INDEXER);
         set.put(new StrItem(null));
@@ -544,6 +575,7 @@ public class IndexedSetTest extends TestCase {
         assertTrue(set.containsKey(new StrItem("b")));
     }
 
+    @Test
     public void testKeySetRemoveIf() {
         IndexedMap<StrItem, StrItem> set = IndexedMap.create(STR_ITEM_WEIRD_INDEXER);
         set.put(new StrItem(null));
@@ -555,12 +587,13 @@ public class IndexedSetTest extends TestCase {
         assertTrue(set.containsKey(new StrItem("b")));
     }
 
+    @Test
     public void testIdentitySet() {
         doTestIdentitySet(IndexedSet.create(STRING_IDENTITY_INDEXER));
         doTestIdentitySet(SynchronizedIndexedSet.create(STRING_IDENTITY_INDEXER));
     }
 
-    @SuppressWarnings({"RedundantStringConstructorCall", "StringEquality"})
+    @SuppressWarnings({"StringEquality"})
     private void doTestIdentitySet(IndexedSet<String, String> is) {
         String s1 = new String("HABA");
         String s2 = new String("HABA");
@@ -590,7 +623,6 @@ public class IndexedSetTest extends TestCase {
             assertTrue(eq1 == eq2);
             return eq1;
         } catch (Exception e) {
-            e.printStackTrace();
             fail(e.toString());
             return false; // should never execute
         }

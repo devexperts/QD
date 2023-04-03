@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -37,7 +37,6 @@ import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.stats.QDStats;
-import junit.framework.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -620,7 +619,7 @@ public class HistorySnapshotMTStressTest {
     private static class HSF implements HistorySubscriptionFilter {
         @Override
         public long getMinHistoryTime(DataRecord record, int cipher, String symbol) {
-            Assert.assertEquals(0, cipher);
+            assertEquals(0, cipher);
             return symbol.hashCode();
         }
 

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,13 +12,14 @@
 package com.dxfeed.ipf.transform;
 
 import com.dxfeed.ipf.InstrumentProfile;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.Collections;
 import java.util.List;
+
+import static org.junit.Assert.assertEquals;
 
 public class InstrumentProfileTransformTest {
     private final InstrumentProfileTransform containsTransform = InstrumentProfileTransform.compile(
@@ -114,7 +115,7 @@ public class InstrumentProfileTransformTest {
         profile.setExchanges(old);
         profile.setOPOL(item);
         List<InstrumentProfile> transformed = transform.transform(Collections.singletonList(profile));
-        Assert.assertEquals(1, transformed.size());
-        Assert.assertEquals(expected, transformed.get(0).getExchanges());
+        assertEquals(1, transformed.size());
+        assertEquals(expected, transformed.get(0).getExchanges());
     }
 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,9 +18,17 @@ import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.qd.kit.DefaultScheme;
 import com.devexperts.qd.kit.PentaCodec;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class DynamicFilterTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+
+public class DynamicFilterTest {
     private static final DataScheme SCHEME = new DefaultScheme(PentaCodec.INSTANCE);
 
     TestFilter one = new TestFilter(SCHEME, "one");
@@ -28,6 +36,7 @@ public class DynamicFilterTest extends TestCase {
     QDFilter curFilter;
     TestListener filter = new TestListener();
 
+    @Test
     public void testDynamicCompositeFireAlways() {
         curFilter = CompositeFilters.makeAnd(one, two);
         // will fire on all updates
@@ -51,6 +60,7 @@ public class DynamicFilterTest extends TestCase {
         assertNotFired();
     }
 
+    @Test
     public void testDynamicCompositeFireOnce() {
         curFilter = CompositeFilters.makeAnd(one, two);
         // will fire once
@@ -87,16 +97,16 @@ public class DynamicFilterTest extends TestCase {
     }
 
     private void assertFired() {
-        assertTrue(filter.fired != null);
-        assertTrue(filter.fired == curFilter);
+        assertNotNull(filter.fired);
+        assertSame(filter.fired, curFilter);
         curFilter = curFilter.getUpdatedFilter();
-        assertTrue(curFilter != filter.fired);
+        assertNotSame(curFilter, filter.fired);
         filter.fired = null;
         assertCurValid();
     }
 
     private void assertNotFired() {
-        assertTrue(filter.fired == null);
+        assertNull(filter.fired);
     }
 
     private static class TestFilter extends QDFilter {
@@ -144,8 +154,8 @@ public class DynamicFilterTest extends TestCase {
 
         @Override
         public void filterUpdated(QDFilter filter) {
-            assertTrue(fired == null);
-            assertTrue(filter == curFilter);
+            assertNull(fired);
+            assertSame(filter, curFilter);
             fired = filter;
         }
     }

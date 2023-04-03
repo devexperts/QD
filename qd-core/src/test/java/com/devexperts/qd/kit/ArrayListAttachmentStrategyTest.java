@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -25,7 +25,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class ArrayListAttachmentStrategyTest {
-    private static final DataRecord RECORD = new DefaultRecord(0, "Test", false, new DataIntField[0], new DataObjField[0]);
+    private static final DataRecord RECORD =
+        new DefaultRecord(0, "Test", false, new DataIntField[0], new DataObjField[0]);
 
     Set<String> set = new HashSet<>();
     ArrayListAttachmentStrategy<String, ArrayListAttachmentStrategyTest> alas =

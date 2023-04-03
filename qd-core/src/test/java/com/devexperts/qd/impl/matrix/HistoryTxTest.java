@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -81,8 +81,10 @@ public class HistoryTxTest {
     @Parameterized.Parameters(name= "blocking={0}, unconflated={1}")
     public static Iterable<Object[]> data() {
         return Arrays.asList(new Object[][] {
-            { false, false }, { true, false },
-            { false, true }, { true, true },
+            { false, false },
+            { true, false },
+            { false, true },
+            { true, true },
         });
     }
 
@@ -619,6 +621,27 @@ public class HistoryTxTest {
         // ---
         distribute(0, 0, REMOVE_EVENT | SNAPSHOT_END);
         expectNothing();
+    }
+
+    @Test
+    public void testSnapshotSweepClearTx() {
+        // [QD-1434] Sweeping snapshot in History causes endless TX_PENDING
+        history.setStoreEverything(true);
+
+        // Send initial snapshot
+        distribute(2, 1, SNAPSHOT_BEGIN);
+        distribute(1, 1, 0);
+        distribute(0, 0, REMOVE_EVENT | SNAPSHOT_END | SNAPSHOT_SNIP);
+
+        // Send change in the snapshot, thus causing sweep
+        distribute(2, 1, SNAPSHOT_BEGIN);
+        distribute(0, 0, REMOVE_EVENT | SNAPSHOT_END | SNAPSHOT_SNIP);
+
+        createAgent(0, true);
+
+        // TX_PENDING should not be present
+        expectMore(2, 1, SNAPSHOT_BEGIN);
+        expectJust(0, 0, REMOVE_EVENT | SNAPSHOT_END);
     }
 
     @Test
@@ -2700,8 +2723,8 @@ public class HistoryTxTest {
         closeAgent2(); // will wait for begin snapshot
         // finish snapshot
         distribute(2, 13, 0);
-        distribute(1, 14, 0);
-        distribute(0, 15, SNAPSHOT_END); // no sub any more
+        distribute(1, 14, 0); // snapshot end for subscription time=1
+        distribute(0, 15, SNAPSHOT_END); // no sub anymore
 
         // do update transaction
         distribute(2, 16, TX_PENDING);
@@ -2716,11 +2739,11 @@ public class HistoryTxTest {
         if (unconflated && blocking) {
             expectMore(3, 10, SNAPSHOT_BEGIN);
             expectMore(2, 13, TX_PENDING);
-            expectMore(1, 14, TX_PENDING | SNAPSHOT_END);
+            expectMore(1, 14, SNAPSHOT_END);
             expectMore(2, 16, TX_PENDING);
             expectMore(3, 17, TX_PENDING);
-            expectMore(1, 18, TX_PENDING);
-            expectMore(3, 17, TX_PENDING | SNAPSHOT_BEGIN);
+            expectMore(1, 18, 0); // txEnd
+            expectMore(3, 17, SNAPSHOT_BEGIN);
             expectMore(2, 19, TX_PENDING);
             expectJust(1, 20, SNAPSHOT_END);
         } else if (unconflated) {
@@ -2729,10 +2752,10 @@ public class HistoryTxTest {
             expectJust(1, 20, SNAPSHOT_END);
         } else {
             expectMore(2, 13, TX_PENDING);
-            expectMore(1, 14, TX_PENDING);
+            expectMore(1, 14, 0); // snapshot end
             expectMore(2, 16, TX_PENDING);
             expectMore(3, 17, TX_PENDING);
-            expectMore(1, 18, TX_PENDING);
+            expectMore(1, 18, 0); // txEnd
             expectMore(2, 19, TX_PENDING);
             expectJust(1, 20, 0);
         }

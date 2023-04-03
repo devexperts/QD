@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -36,6 +36,7 @@ import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TypedMap;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nonnull;
@@ -530,6 +531,10 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
 
     protected ProtocolOption.Set getRemoteOptSet() {
         return remoteOptSet;
+    }
+
+    protected void setRemoteOptSet(ProtocolOption.Set optSet) {
+        remoteOptSet = Objects.requireNonNull(optSet);
     }
 
     private void updateManagerState(boolean beforePreparing) {

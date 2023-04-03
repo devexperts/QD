@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,14 +17,18 @@ import com.dxfeed.ipf.live.InstrumentProfileCollector;
 import com.dxfeed.ipf.live.InstrumentProfileConnection;
 import com.dxfeed.ipf.live.InstrumentProfileUpdateListener;
 import com.dxfeed.ipf.services.InstrumentProfileServer;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Test;
 
 import java.util.Iterator;
 import java.util.Random;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-public class InstrumentsServerTest extends TestCase {
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+public class InstrumentsServerTest {
     private final int randomPortOffset = 10000 + new Random().nextInt(10000); // port randomization
 
     private String updateFail;
@@ -35,6 +39,7 @@ public class InstrumentsServerTest extends TestCase {
     private InstrumentProfileConnection destConnection;
     private volatile boolean toolOk = true;
 
+    @Test
     public void testLiveServer() throws InterruptedException {
         // start source server
         InstrumentProfileCollector source = new InstrumentProfileCollector();
@@ -99,8 +104,8 @@ public class InstrumentsServerTest extends TestCase {
             fail(updateFail);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         destConnection.close();
         toolThread.interrupt();
         toolThread.join();

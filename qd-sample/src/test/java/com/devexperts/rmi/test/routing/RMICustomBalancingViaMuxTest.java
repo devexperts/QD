@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -58,21 +58,24 @@ public class RMICustomBalancingViaMuxTest extends AbstractRMICustomBalancingTest
         configure();
 
         // Route to the first server
-        RMIService<?> service = muxes.clients[0].getClient().getService(DifferentServices.CALCULATOR_SERVICE.getServiceName());
+        RMIService<?> service = muxes.clients[0].getClient().getService(
+            DifferentServices.CALCULATOR_SERVICE.getServiceName());
         await(() -> service.getDescriptors().size() == 2);
         RMIServiceDescriptor target = getTargetDescriptor(service, serviceImpl0);
         TestRMILoadBalancerFactory.clientOrMuxBalancerBehavior = req -> Promise.completed(route(target.getServiceId()));
         RMIRequest<Double> sum = createSumRequest();
         sum.send();
         assertEquals(3.2, sum.getBlocking(), 0.00001);
-        assertRoute(sum.getResponseMessage().getRoute(), servers.servers[0].getEndpointId(), muxes.servers[0].getEndpointId());
+        assertRoute(sum.getResponseMessage().getRoute(),
+            servers.servers[0].getEndpointId(), muxes.servers[0].getEndpointId());
 
         // Do the same but asynchronously
         TestRMILoadBalancerFactory.clientOrMuxBalancerBehavior = req -> completeAsync(route(target.getServiceId()));
         sum = createSumRequest();
         sum.send();
         assertEquals(3.2, sum.getBlocking(), 0.00001);
-        assertRoute(sum.getResponseMessage().getRoute(), servers.servers[0].getEndpointId(), muxes.servers[0].getEndpointId());
+        assertRoute(sum.getResponseMessage().getRoute(),
+            servers.servers[0].getEndpointId(), muxes.servers[0].getEndpointId());
 
         // Disconnect the first server and wait until mux forgets about it
         servers.servers[0].disconnect();
@@ -86,13 +89,15 @@ public class RMICustomBalancingViaMuxTest extends AbstractRMICustomBalancingTest
         // Instruct the balancer to route everything to the second server
         RMIServiceDescriptor secondTarget = getTargetDescriptor(service, serviceImpl1);
         assertNotNull(secondTarget);
-        TestRMILoadBalancerFactory.clientOrMuxBalancerBehavior = req -> completeAsync(route(secondTarget.getServiceId()));
+        TestRMILoadBalancerFactory.clientOrMuxBalancerBehavior =
+            req -> completeAsync(route(secondTarget.getServiceId()));
 
         sum = createSumRequest();
         sum.send();
         sum.getBlocking();
         assertEquals(3.2, sum.getBlocking(), 0.00001);
-        assertRoute(sum.getResponseMessage().getRoute(), servers.servers[1].getEndpointId(), muxes.servers[0].getEndpointId());
+        assertRoute(sum.getResponseMessage().getRoute(),
+            servers.servers[1].getEndpointId(), muxes.servers[0].getEndpointId());
         TestRMILoadBalancerFactory.assertNoServerBalancing();
     }
 
@@ -150,7 +155,8 @@ public class RMICustomBalancingViaMuxTest extends AbstractRMICustomBalancingTest
     }
 
     private void routeToFirstServer() throws InterruptedException {
-        RMIService<?> service = muxes.clients[0].getClient().getService(DifferentServices.CALCULATOR_SERVICE.getServiceName());
+        RMIService<?> service = muxes.clients[0].getClient().getService(
+            DifferentServices.CALCULATOR_SERVICE.getServiceName());
         await(() -> service.getDescriptors().size() == 2);
         RMIServiceDescriptor target = getTargetDescriptor(service, serviceImpl0);
         TestRMILoadBalancerFactory.clientOrMuxBalancerBehavior = req -> Promise.completed(route(target.getServiceId()));

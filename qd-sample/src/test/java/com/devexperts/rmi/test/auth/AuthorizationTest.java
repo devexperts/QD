@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -44,11 +44,12 @@ import com.dxfeed.promise.Promise;
 import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collections;
@@ -80,9 +81,8 @@ public class AuthorizationTest {
 
     private static final int ERROR_LOGIN_COUNT = 3;
     private static final int COUNT = 10;
+    private static final String CONFIG_NAME = "AuthRealm.config";
 
-    private static final String FILE_NAME = "AuthRealm.config";
-    private static final File FILE = new File(FILE_NAME);
     private static String serverSubject;
 
     private volatile Thread waitingThread;
@@ -90,6 +90,8 @@ public class AuthorizationTest {
     private DXEndpoint dxClientEndpoint;
     private DXEndpoint dxServerEndpoint;
 
+    @Rule
+    public TemporaryFolder tempFolder = new TemporaryFolder();
 
     static {
         char[] b = new char[10];
@@ -136,7 +138,6 @@ public class AuthorizationTest {
         if (serverAuth != null)
             serverAuth.close();
         System.out.println(" -- 6 -- ");
-        FILE.deleteOnExit();
         ThreadCleanCheck.after();
     }
 
@@ -167,7 +168,8 @@ public class AuthorizationTest {
     @Test
     public void testCustomAuth() throws InterruptedException {
         serverAuth = new SimpleAuthServer(serverSubject, BAD_USER, GOOD_USER);
-        String serverAddress = initServerSimple("auth=" + AuthFactory.PREFIX + ":" + serverAuth.getAddress() + ";" + serverSubject);
+        String serverAddress = initServerSimple(
+            "auth=" + AuthFactory.PREFIX + ":" + serverAuth.getAddress() + ";" + serverSubject);
         String clientAddress = "(" + serverAddress +
             "[login=" + LoginFactory.PREFIX + ":" + BAD_USER + ";" + GOOD_USER + ";" + ERROR_LOGIN_COUNT + "])" +
             "(" + serverAuth.getAddress() + ")";
@@ -182,17 +184,19 @@ public class AuthorizationTest {
 
     @Test
     public void testBasicAuthRealmFromFile() throws Exception {
+        File file = new File(tempFolder.getRoot(), CONFIG_NAME);
+
         receiveQuote = new CountDownLatch(2);
         recordsLatch = new CountDownLatch(20);
-        Files.write(FILE.toPath(), Arrays.asList("user2:qwerty:*", "user3:vfr3we:TICKER"), StandardCharsets.UTF_8);
+        Files.write(file.toPath(), Arrays.asList("user2:qwerty:*", "user3:vfr3we:TICKER"));
         String name1 = UUID.randomUUID().toString();
         String name2 = UUID.randomUUID().toString();
         //noinspection deprecation
         Promise<Integer> p1 = ServerSocketTestHelper.createPortPromise(name1);
         //noinspection deprecation
         Promise<Integer> p2 = ServerSocketTestHelper.createPortPromise(name2);
-        String serverAddress = "(:0[name=" + name1 + ",auth=" + FILE_NAME + "])" +
-            "(:0[name=" + name2 + ",auth=" + FILE_NAME + "])";
+        String serverAddress = "(:0[name=" + name1 + ",auth=" + file.getPath() + "])" +
+            "(:0[name=" + name2 + ",auth=" + file.getPath() + "])";
         initServer(serverAddress);
         int port1 = p1.await(10, TimeUnit.SECONDS);
         int port2 = p2.await(10, TimeUnit.SECONDS);
@@ -210,6 +214,8 @@ public class AuthorizationTest {
 
     @Test
     public void testAll() throws Exception {
+        File file = new File(tempFolder.getRoot(), CONFIG_NAME);
+
         globalUsersCount = 4;
         RMIEndpoint serverAuth = RMIEndpoint.newBuilder()
             .withName("AUTH SERVER")
@@ -227,8 +233,7 @@ public class AuthorizationTest {
 
         String authAddress = NTU.localHost(NTU.connectServer(serverAuth));
         log.info("first part");
-        Files.write(FILE.toPath(), Arrays.asList("user1:123456", "user2:qwerty:*", "user3:vfr3we:TICKER"),
-            StandardCharsets.UTF_8);
+        Files.write(file.toPath(), Arrays.asList("user1:123456", "user2:qwerty:*", "user3:vfr3we:TICKER"));
 
         String[] names = Stream.generate(() -> UUID.randomUUID().toString()).limit(6).toArray(String[]::new);
 
@@ -240,8 +245,8 @@ public class AuthorizationTest {
             "(:0[name=" + names[1] + ",auth=" + FixedUsersAuthRealmFactory.PREFIX + ":" + authAddress + "])" +
             "(:0[name=" + names[2] + ",auth=" + FixedUsersAuthRealmFactory.PREFIX + ":" + authAddress + "])" +
             "(:0[name=" + names[3] + ",auth=" + FixedUsersAuthRealmFactory.PREFIX + ":" + authAddress + "])" +
-            "(:0[name=" + names[4] + ",auth=" + FILE_NAME + "])" +
-            "(:0[name=" + names[5] + ",auth=" + FILE_NAME + "])";
+            "(:0[name=" + names[4] + ",auth=" + file.getPath() + "])" +
+            "(:0[name=" + names[5] + ",auth=" + file.getPath() + "])";
         initServer(serverAddress);
 
         int[] ports = promises.stream().mapToInt((p) -> p.await(10, TimeUnit.SECONDS)).toArray();
@@ -292,7 +297,8 @@ public class AuthorizationTest {
 
         @Override
         public Promise<AuthToken> login(String reason) {
-            RMIRequest<AuthToken> request = client.getClient().getPort(null).createRequest(FixedUsersAuthServiceImpl.REGISTERED_USER);
+            RMIRequest<AuthToken> request = client.getClient().getPort(null).createRequest(
+                FixedUsersAuthServiceImpl.REGISTERED_USER);
             Promise<AuthToken> tokenPromise = request.getPromise();
             tokenPromise.whenDone(promise -> {
                 if (promise.isCancelled())
@@ -373,7 +379,8 @@ public class AuthorizationTest {
 
         @Override
         public Promise<AuthSession> authenticate(AuthToken authToken, TypedMap connectionVariables) {
-            RMIRequest<Boolean> request = referenceEndpoint().getClient().getPort(null).createRequest(FixedUsersAuthServiceImpl.CHECK_USER, authToken);
+            RMIRequest<Boolean> request = referenceEndpoint().getClient().getPort(null).createRequest(
+                FixedUsersAuthServiceImpl.CHECK_USER, authToken);
             Promise<AuthSession> sessionPromise = new Promise<>();
             sessionPromise.whenDone(promise -> {
                 if (promise.isCancelled()) {
@@ -526,7 +533,9 @@ public class AuthorizationTest {
         private static final String FACTORY_NAME = "updater_basic";
 
         @Override
-        public QDLoginHandler createLoginHandler(String login, MessageAdapterConnectionFactory factory) throws InvalidFormatException {
+        public QDLoginHandler createLoginHandler(String login, MessageAdapterConnectionFactory factory)
+            throws InvalidFormatException
+        {
             return login.startsWith(FACTORY_NAME) ? new CloseLoginHandler() : null;
         }
     }
@@ -579,7 +588,9 @@ public class AuthorizationTest {
         private static final String FACTORY_NAME = "close_factory";
 
         @Override
-        public QDAuthRealm createAuthRealm(String auth, MessageAdapterConnectionFactory factory) throws InvalidFormatException {
+        public QDAuthRealm createAuthRealm(String auth, MessageAdapterConnectionFactory factory)
+            throws InvalidFormatException
+        {
             return auth.equals(FACTORY_NAME) ? new CloseCountAuthRealm() : null;
         }
     }
@@ -627,7 +638,9 @@ public class AuthorizationTest {
         private static final String FACTORY_NAME = "repeat_factory";
 
         @Override
-        public QDAuthRealm createAuthRealm(String auth, MessageAdapterConnectionFactory factory) throws InvalidFormatException {
+        public QDAuthRealm createAuthRealm(String auth, MessageAdapterConnectionFactory factory)
+            throws InvalidFormatException
+        {
             return auth.equals(FACTORY_NAME) ? new RepeatAuthRealm() : null;
         }
     }
@@ -643,10 +656,12 @@ public class AuthorizationTest {
             AuthSession session = getSession(authToken);
             Promise<AuthSession> sessionPromise = new Promise<>();
             sessionPromise.whenDone(promise -> sessions.clear());
-            if (session == null)
-                sessionPromise.completeExceptionally(new Exception("REPEAT " + (authToken.equals(GOOD_USER) ? "good" : "bad")));
-            else
+            if (session == null) {
+                sessionPromise.completeExceptionally(
+                    new Exception("REPEAT " + (authToken.equals(GOOD_USER) ? "good" : "bad")));
+            } else {
                 sessionPromise.complete(session);
+            }
             return sessionPromise;
         }
 
@@ -767,5 +782,4 @@ public class AuthorizationTest {
             }
         }
     }
-
 }

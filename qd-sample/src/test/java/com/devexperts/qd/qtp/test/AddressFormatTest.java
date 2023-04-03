@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -23,14 +23,18 @@ import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.qtp.nio.NioServerConnector;
 import com.devexperts.qd.qtp.socket.ClientSocketConnector;
 import com.devexperts.qd.qtp.socket.ServerSocketConnector;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class AddressFormatTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
+
+public class AddressFormatTest {
 
     private final ApplicationConnectionFactory ACF = new ApplicationConnectionFactory() {
         @Override
@@ -53,13 +57,17 @@ public class AddressFormatTest extends TestCase {
 
     List<String> filters = new ArrayList<>();
 
+    @Test
     public void testAddressFormats() throws Exception {
         filters.clear();
-        validate1(MessageConnectors.createMessageConnectors(ACF, "(haba@xor(secret=secret)+tls[isServer=true]+1.2.3.4:5678)(ssl[isServer]+:1111(bindAddr=7.7.7.7))"));
+        validate1(MessageConnectors.createMessageConnectors(ACF,
+            "(haba@xor(secret=secret)+tls[isServer=true]+1.2.3.4:5678)(ssl[isServer]+:1111(bindAddr=7.7.7.7))"));
         filters.clear();
-        validate1(MessageConnectors.createMessageConnectors(ACF, "(haba@xor+tls[isServer=true]+1.2.3.4:5678)(ssl(isServer)+:1111[bindAddr=7.7.7.7])"));
+        validate1(MessageConnectors.createMessageConnectors(ACF,
+            "(haba@xor+tls[isServer=true]+1.2.3.4:5678)(ssl(isServer)+:1111[bindAddr=7.7.7.7])"));
         filters.clear();
-        validate1(MessageConnectors.createMessageConnectors(ACF, "haba@xor[secret=secret]+tls[isServer=true]+1.2.3.4:5678/ssl[isServer]+:1111(bindAddr=7.7.7.7)"));
+        validate1(MessageConnectors.createMessageConnectors(ACF,
+            "haba@xor[secret=secret]+tls[isServer=true]+1.2.3.4:5678/ssl[isServer]+:1111(bindAddr=7.7.7.7)"));
 
         try {
             MessageConnectors.createMessageConnectors(ACF, "xor+[secret=12345]http://foo.com:1234");
@@ -71,6 +79,7 @@ public class AddressFormatTest extends TestCase {
         } catch (AddressSyntaxException ignored) {}
     }
 
+    @Test
     public void testNioAmbiguity() {
         try {
             MessageConnectors.createMessageConnectors(ACF, "nio:7777");
@@ -88,7 +97,6 @@ public class AddressFormatTest extends TestCase {
         assertEquals(ClientSocketConnector.class, clientConnector.getClass());
         assertEquals(((ClientSocketConnector) clientConnector).getHost(), "nio");
     }
-
 
     private final Field delegateField;
     {
@@ -127,6 +135,4 @@ public class AddressFormatTest extends TestCase {
         delegateField.setAccessible(true);
         assertEquals(ACF.getClass(), delegateField.get(sslFactory).getClass());
     }
-
-
 }

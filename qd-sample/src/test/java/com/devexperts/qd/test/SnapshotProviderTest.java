@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,23 +22,29 @@ import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordListener;
 import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.ng.RecordProvider;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class SnapshotProviderTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+
+public class SnapshotProviderTest {
     private static final DataScheme SCHEME = new TestDataScheme(20140721, TestDataScheme.Type.HAS_TIME_AND_VALUE);
     private static final DataRecord RECORD = SCHEME.getRecord(0);
     private static final String SYMBOL = "LongTestSymbol"; // no cipher
+    private static final int SNAPSHOT = 0;
+    private static final int DATA = 1;
 
+    @Test
     public void testTickerSnapshotProvider() {
         checkSnapshotProvider(QDFactory.getDefaultFactory().createTicker(SCHEME));
     }
 
+    @Test
     public void testHistorySnapshotProvider() {
         checkSnapshotProvider(QDFactory.getDefaultFactory().createHistory(SCHEME));
     }
-
-    static final int SNAPSHOT = 0;
-    static final int DATA = 1;
 
     private void checkSnapshotProvider(QDCollector collector) {
         // Create distributor & agent

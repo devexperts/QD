@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -69,8 +69,11 @@ public class ConsistentLoadBalancerTest {
         System.out.println(".");
         RMIRequestMessage<?> message;
         for (int i = 0; i < countClients; i++) {
-            message = new RMIRequestMessage<>(RMIRequestType.DEFAULT, (RMIOperation<?>) DifferentServices.CalculatorService.PLUS,
-                Marshalled.forObject(new Object[] {1, 2}, DifferentServices.CalculatorService.PLUS.getParametersMarshaller()), RMIRoute.createRMIRoute(EndpointId.newEndpointId("RMI")), null);
+            message = new RMIRequestMessage<>(RMIRequestType.DEFAULT,
+                (RMIOperation<?>) DifferentServices.CalculatorService.PLUS,
+                Marshalled.forObject(new Object[] {1, 2},
+                    DifferentServices.CalculatorService.PLUS.getParametersMarshaller()),
+                RMIRoute.createRMIRoute(EndpointId.newEndpointId("RMI")), null);
             Promise<BalanceResult> decision = loadBalancer.balance(message);
             assertNotNull(decision.await().getTarget());
             hits.put(decision.getResult().getTarget(), hits.get(decision.getResult().getTarget()) + 1);
@@ -87,8 +90,12 @@ public class ConsistentLoadBalancerTest {
         RMIRequestMessage<?> message;
         RMIServiceId serviceId1 = RMIServiceId.newServiceId(SERVICE_NAME);
         RMIServiceId serviceId2 = RMIServiceId.newServiceId(SERVICE_NAME);
-        message = new RMIRequestMessage<>(RMIRequestType.DEFAULT, (RMIOperation<?>) DifferentServices.CalculatorService.PLUS, Marshalled.forObject(null),
-            Marshalled.forObject(new Object[] {1, 2}, DifferentServices.CalculatorService.PLUS.getParametersMarshaller()), RMIRoute.createRMIRoute(EndpointId.newEndpointId("RMI")));
+        message = new RMIRequestMessage<>(RMIRequestType.DEFAULT,
+            (RMIOperation<?>) DifferentServices.CalculatorService.PLUS,
+            Marshalled.forObject(null),
+            Marshalled.forObject(new Object[] {1, 2},
+                DifferentServices.CalculatorService.PLUS.getParametersMarshaller()),
+            RMIRoute.createRMIRoute(EndpointId.newEndpointId("RMI")));
 
         BalanceResult decision = loadBalancer.balance(message).await();
         assertNull(decision.getTarget());
@@ -99,15 +106,18 @@ public class ConsistentLoadBalancerTest {
 
         loadBalancer.updateServiceDescriptor(RMIServiceDescriptor.createDescriptor(serviceId2, 10, null, null));
 
-        loadBalancer.updateServiceDescriptor(RMIServiceDescriptor.createDescriptor(serviceId1, RMIService.UNAVAILABLE_METRIC, null, null));
+        loadBalancer.updateServiceDescriptor(RMIServiceDescriptor.createDescriptor(serviceId1,
+            RMIService.UNAVAILABLE_METRIC, null, null));
         assertEquals(serviceId2, loadBalancer.balance(message).await().getTarget());
 
         loadBalancer.updateServiceDescriptor(RMIServiceDescriptor.createDescriptor(serviceId1, 10, null, null));
 
-        loadBalancer.updateServiceDescriptor(RMIServiceDescriptor.createDescriptor(serviceId2, RMIService.UNAVAILABLE_METRIC, null, null));
+        loadBalancer.updateServiceDescriptor(RMIServiceDescriptor.createDescriptor(serviceId2,
+            RMIService.UNAVAILABLE_METRIC, null, null));
         assertEquals(serviceId1, loadBalancer.balance(message).await().getTarget());
 
-        loadBalancer.updateServiceDescriptor(RMIServiceDescriptor.createDescriptor(serviceId1, RMIService.UNAVAILABLE_METRIC, null, null));
+        loadBalancer.updateServiceDescriptor(RMIServiceDescriptor.createDescriptor(serviceId1,
+            RMIService.UNAVAILABLE_METRIC, null, null));
         assertNull(loadBalancer.balance(message).await().getTarget());
         assertFalse(decision.isReject());
     }

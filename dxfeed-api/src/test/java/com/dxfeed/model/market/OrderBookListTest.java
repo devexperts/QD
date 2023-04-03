@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,17 +14,19 @@ package com.dxfeed.model.market;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.Scope;
 import com.dxfeed.event.market.Side;
-import junit.framework.TestCase;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static com.dxfeed.model.market.CheckedTreeList.Node;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Unit test for {@link OrderBookList} class.
  */
-public class OrderBookListTest extends TestCase {
+public class OrderBookListTest {
 
     public static final char EXCHANGE = 'Q';
     public static final String MMID = "NYSE";
@@ -32,40 +34,41 @@ public class OrderBookListTest extends TestCase {
 
     private OrderBookList list;
 
-    private Order composite = composite(100);
-    private Order regional = regional(101);
-    private Order aggregate = aggregate(102);
-    private Order order = order(103);
+    private final Order composite = composite(100);
+    private final Order regional = regional(101);
+    private final Order aggregate = aggregate(102);
+    private final Order order = order(103);
 
-    public OrderBookListTest(String s) {
-        super(s);
-    }
-
-    @Override
+    @Before
     public void setUp() {
         list = (OrderBookList) new OrderBookModel().getBuyOrders();
     }
 
+    @Test
     public void testCompositeOnly() {
         list.setFilter(OrderBookModelFilter.COMPOSITE);
         runTestForScope(Scope.COMPOSITE);
     }
 
+    @Test
     public void testRegionalOnly() {
         list.setFilter(OrderBookModelFilter.REGIONAL);
         runTestForScope(Scope.REGIONAL);
     }
 
+    @Test
     public void testAggregateOnly() {
         list.setFilter(OrderBookModelFilter.AGGREGATE);
         runTestForScope(Scope.AGGREGATE);
     }
 
+    @Test
     public void testOrderOnly() {
         list.setFilter(OrderBookModelFilter.ORDER);
         runTestForScope(Scope.ORDER);
     }
 
+    @Test
     public void testOrderCount() {
         list.setFilter(OrderBookModelFilter.ALL);
 
@@ -90,6 +93,7 @@ public class OrderBookListTest extends TestCase {
         assertEquals(aggregate, list.get(0));
     }
 
+    @Test
     public void testAll() {
         list.setFilter(OrderBookModelFilter.ALL);
         assertEquals(0, list.size());
@@ -127,6 +131,7 @@ public class OrderBookListTest extends TestCase {
         assertEquals(0, list.size());
     }
 
+    @Test
     public void testChangeFilter() {
         list.setFilter(OrderBookModelFilter.ALL);
         assertEquals(0, list.size());

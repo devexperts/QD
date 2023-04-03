@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -35,7 +35,6 @@ import com.dxfeed.event.market.TimeAndSale;
 import com.dxfeed.event.market.TimeAndSaleType;
 import com.dxfeed.event.market.Trade;
 import com.dxfeed.event.option.Series;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -45,7 +44,7 @@ import java.util.Random;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 public class DXPublisherTest extends AbstractDXPublisherTest {
     // Note that '9' and '~' are not a supported "exchange codes" and subscription to
@@ -74,7 +73,7 @@ public class DXPublisherTest extends AbstractDXPublisherTest {
             public void symbolsAdded(Set<?> symbols) {
                 log.info("symbolsAdded " + symbols);
                 added.addAll(symbols);
-                assertTrue(!symbols.isEmpty());
+                assertFalse(symbols.isEmpty());
                 throw new RuntimeException();
             }
 
@@ -82,13 +81,13 @@ public class DXPublisherTest extends AbstractDXPublisherTest {
             public void symbolsRemoved(Set<?> symbols) {
                 log.info("symbolsRemoved " + symbols);
                 removed.addAll(symbols);
-                assertTrue(!symbols.isEmpty());
+                assertFalse(symbols.isEmpty());
                 throw new RuntimeException();
             }
         };
         Class<Quote> eventType = Quote.class;
         publisher.getSubscription(eventType).addChangeListener(observableSubChangeListener);
-        DXFeedSubscription sub = feed.createSubscription(eventType);
+        DXFeedSubscription<Quote> sub = feed.createSubscription(eventType);
         log.info("Adding symbol " + firstSymbol);
         sub.addSymbols(firstSymbol);
         checkpoint();
@@ -122,10 +121,10 @@ public class DXPublisherTest extends AbstractDXPublisherTest {
                 q.setBidPrice(i++);
                 q.setBidSize(i++);
                 q.setBidExchangeCode(exchangeCode == 0 ? 'X' : exchangeCode);
-                q.setBidTime(i++ * 1000);
+                q.setBidTime(i++ * 1000L);
                 q.setAskPrice(i++);
                 q.setAskSize(i++);
-                q.setAskTime(i++ * 1000);
+                q.setAskTime(i++ * 1000L);
                 q.setTimeNanoPart(i++);
                 q.setAskExchangeCode(exchangeCode == 0 ? 'Y' : exchangeCode);
                 return q;
@@ -157,7 +156,7 @@ public class DXPublisherTest extends AbstractDXPublisherTest {
             t.setSize(i++);
             char exchangeCode = EXCHANGE_CODES[i % EXCHANGE_CODES.length];
             t.setExchangeCode(exchangeCode == 0 ? 'C' : exchangeCode);
-            t.setTimeNanos(i++ * 1000_000 + i++);
+            t.setTimeNanos(i++ * 1000_000L + i++);
             t.setDayVolume(i++);
             return t;
         });
@@ -196,8 +195,8 @@ public class DXPublisherTest extends AbstractDXPublisherTest {
         summary.setDayId(100);
         summary.setEventTime(100);
         testGetLastEvent(Summary.class, summary, new Summary(), (publishedEvent, receivedEvent) -> {
-            Assert.assertEquals(publishedEvent.getDayId(), receivedEvent.getDayId());
-            Assert.assertEquals(publishedEvent.getEventTime(), receivedEvent.getEventTime());
+            assertEquals(publishedEvent.getDayId(), receivedEvent.getDayId());
+            assertEquals(publishedEvent.getEventTime(), receivedEvent.getEventTime());
         });
     }
 
@@ -209,8 +208,8 @@ public class DXPublisherTest extends AbstractDXPublisherTest {
             if (i < 0)
                 return p;
             p.setEventTime(i++);
-            p.setHaltStartTime(i++ * 1000);
-            p.setHaltEndTime(i++ * 1000);
+            p.setHaltStartTime(i++ * 1000L);
+            p.setHaltEndTime(i++ * 1000L);
             p.setDescription("" + i++);
             p.setStatusReason("" + i++);
             return p;
@@ -252,7 +251,7 @@ public class DXPublisherTest extends AbstractDXPublisherTest {
             if (i < 0)
                 return ts;
             ts.setEventTime(i++);
-            ts.setTimeNanos(i++ * 1000_000 + i++);
+            ts.setTimeNanos(i++ * 1000_000L + i++);
             ts.setSequence(i++);
             ts.setPrice(i++);
             ts.setSize(i++);
@@ -284,7 +283,7 @@ public class DXPublisherTest extends AbstractDXPublisherTest {
             o.setPrice(i++);
             o.setSize(i++);
             o.setExchangeCode((char) i);
-            o.setTimeNanos(i++ * 1000_000 + i++);
+            o.setTimeNanos(i++ * 1000_000L + i++);
             o.setSequence(i++);
             o.setMarketMaker(Integer.toHexString(i++));
             return o;
@@ -292,7 +291,7 @@ public class DXPublisherTest extends AbstractDXPublisherTest {
         Object subSymbol = new IndexedEventSubscriptionSymbol<>(symbol, OrderSource.DEFAULT);
         testEventPublishing(Order.class, subSymbol, eventCreator);
         testEventPublishing(Order.class, WildcardSymbol.ALL, eventCreator);
-//      testHistory(Order.class, eventCreator);
+        //testHistory(Order.class, eventCreator);
     }
 
     @Test
@@ -303,10 +302,14 @@ public class DXPublisherTest extends AbstractDXPublisherTest {
         for (int i = 0; i < 100; i++) {
             CandleSymbol symbol = CandleSymbol.valueOf("Candle",
                 CandlePeriod.valueOf(r.nextInt(3) + 1, CandleType.values()[r.nextInt(CandleType.values().length)]));
-            if (r.nextBoolean())
-                symbol = CandleSymbol.valueOf(symbol.toString(), CandlePrice.values()[r.nextInt(CandlePrice.values().length)]);
-            if (r.nextBoolean())
-                symbol = CandleSymbol.valueOf(symbol.toString(), CandleSession.values()[r.nextInt(CandleSession.values().length)]);
+            if (r.nextBoolean()) {
+                CandlePrice priceAttr = CandlePrice.values()[r.nextInt(CandlePrice.values().length)];
+                symbol = CandleSymbol.valueOf(symbol.toString(), priceAttr);
+            }
+            if (r.nextBoolean()) {
+                CandleSession sessionAttr = CandleSession.values()[r.nextInt(CandleSession.values().length)];
+                symbol = CandleSymbol.valueOf(symbol.toString(), sessionAttr);
+            }
             symbols.add(symbol);
         }
         for (CandlePrice price : CandlePrice.values()) {
@@ -362,8 +365,8 @@ public class DXPublisherTest extends AbstractDXPublisherTest {
             candle.setTime(100);
             candle.setEventTime(100);
             testGetLastEvent(Candle.class, candle, new Candle(), (publishedEvent, receivedEvent) -> {
-                Assert.assertEquals(publishedEvent.getTime(), receivedEvent.getTime());
-                Assert.assertEquals(publishedEvent.getEventTime(), receivedEvent.getEventTime());
+                assertEquals(publishedEvent.getTime(), receivedEvent.getTime());
+                assertEquals(publishedEvent.getEventTime(), receivedEvent.getEventTime());
             });
         }
     }

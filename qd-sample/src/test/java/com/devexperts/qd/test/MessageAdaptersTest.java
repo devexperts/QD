@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -35,27 +35,40 @@ import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.qtp.text.TextQTPComposer;
 import com.devexperts.qd.qtp.text.TextQTPParser;
 import com.devexperts.qd.stats.QDStats;
-import junit.framework.TestCase;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
 
 /**
  * Tests to ensure that message adapters correctly compose and parse various messages.
  */
-public class MessageAdaptersTest extends TestCase {
+public class MessageAdaptersTest {
     private static final TestDataScheme SCHEME = new TestDataScheme(20080828, TestDataScheme.Type.HAS_TIME);
 
+    @Test
     public void testTicker() {
-        for (Serial ser : Serial.values())
-            check(ser, QDFactory.getDefaultFactory().createTicker(SCHEME), QDFactory.getDefaultFactory().createTicker(SCHEME));
+        QDFactory factory = QDFactory.getDefaultFactory();
+        for (Serial ser : Serial.values()) {
+            check(ser, factory.createTicker(SCHEME), factory.createTicker(SCHEME));
+        }
     }
 
+    @Test
     public void testStream() {
-        for (Serial ser : Serial.values())
-            check(ser, QDFactory.getDefaultFactory().createStream(SCHEME), QDFactory.getDefaultFactory().createStream(SCHEME));
+        QDFactory factory = QDFactory.getDefaultFactory();
+        for (Serial ser : Serial.values()) {
+            check(ser, factory.createStream(SCHEME), factory.createStream(SCHEME));
+        }
     }
 
+    @Test
     public void testHistory() {
-        for (Serial ser : Serial.values())
-            check(ser, QDFactory.getDefaultFactory().createHistory(SCHEME), QDFactory.getDefaultFactory().createHistory(SCHEME));
+        QDFactory factory = QDFactory.getDefaultFactory();
+        for (Serial ser : Serial.values()) {
+            check(ser, factory.createHistory(SCHEME), factory.createHistory(SCHEME));
+        }
     }
 
     // different parser/composer combinations to try
@@ -231,14 +244,14 @@ public class MessageAdaptersTest extends TestCase {
         }
     }
 
-    private void resendMessage(Serial ser, Msg[][] msgs, MessageType message, MessageAdapter to_adapter) {
+    private void resendMessage(Serial ser, Msg[][] msgs, MessageType message, MessageAdapter toAdapter) {
         Msg msg = msgs[0][message.ordinal()];
         ChunkList last = msg.last;
         ChunkedInput input = new ChunkedInput();
         input.addAllToInput(last, msg);
         AbstractQTPParser parser = ser.createParser();
         parser.setInput(input);
-        parser.parse(to_adapter);
+        parser.parse(toAdapter);
     }
 
     private void expectChange(Serial ser, Msg[][] msgs, MessageType message, int size) {

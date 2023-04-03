@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -21,13 +21,18 @@ import com.devexperts.qd.kit.PatternFilter;
 import com.devexperts.qd.kit.RecordOnlyFilter;
 import com.devexperts.qd.kit.SymbolSetFilter;
 import com.devexperts.qd.spi.QDFilterFactory;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class CompositeFiltersTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+
+public class CompositeFiltersTest {
     // scheme with custom filter factory
     private static final DataScheme SCHEME = new TestDataScheme(20070517) {
         @SuppressWarnings("unchecked")
@@ -78,13 +83,15 @@ public class CompositeFiltersTest extends TestCase {
         return l.toArray(new String[0]);
     }
 
+    @Test
     public void testNothing() {
         checkSame("!*", QDFilter.NOTHING, true);
         checkSame("!*", CompositeFilters.makeNot(QDFilter.ANYTHING), true);
-        assertTrue(CompositeFilters.makeNot(QDFilter.ANYTHING) == QDFilter.NOTHING);
-        assertTrue(CompositeFilters.makeNot(QDFilter.NOTHING) == QDFilter.ANYTHING);
+        assertSame(QDFilter.NOTHING, CompositeFilters.makeNot(QDFilter.ANYTHING));
+        assertSame(QDFilter.ANYTHING, CompositeFilters.makeNot(QDFilter.NOTHING));
     }
 
+    @Test
     public void testCustom() {
         assertEquals("an", CompositeFilters.valueOf("an", SCHEME).toString());
         assertEquals("an", CompositeFilters.valueOf("((an))", SCHEME).toString());
@@ -92,25 +99,26 @@ public class CompositeFiltersTest extends TestCase {
         assertEquals("an&oz", CompositeFilters.valueOf("an&oz", SCHEME).toString());
     }
 
+    @Test
     public void testLogic() {
         boolean[] b = getResult("B*");
         checkNonTrivial(b);
-        boolean[] not_b = getResult("!B*");
-        checkNonTrivial(not_b);
+        boolean[] notB = getResult("!B*");
+        checkNonTrivial(notB);
         for (int i = 0; i < SYMBOLS.length; i++)
-            assertEquals(SYMBOLS[i], !b[i], not_b[i]);
+            assertEquals(SYMBOLS[i], !b[i], notB[i]);
         boolean[] cc = getResult("CC*");
         checkNonTrivial(cc);
         for (int i = 0; i < SYMBOLS.length; i++)
             assertFalse(SYMBOLS[i], b[i] && cc[i]);
-        boolean[] b_or_cc = getResult("B*,CC*");
-        checkNonTrivial(b_or_cc);
+        boolean[] bOrCc = getResult("B*,CC*");
+        checkNonTrivial(bOrCc);
         for (int i = 0; i < SYMBOLS.length; i++)
-            assertEquals(SYMBOLS[i], b[i] || cc[i], b_or_cc[i]);
-        boolean[] not_b_and_not_cc = getResult("!B*&!CC*");
-        checkNonTrivial(not_b_and_not_cc);
+            assertEquals(SYMBOLS[i], b[i] || cc[i], bOrCc[i]);
+        boolean[] notBAndNotCc = getResult("!B*&!CC*");
+        checkNonTrivial(notBAndNotCc);
         for (int i = 0; i < SYMBOLS.length; i++)
-            assertEquals(SYMBOLS[i], !b[i] && !cc[i], not_b_and_not_cc[i]);
+            assertEquals(SYMBOLS[i], !b[i] && !cc[i], notBAndNotCc[i]);
     }
 
     private void checkNonTrivial(boolean[] a) {
@@ -125,6 +133,7 @@ public class CompositeFiltersTest extends TestCase {
         assertTrue(fc != 0);
     }
 
+    @Test
     public void testParse() {
         // null elimination
         checkSame("A*,*", null, false);
@@ -138,8 +147,10 @@ public class CompositeFiltersTest extends TestCase {
         checkSame("[&]*,(((!![,]*,[(]*))),[)]*,!![*]*", PatternFilter.valueOf("[&,()*]*", null), false);
 
         // more escaping
-        checkSame("A or B", CompositeFilters.makeOr(PatternFilter.valueOf("A", SCHEME), PatternFilter.valueOf("B", SCHEME)), false);
-        checkSame("[A] or [B]", CompositeFilters.makeOr(PatternFilter.valueOf("A", SCHEME), PatternFilter.valueOf("B", SCHEME)), false);
+        checkSame("A or B", CompositeFilters.makeOr(
+            PatternFilter.valueOf("A", SCHEME), PatternFilter.valueOf("B", SCHEME)), false);
+        checkSame("[A] or [B]", CompositeFilters.makeOr(
+            PatternFilter.valueOf("A", SCHEME), PatternFilter.valueOf("B", SCHEME)), false);
         checkSame("[A]or[B]", PatternFilter.valueOf("[A]or[B]", SCHEME), true);
 
         // logic
@@ -173,6 +184,7 @@ public class CompositeFiltersTest extends TestCase {
         ), false);
     }
 
+    @Test
     public void testForRecords() {
         DataRecord r1 = SCHEME.getRecord(0);
         DataRecord r2 = SCHEME.getRecord(1);
@@ -207,17 +219,17 @@ public class CompositeFiltersTest extends TestCase {
     }
 
     private void checkFilters(DataRecord r1, DataRecord r2, RecordOnlyFilter r1f, RecordOnlyFilter r2f) {
-        QDFilter r1_or_r2 = CompositeFilters.makeOr(r1f, r2f);
-        checkRecord(r1_or_r2, r1, true);
-        checkRecord(r1_or_r2, r2, true);
+        QDFilter r1OrR2 = CompositeFilters.makeOr(r1f, r2f);
+        checkRecord(r1OrR2, r1, true);
+        checkRecord(r1OrR2, r2, true);
 
-        QDFilter r1_and_r2 = CompositeFilters.makeAnd(r1f, r2f);
-        checkRecord(r1_and_r2, r1, false);
-        checkRecord(r1_and_r2, r2, false);
+        QDFilter r1AndR2 = CompositeFilters.makeAnd(r1f, r2f);
+        checkRecord(r1AndR2, r1, false);
+        checkRecord(r1AndR2, r2, false);
 
-        QDFilter not_r1 = CompositeFilters.makeNot(r1f);
-        checkRecord(not_r1, r1, false);
-        checkRecord(not_r1, r2, true);
+        QDFilter notR1 = CompositeFilters.makeNot(r1f);
+        checkRecord(notR1, r1, false);
+        checkRecord(notR1, r2, true);
     }
 
     private void checkRecord(QDFilter filter, DataRecord record, boolean expected) {
@@ -228,6 +240,7 @@ public class CompositeFiltersTest extends TestCase {
     }
 
     @SuppressWarnings("SimplifiableJUnitAssertion")
+    @Test
     public void testOptimize() {
         // record filters ordered first (add spaces to the so its longer vs default name)
         checkConversion("         IBM*&:Record1", ":Record1&IBM*");
@@ -239,7 +252,8 @@ public class CompositeFiltersTest extends TestCase {
         checkConversion("         !(:Record2,MSFT,:Record3)", "!:Record2&!:Record3&!MSFT");
         checkConversion("         !(:Record2,:Record3,:Record4)", "!:Record2&!:Record3&!:Record4");
         // long chain for ands mixed with any
-        checkConversion("         *&:Record1&*&*&MSFT*&:Record[123]&*&:Record[13]&*&IBM*&*", ":Record1&:Record[123]&:Record[13]&MSFT*&IBM*");
+        checkConversion("         *&:Record1&*&*&MSFT*&:Record[123]&*&:Record[13]&*&IBM*&*",
+            ":Record1&:Record[123]&:Record[13]&MSFT*&IBM*");
         // will optimize to anything
         assertTrue(CompositeFilters.valueOf("*,:Record1", SCHEME) == QDFilter.ANYTHING);
         assertTrue(CompositeFilters.valueOf(":Record1,*", SCHEME) == QDFilter.ANYTHING);
@@ -248,7 +262,8 @@ public class CompositeFiltersTest extends TestCase {
         assertTrue(CompositeFilters.valueOf(":Record1&!*", SCHEME) == QDFilter.NOTHING);
         checkConversion("*&:Record1&*&*&MSFT&:Record[123]&*&:Record[13]&*&IBM*&*", "!*");
         checkConversion("*&:Record1&*&*&MSFT&:Record[123]&*&:Record[13]&*&IBM&*", "!*");
-        // make sure that "all records effectively" is _not_ recognized as anything, but is kept (important for string rep of filters)
+        // make sure that "all records effectively" is _not_ recognized as anything, but is kept
+        // (important for string rep of filters)
         checkConversion(":*&*&IBM*&*&:*&:Record*&*", ":Record*&IBM*");
         // alternative operation names
         checkConversion("any", "*");
@@ -277,6 +292,7 @@ public class CompositeFiltersTest extends TestCase {
         checkConversion("!!!asymbol", "!asymbol");
     }
 
+    @Test
     public void testEfficiency() {
         // symbol sets
         assertTrue(parse("A") instanceof SymbolSetFilter);
@@ -289,6 +305,7 @@ public class CompositeFiltersTest extends TestCase {
         assertTrue(parse("!A*") instanceof PatternFilter);
     }
 
+    @Test
     public void testOptimizedSymbolSets() {
         checkSame("[AB],C", SymbolSetFilter.valueOf("A,B,C", SCHEME), false);
         checkConversion("[AB],C", "[AB],C");
@@ -326,11 +343,11 @@ public class CompositeFiltersTest extends TestCase {
             two == null || two.acceptRecord(record, cipher, symbol));
     }
 
-    private void checkSame(String s, SubscriptionFilter two, boolean check_s) {
+    private void checkSame(String s, SubscriptionFilter two, boolean checkSame) {
         QDFilter one = parse(s);
         for (String symbol : SYMBOLS)
             checkSame(symbol, one, two);
-        if (check_s) {
+        if (checkSame) {
             assertEquals(s, one.toString());
             assertEquals(s, two.toString());
         }

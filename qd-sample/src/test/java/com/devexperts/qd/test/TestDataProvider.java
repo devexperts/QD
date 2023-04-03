@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -26,7 +26,7 @@ public class TestDataProvider extends AbstractRecordProvider {
     private final Random rnd;
     private final TestSubscriptionProvider subscription;
 
-    private int records_provided_count;
+    private int recordsProvidedCount;
 
     public TestDataProvider(DataScheme scheme, long seed) {
         this.rnd = new Random(seed + 1);
@@ -68,7 +68,8 @@ public class TestDataProvider extends AbstractRecordProvider {
             public void append(RecordCursor cursor) {
                 DataRecord record = cursor.getRecord();
                 dataBuf.clear();
-                RecordCursor dataCur = dataBuf.add(record, cursor.getCipher(), cursor.getCipher() == 0 ? cursor.getSymbol() : null);
+                RecordCursor dataCur = dataBuf.add(
+                    record, cursor.getCipher(), (cursor.getCipher() == 0 ? cursor.getSymbol() : null));
                 for (int i = 0, n = record.getIntFieldCount(); i < n; i++) {
                     int value = rnd.nextInt();
                     if (record.hasTime() && i == 0)
@@ -78,12 +79,12 @@ public class TestDataProvider extends AbstractRecordProvider {
                 for (int i = 0, n = record.getObjFieldCount(); i < n; i++)
                     dataCur.setObj(i, "String" + rnd.nextInt());
                 sink.append(dataCur);
-                records_provided_count++;
+                recordsProvidedCount++;
             }
         });
     }
 
     public int getRecordsProvidedCount() {
-        return records_provided_count;
+        return recordsProvidedCount;
     }
 }

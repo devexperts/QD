@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,23 @@
  */
 package com.devexperts.io;
 
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
 
-public class StringPrefixSetTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+public class StringPrefixSetTest {
 
     StringPrefixSet list;
     //Serialization List tests
 
+    @Test
     public void testIllegalArgumentException() {
         throwAndCatchException("*.devexperts.rmi.RMIEndpoint");
         throwAndCatchException("*.devexperts.*");
@@ -50,25 +57,26 @@ public class StringPrefixSetTest extends TestCase {
         }
     }
 
+    @Test
     public void testAnythingAndNothing() {
         list = StringPrefixSet.valueOf("*");
         assertEquals(list, StringPrefixSet.ANYTHING_SET);
-        list = StringPrefixSet.valueOf(Arrays.asList(new String[]{"com.this", "String", "*", "java.lang.Math", "com.devexperts.*"}));
+        list = StringPrefixSet.valueOf(Arrays.asList("com.this", "String", "*", "java.lang.Math", "com.devexperts.*"));
         assertEquals(list, StringPrefixSet.ANYTHING_SET);
         assertTrue(list.accept(String.class.getName()));
         assertTrue(list.accept(List.class.getName()));
         assertTrue(list.accept(Marshalled.class.getName()));
 
-
-        list = StringPrefixSet.valueOf(Arrays.asList(new String[]{"com.this", ""}));
-        assertFalse(list.equals(StringPrefixSet.NOTHING_SET));
+        list = StringPrefixSet.valueOf(Arrays.asList("com.this", ""));
+        assertNotEquals(StringPrefixSet.NOTHING_SET, list);
         list = StringPrefixSet.valueOf("");
-        assertEquals(list, StringPrefixSet.NOTHING_SET);
+        assertEquals(StringPrefixSet.NOTHING_SET, list);
         assertFalse(list.accept(String.class.getName()));
         assertFalse(list.accept(List.class.getName()));
         assertFalse(list.accept(Marshalled.class.getName()));
     }
 
+    @Test
     public void testFullNames() {
         list = StringPrefixSet.valueOf(String.class.getName());
         assertTrue(list.accept(String.class.getName()));
@@ -78,14 +86,15 @@ public class StringPrefixSetTest extends TestCase {
         assertTrue(list.accept(Marshalled.class.getName()));
         assertFalse(list.accept(String.class.getName()));
 
-        list = StringPrefixSet.valueOf(Arrays.asList(new String[]{String.class.getName(), Marshalled.class.getName(),
-            Object.class.getName(), Marshalled[].class.getName()}));
+        list = StringPrefixSet.valueOf(Arrays.asList(String.class.getName(), Marshalled.class.getName(),
+            Object.class.getName(), Marshalled[].class.getName()));
         assertTrue(list.accept(String.class.getName()));
         assertFalse(list.accept(List.class.getName()));
         assertTrue(list.accept(Marshalled.class.getName()));
         assertTrue(list.accept(Object.class.getName()));
     }
 
+    @Test
     public void testPrefixes() {
         list = StringPrefixSet.valueOf("com.devexperts.io.*");
         assertFalse(list.accept("java.lang.String"));
@@ -96,7 +105,6 @@ public class StringPrefixSetTest extends TestCase {
         assertFalse(list.accept("com.devexperts.Something"));
         assertTrue(list.accept("com.devexperts.io.pack.Class"));
 
-
         list = StringPrefixSet.valueOf("com.devexperts.*");
         assertFalse(list.accept("java.lang.String"));
         assertFalse(list.accept("java.util.List"));
@@ -106,7 +114,6 @@ public class StringPrefixSetTest extends TestCase {
         assertTrue(list.accept("com.devexperts.Something"));
         assertFalse(list.accept("com.All"));
         assertTrue(list.accept("com.devexperts.io.pack.Class"));
-
 
         list = StringPrefixSet.valueOf(";", "com.devexperts.io.*;com.devexperts.util.*");
         assertFalse(list.accept("java.lang.String"));
@@ -119,7 +126,7 @@ public class StringPrefixSetTest extends TestCase {
         assertTrue(list.accept("com.devexperts.io.pack.Class"));
     }
 
-
+    @Test
     public void testPrefixesAndFullNames() {
         list = StringPrefixSet.valueOf(";",
             "com.devexperts.io.*;com.devexperts.util.*;java.util.List;java.lang.*;java.util.concurrent.Executor");
@@ -132,7 +139,5 @@ public class StringPrefixSetTest extends TestCase {
         assertTrue(list.accept("com.devexperts.io.pack.Class"));
         assertTrue(list.accept("java.util.concurrent.Executor"));
         assertFalse(list.accept("java.util.concurrent.ExecutorService"));
-
     }
-
 }

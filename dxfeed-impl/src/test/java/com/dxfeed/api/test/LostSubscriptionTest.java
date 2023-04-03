@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,7 +18,9 @@ import com.dxfeed.api.DXFeedEventListener;
 import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.api.osub.ObservableSubscriptionChangeListener;
 import com.dxfeed.event.market.Quote;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -28,9 +30,12 @@ import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-public class LostSubscriptionTest extends TestCase
-    implements ObservableSubscriptionChangeListener, DXFeedEventListener<Quote>
-{
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+public class LostSubscriptionTest implements ObservableSubscriptionChangeListener, DXFeedEventListener<Quote> {
+    
     private static final List<String> SYMBOLS = Arrays.asList("AAPL", "GOOG", "IBM");
     private static final double BID_PRICE = 100.5;
 
@@ -40,20 +45,21 @@ public class LostSubscriptionTest extends TestCase
     private Semaphore pubSemaphore;
     private Semaphore subSemaphore;
 
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         ThreadCleanCheck.before();
         endpoint = DXEndpoint.create(DXEndpoint.Role.LOCAL_HUB);
         pubSemaphore = new Semaphore(0);
         subSemaphore = new Semaphore(0);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         endpoint.close();
         ThreadCleanCheck.after();
     }
 
+    @Test
     public void testLostSub() {
         assertTrue("must have at least 2 symbols", SYMBOLS.size() >= 2);
 
@@ -123,7 +129,7 @@ public class LostSubscriptionTest extends TestCase
     private void check(String symbol, double expectedBidPrice) {
         Quote q = endpoint.getFeed().getLastEvent(new Quote(symbol));
         println("get last = " + q);
-        assertTrue(Double.compare(q.getBidPrice(), expectedBidPrice) == 0);
+        assertEquals(0, Double.compare(q.getBidPrice(), expectedBidPrice));
     }
 
     private void acquire(Semaphore semaphore, int permits) {
@@ -139,6 +145,7 @@ public class LostSubscriptionTest extends TestCase
         String threadName = Thread.currentThread().getName();
         if (threadName.matches(".*ExecutorThread.."))
             threadName = "ET" + threadName.substring(threadName.length() - 2);
-        System.out.println(TimeFormat.DEFAULT.withMillis().format(System.currentTimeMillis()) + " [" + threadName + "] " + message);
+        System.out.println(TimeFormat.DEFAULT.withMillis().format(System.currentTimeMillis()) +
+            " [" + threadName + "] " + message);
     }
 }

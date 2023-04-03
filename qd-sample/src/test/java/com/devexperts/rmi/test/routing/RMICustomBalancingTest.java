@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -51,7 +51,8 @@ public class RMICustomBalancingTest extends AbstractRMICustomBalancingTest {
         configure();
 
         // Instruct client load balancers to route requests to the first server
-        RMIService<?> service = clients.clients[0].getClient().getService(DifferentServices.CALCULATOR_SERVICE.getServiceName());
+        RMIService<?> service = clients.clients[0].getClient().getService(
+            DifferentServices.CALCULATOR_SERVICE.getServiceName());
         RMIServiceDescriptor target = getTargetDescriptor(service, serviceImpl0);
         TestRMILoadBalancerFactory.clientOrMuxBalancerBehavior = req -> Promise.completed(route(target.getServiceId()));
         RMIRequest<Double> sum = createSumRequest();
@@ -73,7 +74,8 @@ public class RMICustomBalancingTest extends AbstractRMICustomBalancingTest {
         // Instruct the balancer to route everything to the second server
         RMIServiceDescriptor secondTarget = getTargetDescriptor(service, serviceImpl1);
         assertNotNull(secondTarget);
-        TestRMILoadBalancerFactory.clientOrMuxBalancerBehavior = req -> completeAsync(route(secondTarget.getServiceId()));
+        TestRMILoadBalancerFactory.clientOrMuxBalancerBehavior =
+            req -> completeAsync(route(secondTarget.getServiceId()));
 
         sum = createSumRequest();
         sum.send();
@@ -102,7 +104,8 @@ public class RMICustomBalancingTest extends AbstractRMICustomBalancingTest {
         sum2.send();
         await(() -> pendingPromise.get() != null);
 
-        RMIService<?> service = clients.clients[0].getClient().getService(DifferentServices.CALCULATOR_SERVICE.getServiceName());
+        RMIService<?> service = clients.clients[0].getClient().getService(
+            DifferentServices.CALCULATOR_SERVICE.getServiceName());
         RMIServiceDescriptor target = getTargetDescriptor(service, serviceImpl0);
 
         pendingPromise.get().complete(route(target.getServiceId()));
@@ -154,7 +157,8 @@ public class RMICustomBalancingTest extends AbstractRMICustomBalancingTest {
         // Configure unlimited timeout so that any host computer slowness does not affect this test
         clients.clients[0].getClient().setRequestSendingTimeout(Long.MAX_VALUE);
 
-        RMIService<?> service = clients.clients[0].getClient().getService(DifferentServices.CALCULATOR_SERVICE.getServiceName());
+        RMIService<?> service = clients.clients[0].getClient().getService(
+            DifferentServices.CALCULATOR_SERVICE.getServiceName());
         RMIServiceDescriptor target = getTargetDescriptor(service, serviceImpl0);
 
         // Instruct the balancer to return an incomplete promise.

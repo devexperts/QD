@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,50 +12,48 @@
 package com.dxfeed.glossary.test;
 
 import com.dxfeed.glossary.PriceIncrements;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.math.RoundingMode;
-import java.util.Arrays;
 import java.util.Random;
 
-/**
- * Unit test for {@link PriceIncrements} class.
- */
-public class PriceIncrementsTest extends TestCase {
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
+
+public class PriceIncrementsTest {
 
     private static final double EPS = 1e-10;
 
-    public PriceIncrementsTest(String s) {
-        super(s);
-    }
-
+    @Test
     public void testPrecision() {
         PriceIncrements pi;
         pi = PriceIncrements.valueOf("0.00000001");
-        assertEquals(pi.incrementPrice(0.60618514, 1), 0.60618515);
+        assertEquals(pi.incrementPrice(0.60618514, 1), 0.60618515, 0.0);
         Random r = new Random(3);
         for (int i = 1; i < 100000; i++) {
             int x = r.nextInt(100000000);
             double price0 = (double) x / 100000000;
             double price1 = (double) (x + 1) / 100000000;
-            assertEquals(pi.incrementPrice(price0, 1), price1);
+            assertEquals(pi.incrementPrice(price0, 1), price1, 0.0);
         }
     }
 
+    @Test
     public void testLogic() {
         PriceIncrements pi;
 
         pi = PriceIncrements.valueOf("0.01");
         assertEquals(pi.getText(), "0.01");
-        assertTrue(Arrays.equals(pi.getPriceIncrements(), new double[] {0.01}));
+        assertArrayEquals(new double[] { 0.01 }, pi.getPriceIncrements(), 0.0);
         assertEquals(pi.getText(), PriceIncrements.valueOf(0.01).getText());
         assertEquals(pi.getText(), PriceIncrements.valueOf(new double[] {0.01}).getText());
-        assertEquals(pi.getPriceIncrement(), 0.01);
-        assertEquals(pi.getPriceIncrement(Double.NaN), 0.01);
-        assertEquals(pi.getPriceIncrement(0.1234), 0.01);
-        assertEquals(pi.getPriceIncrement(-0.1234), 0.01);
-        assertEquals(pi.getPriceIncrement(1234), 0.01);
-        assertEquals(pi.getPriceIncrement(-1234), 0.01);
+        assertEquals(pi.getPriceIncrement(), 0.01, 0.0);
+        assertEquals(pi.getPriceIncrement(Double.NaN), 0.01, 0.0);
+        assertEquals(pi.getPriceIncrement(0.1234), 0.01, 0.0);
+        assertEquals(pi.getPriceIncrement(-0.1234), 0.01, 0.0);
+        assertEquals(pi.getPriceIncrement(1234), 0.01, 0.0);
+        assertEquals(pi.getPriceIncrement(-1234), 0.01, 0.0);
         assertEquals(pi.getPricePrecision(), 2);
         assertEquals(pi.getPricePrecision(Double.NaN), 2);
         assertEquals(pi.getPricePrecision(0.1234), 2);
@@ -75,16 +73,16 @@ public class PriceIncrementsTest extends TestCase {
 
         pi = PriceIncrements.valueOf("0.0001 1; 0.01");
         assertEquals(pi.getText(), "0.0001 1; 0.01");
-        assertTrue(Arrays.equals(pi.getPriceIncrements(), new double[] {0.0001, 1, 0.01}));
-        assertEquals(pi.getText(), PriceIncrements.valueOf(new double[] {0.0001, 1, 0.01}).getText());
-        assertEquals(pi.getPriceIncrement(), 0.0001);
-        assertEquals(pi.getPriceIncrement(Double.NaN), 0.0001);
-        assertEquals(pi.getPriceIncrement(0.1234), 0.0001);
-        assertEquals(pi.getPriceIncrement(-0.1234), 0.0001);
-        assertEquals(pi.getPriceIncrement(1, -1), 0.0001);
-        assertEquals(pi.getPriceIncrement(1, 1), 0.01);
-        assertEquals(pi.getPriceIncrement(1234), 0.01);
-        assertEquals(pi.getPriceIncrement(-1234), 0.01);
+        assertArrayEquals(new double[] { 0.0001, 1, 0.01 }, pi.getPriceIncrements(), 0.0);
+        assertEquals(pi.getText(), PriceIncrements.valueOf(new double[] { 0.0001, 1, 0.01 }).getText());
+        assertEquals(pi.getPriceIncrement(), 0.0001, 0.0);
+        assertEquals(pi.getPriceIncrement(Double.NaN), 0.0001, 0.0);
+        assertEquals(pi.getPriceIncrement(0.1234), 0.0001, 0.0);
+        assertEquals(pi.getPriceIncrement(-0.1234), 0.0001, 0.0);
+        assertEquals(pi.getPriceIncrement(1, -1), 0.0001, 0.0);
+        assertEquals(pi.getPriceIncrement(1, 1), 0.01, 0.0);
+        assertEquals(pi.getPriceIncrement(1234), 0.01, 0.0);
+        assertEquals(pi.getPriceIncrement(-1234), 0.01, 0.0);
         assertEquals(pi.getPricePrecision(), 4);
         assertEquals(pi.getPricePrecision(Double.NaN), 4);
         assertEquals(pi.getPricePrecision(0.1234), 4);
@@ -120,6 +118,7 @@ public class PriceIncrementsTest extends TestCase {
         assertEquals(pi.incrementPrice(7.123456, -1, 7), 0.1235, EPS);
     }
 
+    @Test
     public void testRound() {
         PriceIncrements pi = PriceIncrements.valueOf("0.01");
 
@@ -169,18 +168,8 @@ public class PriceIncrementsTest extends TestCase {
 
         assertEquals(0.12, pi.roundPrice(0.12, RoundingMode.UNNECESSARY), EPS);
         assertEquals(-0.12, pi.roundPrice(-0.12, RoundingMode.UNNECESSARY), EPS);
-        try {
-            pi.roundPrice(0.1234, RoundingMode.UNNECESSARY);
-            fail();
-        } catch (ArithmeticException e) {
-            //ignore
-        }
-        try {
-            pi.roundPrice(-0.1234, RoundingMode.UNNECESSARY);
-            fail();
-        } catch (ArithmeticException e) {
-            //ignore
-        }
+        assertThrows(ArithmeticException.class, () -> pi.roundPrice(0.1234, RoundingMode.UNNECESSARY));
+        assertThrows(ArithmeticException.class, () -> pi.roundPrice(-0.1234, RoundingMode.UNNECESSARY));
     }
 
     private void roundNearest(PriceIncrements pi, double price, double nearest) {
@@ -194,7 +183,9 @@ public class PriceIncrementsTest extends TestCase {
         assertEquals(increase, pi.roundPrice(price, 1), EPS);
     }
 
-    private void roundMode(PriceIncrements pi, double price, double up, double down, double ceiling, double floor, double halfUp, double halfDown, double halfEven) {
+    private void roundMode(PriceIncrements pi, double price, double up, double down, double ceiling, double floor,
+        double halfUp, double halfDown, double halfEven)
+    {
         assertEquals(up, pi.roundPrice(price, RoundingMode.UP), EPS);
         assertEquals(down, pi.roundPrice(price, RoundingMode.DOWN), EPS);
         assertEquals(ceiling, pi.roundPrice(price, RoundingMode.CEILING), EPS);

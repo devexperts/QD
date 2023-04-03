@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,25 +22,31 @@ import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordListener;
 import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.ng.RecordProvider;
-import junit.framework.TestCase;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /**
  * Tests that collector implementations are robust in presence of exceptions thrown by record sink.
  */
-public class CollectorRobustnessTest extends TestCase {
+public class CollectorRobustnessTest {
     private static final DataScheme SCHEME = new TestDataScheme(20140506, TestDataScheme.Type.HAS_TIME);
     private static final DataRecord RECORD = SCHEME.getRecord(0);
     private static final String SYMBOL_CRASH = "SYMBOL_CRASH";
     private static final String SYMBOL_OK = "SYMBOL_OK";
 
+    @Test
     public void testTicker() {
         checkCollector(QDFactory.getDefaultFactory().createTicker(SCHEME));
     }
 
+    @Test
     public void testStream() {
         checkCollector(QDFactory.getDefaultFactory().createStream(SCHEME));
     }
 
+    @Test
     public void testHistory() {
         checkCollector(QDFactory.getDefaultFactory().createHistory(SCHEME));
     }

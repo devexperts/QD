@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -26,18 +26,23 @@ import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.SymbolObjectMap;
 import com.devexperts.qd.util.SymbolObjectVisitor;
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import java.util.ArrayList;
 import java.util.Random;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test outgoing data buffering behaviour in Stream and History.
  * Also check that buffer stats are correctly reported.
  */
-public class CollectorBufferTest extends TestCase {
+@RunWith(Parameterized.class)
+public class CollectorBufferTest {
     private static final int SEED = 20090923;
     private static final int REPEAT = 100;
     private static final DataScheme SCHEME = new TestDataScheme(2, SEED, TestDataScheme.Type.HAS_TIME_AND_VALUE);
@@ -45,59 +50,59 @@ public class CollectorBufferTest extends TestCase {
 
     private String[] symbols;
 
-    public static Test suite() {
-        TestSuite suit = new TestSuite(CollectorBufferTest.class.getName());
-
-        // many symbols
-        addAll(suit, new TestSuite(CollectorBufferTest.class));
-
-        // repeat with few symbols
-        TestSuite child = new TestSuite(CollectorBufferTest.class);
-        for (int i = 0; i < child.countTestCases(); i++)
-            ((CollectorBufferTest) child.testAt(i)).symbols = new String[] { "A", "B", "HABAHABA" };
-        addAll(suit, child);
-        return suit;
+    @Parameters(name = "{index}")
+    public static String[][][] data() {
+        return new String[][][] {
+            { null },
+            { new String[] { "A", "B", "HABAHABA" } }
+        };
     }
 
-    private static void addAll(TestSuite suit, TestSuite child) {
-        for (int i = 0; i < child.countTestCases(); i++) {
-            TestCase test = (TestCase) child.testAt(i);
-            suit.addTest(test);
-        }
+    public CollectorBufferTest(String[] symbols) {
+        this.symbols = symbols;
     }
 
+    @Test
     public void testStreamBufferCleanup() {
         checkBufferCleanup(QDFactory.getDefaultFactory().createStream(SCHEME, createStats()), false);
     }
 
+    @Test
     public void testHistoryBufferCleanup() {
         checkBufferCleanup(QDFactory.getDefaultFactory().createHistory(SCHEME, createStats()), false);
     }
 
+    @Test
     public void testStreamBufferPartialCleanup() {
         checkBufferCleanup(QDFactory.getDefaultFactory().createStream(SCHEME, createStats()), true);
     }
 
+    @Test
     public void testHistoryBufferPartialCleanup() {
         checkBufferCleanup(QDFactory.getDefaultFactory().createHistory(SCHEME, createStats()), true);
     }
 
+    @Test
     public void testStreamBufferOverflowDropNewest() {
         checkBufferOverflow(QDFactory.getDefaultFactory().createStream(SCHEME, createStats()), false);
     }
 
+    @Test
     public void testHistoryBufferOverflowDropNewest() {
         checkBufferOverflow(QDFactory.getDefaultFactory().createHistory(SCHEME, createStats()), false);
     }
 
+    @Test
     public void testStreamBufferOverflowDropOldest() {
         checkBufferOverflow(QDFactory.getDefaultFactory().createStream(SCHEME, createStats()), true);
     }
 
+    @Test
     public void testHistoryBufferOverflowDropOldest() {
         checkBufferOverflow(QDFactory.getDefaultFactory().createHistory(SCHEME, createStats()), true);
     }
 
+    @Test
     public void testHistoryBufferAddSubResend() {
         checkBufferAddSubResend(QDFactory.getDefaultFactory().createHistory(SCHEME, createStats()));
     }
@@ -107,7 +112,7 @@ public class CollectorBufferTest extends TestCase {
     }
 
     private void checkBufferCleanup(QDCollector collector, boolean partial) {
-        QDStats buffer_stats = getBufferStats(collector);
+        QDStats bufferStats = getBufferStats(collector);
         QDAgent agent = collector.agentBuilder()
             .withKeyProperties("name=BufferCleanup")
             .build();
@@ -134,18 +139,18 @@ public class CollectorBufferTest extends TestCase {
             if (partial) {
                 // unsubscribe partially
                 ArrayList<SymbolObjectMap<Integer>> checksum = allocateMap();
-                ArrayList<SymbolObjectMap<Boolean>> still_sub = allocateMap();
+                ArrayList<SymbolObjectMap<Boolean>> stillSub = allocateMap();
 
                 int part = rnd.nextInt(sub.size());
-                unsubPart(agent, sub, still_sub, part);
+                unsubPart(agent, sub, stillSub, part);
 
                 // check it
-                retrieveAndCheckData(agent, buf, checksum, still_sub);
+                retrieveAndCheckData(agent, buf, checksum, stillSub);
 
                 // now correct data a little bit (increase time), publish and check it again
                 incTime(buf);
                 dist.processData(buf);
-                retrieveAndCheckData(agent, buf, checksum, still_sub);
+                retrieveAndCheckData(agent, buf, checksum, stillSub);
 
                 // now correct data a little bit (increase time), publish it again
                 // it should get buffered in History!
@@ -154,7 +159,7 @@ public class CollectorBufferTest extends TestCase {
 
                 // unsubscibe again (this time leave smaller subscription)
                 part = rnd.nextInt(Math.max(1, part));
-                unsubPart(agent, sub, still_sub, part);
+                unsubPart(agent, sub, stillSub, part);
 
                 // for history -- chanage data in last still subscribed item and replace it (in buffer)
                 // this gets code coverage for a additional case in history
@@ -167,13 +172,13 @@ public class CollectorBufferTest extends TestCase {
                 }
 
                 // check it
-                retrieveAndCheckData(agent, buf, checksum, still_sub);
+                retrieveAndCheckData(agent, buf, checksum, stillSub);
             }
 
             // unsubscribe fully
             agent.getRemovingSubscriptionConsumer().processSubscription(sub);
             assertEquals(0, agent.getSubscriptionSize());
-            assertEquals(0, buffer_stats.getValue(QDStats.SValue.RID_SIZE));
+            assertEquals(0, bufferStats.getValue(QDStats.SValue.RID_SIZE));
 
             // make sure there's no data
             buf.clear();
@@ -212,50 +217,54 @@ public class CollectorBufferTest extends TestCase {
             cur.setInt(j, cur.getInt(j) + j);
     }
 
-    private void unsubPart(QDAgent agent, SubscriptionBuffer sub, ArrayList<SymbolObjectMap<Boolean>> still_sub, int still_sub_part) {
+    private void unsubPart(QDAgent agent, SubscriptionBuffer sub, ArrayList<SymbolObjectMap<Boolean>> stillSub,
+        int stillSubPart)
+    {
         SubscriptionIterator it = sub.examiningIterator();
         DataRecord rec;
-        for (int i = 0; i < still_sub_part; i++) {
+        for (int i = 0; i < stillSubPart; i++) {
             rec = it.nextRecord();
-            still_sub.get(rec.getId()).put(it.getCipher(), it.getSymbol(), true);
+            stillSub.get(rec.getId()).put(it.getCipher(), it.getSymbol(), true);
         }
         while ((rec = it.nextRecord()) != null) {
-            still_sub.get(rec.getId()).remove(it.getCipher(), it.getSymbol());
+            stillSub.get(rec.getId()).remove(it.getCipher(), it.getSymbol());
         }
-        int expected_sub_size = 0;
+        int expectedSubSize = 0;
         for (int i = 0; i < SCHEME.getRecordCount(); i++)
-            expected_sub_size += still_sub.get(i).size();
+            expectedSubSize += stillSub.get(i).size();
         it = sub.examiningIterator();
-        for (int i = 0; i < still_sub_part; i++) // skip again first part
+        for (int i = 0; i < stillSubPart; i++) // skip again first part
             it.nextRecord();
         agent.getRemovingSubscriptionConsumer().processSubscription(it);
-        assertEquals(expected_sub_size, agent.getSubscriptionSize());
+        assertEquals(expectedSubSize, agent.getSubscriptionSize());
     }
 
-    private void retrieveAndCheckData(QDAgent agent, RecordBuffer orig_buf, ArrayList<SymbolObjectMap<Integer>> checksum, ArrayList<SymbolObjectMap<Boolean>> still_sub) {
+    private void retrieveAndCheckData(QDAgent agent, RecordBuffer origBuf, ArrayList<SymbolObjectMap<Integer>> checksum,
+        ArrayList<SymbolObjectMap<Boolean>> stillSub)
+    {
         // compute original data checksum
-        orig_buf.rewind();
+        origBuf.rewind();
         RecordCursor cur;
-        while ((cur = orig_buf.next()) != null) {
+        while ((cur = origBuf.next()) != null) {
             Integer oldsum = checksum.get(cur.getRecord().getId()).get(cur.getCipher(), cur.getSymbol());
             checksum.get(cur.getRecord().getId()).put(cur.getCipher(), cur.getSymbol(),
                 (oldsum == null ? 0 : oldsum) + computeCheckSum(cur));
         }
 
-        // make sure there's exactly remaining data (data where we still_sub)
+        // make sure there's exactly remaining data (data where we stillSub)
         RecordBuffer buf = new RecordBuffer();
         agent.retrieveData(buf);
         while ((cur = buf.next()) != null) {
-            assertTrue(still_sub.get(cur.getRecord().getId()).contains(cur.getCipher(), cur.getSymbol()));
+            assertTrue(stillSub.get(cur.getRecord().getId()).contains(cur.getCipher(), cur.getSymbol()));
             // update checksum
             Integer oldsum = checksum.get(cur.getRecord().getId()).get(cur.getCipher(), cur.getSymbol());
             checksum.get(cur.getRecord().getId()).put(cur.getCipher(), cur.getSymbol(),
                 oldsum - computeCheckSum(cur));
         }
-        // make sure that all checksums for still_sub data agree
+        // make sure that all checksums for stillSub data agree
         for (int i = 0; i < SCHEME.getRecordCount(); i++) {
             final SymbolObjectMap<Integer> csm = checksum.get(i);
-            still_sub.get(i).examineEntries(new SymbolObjectVisitor<Boolean>() {
+            stillSub.get(i).examineEntries(new SymbolObjectVisitor<Boolean>() {
                 public boolean hasCapacity() {
                     return true;
                 }
@@ -274,12 +283,12 @@ public class CollectorBufferTest extends TestCase {
         return sum;
     }
 
-    private void checkBufferOverflow(QDCollector collector, boolean drop_oldest) {
-        QDStats buffer_stats = getBufferStats(collector);
+    private void checkBufferOverflow(QDCollector collector, boolean dropOldest) {
+        QDStats bufferStats = getBufferStats(collector);
         QDAgent agent = collector.agentBuilder()
             .withKeyProperties("name=BufferOverflow")
             .build();
-        agent.setBufferOverflowStrategy(MAX_SIZE, drop_oldest, true);
+        agent.setBufferOverflowStrategy(MAX_SIZE, dropOldest, true);
         QDDistributor dist = collector.distributorBuilder().build();
         TestSubscriptionProvider subp = new TestSubscriptionProvider(SCHEME, SEED, symbols);
         final SubscriptionBuffer sub = new SubscriptionBuffer();
@@ -289,14 +298,14 @@ public class CollectorBufferTest extends TestCase {
         RecordBuffer dstbuf = new RecordBuffer();
 
         final Random rnd = new Random(20090924);
-        final ArrayList<SymbolObjectMap<Long>> known_times = allocateMap();
-        final ArrayList<SymbolObjectMap<Integer>> record_counts = allocateMap();
-        boolean is_history = collector instanceof QDHistory;
+        final ArrayList<SymbolObjectMap<Long>> knownTimes = allocateMap();
+        final ArrayList<SymbolObjectMap<Integer>> recordCounts = allocateMap();
+        boolean isHistory = collector instanceof QDHistory;
         for (int rep = 0; rep < REPEAT; rep++) {
             sub.clear();
 
-            final int[] resend_count = new int[1];
-            final ArrayList<SymbolObjectMap<Boolean>> sub_flags = allocateMap();
+            final int[] resendCount = new int[1];
+            final ArrayList<SymbolObjectMap<Boolean>> subFlags = allocateMap();
 
             subp.retrieveSubscription(new SubscriptionVisitor() {
                 public boolean hasCapacity() {
@@ -304,17 +313,17 @@ public class CollectorBufferTest extends TestCase {
                 }
 
                 public void visitRecord(DataRecord record, int cipher, String symbol, long time) {
-                    Integer count = record_counts.get(record.getId()).get(cipher, symbol);
-                    Boolean is_sub = sub_flags.get(record.getId()).get(cipher, symbol);
-                    if (is_sub != null)
+                    Integer count = recordCounts.get(record.getId()).get(cipher, symbol);
+                    Boolean isSub = subFlags.get(record.getId()).get(cipher, symbol);
+                    if (isSub != null)
                         return; // newer subscribe twice to the same record in one batch for this test
                     if (count != null) {
                         if (rnd.nextBoolean())
                             return; // don't resubscribe every other time to already published records
-                        resend_count[0] += count;
+                        resendCount[0] += count;
                     }
-                    sub_flags.get(record.getId()).put(cipher, symbol, Boolean.TRUE);
-                    known_times.get(record.getId()).put(cipher, symbol, null);
+                    subFlags.get(record.getId()).put(cipher, symbol, Boolean.TRUE);
+                    knownTimes.get(record.getId()).put(cipher, symbol, null);
                     sub.visitRecord(record, cipher, symbol, time);
                 }
             });
@@ -322,54 +331,55 @@ public class CollectorBufferTest extends TestCase {
             agent.getAddingSubscriptionConsumer().processSubscription(sub);
             assertTrue(agent.getSubscriptionSize() > 0);
 
-            int expected_retrieve_size = 0;
-            if (is_history)
-                expected_retrieve_size = resend_count[0];
+            int expectedRetrieveSize = 0;
+            if (isHistory)
+                expectedRetrieveSize = resendCount[0];
 
             dstbuf.clear();
             agent.retrieveData(dstbuf); // retrieve all data that was "resent"
-            assertEquals(expected_retrieve_size, dstbuf.size()); // check now much data was resent
-            assertEquals(0, buffer_stats.getValue(QDStats.SValue.RID_SIZE));
-            updateKnownTimes(dstbuf, known_times);
+            assertEquals(expectedRetrieveSize, dstbuf.size()); // check now much data was resent
+            assertEquals(0, bufferStats.getValue(QDStats.SValue.RID_SIZE));
+            updateKnownTimes(dstbuf, knownTimes);
 
             srcbuf.clear();
             datap.retrieveData(srcbuf);
             RecordCursor cur;
 
             // compute how much data will get buffered
-            int buffered_cnt = 0;
-            int nonbuffered_cnt = 0;
+            int bufferedCount = 0;
+            int nonBufferedCount = 0;
             while ((cur = srcbuf.next()) != null) {
-                Long known_time = known_times.get(cur.getRecord().getId()).get(cur.getCipher(), cur.getSymbol());
-                if (known_time != null && cur.getTime() > known_time) {
+                Long knownTime = knownTimes.get(cur.getRecord().getId()).get(cur.getCipher(), cur.getSymbol());
+                if (knownTime != null && cur.getTime() > knownTime) {
                     // record gets buffered when it's time is larger than last retrieved one
-                    buffered_cnt++;
+                    bufferedCount++;
                 } else {
-                    nonbuffered_cnt++;
+                    nonBufferedCount++;
                 }
-                Integer record_count = record_counts.get(cur.getRecord().getId()).get(cur.getCipher(), cur.getSymbol());
-                record_counts.get(cur.getRecord().getId()).put(cur.getCipher(), cur.getSymbol(), record_count == null ? 1 : record_count + 1);
+                Integer recordCount = recordCounts.get(cur.getRecord().getId()).get(cur.getCipher(), cur.getSymbol());
+                recordCounts.get(cur.getRecord().getId()).put(cur.getCipher(), cur.getSymbol(), recordCount == null ?
+                    1 : recordCount + 1);
             }
             srcbuf.rewind();
             dist.processData(srcbuf);
 
-            int expected_buffer_size;
-            if (is_history) {
-                expected_buffer_size = Math.min(buffered_cnt, MAX_SIZE);
-                expected_retrieve_size = expected_buffer_size + nonbuffered_cnt;
+            int expectedBufferSize;
+            if (isHistory) {
+                expectedBufferSize = Math.min(bufferedCount, MAX_SIZE);
+                expectedRetrieveSize = expectedBufferSize + nonBufferedCount;
             } else {
-                expected_buffer_size = Math.min(buffered_cnt + nonbuffered_cnt, MAX_SIZE);
-                expected_retrieve_size = expected_buffer_size;
+                expectedBufferSize = Math.min(bufferedCount + nonBufferedCount, MAX_SIZE);
+                expectedRetrieveSize = expectedBufferSize;
             }
-            assertEquals(expected_buffer_size, buffer_stats.getValue(QDStats.SValue.RID_SIZE));
+            assertEquals(expectedBufferSize, bufferStats.getValue(QDStats.SValue.RID_SIZE));
 
             dstbuf.clear();
             agent.retrieveData(dstbuf);
-            assertEquals(expected_retrieve_size, dstbuf.size());
-            assertEquals(0, buffer_stats.getValue(QDStats.SValue.RID_SIZE));
-            updateKnownTimes(dstbuf, known_times);
+            assertEquals(expectedRetrieveSize, dstbuf.size());
+            assertEquals(0, bufferStats.getValue(QDStats.SValue.RID_SIZE));
+            updateKnownTimes(dstbuf, knownTimes);
 
-            if (is_history) {
+            if (isHistory) {
                 // try to deliver data again and make sure it does not go to consumers
                 srcbuf.rewind();
                 dist.processData(srcbuf);
@@ -381,7 +391,7 @@ public class CollectorBufferTest extends TestCase {
     }
 
     private void checkBufferAddSubResend(QDCollector collector) {
-        QDStats buffer_stats = getBufferStats(collector);
+        QDStats bufferStats = getBufferStats(collector);
         QDAgent agent = collector.agentBuilder().build();
         QDDistributor dist = collector.distributorBuilder().build();
         TestSubscriptionProvider subp = new TestSubscriptionProvider(SCHEME, SEED, symbols);
@@ -405,26 +415,26 @@ public class CollectorBufferTest extends TestCase {
 
             // retrieve data and make sure it's the same data (data stays in glogal buffer)
             ArrayList<SymbolObjectMap<Integer>> checksum = allocateMap();
-            ArrayList<SymbolObjectMap<Boolean>> still_sub = allocateMap();
-            buildSubMap(still_sub, sub.examiningIterator());
-            retrieveAndCheckData(agent, buf, checksum, still_sub);
+            ArrayList<SymbolObjectMap<Boolean>> stillSub = allocateMap();
+            buildSubMap(stillSub, sub.examiningIterator());
+            retrieveAndCheckData(agent, buf, checksum, stillSub);
 
             // change data values and republish
             tweakValues(buf);
             dist.processData(buf);
-            retrieveAndCheckData(agent, buf, checksum, still_sub);
+            retrieveAndCheckData(agent, buf, checksum, stillSub);
 
             // change data values again and republish
             tweakValues(buf);
             dist.processData(buf);
             // ... and resubscribe again before checking what we've got
             agent.getAddingSubscriptionConsumer().processSubscription(sub.examiningIterator());
-            retrieveAndCheckData(agent, buf, checksum, still_sub);
+            retrieveAndCheckData(agent, buf, checksum, stillSub);
 
             // unsubscribe fully
             agent.getRemovingSubscriptionConsumer().processSubscription(sub);
             assertEquals(0, agent.getSubscriptionSize());
-            assertEquals(0, buffer_stats.getValue(QDStats.SValue.RID_SIZE));
+            assertEquals(0, bufferStats.getValue(QDStats.SValue.RID_SIZE));
 
             // make sure there's no data
             buf.clear();
@@ -433,18 +443,18 @@ public class CollectorBufferTest extends TestCase {
         }
     }
 
-    private void buildSubMap(ArrayList<SymbolObjectMap<Boolean>> still_sub, SubscriptionIterator it) {
+    private void buildSubMap(ArrayList<SymbolObjectMap<Boolean>> stillSub, SubscriptionIterator it) {
         DataRecord rec;
         while ((rec = it.nextRecord()) != null)
-            still_sub.get(rec.getId()).put(it.getCipher(), it.getSymbol(), true);
+            stillSub.get(rec.getId()).put(it.getCipher(), it.getSymbol(), true);
     }
 
-    private void updateKnownTimes(RecordBuffer buf, ArrayList<SymbolObjectMap<Long>> known_times) {
+    private void updateKnownTimes(RecordBuffer buf, ArrayList<SymbolObjectMap<Long>> knownTimes) {
         RecordCursor cur;
         while ((cur = buf.next()) != null) {
-            Long known_time = known_times.get(cur.getRecord().getId()).get(cur.getCipher(), cur.getSymbol());
-            known_times.get(cur.getRecord().getId()).put(cur.getCipher(), cur.getSymbol(),
-                known_time == null ? cur.getTime() : Math.min(known_time, cur.getTime()));
+            Long knownTime = knownTimes.get(cur.getRecord().getId()).get(cur.getCipher(), cur.getSymbol());
+            knownTimes.get(cur.getRecord().getId()).put(cur.getCipher(), cur.getSymbol(),
+                knownTime == null ? cur.getTime() : Math.min(knownTime, cur.getTime()));
         }
     }
 

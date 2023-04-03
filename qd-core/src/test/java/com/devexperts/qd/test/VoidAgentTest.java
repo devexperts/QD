@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -27,14 +27,18 @@ import com.devexperts.qd.ng.AbstractRecordSink;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordMode;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 
-public class VoidAgentTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+
+public class VoidAgentTest {
     private static final DataRecord REC_0 = new DefaultRecord(0, "Rec0", true, timeFields("Rec0"), new DataObjField[0]);
     private static final DataRecord REC_1 = new DefaultRecord(1, "Rec1", true, timeFields("Rec1"), new DataObjField[0]);
 
@@ -49,6 +53,7 @@ public class VoidAgentTest extends TestCase {
 
     private QDAgent agent;
 
+    @Test
     public void testTickerVoidAgent() {
         agent = QDFactory.getDefaultFactory().createVoidAgentBuilder(QDContract.TICKER, SCHEME).build();
         assertSub();
@@ -78,6 +83,7 @@ public class VoidAgentTest extends TestCase {
         assertSub();
     }
 
+    @Test
     public void testHistoryVoidAgent() {
         agent = QDFactory.getDefaultFactory().createVoidAgentBuilder(QDContract.HISTORY, SCHEME).build();
         assertSub();
@@ -107,10 +113,12 @@ public class VoidAgentTest extends TestCase {
         assertSub();
     }
 
+    @Test
     public void testTickerStress() {
         checkStress(QDContract.TICKER);
     }
 
+    @Test
     public void testHistoryStress() {
         checkStress(QDContract.HISTORY);
     }
@@ -154,13 +162,13 @@ public class VoidAgentTest extends TestCase {
             @Override
             public void append(RecordCursor cursor) {
                 Item item = item(cursor.getRecord(), cursor.getDecodedSymbol(), cursor.getTime());
-                assertTrue(map.put(item, item) == null);
+                assertNull(map.put(item, item));
             }
         });
         assertEquals(items.length, map.size());
         for (Item item : items) {
             Item other = map.get(item);
-            assertTrue("Contains " + item.toString(), other != null);
+            assertNotNull("Contains " + item.toString(), other);
             assertEquals("time", item.time, other.time);
         }
     }

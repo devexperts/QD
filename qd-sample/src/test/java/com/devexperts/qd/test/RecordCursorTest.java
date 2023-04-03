@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,9 +22,12 @@ import com.devexperts.qd.kit.StringField;
 import com.devexperts.qd.ng.EventFlag;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordMode;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class RecordCursorTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+public class RecordCursorTest {
 
     private static final DataRecord RECORDI = new DefaultRecord(
         0, "i", false, new DataIntField[] { new CompactIntField(0, "i.i") }, null
@@ -39,6 +42,7 @@ public class RecordCursorTest extends TestCase {
     private static final DefaultScheme SCHEME = new DefaultScheme(CODEC,
         new DataRecord[] { RECORDI, RECORDO });
 
+    @Test
     public void testCopyFrom() {
         RecordCursor cur1 = RecordCursor.allocate(RECORDI, "X");
         cur1.setInt(0, 1234);
@@ -69,6 +73,7 @@ public class RecordCursorTest extends TestCase {
         assertEquals(cur4.getObj(0), "1234");
     }
 
+    @Test
     public void testToStringPrintsEventFlags() {
         RecordCursor cur1 = RecordCursor.allocate(RECORDI, "X", RecordMode.FLAGGED_DATA);
         cur1.setInt(0, 1234);

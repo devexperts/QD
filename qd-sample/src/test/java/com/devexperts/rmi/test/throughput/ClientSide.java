@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -60,13 +60,14 @@ class ClientSide {
                         totalSentRequestsCount += sentCount;
                         totalSucceededRequestsCount += succeededCount;
                         totalFailedRequestsCount += failedCount;
-                        sb.append("Number of requests pending for sending: ").append(sendingRequestNumber).append('\n');
-                        sb.append("Client sends ").append(sentCount / loggingInterval).append(" requests per second\n");
-                        sb.append("Total number of sent requests: ").append(totalSentRequestsCount).append('\n');
+                        sb.append("Number of requests pending for sending: ").append(sendingRequestNumber)
+                            .append("\nClient sends ").append(sentCount / loggingInterval)
+                            .append(" requests per second\n")
+                            .append("Total number of sent requests: ").append(totalSentRequestsCount).append('\n');
                         if (!oneWay) {
-                            sb.append("Total number of succeeded requests: ").append(totalSucceededRequestsCount).append('\n');
-                            sb.append("Total number of failed requests: ").append(totalFailedRequestsCount).append('\n');
-                            sb.append("Average request execution time: ").append(executionTime).append(" ms\n");
+                            sb.append("Total number of succeeded requests: ").append(totalSucceededRequestsCount)
+                                .append("\nTotal number of failed requests: ").append(totalFailedRequestsCount)
+                                .append("\nAverage request execution time: ").append(executionTime).append(" ms\n");
                         }
                         return sb.toString();
                     }

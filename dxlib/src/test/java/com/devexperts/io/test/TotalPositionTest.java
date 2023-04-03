@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,14 +20,17 @@ import com.devexperts.io.ChunkList;
 import com.devexperts.io.ChunkPool;
 import com.devexperts.io.ChunkedInput;
 import com.devexperts.io.ChunkedOutput;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.io.IOException;
 
-public class TotalPositionTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+
+public class TotalPositionTest {
     private static final int CNT = 30000;
     private static final int REP = 5;
 
+    @Test
     public void testByteArrayOutputTotalPosition() throws IOException {
         ByteArrayOutput out = new ByteArrayOutput();
         for (int i = 0; i < REP; i++) {
@@ -39,6 +42,7 @@ public class TotalPositionTest extends TestCase {
         }
     }
 
+    @Test
     public void testChunkedOutputTotalPosition() throws IOException {
         ChunkedOutput out = new ChunkedOutput();
         for (int i = 0; i < REP; i++) {
@@ -51,6 +55,7 @@ public class TotalPositionTest extends TestCase {
         }
     }
 
+    @Test
     public void testChunkedOutputTotalPositionKeep() throws IOException {
         ChunkedOutput out = new ChunkedOutput();
         for (int i = 0; i < REP; i++) {
@@ -65,6 +70,7 @@ public class TotalPositionTest extends TestCase {
         }
     }
 
+    @Test
     public void testChunkedOutputFromChunkListWrapped() throws IOException {
         ChunkedOutput out = new ChunkedOutput();
         for (int i = 0; i < REP; i++) {
@@ -78,6 +84,7 @@ public class TotalPositionTest extends TestCase {
         }
     }
 
+    @Test
     public void testChunkedOutputFromChunkListPooled() throws IOException {
         ChunkedOutput out = new ChunkedOutput();
         for (int i = 0; i < REP; i++) {

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -21,7 +21,7 @@ import com.devexperts.io.ChunkedOutput;
 import com.devexperts.io.IOUtil;
 import com.devexperts.io.StreamInput;
 import com.devexperts.io.StreamOutput;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -36,7 +36,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
-public class IOTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+
+public class IOTest {
     private static abstract class Item {
         Item() {}
         abstract void writeDataOutput(DataOutput out) throws IOException;
@@ -311,6 +314,7 @@ public class IOTest extends TestCase {
         }
     }
 
+    @Test
     public void testIO() throws IOException {
         List<Item> items = makeItems();
         // test IOUtil/BAOS/BAIS write/read

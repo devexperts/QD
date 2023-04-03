@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -34,11 +34,18 @@ import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordListener;
 import com.devexperts.qd.util.SymbolObjectMap;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Tests correct processing of subscription lists in the presence of multiple agents which
@@ -74,24 +81,25 @@ public class MultiAgentTest extends QDTestBase {
         INT_RECORD, OBJ_RECORD
     });
 
-    public MultiAgentTest() {
+    public MultiAgentTest(String matrixType) {
+        super(matrixType);
     }
 
-    public MultiAgentTest(String s) {
-        super(s);
-    }
-
-    @TestHash
+    @Test
     public void testTestTickerPlain() {
+        assumeTrue(isMatrix() || isHash());
         runTest(qdf.createTicker(SCHEME), false, false);
     }
 
-    @TestHash
+    @Test
     public void testTestTickerWithVoidListener() {
+        assumeTrue(isMatrix() || isHash());
         runTest(qdf.createTicker(SCHEME), false, true);
     }
 
+    @Test
     public void testTickerInterleaves() {
+        assumeTrue(isMatrix());
         for (int interleave = 1; interleave <= 4; interleave++) {
             QDTicker ticker = qdf.createTicker(SCHEME);
             Tweaks.setTickerInterleave(SCHEME, interleave);
@@ -100,39 +108,45 @@ public class MultiAgentTest extends QDTestBase {
         Tweaks.setTickerDefaults(SCHEME);
     }
 
+    @Test
     public void testTickerStress() {
+        assumeTrue(isMatrix());
         QDTicker ticker = qdf.createTicker(SCHEME);
         Tweaks.setTickerStress(SCHEME);
         runTest(ticker, false, false);
         Tweaks.setTickerDefaults(SCHEME);
     }
 
-    @TestStriped
+    @Test
     public void testTickerStoreEverything() {
+        assumeTrue(isMatrix() || isStriped());
         QDTicker ticker = qdf.createTicker(SCHEME);
         ticker.setStoreEverything(true);
         runTest(ticker, false, false);
     }
 
-    @TestStriped
+    @Test
     public void testStream() {
+        assumeTrue(isMatrix() || isStriped());
         runTest(qdf.createStream(SCHEME), false, false);
     }
 
-    // Does not really work with striped collector -- '*' subscription gets multipled on N by StripedStream
-    //@TestStriped
+    // Does not really work with striped collector -- '*' subscription gets multiplied on N by StripedStream
+    @Test
     public void testStreamWildcard() {
+        assumeTrue(isMatrix());
         QDStream stream = qdf.createStream(SCHEME);
         stream.setEnableWildcards(true);
         runTest(stream, true, false);
     }
 
-    @TestStriped
+    @Test
     public void testHistory() {
+        assumeTrue(isMatrix() || isStriped());
         runTest(qdf.createHistory(SCHEME), false, false);
     }
 
-    private void runTest(QDCollector collector, boolean use_wildcard, boolean withVoidListeners) {
+    private void runTest(QDCollector collector, boolean useWildcard, boolean withVoidListeners) {
         collector.setErrorHandler(new QDErrorHandler() {
             public void handleDataError(DataProvider provider, Throwable t) {
                 throw new RuntimeException(t);
@@ -144,7 +158,7 @@ public class MultiAgentTest extends QDTestBase {
         });
         Random r = new Random(20081111);
 
-        // kenerate keys
+        // Generate keys
         DataRecord[] record = new DataRecord[KEYS];
         String[] symbol = new String[KEYS];
         int[] cipher = new int[KEYS];
@@ -166,7 +180,7 @@ public class MultiAgentTest extends QDTestBase {
                 }
                 s = sb.toString();
             } while (!u.add(s));
-            if (use_wildcard && i < RECORDS) {
+            if (useWildcard && i < RECORDS) {
                 s = CODEC.decode(CODEC.getWildcardCipher());
                 j = i;
             }
@@ -190,7 +204,7 @@ public class MultiAgentTest extends QDTestBase {
         for (int i = 0; i < AGENTS; i++) {
             Arrays.fill(sub[i], 0, asubc[i], true);
             shuffle(sub[i], r, SUB_KEYS);
-            if (use_wildcard)
+            if (useWildcard)
                 for (int j = 0; j < RECORDS; j++) {
                     if (sub[i][j])
                         wsub[i][j] = true;
@@ -224,24 +238,24 @@ public class MultiAgentTest extends QDTestBase {
         }
 
         // check "diversity" of subscription (make sure our random is good enough)
-        if (!use_wildcard) {
-            int cipher_subc = 0;
-            int cipher_total = 0;
-            int symbol_subc = 0;
-            int symbol_total = 0;
+        if (!useWildcard) {
+            int cipherSubc = 0;
+            int cipherTotal = 0;
+            int symbolSubc = 0;
+            int symbolTotal = 0;
             for (int i = 0; i < KEYS; i++) {
                 if (cipher[i] != 0) {
-                    cipher_total++;
+                    cipherTotal++;
                     if (ksubc[i] > 0)
-                        cipher_subc++;
+                        cipherSubc++;
                 } else {
-                    symbol_total++;
+                    symbolTotal++;
                     if (ksubc[i] > 0)
-                        symbol_subc++;
+                        symbolSubc++;
                 }
             }
-            assertTrue("cipher " + cipher_subc + " of " + cipher_total, cipher_subc > 0 && cipher_subc < cipher_total);
-            assertTrue("symbol " + symbol_subc + " of " + symbol_total, symbol_subc > 0 && symbol_subc < symbol_total);
+            assertTrue("cipher " + cipherSubc + " of " + cipherTotal, cipherSubc > 0 && cipherSubc < cipherTotal);
+            assertTrue("symbol " + symbolSubc + " of " + symbolTotal, symbolSubc > 0 && symbolSubc < symbolTotal);
         }
 
         // create distributor, check subs
@@ -335,7 +349,9 @@ public class MultiAgentTest extends QDTestBase {
         private final long[][] maxseen;
         private final QDAgent qdAgent;
 
-        public MyDataListener(SymbolObjectMap<Integer>[] keys, boolean[][] sub, int ai, boolean[][] wsub, long[][] maxseen, QDAgent qdAgent) {
+        public MyDataListener(SymbolObjectMap<Integer>[] keys, boolean[][] sub, int ai, boolean[][] wsub,
+            long[][] maxseen, QDAgent qdAgent)
+        {
             this.keys = keys;
             this.sub = sub;
             this.ai = ai;
@@ -345,7 +361,7 @@ public class MultiAgentTest extends QDTestBase {
         }
 
         public void dataAvailable(DataProvider provider) {
-            assertTrue(provider == qdAgent);
+            assertSame(qdAgent, provider);
             RecordBuffer tmp = RecordBuffer.getInstance();
             provider.retrieveData(tmp);
             RecordCursor cur;

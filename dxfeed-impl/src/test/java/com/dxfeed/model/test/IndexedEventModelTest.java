@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -19,7 +19,9 @@ import com.dxfeed.event.IndexedEvent;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.Side;
 import com.dxfeed.model.IndexedEventModel;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,40 +29,44 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 /**
  * Unit test for {@link IndexedEventModel} class.
  */
-public class IndexedEventModelTest extends TestCase {
+public class IndexedEventModelTest {
     private static final String SYMBOL = "INDEX-TEST";
 
     private DXEndpoint endpoint;
     private DXPublisher publisher;
-    private DXFeed feed;
 
     private final List<Runnable> executionQueue = new ArrayList<>();
     private final IndexedEventModel<Order> indexedOrders = new IndexedEventModel<>(Order.class);
 
     private boolean changed;
 
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         ThreadCleanCheck.before();
         endpoint = DXEndpoint.create(DXEndpoint.Role.LOCAL_HUB);
         publisher = endpoint.getPublisher();
-        feed = endpoint.getFeed();
+        DXFeed feed = endpoint.getFeed();
         endpoint.executor(executionQueue::add);
         indexedOrders.setSymbol(SYMBOL);
         indexedOrders.getEventsList().addListener(change -> changed = true);
         indexedOrders.attach(feed);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         endpoint.close();
         ThreadCleanCheck.after();
     }
 
     // Simple test -- add two orders and remove them
+    @Test
     public void testSimple() {
         checkSize(0);
 
@@ -89,6 +95,7 @@ public class IndexedEventModelTest extends TestCase {
         checkSize(0);
     }
 
+    @Test
     public void testEventListIterator() {
         checkSize(0);
         assertFalse(indexedOrders.getEventsList().iterator().hasNext());
@@ -116,6 +123,7 @@ public class IndexedEventModelTest extends TestCase {
         assertFalse(indexedOrders.getEventsList().iterator().hasNext());
     }
 
+    @Test
     public void testListIterator() {
         checkSize(0);
         assertFalse(indexedOrders.getEventsList().listIterator().hasNext());
@@ -152,6 +160,7 @@ public class IndexedEventModelTest extends TestCase {
         assertFalse(indexedOrders.getEventsList().listIterator().hasPrevious());
     }
 
+    @Test
     public void testListIteratorWithIndex() {
         checkSize(0);
         assertFalse(indexedOrders.getEventsList().listIterator(0).hasNext());
@@ -194,11 +203,13 @@ public class IndexedEventModelTest extends TestCase {
         assertFalse(indexedOrders.getEventsList().listIterator(0).hasPrevious());
     }
 
+    @Test
     public void testCloseEmpty() {
         checkSize(0);
         indexedOrders.close();
     }
 
+    @Test
     public void testCloseEmptyAfterWork() {
         checkSize(0);
         // get a couple of orders
@@ -217,6 +228,7 @@ public class IndexedEventModelTest extends TestCase {
         indexedOrders.close();
     }
 
+    @Test
     public void testCloseNonEmpty() {
         checkSize(0);
         // get a couple of orders
@@ -229,6 +241,7 @@ public class IndexedEventModelTest extends TestCase {
         indexedOrders.close();
     }
 
+    @Test
     public void testCloseAbruptly() {
         checkSize(0);
         // get a couple of orders
@@ -248,6 +261,7 @@ public class IndexedEventModelTest extends TestCase {
     }
 
     // Add two orders snapshot
+    @Test
     public void testSnapshot() {
         checkSize(0);
 
@@ -265,6 +279,7 @@ public class IndexedEventModelTest extends TestCase {
     }
 
     // Add an order, then do transaction
+    @Test
     public void testTx() {
         checkSize(0);
 
@@ -288,6 +303,7 @@ public class IndexedEventModelTest extends TestCase {
         check(1, 1, 56.78);
     }
 
+    @Test
     public void testSnapshotClean() {
         checkSize(0);
 
@@ -307,6 +323,7 @@ public class IndexedEventModelTest extends TestCase {
         checkSize(0);
     }
 
+    @Test
     public void testGrow() {
         int n = 100;
         for (int i = 0; i < n; i++) {
@@ -352,7 +369,7 @@ public class IndexedEventModelTest extends TestCase {
     private void checkOrder(Order order, int index, double price) {
         assertEquals("symbol", SYMBOL, order.getEventSymbol());
         assertEquals("index", index, order.getIndex());
-        assertEquals("price", price, order.getPrice());
+        assertEquals("price", price, order.getPrice(), 0.0);
     }
 
     private void process() {

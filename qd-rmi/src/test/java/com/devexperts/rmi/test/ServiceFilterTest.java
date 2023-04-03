@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,9 +12,14 @@
 package com.devexperts.rmi.test;
 
 import com.devexperts.rmi.impl.ServiceFilter;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class ServiceFilterTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
+
+public class ServiceFilterTest {
 
     public static final String[] SERVICE_NAMES =
         {"Service", "feed.service1", "feed.service2", "feed.news.service1", "feed.news.service2"};
@@ -22,6 +27,7 @@ public class ServiceFilterTest extends TestCase {
 
     //----------------------------- test Filter -----------------------------
 
+    @Test
     public void testEquals() {
         ServiceFilter filter1 = ServiceFilter.valueOf("Service,News,");
         ServiceFilter filter2 = ServiceFilter.valueOf("Service,News");
@@ -46,12 +52,12 @@ public class ServiceFilterTest extends TestCase {
         filter2 = ServiceFilter.valueOf("service");
         assertFalse(filter1.equals(filter2));
 
-//      todo: uncomment when added sorting in ServiceFilter.valueOf()
-//      filter2 = ServiceFilter.valueOf("Service,Service*");
-//      assertEquals(filter1, filter2);
-
+        //TODO uncomment when added sorting in ServiceFilter.valueOf()
+        //filter2 = ServiceFilter.valueOf("Service,Service*");
+        //assertEquals(filter1, filter2);
     }
 
+    @Test
     public void testAccept() {
         ServiceFilter filter = ServiceFilter.valueOf("Service");
         actualResults = new boolean[SERVICE_NAMES.length];
@@ -104,13 +110,15 @@ public class ServiceFilterTest extends TestCase {
         accepted(filter);
     }
 
+    @Test
     public void testIntersection() {
         ServiceFilter filter1 = ServiceFilter.valueOf("Service*,Serv*ice,");
         ServiceFilter filter2 = ServiceFilter.valueOf("*Service,Service,,Serv*ice,ServicePrint");
-        ServiceFilter result = ServiceFilter.valueOf("Service*Service,Service,Service,Service*ice,Service,ServicePrint,Serv*Service,Service,Service,Serv*ice");
+        ServiceFilter result = ServiceFilter.valueOf(
+            "Service*Service,Service,Service,Service*ice,Service,ServicePrint,Serv*Service,Service,Service,Serv*ice");
         assertEquals(filter1.intersection(filter2), result);
-//      todo: uncomment when added sorting in ServiceFilter.valueOf()
-//      assertEquals(filter2.intersection(filter1), result);
+        //TODO uncomment when added sorting in ServiceFilter.valueOf()
+        //assertEquals(filter2.intersection(filter1), result);
         assertTrue(result.accept("ServService"));
         assertEquals(filter1.intersection(ServiceFilter.NOTHING), ServiceFilter.NOTHING);
         assertEquals(ServiceFilter.NOTHING.intersection(filter1), ServiceFilter.NOTHING);
@@ -127,35 +135,37 @@ public class ServiceFilterTest extends TestCase {
 
     //----------------------------- test Atom Filter -----------------------------
 
+    @Test
     public void testAtomEquals() {
         ServiceFilter filter1 = ServiceFilter.valueOf("");
         ServiceFilter filter2 = ServiceFilter.valueOf("Service");
         assertEquals(filter1, ServiceFilter.NOTHING);
-        assertFalse(filter1.equals(ServiceFilter.ANYTHING));
-        assertFalse(filter1.equals(filter2));
+        assertNotEquals(filter1, ServiceFilter.ANYTHING);
+        assertNotEquals(filter1, filter2);
         filter2 = ServiceFilter.valueOf("service*1");
-        assertFalse(filter1.equals(filter2));
+        assertNotEquals(filter1, filter2);
 
         filter1 = ServiceFilter.valueOf("*");
         assertEquals(filter1, ServiceFilter.ANYTHING);
-        assertFalse(filter1.equals(ServiceFilter.NOTHING));
-        assertFalse(filter1.equals(filter2));
+        assertNotEquals(filter1, ServiceFilter.NOTHING);
+        assertNotEquals(filter1, filter2);
         filter2 = ServiceFilter.valueOf("service");
-        assertFalse(filter1.equals(filter2));
+        assertNotEquals(filter1, filter2);
 
         filter1 = ServiceFilter.valueOf("service");
         filter2 = ServiceFilter.valueOf("service");
         assertEquals(filter1, filter2);
         filter2 = ServiceFilter.valueOf("service*1");
-        assertFalse(filter1.equals(filter2));
+        assertNotEquals(filter1, filter2);
 
         filter1 = ServiceFilter.valueOf("*service");
         filter2 = ServiceFilter.valueOf("*service");
         assertEquals(filter1, filter2);
         filter2 = ServiceFilter.valueOf("service*");
-        assertFalse(filter1.equals(filter2));
+        assertNotEquals(filter1, filter2);
     }
 
+    @Test
     public void testAtomAccept() {
         ServiceFilter filter = ServiceFilter.valueOf("");
         assertFalse(filter.accept("service"));
@@ -188,6 +198,7 @@ public class ServiceFilterTest extends TestCase {
         assertFalse(filter.accept("ServicePrintServ"));
     }
 
+    @Test
     public void testAtomIntersection() {
         ServiceFilter filter1 = ServiceFilter.valueOf("Service*");
         ServiceFilter filter2 = ServiceFilter.valueOf("Service");

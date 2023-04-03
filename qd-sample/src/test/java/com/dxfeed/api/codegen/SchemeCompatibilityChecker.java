@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -42,8 +42,8 @@ class SchemeCompatibilityChecker {
         this.feed = feed;
     }
 
-    <S extends EventType<?>, P extends EventType<?>> void checkEventPublishing(Class<S> subClass, Class<P> pubClass, Object symbol,
-        IntFunction<P> eventCreator, BiConsumer<P, S> eventChecker) throws Exception
+    <S extends EventType<?>, P extends EventType<?>> void checkEventPublishing(Class<S> subClass, Class<P> pubClass,
+        Object symbol, IntFunction<P> eventCreator, BiConsumer<P, S> eventChecker) throws Exception
     {
         BlockingQueue<Object> subAddQueue = new ArrayBlockingQueue<>(1);
         BlockingQueue<Object> subRemoveQueue = new ArrayBlockingQueue<>(1);

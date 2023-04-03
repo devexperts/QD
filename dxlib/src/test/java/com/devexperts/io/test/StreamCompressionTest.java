@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,7 +13,7 @@ package com.devexperts.io.test;
 
 import com.devexperts.io.ByteArrayOutput;
 import com.devexperts.io.StreamCompression;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -21,7 +21,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
-public class StreamCompressionTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+
+public class StreamCompressionTest {
+
+    @Test
     public void testString() {
         assertEquals(StreamCompression.NONE, StreamCompression.valueOf("NONE"));
         assertEquals(StreamCompression.NONE, StreamCompression.valueOf("None"));
@@ -41,8 +46,9 @@ public class StreamCompressionTest extends TestCase {
         assertEquals("gzip[level=1]", StreamCompression.valueOf("gzip[level=1]").toString());
     }
 
+    @Test
     public void testMimeType() {
-        assertEquals(null, StreamCompression.NONE.getMimeType());
+        assertNull(StreamCompression.NONE.getMimeType());
         assertEquals("application/gzip", StreamCompression.GZIP.getMimeType());
         assertEquals("application/zip", StreamCompression.ZIP.getMimeType());
 
@@ -53,6 +59,7 @@ public class StreamCompressionTest extends TestCase {
         assertEquals(StreamCompression.ZIP, StreamCompression.detectCompressionByMimeType("application/zip"));
     }
 
+    @Test
     public void testExtension() {
         assertEquals("", StreamCompression.NONE.getExtension());
         assertEquals(".gz", StreamCompression.GZIP.getExtension());
@@ -65,16 +72,19 @@ public class StreamCompressionTest extends TestCase {
         assertEquals(StreamCompression.ZIP, StreamCompression.detectCompressionByExtension("file.zip"));
     }
 
+    @Test
     public void testNoneCompression() throws IOException {
         checkCompression(StreamCompression.NONE, "This is a test");
         checkCompression(StreamCompression.NONE, "");
     }
 
+    @Test
     public void testGZipCompression() throws IOException {
         checkCompression(StreamCompression.GZIP, "This is a test");
         checkCompression(StreamCompression.GZIP, "");
     }
 
+    @Test
     public void testZipCompression() throws IOException {
         checkCompression(StreamCompression.ZIP, "This is a test");
         checkCompression(StreamCompression.ZIP, "");

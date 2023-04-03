@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -516,7 +516,7 @@ public class DumpTimestampConversionTest {
     public void setUp() throws Exception {
         ThreadCleanCheck.before();
         deleteFiles();
-        savedSchemeProp = (String) System.getProperties().setProperty(SCHEME_PROP, DumpSchemeProvider.class.getName());
+        savedSchemeProp = System.setProperty(SCHEME_PROP, DumpSchemeProvider.class.getName());
         TimeFormat.setDefaultTimeZone(TimeZone.getTimeZone("America/New_York"));
         QDFactory.setVersion("QDS-TEST");
     }
@@ -528,9 +528,9 @@ public class DumpTimestampConversionTest {
         QDFactory.setVersion(null);
         ThreadCleanCheck.after();
         if (savedSchemeProp == null) {
-            System.getProperties().remove(SCHEME_PROP);
+            System.clearProperty(SCHEME_PROP);
         } else {
-            System.getProperties().setProperty(SCHEME_PROP, savedSchemeProp);
+            System.setProperty(SCHEME_PROP, savedSchemeProp);
         }
     }
 
@@ -1762,5 +1762,4 @@ public class DumpTimestampConversionTest {
             return new DefaultScheme(PentaCodec.INSTANCE, sb.buildRecords());
         }
     }
-
 }

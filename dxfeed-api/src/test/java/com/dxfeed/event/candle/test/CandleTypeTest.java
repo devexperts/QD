@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,22 +12,17 @@
 package com.dxfeed.event.candle.test;
 
 import com.dxfeed.event.candle.CandleType;
-import junit.framework.TestCase;
-import org.junit.Assert;
+import org.junit.Test;
 
-public class CandleTypeTest extends TestCase {
+import static org.junit.Assert.assertThrows;
+
+public class CandleTypeTest {
+
+    @Test
     public void testCandleTypeEIsNotSupported() {
-        try {
-            CandleType.valueOf("E");
-            Assert.fail("Candle Type 'E' is not supported");
-        } catch (IllegalArgumentException ignored) {
-            // ignore
-        }
-        try {
-            CandleType.valueOf("e");
-            Assert.fail("Candle Type 'e' is not supported");
-        } catch (IllegalArgumentException ignored) {
-            // ignore
-        }
+        assertThrows("Candle Type 'E' is not supported", IllegalArgumentException.class,
+            () -> CandleType.valueOf("E"));
+        assertThrows("Candle Type 'e' is not supported", IllegalArgumentException.class,
+            () -> CandleType.valueOf("e"));
     }
 }

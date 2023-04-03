@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -29,8 +29,7 @@ import com.devexperts.qd.qtp.socket.ServerSocketTestHelper;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.test.TestDataScheme;
 import com.dxfeed.promise.Promise;
-import junit.framework.TestCase;
-import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,10 +37,15 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-public class MessageConnectorsTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+public class MessageConnectorsTest {
     DataScheme scheme = new TestDataScheme();
     QDTicker ticker = QDFactory.getDefaultFactory().createTicker(scheme);
 
+    @Test
     public void testDistributorServerConnectorWithLegacyFilter() {
         ConfigurableMessageAdapterFactory originalFactory = new DistributorAdapter.Factory(ticker);
         List<MessageConnector> connectors = MessageConnectors.createMessageConnectors(originalFactory,
@@ -61,6 +65,7 @@ public class MessageConnectorsTest extends TestCase {
         assertEquals("ServerSocket-Distributor[TEST]", connector.getName());
     }
 
+    @Test
     public void testDistributorServerConnectorWithPropertyFilter() {
         ConfigurableMessageAdapterFactory originalFactory = new DistributorAdapter.Factory(ticker);
         List<MessageConnector> connectors = MessageConnectors.createMessageConnectors(originalFactory,
@@ -80,6 +85,7 @@ public class MessageConnectorsTest extends TestCase {
         assertEquals("ServerSocket-Distributor[TEST]", connector.getName());
     }
 
+    @Test
     public void testUniqueNames() {
         ConfigurableMessageAdapterFactory originalFactory = new DistributorAdapter.Factory(ticker);
         List<MessageConnector> connectors = MessageConnectors.createMessageConnectors(originalFactory,
@@ -100,10 +106,12 @@ public class MessageConnectorsTest extends TestCase {
         assertEquals("ClientSocket-Distributor-1", connectors.get(3).getName());
     }
 
+    @Test
     public void testSpecialCharactersInPassword() {
         ConfigurableMessageAdapterFactory originalFactory = new DistributorAdapter.Factory(ticker);
         List<MessageConnector> connectors = MessageConnectors.createMessageConnectors(originalFactory,
-            "(ssl[trustStorePassword=!it+can@be-complex]+:1234[user=name,password=has@special+characters!])", QDStats.VOID);
+            "(ssl[trustStorePassword=!it+can@be-complex]+:1234[user=name,password=has@special+characters!])",
+            QDStats.VOID);
         assertEquals(1, connectors.size());
 
         // check attributes
@@ -115,31 +123,39 @@ public class MessageConnectorsTest extends TestCase {
             connectors.get(0).getFactory().getClass().getName());
     }
 
+    @Test
     public void testServerSocketMaxConnections() throws InterruptedException {
         checkMaxConnectionsForParticularServerAddress(":", 2, "maxConnections=" + 2);
     }
 
+    @Test
     public void testServerSocketUnlimitedMaxConnectionsNoOpt() throws InterruptedException {
         checkMaxConnectionsForParticularServerAddress(":", 0, "");
     }
 
+    @Test
     public void testServerSocketUnlimitedMaxConnections() throws InterruptedException {
         checkMaxConnectionsForParticularServerAddress(":", 0, "maxConnections=" + 0);
     }
 
+    @Test
     public void testNioServerSocketMaxConnections() throws InterruptedException {
         checkMaxConnectionsForParticularServerAddress("nio::", 2, "maxConnections=" + 2);
     }
 
+    @Test
     public void testNioServerSocketUnlimitedMaxConnectionsNoOpt() throws InterruptedException {
         checkMaxConnectionsForParticularServerAddress("nio::", 0, "");
     }
 
+    @Test
     public void testNioServerSocketUnlimitedMaxConnections() throws InterruptedException {
         checkMaxConnectionsForParticularServerAddress("nio::", 0, "maxConnections=" + 0);
     }
 
-    private void checkMaxConnectionsForParticularServerAddress(String prefix, int maxConnectionsVal, String maxConnectionsOpt) throws InterruptedException {
+    private void checkMaxConnectionsForParticularServerAddress(String prefix, int maxConnectionsVal,
+        String maxConnectionsOpt) throws InterruptedException
+    {
         String testID = UUID.randomUUID().toString();
         Promise<Integer> port = ServerSocketTestHelper.createPortPromise(testID);
         QDEndpoint outEndpoint = createEndpoint();
@@ -150,9 +166,9 @@ public class MessageConnectorsTest extends TestCase {
         );
         outEndpoint.startConnectors();
 
-        Assert.assertEquals(1, outEndpoint.getConnectors().size());
+        assertEquals(1, outEndpoint.getConnectors().size());
         MessageConnector connector = outEndpoint.getConnectors().get(0);
-        Assert.assertEquals(0, connector.getConnectionCount());
+        assertEquals(0, connector.getConnectionCount());
 
         int maxConnections = maxConnectionsVal == 0 ? 2 : maxConnectionsVal;
 
@@ -177,9 +193,9 @@ public class MessageConnectorsTest extends TestCase {
                 Thread.sleep(1);
                 waitTime++;
                 if (waitTime > 1000)
-                    Assert.fail("Not allowed connection was not closed");
+                    fail("Not allowed connection was not closed");
             }
-            Assert.assertTrue(inConnector.getClosedConnectionCount() > 0);
+            assertTrue(inConnector.getClosedConnectionCount() > 0);
         }
 
         for (QDEndpoint in : inEndpoints) {
@@ -190,12 +206,16 @@ public class MessageConnectorsTest extends TestCase {
         outEndpoint.close();
     }
 
-    protected long waitForConnection(long waitTime, MessageConnector connector, int connectionCount) throws InterruptedException {
-        while (connector.getState() != MessageConnectorState.CONNECTED && connector.getConnectionCount() != connectionCount) {
+    protected long waitForConnection(long waitTime, MessageConnector connector, int connectionCount)
+        throws InterruptedException
+    {
+        while (connector.getState() != MessageConnectorState.CONNECTED &&
+            connector.getConnectionCount() != connectionCount)
+        {
             Thread.sleep(1);
             waitTime += 1;
             if (waitTime > 1000)
-                Assert.fail("Test timeout, couldn't connect to endpoint");
+                fail("Test timeout, couldn't connect to endpoint");
         }
         return waitTime;
     }
@@ -217,5 +237,4 @@ public class MessageConnectorsTest extends TestCase {
             .withCollectors(Collections.singletonList(QDContract.TICKER))
             .build();
     }
-
 }

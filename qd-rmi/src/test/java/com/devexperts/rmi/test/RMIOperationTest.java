@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,7 +13,7 @@ package com.devexperts.rmi.test;
 
 import com.devexperts.rmi.RMIOperation;
 import com.dxfeed.promise.Promise;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -22,22 +22,20 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
-public class RMIOperationTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+
+public class RMIOperationTest {
 
     interface Bar {
         float foo(int n, String str, List<Integer> lists, Thread... threads) throws IOException;
     }
 
-    public void testOperationSignatures() {
+    @Test
+    public void testOperationSignatures() throws NoSuchMethodException {
         Method method;
         @SuppressWarnings("rawtypes")
         Class[] paramTypes = {int.class, String.class, List.class, Thread[].class};
-        try {
-            method = Bar.class.getMethod("foo", paramTypes);
-        } catch (NoSuchMethodException e) {
-            fail();
-            return;
-        }
+        method = Bar.class.getMethod("foo", paramTypes);
         String serviceName = "com.devexperts.rmi.test.RMIOperationTest$Bar";
         List<RMIOperation<?>> ops = new ArrayList<>();
         ops.add(RMIOperation.valueOf(Bar.class, method));
@@ -54,14 +52,9 @@ public class RMIOperationTest extends TestCase {
         Promise<Integer> bar(int a, int b);
     }
 
+    @Test
     public void testOperationWithPromise() throws NoSuchMethodException {
-        Method method;
-        try {
-            method = Foo.class.getMethod("bar", int.class, int.class);
-        } catch (NoSuchMethodException e) {
-            fail();
-            return;
-        }
+        Method method = Foo.class.getMethod("bar", int.class, int.class);
         RMIOperation<?> op = RMIOperation.valueOf(Foo.class.getName(), method);
         String signature =  Foo.class.getName() + "#bar(int,int):java.lang.Integer";
         assertEquals(op.getSignature(), signature);
@@ -71,14 +64,9 @@ public class RMIOperationTest extends TestCase {
         Promise<Collection<String>> hack(Set<Integer> set);
     }
 
-    public void testRawTypes() {
-        Method method;
-        try {
-            method = Hack.class.getMethod("hack", Set.class);
-        } catch (NoSuchMethodException e) {
-            fail();
-            return;
-        }
+    @Test
+    public void testRawTypes() throws NoSuchMethodException {
+        Method method = Hack.class.getMethod("hack", Set.class);
         RMIOperation<?> op = RMIOperation.valueOf(Hack.class.getName(), method);
         String signature =  Hack.class.getName() + "#hack(java.util.Set):java.util.Collection";
         assertEquals(op.getSignature(), signature);

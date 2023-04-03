@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -44,7 +44,8 @@ import static org.junit.Assert.fail;
 public abstract class AbstractRMICustomBalancingTest {
     private static final Logging log = Logging.getLogging(AbstractRMICustomBalancingTest.class);
 
-    private static final String DEFAULT_BALANCING_DISABLED = "com.devexperts.rmi.impl.DefaultLoadBalancerFactory.disable";
+    private static final String DEFAULT_BALANCING_DISABLED =
+        "com.devexperts.rmi.impl.DefaultLoadBalancerFactory.disable";
     private ScheduledExecutorService scheduler = new ScheduledThreadPoolExecutor(1);
 
     @Rule
@@ -76,11 +77,11 @@ public abstract class AbstractRMICustomBalancingTest {
     }
 
     void enableDefaultBalancing() {
-        System.getProperties().remove(DEFAULT_BALANCING_DISABLED);
+        System.clearProperty(DEFAULT_BALANCING_DISABLED);
     }
 
     void disableDefaultBalancing() {
-        System.getProperties().setProperty(DEFAULT_BALANCING_DISABLED, "true");
+        System.setProperty(DEFAULT_BALANCING_DISABLED, "true");
     }
 
     static void assertRoute(List<EndpointId> actualRoute, EndpointId... expectedRoute) {

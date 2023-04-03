@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -31,7 +31,8 @@ public class SubscriptionStress implements Runnable {
     private static final int MAX_TIMES = 100;
 
     private static final Random BASE_RND = new Random(20100102);
-    private static final TestDataScheme SCHEME = new TestDataScheme(RECORDS, BASE_RND.nextLong(), TestDataScheme.Type.SIMPLE);
+    private static final TestDataScheme SCHEME =
+        new TestDataScheme(RECORDS, BASE_RND.nextLong(), TestDataScheme.Type.SIMPLE);
 
     public static void main(String[] args) throws InterruptedException {
         new SubscriptionStress().go();

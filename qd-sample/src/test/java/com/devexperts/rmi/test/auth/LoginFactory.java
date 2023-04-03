@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -67,8 +67,9 @@ public class LoginFactory implements QDLoginHandlerFactory {
         @Override
         public Promise<AuthToken> login(String reason) {
             log.info("START LOGIN");
-            RMIRequest<AuthToken> request = client.getClient().getPort(null)
-                .createRequest(SimpleAuthServer.GET_ACCESS_TOKEN, requestCount++ < errorLoginCount ? badUserPassword : goodUserPassword);
+            RMIRequest<AuthToken> request = client.getClient().getPort(null).createRequest(
+                SimpleAuthServer.GET_ACCESS_TOKEN,
+                requestCount++ < errorLoginCount ? badUserPassword : goodUserPassword);
             Promise<AuthToken> tokenPromise = new Promise<>();
             tokenPromise.whenDone(promise -> {
                 if (promise.isCancelled()) {

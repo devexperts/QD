@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,21 +14,36 @@ package com.devexperts.qd.test;
 import com.devexperts.io.ByteArrayInput;
 import com.devexperts.io.ByteArrayOutput;
 import com.devexperts.io.IOUtil;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.IOException;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /**
  * This is test fixture and test routines for CompactInt class.
  */
-public class CompactIntTest extends TestCase {
-    public CompactIntTest(String name) {
-        super(name);
-    }
+public class CompactIntTest {
 
     private ByteArrayInput in;
     private ByteArrayOutput out;
 
+    @Before
+    public void setUp() {
+        out = new ByteArrayOutput(1024);
+        in = new ByteArrayInput(out.getBuffer());
+    }
+
+    @After
+    public void tearDown() {
+        in = null;
+        out = null;
+    }
+
+    @Test
     public void testInt() {
         for (int i = 0; i >= 0; i += Math.max(1, i / 1000)) {
             helpTestInt(i);
@@ -36,6 +51,7 @@ public class CompactIntTest extends TestCase {
         }
     }
 
+    @Test
     public void testLong() {
         for (long i = 0; i >= 0; i += Math.max(1, i / 1000)) {
             helpTestLong(i);
@@ -52,8 +68,10 @@ public class CompactIntTest extends TestCase {
             int x = IOUtil.readCompactInt(in);
             assertEquals(out.getPosition(), in.getPosition());
             assertEquals(out.getPosition(), IOUtil.getCompactLength(n));
-            if (x != n)
-                fail("error: [" + n + " = " + Integer.toHexString(n) + "] became [" + x + " = " + Integer.toHexString(x) + "]");
+            if (x != n) {
+                fail("error: [" + n + " = " + Integer.toHexString(n) + "] became [" +
+                    x + " = " + Integer.toHexString(x) + "]");
+            }
             int p = out.getPosition();
             out.writeCompactInt(n);
             assertEquals(out.getPosition() - p, p);
@@ -62,8 +80,10 @@ public class CompactIntTest extends TestCase {
             in.setLimit(out.getPosition());
             x = in.readCompactInt();
             assertEquals(out.getPosition(), in.getPosition());
-            if (x != n)
-                fail("error: [" + n + " = " + Integer.toHexString(n) + "] became [" + x + " = " + Integer.toHexString(x) + "]");
+            if (x != n) {
+                fail("error: [" + n + " = " + Integer.toHexString(n) + "] became [" +
+                    x + " = " + Integer.toHexString(x) + "]");
+            }
         } catch (IOException e) {
             fail(e.toString());
         }
@@ -77,8 +97,10 @@ public class CompactIntTest extends TestCase {
             in.setLimit(out.getPosition());
             long x = IOUtil.readCompactLong(in);
             assertEquals(out.getPosition(), in.getPosition());
-            if (x != n)
-                fail("error: [" + n + " = " + Long.toHexString(n) + "] became [" + x + " = " + Long.toHexString(x) + "]");
+            if (x != n) {
+                fail("error: [" + n + " = " + Long.toHexString(n) + "] became [" +
+                    x + " = " + Long.toHexString(x) + "]");
+            }
             int p = out.getPosition();
             out.writeCompactLong(n);
             assertEquals(out.getPosition() - p, p);
@@ -87,20 +109,12 @@ public class CompactIntTest extends TestCase {
             in.setLimit(out.getPosition());
             x = in.readCompactLong();
             assertEquals(out.getPosition(), in.getPosition());
-            if (x != n)
-                fail("error: [" + n + " = " + Long.toHexString(n) + "] became [" + x + " = " + Long.toHexString(x) + "]");
+            if (x != n) {
+                fail("error: [" + n + " = " + Long.toHexString(n) + "] became [" +
+                    x + " = " + Long.toHexString(x) + "]");
+            }
         } catch (IOException e) {
             fail(e.toString());
         }
-    }
-
-    protected void setUp() {
-        out = new ByteArrayOutput(1024);
-        in = new ByteArrayInput(out.getBuffer());
-    }
-
-    protected void tearDown() {
-        in = null;
-        out = null;
     }
 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -34,7 +34,6 @@ import com.devexperts.qd.qtp.file.FileReaderParams;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Date;
@@ -91,6 +90,6 @@ public class FileConnectorTestUtils {
     }
 
     public static void writeTextFile(File file, String... lines) throws IOException {
-        Files.write(file.toPath(), Arrays.asList(lines), StandardCharsets.UTF_8);
+        Files.write(file.toPath(), Arrays.asList(lines));
     }
 }

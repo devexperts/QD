@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,9 +22,11 @@ import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.ng.AbstractRecordSink;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class HistoryPerformanceTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+
+public class HistoryPerformanceTest {
     // N is so big that N*N behavior will effectively "hang" this test.
     private static final int N = 30000;
 
@@ -32,6 +34,7 @@ public class HistoryPerformanceTest extends TestCase {
     private static final DataRecord RECORD = SCHEME.getRecord(0);
     private static final SymbolCodec CODEC = SCHEME.getCodec();
 
+    @Test
     public void testDataRetrieve() {
         String[] symbols = genSymbols();
         QDHistory history = QDFactory.getDefaultFactory().createHistory(SCHEME);
@@ -47,8 +50,8 @@ public class HistoryPerformanceTest extends TestCase {
             for (int i = 0; i < N; i++) {
                 agent.retrieveData(sink);
                 assertEquals(1, sink.count);
-                assertEquals(symbols[i], sink.last_symbol);
-                assertEquals(time, sink.last_time);
+                assertEquals(symbols[i], sink.lastSymbol);
+                assertEquals(time, sink.lastTime);
                 sink.count = 0;
             }
         }
@@ -77,8 +80,8 @@ public class HistoryPerformanceTest extends TestCase {
 
     private static class OneRecordSink extends AbstractRecordSink {
         int count;
-        String last_symbol;
-        long last_time;
+        String lastSymbol;
+        long lastTime;
 
         OneRecordSink() {}
 
@@ -89,8 +92,8 @@ public class HistoryPerformanceTest extends TestCase {
 
         public void append(RecordCursor cursor) {
             count++;
-            last_symbol = CODEC.decode(cursor.getCipher(), cursor.getSymbol());
-            last_time = cursor.getTime();
+            lastSymbol = CODEC.decode(cursor.getCipher(), cursor.getSymbol());
+            lastTime = cursor.getTime();
         }
     }
 }

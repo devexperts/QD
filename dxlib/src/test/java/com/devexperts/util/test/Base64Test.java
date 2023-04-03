@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,32 +12,23 @@
 package com.devexperts.util.test;
 
 import com.devexperts.util.Base64;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Random;
 
-public class Base64Test extends TestCase {
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.fail;
 
+public class Base64Test {
+
+    @Test
     public void testBase64() {
-        try {
-            new Base64("short alphabet");
-            fail();
-        } catch (Exception e) {
-            System.out.println(e);
-        }
-        try {
-            new Base64("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789++=");
-            fail();
-        } catch (Exception e) {
-            System.out.println(e);
-        }
-        try {
-            new Base64("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/+");
-            fail();
-        } catch (Exception e) {
-            System.out.println(e);
-        }
+        assertThrows(Exception.class, () -> new Base64("short alphabet"));
+        assertThrows(Exception.class,
+            () -> new Base64("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789++="));
+        assertThrows(Exception.class,
+            () -> new Base64("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/+"));
         doTest(Base64.DEFAULT);
         doTest(Base64.URLSAFE);
         doTest(new Base64("EZ7KG_r4d0-SUQnzmiFawucD6YCpfVqWeo1T35OIxyMh9jsNvJAPkB2Lglt8XHRb+"));
@@ -55,16 +46,23 @@ public class Base64Test extends TestCase {
             if (strUnpadded.indexOf(pad) >= 0)
                 fail(basePadded.getAlphabet() + " for " + Arrays.toString(src) + ": " + strUnpadded + " contains pad");
             StringBuilder sb = new StringBuilder(strUnpadded);
-            while (sb.length() < strPadded.length())
+            while (sb.length() < strPadded.length()) {
                 sb.append(pad);
-            if (!strPadded.equals(sb.toString()))
-                fail(basePadded.getAlphabet() + " for " + Arrays.toString(src) + ": " + strPadded + " does not extend " + strUnpadded);
+            }
+            if (!strPadded.equals(sb.toString())) {
+                fail(basePadded.getAlphabet() + " for " + Arrays.toString(src) + ": " +
+                    strPadded + " does not extend " + strUnpadded);
+            }
             byte[] padded = basePadded.decode(strPadded);
-            if (!Arrays.equals(src, padded))
-                fail(basePadded.getAlphabet() + " for " + Arrays.toString(src) + ": padded " + strPadded + " decodes to " + Arrays.toString(padded));
+            if (!Arrays.equals(src, padded)) {
+                fail(basePadded.getAlphabet() + " for " + Arrays.toString(src) + ": padded " +
+                    strPadded + " decodes to " + Arrays.toString(padded));
+            }
             byte[] unpadded = baseUnpadded.decode(strUnpadded);
-            if (!Arrays.equals(src, unpadded))
-                fail(basePadded.getAlphabet() + " for " + Arrays.toString(src) + ": unpadded " + strUnpadded + " decodes to " + Arrays.toString(unpadded));
+            if (!Arrays.equals(src, unpadded)) {
+                fail(basePadded.getAlphabet() + " for " + Arrays.toString(src) + ": unpadded " +
+                    strUnpadded + " decodes to " + Arrays.toString(unpadded));
+            }
         }
     }
 }

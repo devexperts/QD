@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -19,7 +19,7 @@ import com.dxfeed.api.osub.ObservableSubscriptionChangeListener;
 import com.dxfeed.api.osub.TimeSeriesSubscriptionSymbol;
 import com.dxfeed.event.market.Quote;
 import com.dxfeed.event.market.TimeAndSale;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -28,7 +28,11 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 
-public class DXFeedSubscriptionTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+public class DXFeedSubscriptionTest {
     private static int serialRecv;
     private static int nonSerialRecv;
 
@@ -39,6 +43,7 @@ public class DXFeedSubscriptionTest extends TestCase {
     }
 
     @SuppressWarnings({"unchecked"})
+    @Test
     public void testSerialization() throws Exception {
         // allow direct access to package-private "processEvents" for testing purposes
 
@@ -60,6 +65,7 @@ public class DXFeedSubscriptionTest extends TestCase {
         assertEquals(1, nonSerialRecv);
     }
 
+    @Test
     public void testRemoveListeners() throws Exception {
         // allow direct access to package-private "processEvents" for testing purposes
 
@@ -124,6 +130,7 @@ public class DXFeedSubscriptionTest extends TestCase {
         }
     }
 
+    @Test
     public void testSymbolSet() {
         DXFeedSubscription<TimeAndSale> sub = new DXFeedSubscription<>(TimeAndSale.class);
         MySubscriptionChangeListener cl = new MySubscriptionChangeListener(sub);
@@ -146,19 +153,19 @@ public class DXFeedSubscriptionTest extends TestCase {
         cl.assertRemoved();
         cl.assertSub(s1, s2);
 
-        String s1_new = new String(s1); // new instance of the same string! --> no notification
-        sub.addSymbols(s1_new);
+        String s1New = new String(s1); // new instance of the same string! --> no notification
+        sub.addSymbols(s1New);
         cl.assertAdded();
         cl.assertRemoved();
-        cl.assertSub(s1_new, s2); // but replaced in sub set
-        s1 = s1_new;
+        cl.assertSub(s1New, s2); // but replaced in sub set
+        s1 = s1New;
 
-        s1_new = new String(s1); // new instance of the same string! --> no notification
-        sub.setSymbols(s1_new, s2);
+        s1New = new String(s1); // new instance of the same string! --> no notification
+        sub.setSymbols(s1New, s2);
         cl.assertAdded();
         cl.assertRemoved();
-        cl.assertSub(s1_new, s2); // but replaced in sub set
-        s1 = s1_new;
+        cl.assertSub(s1New, s2); // but replaced in sub set
+        s1 = s1New;
 
         sub.addSymbols(s1, s2);
         cl.assertAdded();

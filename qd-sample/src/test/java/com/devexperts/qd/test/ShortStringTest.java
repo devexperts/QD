@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,9 +12,14 @@
 package com.devexperts.qd.test;
 
 import com.devexperts.qd.util.ShortString;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class ShortStringTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+public class ShortStringTest {
+
+    @Test
     public void testEncode() {
         assertEquals(0, ShortString.encode(null));
         assertEquals(0, ShortString.encode(""));
@@ -28,6 +33,7 @@ public class ShortStringTest extends TestCase {
         assertEquals(0x4142434445464748L, ShortString.encode("ABCDEFGH"));
     }
 
+    @Test
     public void testDecode() {
         assertEquals(null, ShortString.decode(0));
         assertEquals("A", ShortString.decode(0x0000000000000041L));
@@ -43,6 +49,7 @@ public class ShortStringTest extends TestCase {
         assertEquals("ABCDEFGH", ShortString.decode(0x4142434445464748L));
     }
 
+    @Test
     public void testDecodeCache() {
         String s = ShortString.decode(0x4142L);
         assertEquals("AB", s);
@@ -55,6 +62,7 @@ public class ShortStringTest extends TestCase {
         checkDecodeCache(s, 0x4100000000000042L, 0);
     }
 
+    @Test
     public void testInt() {
         for (int i = -12345; i <= 12345; i++) {
             long code = ShortString.encodeInt(i);

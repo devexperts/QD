@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,12 +12,16 @@
 package com.devexperts.qd.test;
 
 import com.devexperts.qd.tools.analysis.PrefixCode;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.PriorityQueue;
 import java.util.Random;
 
-public class PrefixCodeTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+
+public class PrefixCodeTest {
+
+    @Test
     public void test1() {
         PrefixCode code = new PrefixCode();
         code.build(new long[] { 1, 2 }, 10);
@@ -29,6 +33,7 @@ public class PrefixCodeTest extends TestCase {
         assertEquals(1, code.getIndex(1));
     }
 
+    @Test
     public void test2() {
         PrefixCode code = new PrefixCode();
         code.build(new long[] { 1, 2, 4 }, 10);
@@ -43,6 +48,7 @@ public class PrefixCodeTest extends TestCase {
         assertEquals(1, code.getIndex(2));
     }
 
+    @Test
     public void testBalance() {
         int b = 10;
         int n = 1 << b;
@@ -58,6 +64,7 @@ public class PrefixCodeTest extends TestCase {
             assertEquals(b, code.getBitCount(i));
     }
 
+    @Test
     public void testRandom() {
         int n = 1000;
         Random rnd = new Random(1234);
@@ -101,7 +108,7 @@ public class PrefixCodeTest extends TestCase {
         }
 
         public int compareTo(Node o) {
-            return w < o.w ? -1 : w > o.w ? 1 : 0;
+            return Long.compare(w, o.w);
         }
     }
 }

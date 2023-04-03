@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,14 +20,18 @@ import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.OrderSource;
 import com.dxfeed.event.market.Scope;
 import com.dxfeed.event.market.Side;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Collections;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-public class OrderEventFlagsTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+
+public class OrderEventFlagsTest {
     private static final int PORT = 4455;
     private static final String SYMBOL = "IBM";
     private static final String MARKET_MAKER = "TEST";
@@ -38,26 +42,28 @@ public class OrderEventFlagsTest extends TestCase {
     private final BlockingQueue<Object> subQueue = new ArrayBlockingQueue<>(10);
     private final BlockingQueue<Order> orderQeuue = new ArrayBlockingQueue<>(10);
 
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         ThreadCleanCheck.before();
         publisherEndpoint = DXEndpoint.create(DXEndpoint.Role.PUBLISHER);
         feedEndpoint = DXEndpoint.create(DXEndpoint.Role.FEED);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         feedEndpoint.close();
         publisherEndpoint.close();
         ThreadCleanCheck.after();
     }
 
     @SuppressWarnings("unchecked")
+    @Test
     public void testOrderEventFlags() throws InterruptedException {
         publisherEndpoint.connect(":" + PORT);
         feedEndpoint.connect("localhost:" + PORT);
 
-        IndexedEventSubscriptionSymbol<String> expectedSubSymbol = new IndexedEventSubscriptionSymbol<>(SYMBOL, OrderSource.DEFAULT);
+        IndexedEventSubscriptionSymbol<String> expectedSubSymbol =
+            new IndexedEventSubscriptionSymbol<>(SYMBOL, OrderSource.DEFAULT);
 
         DXFeedSubscription<Order> sub = feedEndpoint.getFeed().createSubscription(Order.class);
         sub.addEventListener(orderQeuue::addAll);
@@ -68,7 +74,8 @@ public class OrderEventFlagsTest extends TestCase {
 
         // wait until expected symbol sub is received
         while (true) {
-            IndexedEventSubscriptionSymbol<String> subSymbol = (IndexedEventSubscriptionSymbol<String>) subQueue.poll(10, TimeUnit.SECONDS);
+            IndexedEventSubscriptionSymbol<String> subSymbol =
+                (IndexedEventSubscriptionSymbol<String>) subQueue.poll(10, TimeUnit.SECONDS);
             if (expectedSubSymbol.equals(subSymbol))
                 break;
         }
@@ -84,7 +91,8 @@ public class OrderEventFlagsTest extends TestCase {
         Order got1 = orderQeuue.poll(10, TimeUnit.SECONDS);
         assertEquals(SYMBOL, got1.getEventSymbol());
         assertEquals(0, got1.getIndex());
-        assertEquals(IndexedEvent.SNAPSHOT_BEGIN | IndexedEvent.SNAPSHOT_END | IndexedEvent.REMOVE_EVENT, got1.getEventFlags());
+        assertEquals(
+            IndexedEvent.SNAPSHOT_BEGIN | IndexedEvent.SNAPSHOT_END | IndexedEvent.REMOVE_EVENT, got1.getEventFlags());
         // the other fields will get lost, because of remove event
 
         // Publish regular order
@@ -102,7 +110,7 @@ public class OrderEventFlagsTest extends TestCase {
         assertEquals(Side.BUY, got2.getOrderSide());
         assertEquals(MARKET_MAKER, got2.getMarketMaker());
         assertEquals(Scope.ORDER, got2.getScope());
-        assertEquals(123.45, got2.getPrice());
+        assertEquals(123.45, got2.getPrice(), 0.0);
         assertEquals(67, got2.getSize());
         assertEquals(1, got2.getIndex());
         assertEquals(0, got2.getEventFlags());

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -92,7 +92,8 @@ public class ChannelShaperTest {
 
     private static final QDFilter KEEP_REJECTED_FILTER = CompositeFilters.valueOf(KEEP_REJECTED + "*", SCHEME);
     private static final QDFilter KEEP_REJECTED_ONLY_FILTER = CompositeFilters.valueOf(KEEP_REJECTED, SCHEME);
-    private static final QDFilter KEEP_REJECTED_WITH_INIT_FILTER = CompositeFilters.valueOf(KEEP_REJECTED + "*," + KEEP_INIT_REJECTED, SCHEME);
+    private static final QDFilter KEEP_REJECTED_WITH_INIT_FILTER = CompositeFilters.valueOf(
+        KEEP_REJECTED + "*," + KEEP_INIT_REJECTED, SCHEME);
 
     // ------------- data source -------------
 
@@ -103,18 +104,22 @@ public class ChannelShaperTest {
     private double lastPrice = 12.34;
 
     {
-        distributor.getAddedRecordProvider().setRecordListener(provider -> provider.retrieve(new AbstractRecordSink() {
-            @Override
-            public void append(RecordCursor cursor) {
-                addSubQueue.add(cursor.getDecodedSymbol());
+        distributor.getAddedRecordProvider().setRecordListener(provider -> provider.retrieve(
+            new AbstractRecordSink() {
+                @Override
+                public void append(RecordCursor cursor) {
+                    addSubQueue.add(cursor.getDecodedSymbol());
+                }
             }
-        }));
-        distributor.getRemovedRecordProvider().setRecordListener(provider -> provider.retrieve(new AbstractRecordSink() {
-            @Override
-            public void append(RecordCursor cursor) {
-                remSubQueue.add(cursor.getDecodedSymbol());
+        ));
+        distributor.getRemovedRecordProvider().setRecordListener(provider -> provider.retrieve(
+            new AbstractRecordSink() {
+                @Override
+                public void append(RecordCursor cursor) {
+                    remSubQueue.add(cursor.getDecodedSymbol());
+                }
             }
-        }));
+        ));
 
     }
 
@@ -443,5 +448,4 @@ public class ChannelShaperTest {
             return delegate.toString();
         }
     }
-
 }

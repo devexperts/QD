@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,11 +12,16 @@
 package com.devexperts.qd.test;
 
 import com.devexperts.qd.util.Decimal;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.Random;
 
-public class DecimalParseTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+public class DecimalParseTest {
+
+    @Test
     public void testSpecialCases() {
         // large numbers (infinity)
         assertEquals(Decimal.POSITIVE_INFINITY, Decimal.parseDecimal("123456789123456789"));
@@ -26,6 +31,7 @@ public class DecimalParseTest extends TestCase {
         assertEquals(Decimal.ZERO, Decimal.parseDecimal("-0.000000001"));
     }
 
+    @Test
     public void testParseDecimalListed() {
         assertEquals(Decimal.parseDecimal("  1234  ".toCharArray(), 0, 8), Decimal.compose(1234));
         Random r = new Random(1);
@@ -50,6 +56,7 @@ public class DecimalParseTest extends TestCase {
         check(Double.NaN, r);
     }
 
+    @Test
     public void testParseDecimalRnd() {
         double[] pow10 = new double[6];
         pow10[0] = 1;

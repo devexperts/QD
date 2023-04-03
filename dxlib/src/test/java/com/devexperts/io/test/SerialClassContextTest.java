@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,7 +13,7 @@ package com.devexperts.io.test;
 
 import com.devexperts.io.IOUtil;
 import com.devexperts.io.SerialClassContext;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -22,13 +22,24 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executor;
 
-public class SerialClassContextTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+public class SerialClassContextTest {
+
+    @Test
     public void testEmptySerialContext() {
-        SerialClassContext context1 = SerialClassContext.createSerialClassContext(null, null, null);
-        SerialClassContext context2 = SerialClassContext.createSerialClassContext(null, Collections.singleton("*"), null);
-        SerialClassContext context3 = SerialClassContext.createSerialClassContext(null, null, Collections.singleton(""));
-        SerialClassContext context4 = SerialClassContext.createSerialClassContext(null, Collections.singleton("*"), Collections.singleton(""));
+        SerialClassContext context1 =
+            SerialClassContext.createSerialClassContext(null, null, null);
+        SerialClassContext context2 =
+            SerialClassContext.createSerialClassContext(null, Collections.singleton("*"), null);
+        SerialClassContext context3 =
+            SerialClassContext.createSerialClassContext(null, null, Collections.singleton(""));
+        SerialClassContext context4 =
+            SerialClassContext.createSerialClassContext(null, Collections.singleton("*"), Collections.singleton(""));
         assertEquals(context1, context2);
         assertEquals(context1, context3);
         assertEquals(context1, context4);
@@ -48,6 +59,7 @@ public class SerialClassContextTest extends TestCase {
         checkAccept(context, ClassLoader.class.getName());
     }
 
+    @Test
     public void testAddWhiteAndBlackClasses() {
         SerialClassContext context;
         String c1 = List.class.getName();
@@ -100,16 +112,21 @@ public class SerialClassContextTest extends TestCase {
         }
     }
 
+    @Test
     public void testDifferentClassLoader() {
         ClassLoader loader1 = getClass().getClassLoader();
         ClassLoader loader2 = new URLClassLoader(new URL[]{});
         ClassLoader loader3 = new URLClassLoader(new URL[]{});
-        assertFalse(SerialClassContext.getDefaultSerialContext(loader1).equals(SerialClassContext.getDefaultSerialContext(loader2)));
-        assertFalse(SerialClassContext.getDefaultSerialContext(loader1).equals(SerialClassContext.getDefaultSerialContext(loader3)));
-        assertFalse(SerialClassContext.getDefaultSerialContext(loader2).equals(SerialClassContext.getDefaultSerialContext(loader3)));
+        assertNotEquals(getDefault(loader1), getDefault(loader2));
+        assertNotEquals(getDefault(loader1), getDefault(loader3));
+        assertNotEquals(getDefault(loader2), getDefault(loader3));
 
-        assertTrue(SerialClassContext.getDefaultSerialContext(loader1).equals(SerialClassContext.getDefaultSerialContext(loader1)));
-        assertTrue(SerialClassContext.getDefaultSerialContext(loader2).equals(SerialClassContext.getDefaultSerialContext(loader2)));
-        assertTrue(SerialClassContext.getDefaultSerialContext(loader3).equals(SerialClassContext.getDefaultSerialContext(loader3)));
+        assertEquals(getDefault(loader1), getDefault(loader1));
+        assertEquals(getDefault(loader2), getDefault(loader2));
+        assertEquals(getDefault(loader3), getDefault(loader3));
+    }
+
+    private static SerialClassContext getDefault(ClassLoader cl) {
+        return SerialClassContext.getDefaultSerialContext(cl);
     }
 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -25,7 +25,7 @@ import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDTicker;
 import com.devexperts.qd.SubscriptionBuffer;
 import com.devexperts.qd.ng.RecordBuffer;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -36,16 +36,20 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-public class LockTimeoutTest extends TestCase {
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+public class LockTimeoutTest {
     private static final DataScheme SCHEME = new TestDataScheme(20091005);
     private static final int SYM_A = SCHEME.getCodec().encode("A");
     private static final DataRecord RECORD = SCHEME.getRecord(0);
 
     private static final String LOG_FILE = "LockTimeoutTest.log";
-    private static final Pattern LOG_PATTERN =
-        Pattern.compile(".*Ticker local lock is taking too long to acquire for setSub operation. Last operation was retData.*");
+    private static final Pattern LOG_PATTERN = Pattern.compile(
+        ".*Ticker local lock is taking too long to acquire for setSub operation. Last operation was retData.*");
     private volatile boolean stopVisitor;
 
+    @Test
     public void testLockTooLongWarning() throws IOException {
         Logging.configureLogFile(LOG_FILE);
         QDTicker ticker = QDFactory.getDefaultFactory().createTicker(SCHEME);

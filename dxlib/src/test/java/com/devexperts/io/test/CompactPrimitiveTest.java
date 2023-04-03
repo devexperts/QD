@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,13 +13,14 @@ package com.devexperts.io.test;
 
 import com.devexperts.io.Marshalled;
 import com.devexperts.io.Marshaller;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.io.IOException;
 
-public class CompactPrimitiveTest extends TestCase {
+public class CompactPrimitiveTest {
 
-    public static void testCompactPrimitive() throws IOException {
+    @Test
+    public void testCompactPrimitive() throws IOException {
         checkReadWrite(null, void.class);
         checkReadWrite(true, boolean.class);
         checkReadWrite((byte) 123, byte.class);

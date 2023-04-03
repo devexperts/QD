@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,7 +12,8 @@
 package com.devexperts.qd.tools.test;
 
 import com.devexperts.qd.tools.Tools;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Test;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -20,19 +21,25 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 /**
  * Tests simple transformations with instruments tool.
  */
-public class InstrumentsTransformTest extends TestCase {
+public class InstrumentsTransformTest {
     private static final File IN_FILE = new File("InstrumentsTransformTest.in.ipf");
     private static final File OUT_FILE = new File("InstrumentsTransformTest.out.ipf");
 
-    @Override
-    protected void tearDown() throws Exception {
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    @After
+    public void tearDown() throws Exception {
         IN_FILE.delete();
         OUT_FILE.delete();
     }
 
+    @Test
     public void testReplaceType() throws IOException {
         writeFile(IN_FILE,
             "#ETF::=TYPE,SYMBOL,DESCRIPTION,COUNTRY,OPOL,CURRENCY,TRADING_HOURS,BIST_ISSUE_SUBTYPE,BIST_STOCK_MARKET",

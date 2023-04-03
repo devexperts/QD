@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,39 +12,41 @@
 package com.devexperts.util.test;
 
 import com.devexperts.util.StringCache;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.Random;
 
-@SuppressWarnings({"RedundantCast", "RedundantStringConstructorCall"})
-public class StringCacheTest  extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 
-    public StringCacheTest(String s) {
-        super(s);
-    }
+@SuppressWarnings({"RedundantCast"})
+public class StringCacheTest {
 
+    @Test
     public void testSpecial() {
         StringCache sc = new StringCache();
         // certain methods (not all) support nulls
-        assertTrue(sc.get((String) null, false) == null);
-        assertTrue(sc.get((String) null, true) == null);
-        assertTrue(sc.get((CharSequence) null) == null);
-        assertTrue(sc.get((char[]) null) == null);
-        assertTrue(sc.getASCII((byte[]) null) == null);
-        assertTrue(sc.getShortString(0) == null);
+        assertNull(sc.get((String) null, false));
+        assertNull(sc.get((String) null, true));
+        assertNull(sc.get((CharSequence) null));
+        assertNull(sc.get((char[]) null));
+        assertNull(sc.getASCII((byte[]) null));
+        assertNull(sc.getShortString(0));
         // empty string must be always interned, so strictly equal to constant ""
-        assertTrue(sc.get(new String(), false) == "");
-        assertTrue(sc.get(new String(), true) == "");
-        assertTrue(sc.get(new String("01234567890"), 5, 0) == "");
-        assertTrue(sc.get(new StringBuilder()) == "");
-        assertTrue(sc.get(new StringBuilder("01234567890"), 5, 0) == "");
-        assertTrue(sc.get(new char[0]) == "");
-        assertTrue(sc.get(new char[10], 5, 0) == "");
-        assertTrue(sc.getASCII(new byte[0]) == "");
-        assertTrue(sc.getASCII(new byte[10], 5, 0) == "");
+        assertSame("", sc.get(new String(), false));
+        assertSame("", sc.get(new String(), true));
+        assertSame("", sc.get(new String("01234567890"), 5, 0));
+        assertSame("", sc.get(new StringBuilder()));
+        assertSame("", sc.get(new StringBuilder("01234567890"), 5, 0));
+        assertSame("", sc.get(new char[0]));
+        assertSame("", sc.get(new char[10], 5, 0));
+        assertSame("", sc.getASCII(new byte[0]));
+        assertSame("", sc.getASCII(new byte[10], 5, 0));
         // copying vs non-copying require extra instances to avoid test artifacts
-        assertTrue(new StringCache().get("a", false) == "a");
-        assertTrue(new StringCache().get("a", true) != "a");
+        assertSame("a", new StringCache().get("a", false));
+        assertNotSame("a", new StringCache().get("a", true));
     }
 
     private static final String[] randoms = new String[10000];
@@ -59,6 +61,7 @@ public class StringCacheTest  extends TestCase {
         }
     }
 
+    @Test
     public void testPerformance() {
         int count = 4000;
         int repeat = 10; // 1000 for real test
@@ -82,14 +85,17 @@ public class StringCacheTest  extends TestCase {
         count = Math.min(count, randoms.length);
         StringCache sc = new StringCache(number, size);
         long time = System.currentTimeMillis();
-        for (int n = 0; n < repeat; n++)
-            for (int i = 0; i < count; i++)
+        for (int n = 0; n < repeat; n++) {
+            for (int i = 0; i < count; i++) {
                 assertEquals(sc.get(randoms[i], false), randoms[i]);
+            }
+        }
         System.out.println("Performance [" + number + ", " + size + ", " + count + ", " + repeat + "] = " +
             (count * repeat * 1000L / Math.max(System.currentTimeMillis() - time, 1)) + " ops in " +
             (System.currentTimeMillis() - time) + " ms = " + sc);
     }
 
+    @Test
     public void testAccess() {
         accessTest(1, 1, 10000);
         accessTest(1, 4, 10000);
@@ -137,31 +143,35 @@ public class StringCacheTest  extends TestCase {
         "aaaabBaaaa", "aaabBaaaaa", "aabBaaaaaa", "abBaaaaaaa", "bBaaaaaaaa",
     };
 
+    @Test
     public void testCaching() {
         for (int k = 1; k < collisions.length; k++) {
             StringCache sc = new StringCache(997, k);
             // fill up bucket
             for (int i = 0; i < k; i++)
-                assertTrue(sc.get(collisions[i], false) == collisions[i]);
+                assertSame(collisions[i], sc.get(collisions[i], false));
             // check that all items up to bucket size are cached
             for (int i = 0; i < 1000; i++)
-                assertTrue(sc.get(new String(collisions[i % k]), false) == collisions[i % k]);
+                assertSame(collisions[i % k], sc.get(new String(collisions[i % k]), false));
         }
     }
 
-    public void testLRU() {
+    @Test
+    public void testLeastRecentlyUsed() {
         for (int k = 1; k < collisions.length - 1; k++) {
             StringCache sc = new StringCache(997, k);
             // fill up bucket
-            for (int i = 0; i < k; i++)
-                assertTrue(sc.get(collisions[i], false) == collisions[i]);
+            for (int i = 0; i < k; i++) {
+                assertSame(collisions[i], sc.get(collisions[i], false));
+            }
             // add extra item to push out LRU item
-            assertTrue(sc.get(collisions[k], false) == collisions[k]);
+            assertSame(collisions[k], sc.get(collisions[k], false));
             // check that MRU items are still cached
-            for (int i = 1; i < k; i++)
-                assertTrue(sc.get(new String(collisions[i]), false) == collisions[i]);
+            for (int i = 1; i < k; i++) {
+                assertSame(collisions[i], sc.get(new String(collisions[i]), false));
+            }
             // check that LRU item is not cached
-            assertTrue(sc.get(new String(collisions[0]), false) != collisions[0]);
+            assertNotSame(collisions[0], sc.get(new String(collisions[0]), false));
         }
     }
 }

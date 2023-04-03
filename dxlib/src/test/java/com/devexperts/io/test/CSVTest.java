@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,7 +14,7 @@ package com.devexperts.io.test;
 import com.devexperts.io.CSVFormatException;
 import com.devexperts.io.CSVReader;
 import com.devexperts.io.CSVWriter;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -22,31 +22,33 @@ import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 /**
  * Unit test for {@link CSVReader} and {@link CSVWriter} classes.
  */
-public class CSVTest extends TestCase {
+public class CSVTest {
 
-    public CSVTest(String s) {
-        super(s);
-    }
-
+    @Test
     public void testReader() {
         try {
             CSVReader r = new CSVReader(new StringReader("aaa,\"bbb\"\n,ccc,\n\nddd\r\"\"\r\nfff"));
             assertTrue(r.getLineNumber() == 1 && r.getRecordNumber() == 1);
             assertEquals(r.readField(), "aaa");
             assertEquals(r.readField(), "bbb");
-            assertEquals(r.readField(), null);
-            assertEquals(r.readField(), null);
+            assertNull(r.readField());
+            assertNull(r.readField());
             assertTrue(r.getLineNumber() == 1 && r.getRecordNumber() == 1);
             assertTrue(Arrays.equals(r.readRecord(), new String[0]));
             assertTrue(r.getLineNumber() == 2 && r.getRecordNumber() == 2);
             assertTrue(Arrays.equals(r.readRecord(), new String[] {"", "ccc", ""}));
             assertTrue(r.getLineNumber() == 3 && r.getRecordNumber() == 3);
             assertEquals(r.readField(), "");
-            assertEquals(r.readField(), null);
-            assertEquals(r.readField(), null);
+            assertNull(r.readField());
+            assertNull(r.readField());
             assertTrue(r.getLineNumber() == 3 && r.getRecordNumber() == 3);
             assertTrue(Arrays.equals(r.readRecord(), new String[0]));
             assertTrue(r.getLineNumber() == 4 && r.getRecordNumber() == 4);
@@ -55,7 +57,7 @@ public class CSVTest extends TestCase {
             assertTrue(Arrays.equals(r.readRecord(), new String[] {""}));
             assertTrue(r.getLineNumber() == 6 && r.getRecordNumber() == 6);
             assertEquals(r.readField(), "fff");
-            assertEquals(r.readField(), null);
+            assertNull(r.readField());
             assertTrue(r.getLineNumber() == 6 && r.getRecordNumber() == 6);
             assertTrue(Arrays.equals(r.readRecord(), new String[0]));
             assertTrue(r.getLineNumber() == 6 && r.getRecordNumber() == 7);
@@ -87,6 +89,7 @@ public class CSVTest extends TestCase {
         }
     }
 
+    @Test
     public void testWriter() {
         try {
             StringWriter sw = new StringWriter();
@@ -115,6 +118,7 @@ public class CSVTest extends TestCase {
         }
     }
 
+    @Test
     public void testPipe() {
         testPipe("", 1);
         testPipe("\r\n", 2);

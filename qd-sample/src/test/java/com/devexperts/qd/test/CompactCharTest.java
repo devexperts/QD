@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,12 +14,15 @@ package com.devexperts.qd.test;
 import com.devexperts.io.ByteArrayInput;
 import com.devexperts.io.ByteArrayOutput;
 import com.devexperts.io.IOUtil;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.io.IOException;
 
-public class CompactCharTest extends TestCase {
+import static org.junit.Assert.assertEquals;
 
+public class CompactCharTest {
+
+    @Test
     public void testReadWriteChar() throws IOException {
         ByteArrayOutput out = new ByteArrayOutput();
         ByteArrayInput in = new ByteArrayInput();
@@ -39,6 +42,7 @@ public class CompactCharTest extends TestCase {
         }
     }
 
+    @Test
     public void testReadWriteAll() throws IOException {
         checkReadWriteAll(null);
         checkReadWriteAll("");
@@ -78,5 +82,4 @@ public class CompactCharTest extends TestCase {
         assertEquals(string, in.readUTFString());
         assertEquals(out.getPosition(), in.getPosition());
     }
-
 }

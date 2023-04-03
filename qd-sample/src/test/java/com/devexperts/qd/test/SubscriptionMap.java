@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -77,19 +77,21 @@ class SubscriptionMap extends AbstractRecordSink {
 
     public boolean containsAll(SubscriptionMap other) {
         assert scheme == other.scheme;
-        for (int rid = 0; rid < maps.length; rid++)
+        for (int rid = 0; rid < maps.length; rid++) {
             for (Map.Entry<String, Long> e : other.maps[rid].entrySet()) {
-                Long this_time = maps[rid].get(e.getKey());
-                if (this_time == null || this_time > e.getValue())
+                Long thisTime = maps[rid].get(e.getKey());
+                if (thisTime == null || thisTime > e.getValue())
                     return false;
             }
+        }
         return true;
     }
 
     public boolean isEmpty() {
-        for (HashMap<String, Long> map : maps)
+        for (HashMap<String, Long> map : maps) {
             if (!map.isEmpty())
                 return false;
+        }
         return true;
     }
 
@@ -117,9 +119,10 @@ class SubscriptionMap extends AbstractRecordSink {
             return false;
         SubscriptionMap other = (SubscriptionMap) obj;
         assert scheme == other.scheme;
-        for (int rid = 0; rid < maps.length; rid++)
+        for (int rid = 0; rid < maps.length; rid++) {
             if (!maps[rid].equals(other.maps[rid]))
                 return false;
+        }
         return true;
     }
 

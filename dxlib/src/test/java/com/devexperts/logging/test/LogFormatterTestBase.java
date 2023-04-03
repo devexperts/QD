@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,111 +12,86 @@
 package com.devexperts.logging.test;
 
 import com.devexperts.logging.LogFormatter;
-import junit.framework.TestCase;
+import com.devexperts.test.isolated.Isolated;
+import com.devexperts.test.isolated.IsolatedRunner;
+import org.junit.runner.RunWith;
 
-import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
+import java.nio.file.Files;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.regex.Pattern;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 /**
  * Base class for tests for {@link LogFormatter}.
  */
-public abstract class LogFormatterTestBase extends TestCase {
-    protected final String REGEX = "D \\d{6}? \\d{6}?\\.\\d{3}? \\[_ThreadName_\\] MyCategory \\- My message((\\r)|(\\n))+";
+@RunWith(IsolatedRunner.class)
+@Isolated({"com.devexperts.logging", "org.apache.logging", "org.apache.log4j"})
+public abstract class LogFormatterTestBase {
+    protected final String REGEX =
+        "D \\d{6}? \\d{6}?\\.\\d{3}? \\[_ThreadName_\\] MyCategory \\- My message((\\r)|(\\n))+";
 
     protected LogFormatter formatter;
 
-    public LogFormatterTestBase() {
-    }
-
-    public LogFormatterTestBase(String name) {
-        super(name);
-    }
-
     protected static String loadFile(final File file) throws IOException {
-        InputStream is = null;
-        try {
-            is = new BufferedInputStream(new FileInputStream(file), 1024);
-
-            final Reader reader = new InputStreamReader(is);
-            final StringBuilder result = new StringBuilder();
-            char[] buf = new char[1024];
-            int count;
-            while ((count = reader.read(buf)) != -1) {
-                result.append(buf, 0, count);
-            }
-
-            return result.toString();
-        } finally {
-            if (is != null) {
-                is.close();
-            }
-        }
+        return new String(Files.readAllBytes(file.toPath()));
     }
 
     /**
      * Calls formatter to format string with predefined data and given thread name using log4j method.
-     *
-     * @param thread_name
-     * @return
      */
-    protected String getLog4jFormattedString(final String thread_name) {
-        return formatter.format('D', System.currentTimeMillis(), thread_name, "MyCategory", "My message");
+    protected String getLog4jFormattedString(final String threadName) {
+        return formatter.format('D', System.currentTimeMillis(), threadName, "MyCategory", "My message");
     }
 
     /**
      * Calls formatter to format string with predefined data and given thread name
      * using {@link java.util.logging} method.
-     *
-     * @param thread_name
-     * @return
      */
-    protected String getJULFormattedString(final String thread_name) {
+    protected String getJULFormattedString(final String threadName) {
         final LogRecord record = new LogRecord(Level.FINE, "My message");
         record.setLoggerName("MyCategory");
-        final String current_thread_name = Thread.currentThread().getName();
-        Thread.currentThread().setName(thread_name);
-        final String formatted_string = formatter.format(record);
-        Thread.currentThread().setName(current_thread_name);
-        return formatted_string;
+        final String currentThreadName = Thread.currentThread().getName();
+        Thread.currentThread().setName(threadName);
+        final String formattedString = formatter.format(record);
+        Thread.currentThread().setName(currentThreadName);
+        return formattedString;
     }
 
     /**
      * Creates pattern which should match formatted string created for given thread name.
-     *
-     * @param thread_name
-     * @return
      */
-    protected String getPattern(final String thread_name) {
-        return REGEX.replace("_ThreadName_", Pattern.quote(thread_name));
+    protected String getPattern(final String threadName) {
+        return REGEX.replace("_ThreadName_", Pattern.quote(threadName));
     }
 
     /**
      * Compares formatted string with pattern and throws AssertionFailedError if they do not match.
      */
-    protected void checkResultMatches(final String original_thread_name, final String formatted_thread_name) {
-        final String log4j_formatted_string = getLog4jFormattedString(original_thread_name);
-        final String jul_formatted_string = getJULFormattedString(original_thread_name);
-        final String pattern = getPattern(formatted_thread_name);
-        assertTrue("Obtained string '" + log4j_formatted_string + "' does not match regexp '" + pattern + "'", log4j_formatted_string.matches(pattern));
-        assertTrue("Obtained string '" + jul_formatted_string + "' does not match regexp '" + pattern + "'", jul_formatted_string.matches(pattern));
+    protected void checkResultMatches(final String originalThreadName, final String formattedThreadName) {
+        final String log4jFormattedString = getLog4jFormattedString(originalThreadName);
+        final String julFormattedString = getJULFormattedString(originalThreadName);
+        final String pattern = getPattern(formattedThreadName);
+        assertTrue("Obtained string '" + log4jFormattedString + "' does not match regexp '" + pattern + "'",
+            log4jFormattedString.matches(pattern));
+        assertTrue("Obtained string '" + julFormattedString + "' does not match regexp '" + pattern + "'",
+            julFormattedString.matches(pattern));
     }
 
     /**
      * Compares formatted string with pattern and throws AssertionFailedError if they match.
      */
-    protected void checkResultDoesNotMatch(final String original_thread_name, final String formatted_thread_name) {
-        final String log4j_formatted_string = getLog4jFormattedString(original_thread_name);
-        final String jul_formatted_string = getJULFormattedString(original_thread_name);
-        final String pattern = getPattern(formatted_thread_name);
-        assertFalse("Obtained string '" + log4j_formatted_string + "' should not match regexp '" + pattern + "'", log4j_formatted_string.matches(pattern));
-        assertFalse("Obtained string '" + jul_formatted_string + "' should not match regexp '" + pattern + "'", jul_formatted_string.matches(pattern));
+    protected void checkResultDoesNotMatch(final String originalThreadName, final String formattedThreadName) {
+        final String log4jFormattedString = getLog4jFormattedString(originalThreadName);
+        final String julFormattedString = getJULFormattedString(originalThreadName);
+        final String pattern = getPattern(formattedThreadName);
+        assertFalse("Obtained string '" + log4jFormattedString + "' should not match regexp '" + pattern + "'",
+            log4jFormattedString.matches(pattern));
+        assertFalse("Obtained string '" + julFormattedString + "' should not match regexp '" + pattern + "'",
+            julFormattedString.matches(pattern));
     }
 }

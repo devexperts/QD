@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,32 +13,23 @@ package com.devexperts.util.test;
 
 import com.devexperts.util.DayRange;
 import com.devexperts.util.DayUtil;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class DayRangeTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
-    public void testRequestsForDayIdBCENotSupported() {
+public class DayRangeTest {
+
+    @Test
+    public void testRequestsForDayIdBceNotSupported() {
         int dayId = DayUtil.getDayIdByYearMonthDay(-1, 1, 1);
-        try {
-            DayRange.getWeekRangeByDayId(dayId, 1);
-            fail();
-        } catch (IllegalArgumentException e) {
-        }
-
-        try {
-            DayRange.getMonthRangeByDayId(dayId, 1);
-            fail();
-        } catch (IllegalArgumentException e) {
-        }
-
-        try {
-            DayRange.getYearRangeByDayId(dayId, 1);
-            fail();
-        } catch (IllegalArgumentException e) {
-        }
-
+        assertThrows(IllegalArgumentException.class, () -> DayRange.getWeekRangeByDayId(dayId, 1));
+        assertThrows(IllegalArgumentException.class, () -> DayRange.getMonthRangeByDayId(dayId, 1));
+        assertThrows(IllegalArgumentException.class, () -> DayRange.getYearRangeByDayId(dayId, 1));
     }
 
+    @Test
     public void testWeekDayRangeByDayId() {
         //start week
         int firstWeekStartDayId = DayUtil.getDayIdByYearMonthDay(19700105);
@@ -137,15 +128,17 @@ public class DayRangeTest extends TestCase {
         assertEquals(DayUtil.getDayIdByYearMonthDay(19700105), range.getEndDayId());
     }
 
+    @Test
     public void testMonthStartDayIdByDayId() {
-        //start month
+        // Start month
         int firstMonthStartDayId = DayUtil.getDayIdByYearMonthDay(19700101);
         for (int numberOfMonths = 1; numberOfMonths <= 10; numberOfMonths++) {
             for (int offset = 0; offset <= 28; offset++) {
                 DayRange range = DayRange.getMonthRangeByDayId(firstMonthStartDayId + offset, numberOfMonths);
                 assertEquals(firstMonthStartDayId, range.getStartDayId());
-                for (int j = 0; j < 28 * numberOfMonths; j++)
+                for (int j = 0; j < 28 * numberOfMonths; j++) {
                     assertTrue(range.containsDayId(firstMonthStartDayId + j));
+                }
             }
         }
 
@@ -181,8 +174,7 @@ public class DayRangeTest extends TestCase {
         assertEquals(DayUtil.getDayIdByYearMonthDay(19730901), range.getStartDayId());
         assertEquals(DayUtil.getDayIdByYearMonthDay(19740801), range.getEndDayId());
 
-
-        //months before 1st January 1970
+        // Months before 1st January 1970
         range = DayRange.getMonthRangeByDayId(DayUtil.getDayIdByYearMonthDay(19691201), 1);
         assertEquals(DayUtil.getDayIdByYearMonthDay(19691201), range.getStartDayId());
         assertEquals(DayUtil.getDayIdByYearMonthDay(19700101), range.getEndDayId());
@@ -252,6 +244,7 @@ public class DayRangeTest extends TestCase {
         assertEquals(DayUtil.getDayIdByYearMonthDay(19680301), range.getEndDayId());
     }
 
+    @Test
     public void testYearStartDayIdByDayId() {
         DayRange range = DayRange.getYearRangeByDayId(DayUtil.getDayIdByYearMonthDay(19700215), 1);
         assertEquals(DayUtil.getDayIdByYearMonthDay(19700101), range.getStartDayId());

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -21,7 +21,7 @@ import com.devexperts.qd.kit.DefaultRecord;
 import com.devexperts.qd.kit.DefaultScheme;
 import com.devexperts.qd.kit.PentaCodec;
 import com.devexperts.qd.ng.RecordBuffer;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
@@ -30,25 +30,21 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
+import static org.junit.Assert.assertTrue;
+
 /**
  * Large subscription performance unit test.
  */
-public class LargeSubscriptionTest extends TestCase {
-
-    public LargeSubscriptionTest(String s) {
-        super(s);
-
-        // Measure only CPU time if possible to minimize CI system overload effects.
-        ThreadMXBean threadMX = ManagementFactory.getThreadMXBean();
-        cpuTimeMarksSupplier = threadMX.isCurrentThreadCpuTimeSupported() && threadMX.isThreadCpuTimeEnabled() ?
-            threadMX::getCurrentThreadCpuTime : System::nanoTime;
-    }
+public class LargeSubscriptionTest {
 
     private static final SymbolCodec codec = PentaCodec.INSTANCE;
     private static final DataRecord record = new DefaultRecord(0, "Haba", false, null, null);
     private static final DataScheme scheme = new DefaultScheme(codec, record);
 
-    private final LongSupplier cpuTimeMarksSupplier;
+    ThreadMXBean threadMX = ManagementFactory.getThreadMXBean();
+    private final LongSupplier cpuTimeMarksSupplier =
+        threadMX.isCurrentThreadCpuTimeSupported() && threadMX.isThreadCpuTimeEnabled() ?
+        threadMX::getCurrentThreadCpuTime : System::nanoTime;
 
     private static RecordBuffer sub(int size, boolean encodeable) {
         Random rnd = new Random();
@@ -69,6 +65,7 @@ public class LargeSubscriptionTest extends TestCase {
         return sb;
     }
 
+    @Test
     public void testLargeSubscription() {
         int size = 100_000;
         long threshold = 1_000;

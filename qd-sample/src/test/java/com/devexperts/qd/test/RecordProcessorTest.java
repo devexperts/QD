@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -21,7 +21,9 @@ import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.util.RecordProcessor;
 import com.devexperts.test.ThreadCleanCheck;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BrokenBarrierException;
@@ -32,7 +34,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class RecordProcessorTest extends TestCase {
+import static org.junit.Assert.fail;
+
+public class RecordProcessorTest {
     private static final int MESSAGES_COUNT = 100;
     private static final int MAX_WAIT_TIME = 10000;
 
@@ -43,14 +47,13 @@ public class RecordProcessorTest extends TestCase {
     private volatile int messageNumber;
     private ExecutorService executor;
 
-
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         ThreadCleanCheck.before();
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         if (executor != null)
             executor.shutdown();
         ThreadCleanCheck.after();
@@ -97,6 +100,7 @@ public class RecordProcessorTest extends TestCase {
         }
     }
 
+    @Test
     public void testDataProcessor() throws InterruptedException, BrokenBarrierException, TimeoutException {
         BufRecordProvider dataProvider = new BufRecordProvider();
 

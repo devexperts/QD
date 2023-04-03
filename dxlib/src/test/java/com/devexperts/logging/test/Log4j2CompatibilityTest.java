@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,6 +22,10 @@ import org.apache.logging.log4j.core.config.ConfigurationSource;
 import org.apache.logging.log4j.core.config.properties.PropertiesConfiguration;
 import org.apache.logging.log4j.core.config.properties.PropertiesConfigurationBuilder;
 import org.apache.logging.log4j.core.config.properties.PropertiesConfigurationFactory;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,24 +33,27 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 /**
  * Tests that {@link com.devexperts.logging.DxFeedPatternLayout} works as layout with either Log4j2 version
  * using both Log4J2 logging facilities and {@link Logging}.
  */
 public class Log4j2CompatibilityTest extends LogFormatterTestBase {
-    private static File logFile;
-    public static final File BUILD_TEST_DIR = new File("build/test/");
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
+    @Rule
+    public TemporaryFolder tempFolder = new TemporaryFolder();
 
-        System.getProperties().setProperty(Logging.LOG_CLASS_NAME, "com.devexperts.logging.Log4j2Logging");
+    private File logFile;
+
+    @Before
+    public void setUp() throws Exception {
+        System.setProperty(Logging.LOG_CLASS_NAME, "com.devexperts.logging.Log4j2Logging");
         initLogFormatter();
 
-        // Create log file in folder that will be eventually cleared - "deleteOnExit" does not work for log files.
-        BUILD_TEST_DIR.mkdirs();
-        logFile = File.createTempFile("test.", ".log", BUILD_TEST_DIR);
+        logFile = new File(tempFolder.getRoot(), "test.log");
         final Properties props = new Properties();
         props.load(Log4j2CompatibilityTest.class.getResourceAsStream("/test.log4j2.properties"));
         props.setProperty("appender.file.fileName", logFile.getPath());
@@ -64,52 +71,50 @@ public class Log4j2CompatibilityTest extends LogFormatterTestBase {
         context.setConfigLocation(Log4j2CompatibilityTest.class.getResource("/test.log4j2.properties").toURI());
     }
 
-    @Override
-    protected void tearDown() throws Exception {
-        super.tearDown();
-        if (logFile.exists())
-            logFile.delete();
-    }
-
     protected void initLogFormatter() {
-        System.getProperties().setProperty(LogFormatter.CONFIG_FILE_PROPERTY,
+        System.setProperty(LogFormatter.CONFIG_FILE_PROPERTY,
             Log4j2CompatibilityTest.class.getResource("/test.logformatter.properties").toExternalForm());
     }
 
+    @Test
     public void testLog4JLogging() throws IOException {
         Logger logger = LogManager.getContext(false).getLogger("file");
         final String log4jVersion = Package.getPackage("org.apache.logging.log4j.core").getImplementationVersion();
-        final String log4j_message = "Log4j version: ";
-        final String test_message = "Test log4j message";
-        logger.debug(log4j_message + log4jVersion);
-        logger.debug(test_message);
+        final String log4jMessage = "Log4j version: ";
+        final String testMessage = "Test log4j message";
+        logger.debug(log4jMessage + log4jVersion);
+        logger.debug(testMessage);
         logger.debug("error", new IllegalArgumentException());
-        logger.debug(test_message);
+        logger.debug(testMessage);
 
         final String content = loadFile(logFile);
-        assertTrue("'" + log4j_message + "' not found in the log", content.contains(log4j_message));
-        assertTrue("'" + test_message + "' not found in log file", content.contains(test_message));
+        assertTrue("'" + log4jMessage + "' not found in the log", content.contains(log4jMessage));
+        assertTrue("'" + testMessage + "' not found in log file", content.contains(testMessage));
         assertTrue("Exception not found in log file", content.contains(IllegalArgumentException.class.getName()));
         assertTrue("Exception stack trace not found in log file", content.contains("\tat " + getClass().getName()));
     }
 
+    @Test
     public void testDevexpertsLogging() throws IOException {
         Logging log = Logging.getLogging(Log4j2CompatibilityTest.class);
         log.configureDebugEnabled(true);
-        final String test_message = "Test com.devexperts.logging message";
-        log.debug(test_message);
+        final String testMessage = "Test com.devexperts.logging message";
+        log.debug(testMessage);
         log.debug("error", new IllegalArgumentException());
-        log.debug(test_message);
+        log.debug(testMessage);
 
         final String content = loadFile(logFile);
-        assertTrue("'" + test_message + "' not found in log file", content.contains(test_message));
+        assertTrue("'" + testMessage + "' not found in log file", content.contains(testMessage));
         assertTrue("Exception not found in log file", content.contains(IllegalArgumentException.class.getName()));
         assertTrue("Exception stack trace not found in log file", content.contains("\tat " + getClass().getName()));
     }
 
+    @Test
     public void testConfigureDebugEnabled() throws IOException {
         goTestConfigureDebugEnbled(true);
     }
+
+    @Test
     public void testConfigureDebugDisabled() throws IOException {
         goTestConfigureDebugEnbled(false);
     }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,7 +20,9 @@ import com.dxfeed.event.IndexedEvent;
 import com.dxfeed.event.option.TheoPrice;
 import com.dxfeed.event.option.Underlying;
 import com.dxfeed.promise.Promise;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.ArrayDeque;
 import java.util.Collections;
@@ -28,7 +30,11 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 
-public class OptionEventTimeSeriesPromiseTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+public class OptionEventTimeSeriesPromiseTest {
     private static final String SYMBOL = "XYZ";
 
     private DXEndpoint endpoint;
@@ -40,11 +46,8 @@ public class OptionEventTimeSeriesPromiseTest extends TestCase {
     private final Queue<Object> added = new ArrayDeque<>();
     private final Queue<Object> removed = new ArrayDeque<>();
 
-    public OptionEventTimeSeriesPromiseTest() {
-    }
-
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         ThreadCleanCheck.before();
         endpoint = DXEndpoint.create(DXEndpoint.Role.LOCAL_HUB);
         feed = endpoint.getFeed();
@@ -72,30 +75,31 @@ public class OptionEventTimeSeriesPromiseTest extends TestCase {
         ThreadCleanCheck.after();
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         endpoint.close();
     }
 
+    @Test
     public void testUnderlyingPromise() {
         Promise<List<Underlying>> promise = feed.getTimeSeriesPromise(Underlying.class, SYMBOL, 0, 300);
-        assertTrue(!promise.isDone());
+        assertFalse(promise.isDone());
         assertEquals(0, added.size());
         runTask(); // process sub task
         assertNoTasks();
         assertTrue(added.poll().toString().startsWith(SYMBOL));
         assertNoAddedOrRemoved();
-        assertTrue(!promise.isDone());
+        assertFalse(promise.isDone());
 
         // now publish underlying snapshot
         publishUnderlying(300, 10.01, IndexedEvent.SNAPSHOT_BEGIN);
-        assertTrue(!promise.isDone());
+        assertFalse(promise.isDone());
         assertNoTasks();
         publishUnderlying(200, 10.02, 0);
-        assertTrue(!promise.isDone());
+        assertFalse(promise.isDone());
         assertNoTasks();
         publishUnderlying(100, 10.03, 0);
-        assertTrue(!promise.isDone());
+        assertFalse(promise.isDone());
         assertNoTasks();
         publishUnderlying(0, 10.04, 0);
         assertTrue(promise.isDone());
@@ -112,25 +116,26 @@ public class OptionEventTimeSeriesPromiseTest extends TestCase {
         assertUnderlying(list.get(3), 300, 10.01);
     }
 
+    @Test
     public void testTheoPricePromise() {
         Promise<List<TheoPrice>> promise = feed.getTimeSeriesPromise(TheoPrice.class, SYMBOL, 0, 300);
-        assertTrue(!promise.isDone());
+        assertFalse(promise.isDone());
         assertEquals(0, added.size());
         runTask(); // process sub task
         assertNoTasks();
         assertTrue(added.poll().toString().startsWith(SYMBOL));
         assertNoAddedOrRemoved();
-        assertTrue(!promise.isDone());
+        assertFalse(promise.isDone());
 
         // now publish underlying snapshot
         publishTheoPrice(300, 10.01, IndexedEvent.SNAPSHOT_BEGIN);
-        assertTrue(!promise.isDone());
+        assertFalse(promise.isDone());
         assertNoTasks();
         publishTheoPrice(200, 10.02, 0);
-        assertTrue(!promise.isDone());
+        assertFalse(promise.isDone());
         assertNoTasks();
         publishTheoPrice(100, 10.03, 0);
-        assertTrue(!promise.isDone());
+        assertFalse(promise.isDone());
         assertNoTasks();
         publishTheoPrice(0, 10.04, 0);
         assertTrue(promise.isDone());
@@ -146,7 +151,6 @@ public class OptionEventTimeSeriesPromiseTest extends TestCase {
         assertTheoPrice(list.get(2), 200, 10.02);
         assertTheoPrice(list.get(3), 300, 10.01);
     }
-
 
     private void assertNoAddedOrRemoved() {
         assertEquals(0, added.size());
@@ -165,7 +169,7 @@ public class OptionEventTimeSeriesPromiseTest extends TestCase {
         assertEquals(SYMBOL, underlying.getEventSymbol());
         assertEquals(time, underlying.getTime());
         assertEquals(0, underlying.getEventFlags());
-        assertEquals(volatility, underlying.getVolatility());
+        assertEquals(volatility, underlying.getVolatility(), 0.0);
     }
 
     private void publishTheoPrice(long time, double price, int eventFlags) {
@@ -180,7 +184,7 @@ public class OptionEventTimeSeriesPromiseTest extends TestCase {
         assertEquals(SYMBOL, theoPrice.getEventSymbol());
         assertEquals(time, theoPrice.getTime());
         assertEquals(0, theoPrice.getEventFlags());
-        assertEquals(price, theoPrice.getPrice());
+        assertEquals(price, theoPrice.getPrice(), 0.0);
     }
 
     private void assertNoTasks() {

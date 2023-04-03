@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -34,7 +34,6 @@ public class IndexerSerializationTest {
         "com.devexperts.util.IndexerFunction$DefaultIndexerFunction";
 
     public static void main(String[] args) throws IOException {
-
         try (
             FileOutputStream os = new FileOutputStream("./dxlib/src/test/resources/" + INDEXED_OBJECTS_FILE);
             ObjectOutputStream oos = new ObjectOutputStream(os)
@@ -56,7 +55,6 @@ public class IndexerSerializationTest {
 
     @Test
     public void testNewSerialization() throws IOException, ClassNotFoundException {
-
         byte[] bytes;
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {

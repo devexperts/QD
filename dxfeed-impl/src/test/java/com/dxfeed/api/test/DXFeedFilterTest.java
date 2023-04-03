@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -28,7 +28,9 @@ import com.dxfeed.api.osub.TimeSeriesSubscriptionSymbol;
 import com.dxfeed.event.market.TimeAndSale;
 import com.dxfeed.event.market.Trade;
 import com.dxfeed.promise.Promise;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,7 +41,13 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
-public class DXFeedFilterTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+public class DXFeedFilterTest {
 
     private static final String SYMBOL = "A";
 
@@ -47,8 +55,8 @@ public class DXFeedFilterTest extends TestCase {
     private DXPublisher publisher;
     private QDFilter filter = CompositeFilters.valueOf("!" + SYMBOL, DXFeedScheme.getInstance());
 
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         ThreadCleanCheck.before();
         endpoint = (DXEndpointImpl) DXEndpoint.create(DXEndpoint.Role.LOCAL_HUB);
         // use in-place execution to avoid context switches
@@ -56,13 +64,14 @@ public class DXFeedFilterTest extends TestCase {
         publisher = endpoint.getPublisher();
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         endpoint.close();
         ThreadCleanCheck.after();
     }
 
     @SuppressWarnings("deprecation")
+    @Test
     public void testFilter() {
         DXFeed feed = endpoint.getFeed();
         DXFeedImpl filterFeed = new DXFeedImpl(endpoint, filter);
@@ -89,6 +98,7 @@ public class DXFeedFilterTest extends TestCase {
     }
 
     @SuppressWarnings("deprecation")
+    @Test
     public void testSeparateFeedClose() throws InterruptedException {
         DXFeed feed = endpoint.getFeed();
         DXFeedImpl filterFeed = new DXFeedImpl(endpoint, filter);
@@ -110,6 +120,7 @@ public class DXFeedFilterTest extends TestCase {
     }
 
     @SuppressWarnings("deprecation")
+    @Test
     public void testLastEventPromise() {
         DXFeed filterFeed = new DXFeedImpl(endpoint, filter);
         publisher.publishEvents(Collections.singletonList(new Trade(SYMBOL)));
@@ -130,6 +141,7 @@ public class DXFeedFilterTest extends TestCase {
     }
 
     @SuppressWarnings("deprecation")
+    @Test
     public void testDynamicFilter() {
         SimpleDynamicFilter filter = new SimpleDynamicFilter();
         DXFeed feed = new DXFeedImpl(endpoint, filter);
@@ -168,6 +180,7 @@ public class DXFeedFilterTest extends TestCase {
     }
 
     @SuppressWarnings("deprecation")
+    @Test
     public void testDynamicFilterTimeSeriesEvent() {
         SimpleDynamicFilter filter = new SimpleDynamicFilter();
         DXFeed feed = new DXFeedImpl(endpoint, filter);
@@ -198,6 +211,7 @@ public class DXFeedFilterTest extends TestCase {
     }
 
     @SuppressWarnings("deprecation")
+    @Test
     public void testDynamicFilterTimeSeriesSubscription() {
         SimpleDynamicFilter filter = new SimpleDynamicFilter();
         DXFeed feed = new DXFeedImpl(endpoint, filter);
@@ -235,6 +249,7 @@ public class DXFeedFilterTest extends TestCase {
     }
 
     @SuppressWarnings("deprecation")
+    @Test
     public void testDynamicFilterTimeSeriesAgentLeak() {
         SimpleDynamicFilter filter = new SimpleDynamicFilter();
         filter = filter.addSymbol(SYMBOL);
@@ -264,6 +279,7 @@ public class DXFeedFilterTest extends TestCase {
         assertEquals(2, tns.get(1).getSequence());
     }
 
+    @Test
     public void testTimeSeriesSubscription() {
         DXFeed feed = new DXFeedImpl(endpoint);
         DXFeedTimeSeriesSubscription<TimeAndSale> sub = feed.createTimeSeriesSubscription(TimeAndSale.class);

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,7 +17,8 @@ import com.devexperts.io.Chunk;
 import com.devexperts.io.ChunkList;
 import com.devexperts.io.ChunkedInput;
 import com.devexperts.io.ChunkedOutput;
-import junit.framework.TestCase;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -27,18 +28,27 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Random;
 
-public class ChunksTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+public class ChunksTest {
 
     private Random rnd;
 
-    private TrackingChunkPool pool = new TrackingChunkPool();
+    private final TrackingChunkPool pool = new TrackingChunkPool();
 
+    @Before
     public void setUp() {
         rnd = new Random(12345);
         pool.checkAndClearCounters(0, 0, 0, 0);
     }
 
-    public void testChunk() {
+    @Test
+    public void testChunk1() {
         Object owner = new Object();
         byte[] bytes = randomByteArray(100);
 
@@ -54,73 +64,38 @@ public class ChunksTest extends TestCase {
         assertEquals(80, chunk.getLength());
 
         // index checks
-        try {
-            chunk.setLength(91, owner);
-            fail();
-        } catch (IndexOutOfBoundsException ignored) {}
-        try {
-            chunk.setLength(-1, owner);
-            fail();
-        } catch (IndexOutOfBoundsException ignored) {}
-        try {
-            chunk.setRange(2000000000, 2000000000, owner);
-            fail();
-        } catch (IndexOutOfBoundsException ignored) {}
+        assertThrows(IndexOutOfBoundsException.class, () -> chunk.setLength(91, owner));
+        assertThrows(IndexOutOfBoundsException.class, () -> chunk.setLength(-1, owner));
+        assertThrows(IndexOutOfBoundsException.class, () -> chunk.setRange(2000000000, 2000000000, owner));
 
-        Object oldOwner = owner;
-        owner = new Object();
-        chunk.handOver(oldOwner, owner);
+        Object newOwner = new Object();
+        chunk.handOver(owner, newOwner);
 
         // owner checks
-        try {
-            chunk.setLength(10, this);
-            fail();
-        } catch (IllegalStateException ignored) {}
-        try {
-            chunk.setRange(10, 10, null);
-            fail();
-        } catch (IllegalStateException ignored) {}
-        try {
-            chunk.markReadOnly(oldOwner);
-            fail();
-        } catch (IllegalStateException ignored) {}
-        try {
-            chunk.recycle(oldOwner);
-            fail();
-        } catch (IllegalStateException ignored) {}
-        try {
-            chunk.handOver(oldOwner, owner);
-            fail();
-        } catch (IllegalStateException ignored) {}
+        assertThrows(IllegalStateException.class, () -> chunk.setLength(10, owner));
+        assertThrows(IllegalStateException.class, () -> chunk.setRange(10, 10, null));
+        assertThrows(IllegalStateException.class, () -> chunk.markReadOnly(owner));
+        assertThrows(IllegalStateException.class, () -> chunk.recycle(owner));
+        assertThrows(IllegalStateException.class, () -> chunk.handOver(owner, newOwner));
 
-        chunk.recycle(owner);
-        try {
-            chunk.recycle(owner);
-            fail();
-        } catch (IllegalStateException ignored) {}
-        try {
-            chunk.handOver(owner, this);
-            fail();
-        } catch (IllegalStateException ignored) {}
-        try {
-            chunk.setLength(10, owner);
-            fail();
-        } catch (IllegalStateException ignored) {}
+        chunk.recycle(newOwner);
+        assertThrows(IllegalStateException.class, () -> chunk.recycle(newOwner));
+        assertThrows(IllegalStateException.class, () -> chunk.handOver(newOwner, this));
+        assertThrows(IllegalStateException.class, () -> chunk.setLength(10, newOwner));
+    }
 
-        chunk = Chunk.wrap(bytes, 10, 20, owner);
+    @Test
+    public void testChunk2() {
+        Object owner = new Object();
+        byte[] bytes = randomByteArray(100);
+        Chunk chunk = Chunk.wrap(bytes, 10, 20, owner);
         assertFalse(chunk.isReadOnly());
         chunk.markReadOnly(owner);
         assertTrue(chunk.isReadOnly());
 
         chunk.getBytes();
-        try {
-            chunk.setLength(42, owner);
-            fail();
-        } catch (IllegalStateException ignored) {}
-        try {
-            chunk.setRange(1, 2, owner);
-            fail();
-        } catch (IllegalStateException ignored) {}
+        assertThrows(IllegalStateException.class, () -> chunk.setLength(42, owner));
+        assertThrows(IllegalStateException.class, () -> chunk.setRange(1, 2, owner));
 
         chunk.markReadOnly(this);
         chunk.recycle("Now everyone owns this chunk,");
@@ -133,6 +108,7 @@ public class ChunksTest extends TestCase {
         return result;
     }
 
+    @Test
     public void testChunkList() {
         Object owner = new Object();
         ChunkList list = new ChunkList(owner);
@@ -273,6 +249,7 @@ public class ChunksTest extends TestCase {
         pool.checkAndClearCounters(0, 0, 0, 1);
     }
 
+    @Test
     public void testChunkListAddPoll() {
         final int N = 1000;
         Object owner = new Object();
@@ -347,6 +324,7 @@ public class ChunksTest extends TestCase {
         return result;
     }
 
+    @Test
     public void testChunkedInputOutput() throws IOException {
         final int N = 1000000;
         final int K = 30;
@@ -361,58 +339,60 @@ public class ChunksTest extends TestCase {
         while (totalLen + curLen < N) {
             int op = rnd.nextInt(7);
             switch (op) {
-            case 0: // write from byte array
-            case 1: // write from byte buffer
-            case 2: // write from data input
-            case 3: // write from input stream
-            {
-                int l = rnd.nextInt(K + 1);
-                for (int i = 0; i < l; i++)
-                    data[totalLen + curLen + i] = (byte) rnd.nextInt(256);
-                switch (op) {
-                case 0:
-                    out.write(data, totalLen + curLen, l);
-                    break;
-                case 1:
-                    out.writeFromByteBuffer(ByteBuffer.wrap(data, totalLen + curLen, l));
-                    break;
-                case 2:
-                    out.writeFromDataInput(new ByteArrayInput(data, totalLen + curLen, l), l);
-                    break;
-                case 3:
-                    int decision = rnd.nextInt(3); // one of the following two fields may randomly exceed l, but not both of them at once
-                    int baiLen = decision == 0 ? l + 1 : l;
-                    int writeLim = decision == 1 ? l + 1 : l;
-                    assertEquals(l, out.writeFromInputStream(new ByteArrayInput(data, totalLen + curLen, baiLen), writeLim));
+                case 0: // write from byte array
+                case 1: // write from byte buffer
+                case 2: // write from data input
+                case 3: // write from input stream
+                {
+                    int l = rnd.nextInt(K + 1);
+                    for (int i = 0; i < l; i++)
+                        data[totalLen + curLen + i] = (byte) rnd.nextInt(256);
+                    switch (op) {
+                    case 0:
+                        out.write(data, totalLen + curLen, l);
+                        break;
+                    case 1:
+                        out.writeFromByteBuffer(ByteBuffer.wrap(data, totalLen + curLen, l));
+                        break;
+                    case 2:
+                        out.writeFromDataInput(new ByteArrayInput(data, totalLen + curLen, l), l);
+                        break;
+                    case 3:
+                        // one of the following two fields may randomly exceed l, but not both of them at once
+                        int decision = rnd.nextInt(3);
+                        int baiLen = decision == 0 ? l + 1 : l;
+                        int writeLim = decision == 1 ? l + 1 : l;
+                        assertEquals(l, out.writeFromInputStream(
+                            new ByteArrayInput(data, totalLen + curLen, baiLen), writeLim));
+                        break;
+                    }
+                    curLen += l;
                     break;
                 }
-                curLen += l;
-                break;
-            }
-            case 4: // discard
-            {
-                long l = rnd.nextInt(K + 1);
-                long res = out.discard(l);
-                assertEquals(Math.min(l, curLen), res);
-                curLen -= res;
-                break;
-            }
-            case 5: // getOutput
-                ChunkList output = out.getOutput(this);
-                if (output == null) {
-                    assertEquals(0, curLen);
-                } else {
-                    chunkLists.add(output);
-                    totalLen += curLen;
+                case 4: // discard
+                {
+                    long l = rnd.nextInt(K + 1);
+                    long res = out.discard(l);
+                    assertEquals(Math.min(l, curLen), res);
+                    curLen -= res;
+                    break;
+                }
+                case 5: // getOutput
+                    ChunkList output = out.getOutput(this);
+                    if (output == null) {
+                        assertEquals(0, curLen);
+                    } else {
+                        chunkLists.add(output);
+                        totalLen += curLen;
+                        curLen = 0;
+                    }
+                    break;
+                case 6: // clear();
+                    out.clear();
                     curLen = 0;
-                }
-                break;
-            case 6: // clear();
-                out.clear();
-                curLen = 0;
-                break;
-            default:
-                throw new AssertionError("fix nextInt argument");
+                    break;
+                default:
+                    throw new AssertionError("fix nextInt argument");
             }
         }
         ChunkList output = out.getOutput(this);
@@ -452,103 +432,103 @@ public class ChunksTest extends TestCase {
         while (position < totalLen) {
             int op = rnd.nextInt(10);
             switch (op) {
-            case 0: // read to byte array
-            case 1: // read to byte buffer
-            case 2: // read to data input
-            case 3: // read to input stream
-            {
-                int l = rnd.nextInt(K + 1);
-                int res;
-                switch (op) {
-                case 0:
-                    res = in.read(d, 0, l);
-                    if (res == -1) res = 0;
+                case 0: // read to byte array
+                case 1: // read to byte buffer
+                case 2: // read to data input
+                case 3: // read to input stream
+                {
+                    int l = rnd.nextInt(K + 1);
+                    int res;
+                    switch (op) {
+                        case 0:
+                            res = in.read(d, 0, l);
+                            if (res == -1) res = 0;
+                            break;
+                        case 1:
+                            bb.clear();
+                            bb.limit(l);
+                            in.readToByteBuffer(bb);
+                            res = bb.position();
+                            break;
+                        case 2:
+                            bao.clear();
+                            bao.setLimit(l);
+                            res = (int) in.readToDataOutput(bao, l);
+                            break;
+                        case 3:
+                            bao.clear();
+                            bao.setLimit(l);
+                            res = (int) in.readToOutputStream(bao, l);
+                            break;
+                        default:
+                            throw new AssertionError();
+                    }
+
+                    if (Math.min(l, limit - position) != res)
+                        fail(makeDebugStr(op, position, limit, markState, markPoint, l, res));
+                    for (int i = 0; i < res; i++)
+                        if (data[position + i] != d[i])
+                            fail(makeDebugStr(op, position, limit, markState, markPoint, l, res));
+                    position += res;
                     break;
-                case 1:
-                    bb.clear();
-                    bb.limit(l);
-                    in.readToByteBuffer(bb);
-                    res = bb.position();
+                }
+                case 4: // skip
+                {
+                    int l = rnd.nextInt(K + 1);
+                    int res = (int) in.skip(l);
+                    if (Math.min(l, limit - position) != res)
+                        fail(makeDebugStr(op, position, limit, markState, markPoint, l, res));
+                    position += res;
                     break;
-                case 2:
-                    bao.clear();
-                    bao.setLimit(l);
-                    res = (int) in.readToDataOutput(bao, l);
+                }
+                case 5: // rewind
+                {
+                    int l = rnd.nextInt(K + 1);
+                    try {
+                        in.rewind(l);
+                        assertTrue(markState && position - l >= markPoint);
+                        position -= l;
+                    } catch (IllegalStateException e) {
+                        assertTrue(!markState || position - l < markPoint);
+                    }
                     break;
-                case 3:
-                    bao.clear();
-                    bao.setLimit(l);
-                    res = (int) in.readToOutputStream(bao, l);
+                }
+                case 6: // mark/unmark
+                {
+                    if (markState) {
+                        in.unmark();
+                        markState = false;
+                        markPoint = -1;
+                    } else {
+                        in.mark();
+                        markState = true;
+                        markPoint = position;
+                    }
+                    break;
+                }
+                case 7: // add to input
+                    if (chunkLists.isEmpty())
+                        break;
+                    ChunkList chunks = chunkLists.remove(chunkLists.size() - 1);
+                    limit += chunks.getTotalLength();
+                    in.addAllToInput(chunks, this);
+                    break;
+                case 8: // clear
+                    in.clear();
+                    position = limit;
+                    markState = false;
+                    break;
+                case 9: // try to reset
+                    try {
+                        in.reset();
+                        assertTrue(markState);
+                        position = markPoint;
+                    } catch (IllegalStateException e) {
+                        assertFalse(markState);
+                    }
                     break;
                 default:
-                    throw new AssertionError();
-                }
-
-                if (Math.min(l, limit - position) != res)
-                    fail(makeDebugStr(op, position, limit, markState, markPoint, l, res));
-                for (int i = 0; i < res; i++)
-                    if (data[position + i] != d[i])
-                        fail(makeDebugStr(op, position, limit, markState, markPoint, l, res));
-                position += res;
-                break;
-            }
-            case 4: // skip
-            {
-                int l = rnd.nextInt(K + 1);
-                int res = (int) in.skip(l);
-                if (Math.min(l, limit - position) != res)
-                    fail(makeDebugStr(op, position, limit, markState, markPoint, l, res));
-                position += res;
-                break;
-            }
-            case 5: // rewind
-            {
-                int l = rnd.nextInt(K + 1);
-                try {
-                    in.rewind(l);
-                    assertTrue(markState && position - l >= markPoint);
-                    position -= l;
-                } catch (IllegalStateException e) {
-                    assertTrue(!markState || position - l < markPoint);
-                }
-                break;
-            }
-            case 6: // mark/unmark
-            {
-                if (markState) {
-                    in.unmark();
-                    markState = false;
-                    markPoint = -1;
-                } else {
-                    in.mark();
-                    markState = true;
-                    markPoint = position;
-                }
-                break;
-            }
-            case 7: // add to input
-                if (chunkLists.isEmpty())
-                    break;
-                ChunkList chunks = chunkLists.remove(chunkLists.size() - 1);
-                limit += chunks.getTotalLength();
-                in.addAllToInput(chunks, this);
-                break;
-            case 8: // clear
-                in.clear();
-                position = limit;
-                markState = false;
-                break;
-            case 9: // try to reset
-                try {
-                    in.reset();
-                    assertTrue(markState);
-                    position = markPoint;
-                } catch (IllegalStateException e) {
-                    assertFalse(markState);
-                }
-                break;
-            default:
-                throw new AssertionError("fix nextInt argument");
+                    throw new AssertionError("fix nextInt argument");
             }
             if (position > limit)
                 fail(makeDebugStr(op, position, limit, markState, markPoint, 0, 0));
@@ -564,7 +544,10 @@ public class ChunksTest extends TestCase {
         pool.clearCounters();
     }
 
-    private static String makeDebugStr(int op, int position, int limit, boolean markState, int markPoint, int l, int res) {
-        return "op=" + op + " pos=" + position + " lim=" + limit + " ms=" + markState + " mp=" + markPoint + " l=" + l + " res=" + res;
+    private static String makeDebugStr(int op, int position, int limit, boolean markState, int markPoint,
+        int l, int res)
+    {
+        return "op=" + op + " pos=" + position + " lim=" + limit + " ms=" + markState + " mp=" + markPoint +
+            " l=" + l + " res=" + res;
     }
 }

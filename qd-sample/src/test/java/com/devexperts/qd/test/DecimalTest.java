@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,7 +12,7 @@
 package com.devexperts.qd.test;
 
 import com.devexperts.qd.util.Decimal;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.text.NumberFormat;
 import java.util.HashMap;
@@ -20,10 +20,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 /**
  * Unit test for {@link Decimal} class.
  */
-public class DecimalTest extends TestCase {
+public class DecimalTest {
     private static final long[] POWERS = new long[19];
     static {
         POWERS[0] = 1;
@@ -44,13 +48,11 @@ public class DecimalTest extends TestCase {
 
     private static String str(int decimal) {
         int shift = (decimal & 0x0F) != 0 || (((decimal >> 4) + 1) & 7) <= 2 ? 4 : 7;
-        return "0x" + Integer.toHexString(decimal) + "(" + (decimal >> shift) + ":" + (decimal & ((1 << shift) - 1)) + "=" + Decimal.toString(decimal) + ")";
+        return "0x" + Integer.toHexString(decimal) +
+            "(" + (decimal >> shift) + ":" + (decimal & ((1 << shift) - 1)) + "=" + Decimal.toString(decimal) + ")";
     }
 
-    public DecimalTest(String s) {
-        super(s);
-    }
-
+    @Test
     public void testCoversions() {
         Random r = new Random(20070412);
         for (int i = 0; i < 100000; i++) {
@@ -68,6 +70,7 @@ public class DecimalTest extends TestCase {
         }
     }
 
+    @Test
     public void testRandomCompose() {
         Random r = new Random(20120903);
         for (int i = 0; i < 100000; i++) {
@@ -77,12 +80,15 @@ public class DecimalTest extends TestCase {
 
             int d1 = Decimal.compose(d);
             int d2 = Decimal.composeDecimal(mantissa, precision);
-            if (d1 != d2)
-                fail("compose(" + d + ") = " + str(d1) + ", composeDecimal(" + mantissa + ", " + precision + ") = " + str(d2));
+            if (d1 != d2) {
+                fail("compose(" + d + ") = " + str(d1) +
+                    ", composeDecimal(" + mantissa + ", " + precision + ") = " + str(d2));
+            }
             assertEquals(d1, Decimal.wideToTiny(Decimal.tinyToWide(d1)));
         }
     }
 
+    @Test
     public void testCompose() {
         assertEquals(Decimal.compose(10000000000000000.0), 1600000001);
         assertEquals(Decimal.compose(1000000000000000.0), 160000001);
@@ -123,7 +129,8 @@ public class DecimalTest extends TestCase {
             checkCompose(0, precision, precision <= -19 ? Double.NaN : 0);
             for (int m = 1; m <= 9; m++)
                 for (int k = 0; k < POWERS.length; k++) {
-                    // Note: 1e18 is max decimal power that fits into long, 9e18 is max 1-digit mantissa that fits into long.
+                    // Note: 1e18 is max decimal power that fits into long,
+                    // 9e18 is max 1-digit mantissa that fits into long.
                     int p = k - precision;
                     double value = p >= POWERS.length ? Double.POSITIVE_INFINITY : p <= -POWERS.length ? 0 :
                         p >= 0 ? (double) m * POWERS[p] : (double) m / POWERS[-p];
@@ -146,9 +153,9 @@ public class DecimalTest extends TestCase {
             for (int precision = k; precision <= 13; precision++)
                 checkCompose(131071 * POWERS[precision] + (POWERS[precision] >> k), precision, 131071 + 1.0 / (1 << k));
 
-        assertEquals(Decimal.toDouble(800000029), 5000.0001);
-        assertEquals(Decimal.compose(5000.00005), 800000029);
-        assertEquals(Decimal.composeDecimal(500000005, 5), 800000029);
+        assertEquals(Decimal.toDouble(800000029), 5000.0001, 0.0);
+        assertEquals(Decimal.compose(5000.00005), 800000029, 0.0);
+        assertEquals(Decimal.composeDecimal(500000005, 5), 800000029, 0.0);
         checkCompose(1342177276, 1, 134217730);
         checkCompose(1342177275, -7, Double.POSITIVE_INFINITY);
     }
@@ -163,6 +170,7 @@ public class DecimalTest extends TestCase {
         assertEquals(d1, Decimal.wideToTiny(Decimal.tinyToWide(d1)));
     }
 
+    @Test
     public void testRoundingOnes() {
         // too big -> infinity
         checkRoundingBothSigns(Double.POSITIVE_INFINITY, 111111111111111111111111111111111.0);
@@ -224,6 +232,7 @@ public class DecimalTest extends TestCase {
         checkRoundingBothSigns(0.0, 0.00000000000000000000111111111111111111);
     }
 
+    @Test
     public void testRoundingFours() {
         // too big -> infinity
         checkRoundingBothSigns(Double.POSITIVE_INFINITY, 444444444444444444444444444444444.0);
@@ -285,6 +294,7 @@ public class DecimalTest extends TestCase {
         checkRoundingBothSigns(0.0, 0.00000000000000000000444444444444444444);
     }
 
+    @Test
     public void testRoundingFives() {
         // too big -> infinity
         checkRoundingBothSigns(Double.POSITIVE_INFINITY, 555555555555555555555555555555555.0);
@@ -346,6 +356,7 @@ public class DecimalTest extends TestCase {
         checkRoundingBothSigns(0.0, 0.00000000000000000000555555555555555555);
     }
 
+    @Test
     public void testRoundingSixs() {
         // too big -> infinity
         checkRoundingBothSigns(Double.POSITIVE_INFINITY, 666666666666666666666666666666666.0);
@@ -433,13 +444,14 @@ public class DecimalTest extends TestCase {
     }
 
     private void checkToDoubleAndCanonical(double expect, int decimal) {
-        assertEquals(expect, Decimal.toDouble(decimal));
+        assertEquals(expect, Decimal.toDouble(decimal), 0.0);
         if (Double.isInfinite(expect))
             assertEquals(decimal, expect > 0 ? Decimal.POSITIVE_INFINITY : Decimal.NEGATIVE_INFINITY);
         if (expect == 0)
             assertEquals(decimal, Decimal.ZERO);
     }
 
+    @Test
     public void testPrecision() {
         // standard precision range
         checkPreciseBothSigns(13421772700000000.0, true); // max representable number with 10^8 multiplier
@@ -491,9 +503,10 @@ public class DecimalTest extends TestCase {
         char[] chars = str.toCharArray();
         assertEquals(decimal, Decimal.parseDecimal(chars, 0, chars.length));
         // also check sanity of Double.parseDouble (just in case...)
-        assertEquals(v, Double.parseDouble(str));
+        assertEquals(v, Double.parseDouble(str), 0.0);
     }
 
+    @Test
     public void testDecimals() {
         testStringAndDouble("NaN", Double.NaN);
         testStringAndDouble("Infinity", Double.POSITIVE_INFINITY);
@@ -521,7 +534,7 @@ public class DecimalTest extends TestCase {
         if (Double.isNaN(dbl))
             assertTrue("should be NaN", Double.isNaN(Decimal.toDouble(decimal)));
         else
-            assertEquals(dbl, Decimal.toDouble(decimal));
+            assertEquals(dbl, Decimal.toDouble(decimal), 0.0);
 
         // Should be consistent with Double.toString on NaNs and infinities
         if (Double.isNaN(dbl) || Double.isInfinite(dbl))
@@ -674,23 +687,27 @@ public class DecimalTest extends TestCase {
         return map;
     }
 
+    @Test
     public void testCreatedDecimals() {
-        checkCreatedDecimals(createSpecialDecimals(new HashMap<Integer, Double>()));
-        checkCreatedDecimals(createMalformedSpecialDecimals(new HashMap<Integer, Double>()));
-        checkCreatedDecimals(createOneDecimals(new HashMap<Integer, Double>()));
-        checkCreatedDecimals(createMalformedOneDecimals(new HashMap<Integer, Double>()));
-        checkCreatedDecimals(createDigitDecimals(new HashMap<Integer, Double>()));
-        checkCreatedDecimals(createFractionalDecimals(new HashMap<Integer, Double>()));
+        checkCreatedDecimals(createSpecialDecimals(new HashMap<>()));
+        checkCreatedDecimals(createMalformedSpecialDecimals(new HashMap<>()));
+        checkCreatedDecimals(createOneDecimals(new HashMap<>()));
+        checkCreatedDecimals(createMalformedOneDecimals(new HashMap<>()));
+        checkCreatedDecimals(createDigitDecimals(new HashMap<>()));
+        checkCreatedDecimals(createFractionalDecimals(new HashMap<>()));
     }
 
     private void checkCreatedDecimals(Map<Integer, Double> map) {
         for (Map.Entry<Integer, Double> e : map.entrySet()) {
-            assertEquals(Decimal.toDouble(e.getKey()), e.getValue());
+            assertEquals(Decimal.toDouble(e.getKey()), e.getValue(), 0.0);
             assertEquals(Decimal.toString(e.getKey()), Decimal.toString(Decimal.compose(e.getValue())));
-            assertEquals(Decimal.composeDecimal(Decimal.getDecimalMantissa(e.getKey()), Decimal.getDecimalPrecision(e.getKey())), Decimal.compose(e.getValue()));
+            assertEquals(
+                Decimal.composeDecimal(Decimal.getDecimalMantissa(e.getKey()), Decimal.getDecimalPrecision(e.getKey())),
+                Decimal.compose(e.getValue()));
         }
     }
 
+    @Test
     public void testMath() {
         Map<Integer, Double> map = new HashMap<Integer, Double>();
         createSpecialDecimals(map);
@@ -703,15 +720,19 @@ public class DecimalTest extends TestCase {
             for (Map.Entry<Integer, Double> e2 : map.entrySet()) {
                 int c0 = Double.compare(e1.getValue(), e2.getValue());
                 int c1 = Decimal.compare(e1.getKey(), e2.getKey());
-                if (c0 != c1)
-                    fail("compare(" + str(e1.getKey()) + " aka " + e1.getValue() + ", " + str(e2.getKey()) + " aka " + e2.getValue() + "): " + c0 + " vs " + c1);
+                if (c0 != c1) {
+                    fail("compare(" + str(e1.getKey()) + " aka " + e1.getValue() + ", " +
+                        str(e2.getKey()) + " aka " + e2.getValue() + "): " + c0 + " vs " + c1);
+                }
                 checkMath("subtract", e1, e2, e1.getValue() - e2.getValue(), Decimal.subtract(e1.getKey(), e2.getKey()));
                 checkMath("add", e1, e2, e1.getValue() + e2.getValue(), Decimal.add(e1.getKey(), e2.getKey()));
                 checkMath("average", e1, e2, (e1.getValue() + e2.getValue()) / 2, Decimal.average(e1.getKey(), e2.getKey()));
             }
     }
 
-    private void checkMath(String name, Map.Entry<Integer, Double> e1, Map.Entry<Integer, Double> e2, double expect, int result) {
+    private void checkMath(String name, Map.Entry<Integer, Double> e1, Map.Entry<Integer, Double> e2,
+        double expect, int result)
+    {
         // recompose expected result via decimal to enforce proper precision loss
         double ulp = 2 * Math.ulp(expect);
         int d1 = Decimal.compose(expect - ulp);
@@ -719,8 +740,10 @@ public class DecimalTest extends TestCase {
         double v1 = Decimal.toDouble(d1);
         double v2 = Decimal.toDouble(d2);
         double vr = Decimal.toDouble(result);
-        if (!equals(vr, v1) && !equals(vr, v2))
-            fail(name + "(" + str(e1.getKey()) + " aka " + e1.getValue() + ", " + str(e2.getKey()) + " aka " + e2.getValue() + "): " +
+        if (!equals(vr, v1) && !equals(vr, v2)) {
+            fail(name + "(" + str(e1.getKey()) + " aka " + e1.getValue() + ", " +
+                str(e2.getKey()) + " aka " + e2.getValue() + "): " +
                 str(result) + " while expected " + expect + " composed as " + str(d1) + " or " + str(d2));
+        }
     }
 }

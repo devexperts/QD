@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -46,7 +46,8 @@ public class SampleRMIClient {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        RMIRequest<Double> reqOperation = client.getClient().createRequest(null, DifferentServices.CalculatorService.MULT, r, r);
+        RMIRequest<Double> reqOperation = client.getClient().createRequest(
+            null, DifferentServices.CalculatorService.MULT, r, r);
         reqOperation.send();
         try {
             result = reqOperation.getBlocking();
@@ -55,7 +56,8 @@ public class SampleRMIClient {
             return;
         }
 
-        RMIRequest<Void> print = client.getClient().createRequest(null, SampleRMIClient.print, "r * r = " + result + ", where r = " + r);
+        RMIRequest<Void> print = client.getClient().createRequest(null, SampleRMIClient.print, "r * r = " + result +
+            ", where r = " + r);
         print.send();
 
         reqOperation = client.getClient().createRequest(null, DifferentServices.CalculatorService.DIVIDE, s, result);
@@ -66,7 +68,8 @@ public class SampleRMIClient {
             log.error("operation \"DIVIDE\" fall with Exception " + e.getType(), e);
             return;
         }
-        print = client.getClient().createRequest(null, SampleRMIClient.print, "s / r^2 = " + result + ", where r = " + r + ", s = " + s);
+        print = client.getClient().createRequest(null, SampleRMIClient.print, "s / r^2 = " + result +
+            ", where r = " + r + ", s = " + s);
         print.send();
 
         reqOperation = client.getClient().createRequest(null, DifferentServices.CalculatorService.SIN, result);
@@ -94,7 +97,8 @@ public class SampleRMIClient {
                 text.append("a = ").append(reqOperation.getParameters()[0])
                     .append("; SIN(a) = ");
             } else {
-                reqOperation = client.getClient().createRequest(null, operation, rnd.nextDouble() * 100, rnd.nextDouble() * 100);
+                reqOperation = client.getClient().createRequest(
+                    null, operation, rnd.nextDouble() * 100, rnd.nextDouble() * 100);
                 text.append("a = ").append(reqOperation.getParameters()[0])
                     .append(", b = ").append(reqOperation.getParameters()[1]).append("; ")
                     .append(operation.getMethodName()).append("(a, b) = ");
@@ -103,7 +107,8 @@ public class SampleRMIClient {
             try {
                 result = reqOperation.getBlocking();
             } catch (RMIException e) {
-                log.error("operation \"" + reqOperation.getOperation().getMethodName() + "\" fall with Exception " + e.getType(), e);
+                log.error("operation \"" + reqOperation.getOperation().getMethodName() +
+                    "\" fall with Exception " + e.getType(), e);
                 return;
             }
             text.append(result);

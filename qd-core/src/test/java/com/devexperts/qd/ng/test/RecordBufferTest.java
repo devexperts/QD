@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,19 +22,26 @@ import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.ng.RecordSource;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.HashSet;
 import java.util.Set;
 
-public class RecordBufferTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+public class RecordBufferTest {
     private static final DataRecord RECORD = new DefaultRecord(0, "Test", true,
-        new DataIntField[] { new CompactIntField(0, "Test.Int0"), new CompactIntField(1, "Test.Int1"), new CompactIntField(2, "Test.Int2")},
+        new DataIntField[] { new CompactIntField(0, "Test.Int0"), new CompactIntField(1, "Test.Int1"),
+            new CompactIntField(2, "Test.Int2")},
         new DataObjField[] { new MarshalledObjField(0, "Test.Obj0"), new MarshalledObjField(1, "Test.Obj1")});
     private static final DataRecord RECORD2 = new DefaultRecord(1, "Test2", true,
         new DataIntField[] { new CompactIntField(0, "Test2.Int0"), new CompactIntField(1, "Test2.Int1")},
         new DataObjField[] { new MarshalledObjField(0, "Test2.Obj0")});
 
+    @Test
     public void testGetAt() {
         RecordBuffer buf = new RecordBuffer(RecordMode.DATA.withEventTimeSequence());
         for (int i = 1; i <= 100; i++) {
@@ -71,6 +78,7 @@ public class RecordBufferTest extends TestCase {
         assertEquals(buf.getLimit(), buf.getPosition());
     }
 
+    @Test
     public void testCompact() {
         Set<RecordMode> modes = new HashSet<>();
         modes.add(RecordMode.DATA);
@@ -132,6 +140,7 @@ public class RecordBufferTest extends TestCase {
     }
 
     // Cleanup 2 of 3 records
+    @Test
     public void testCompactCleanup1() {
         RecordBuffer buf = new RecordBuffer(RecordMode.FLAGGED_DATA);
         buf.add(RECORD, 1, null).setEventFlags(EventFlag.REMOVE_EVENT.flag());
@@ -148,6 +157,7 @@ public class RecordBufferTest extends TestCase {
     }
 
     // Cleanup 1 of 3 records
+    @Test
     public void testCompactCleanup2() {
         RecordBuffer buf = new RecordBuffer(RecordMode.FLAGGED_DATA);
         buf.add(RECORD, 1, null).setEventFlags(EventFlag.REMOVE_EVENT.flag());
@@ -162,6 +172,7 @@ public class RecordBufferTest extends TestCase {
         assertEquals(0, buf.add(RECORD, 5, null).getEventFlags());
     }
 
+    @Test
     public void testUnlink() {
         RecordBuffer buf = new RecordBuffer(RecordMode.DATA.withLink());
         RecordCursor cur;
@@ -215,6 +226,7 @@ public class RecordBufferTest extends TestCase {
         int j = 0;
         for (int i = 1; i <= 8; i++) {
             RecordCursor cur = buf.next();
+            assertNotNull(cur);
             assertEquals(i, cur.getCipher());
             if (j < ciphers.length && ciphers[j] < i)
                 j++;
@@ -224,6 +236,7 @@ public class RecordBufferTest extends TestCase {
         buf.rewind();
     }
 
+    @Test
     public void testAddBetweenDifferentModes() {
         RecordBuffer buf1 = RecordBuffer.getInstance(RecordMode.DATA.withLink().withEventTimeSequence());
         RecordCursor cur = buf1.add(RECORD, 0, "TEST-SYM1");
@@ -244,23 +257,27 @@ public class RecordBufferTest extends TestCase {
         assertEquals("buf2.size", 3, buf1.size());
 
         cur = buf2.next();
+        assertNotNull(cur);
         assertEquals("symbol1", "TEST-SYM1", cur.getSymbol());
         assertEquals("mark1", 0, cur.getTimeMark());
         assertEquals("ets1", baseEts, cur.getEventTimeSequence());
 
         cur = buf2.next();
+        assertNotNull(cur);
         assertEquals("symbol2", "TEST-SYM2", cur.getSymbol());
         assertEquals("mark2", 0, cur.getTimeMark());
         assertEquals("ets2", baseEts << 1, cur.getEventTimeSequence());
 
         cur = buf2.next();
+        assertNotNull(cur);
         assertEquals("symbol3", "TEST-SYM3", cur.getSymbol());
         assertEquals("mark3", 0, cur.getTimeMark());
         assertEquals("ets3", baseEts << 2, cur.getEventTimeSequence());
 
-        assertEquals("no next", null, buf2.next());
+        assertNull("no next", buf2.next());
     }
 
+    @Test
     public void testFastCopy() {
         long baseEts = 0x123456789abcdefL;
         RecordCursor cur;
@@ -279,15 +296,18 @@ public class RecordBufferTest extends TestCase {
         assertEquals("buf2.size", 3, buf2.size());
 
         cur = buf2.next();
+        assertNotNull(cur);
         assertEquals("symbol1", "TEST-SYM1", cur.getSymbol());
         assertEquals("ets1", baseEts, cur.getEventTimeSequence());
         cur = buf2.next();
+        assertNotNull(cur);
         assertEquals("symbol2", "TEST-SYM2", cur.getSymbol());
         assertEquals("ets2", baseEts << 1, cur.getEventTimeSequence());
         cur = buf2.next();
+        assertNotNull(cur);
         assertEquals("symbol3", "TEST-SYM3", cur.getSymbol());
         assertEquals("ets3", baseEts << 2, cur.getEventTimeSequence());
-        assertEquals("no next", null, buf2.next());
+        assertNull("no next", buf2.next());
 
         buf1.rewind();
         buf1.next();
@@ -296,17 +316,20 @@ public class RecordBufferTest extends TestCase {
         assertEquals("buf3.size", 2, buf3.size());
 
         cur = buf3.next();
+        assertNotNull(cur);
         assertEquals("symbol2", "TEST-SYM2", cur.getSymbol());
         assertEquals("ets2", baseEts << 1, cur.getEventTimeSequence());
         cur = buf3.next();
+        assertNotNull(cur);
         assertEquals("symbol3", "TEST-SYM3", cur.getSymbol());
         assertEquals("ets3", baseEts << 2, cur.getEventTimeSequence());
-        assertEquals("no next", null, buf3.next());
+        assertNull("no next", buf3.next());
     }
 
+    @Test
     public void testVoid() {
-        assertEquals(null, RecordSource.VOID.current());
-        assertEquals(null, RecordSource.VOID.next());
+        assertNull(RecordSource.VOID.current());
+        assertNull(RecordSource.VOID.next());
         assertEquals(0, RecordSource.VOID.getPosition());
         assertEquals(0, RecordSource.VOID.getLimit());
     }

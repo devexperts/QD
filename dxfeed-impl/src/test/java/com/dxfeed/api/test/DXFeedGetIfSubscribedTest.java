@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -25,12 +25,20 @@ import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.OrderSource;
 import com.dxfeed.event.market.Quote;
 import com.dxfeed.event.market.Side;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
 
-public class DXFeedGetIfSubscribedTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+
+public class DXFeedGetIfSubscribedTest {
     private static final String SYMBOL = "IBM";
     private static final CandleSymbol CANDLE_SYMBOL = CandleSymbol.valueOf(SYMBOL, CandlePeriod.DAY);
 
@@ -38,37 +46,38 @@ public class DXFeedGetIfSubscribedTest extends TestCase {
     private DXFeed feed;
     private DXPublisher publisher;
 
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         ThreadCleanCheck.before();
         endpoint = DXEndpoint.create(DXEndpoint.Role.LOCAL_HUB);
         feed = endpoint.getFeed();
         publisher = endpoint.getPublisher();
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         endpoint.close();
     }
 
+    @Test
     public void testGetLast() {
         Quote q = new Quote(SYMBOL);
         assertSame(q, feed.getLastEvent(q));
         assertEmpty(q);
         q = feed.getLastEventIfSubscribed(Quote.class, SYMBOL);
-        assertTrue(q == null);
+        assertNull(q);
         DXFeedSubscription<Quote> sub = feed.createSubscription(Quote.class);
         sub.addSymbols(SYMBOL);
         q = feed.getLastEventIfSubscribed(Quote.class, SYMBOL);
-        assertTrue(q != null);
+        assertNotNull(q);
         assertEmpty(q);
         // publish something
         q = new Quote(SYMBOL);
         q.setAskPrice(10.5);
         publisher.publishEvents(Collections.singletonList(q));
         q = feed.getLastEventIfSubscribed(Quote.class, SYMBOL);
-        assertTrue(q != null);
-        assertEquals(10.5, q.getAskPrice());
+        assertNotNull(q);
+        assertEquals(10.5, q.getAskPrice(), 0.0);
         q.setAskPrice(Double.NaN);
         assertEmpty(q);
     }
@@ -76,23 +85,24 @@ public class DXFeedGetIfSubscribedTest extends TestCase {
     private void assertEmpty(Quote q) {
         Quote e = new Quote(SYMBOL);
         assertEquals(e.getEventSymbol(), q.getEventSymbol());
-        assertEquals(e.getBidPrice(), q.getBidPrice());
+        assertEquals(e.getBidPrice(), q.getBidPrice(), 0.0);
         assertEquals(e.getBidSize(), q.getBidSize());
         assertEquals(e.getBidTime(), q.getBidTime());
         assertEquals(e.getBidExchangeCode(), q.getBidExchangeCode());
-        assertEquals(e.getAskPrice(), q.getAskPrice());
+        assertEquals(e.getAskPrice(), q.getAskPrice(), 0.0);
         assertEquals(e.getAskSize(), q.getAskSize());
         assertEquals(e.getAskTime(), q.getAskTime());
         assertEquals(e.getAskExchangeCode(), q.getAskExchangeCode());
     }
 
+    @Test
     public void testGetIndexed() {
         List<Order> os = feed.getIndexedEventsIfSubscribed(Order.class, SYMBOL, OrderSource.DEFAULT);
-        assertTrue(os == null);
+        assertNull(os);
         DXFeedSubscription<Order> sub = feed.createSubscription(Order.class);
         sub.addSymbols(SYMBOL);
         os = feed.getIndexedEventsIfSubscribed(Order.class, SYMBOL, OrderSource.DEFAULT);
-        assertTrue(os != null);
+        assertNotNull(os);
         assertTrue(os.isEmpty());
         // publish something
         Order o = new Order(SYMBOL);
@@ -102,29 +112,30 @@ public class DXFeedGetIfSubscribedTest extends TestCase {
         o.setSize(100);
         publisher.publishEvents(Collections.singletonList(o));
         os = feed.getIndexedEventsIfSubscribed(Order.class, SYMBOL, OrderSource.DEFAULT);
-        assertTrue(os != null);
+        assertNotNull(os);
         assertEquals(1, os.size());
         o = os.get(0);
         assertEquals(1, o.getIndex());
         assertEquals(Side.BUY, o.getOrderSide());
-        assertEquals(10.5, o.getPrice());
+        assertEquals(10.5, o.getPrice(), 0.0);
         assertEquals(100, o.getSize());
     }
 
+    @Test
     public void testGetTimeSeries() {
         long fromTime = TimeFormat.DEFAULT.parse("20150101").getTime();
         long toTime = TimeFormat.DEFAULT.parse("20150710").getTime();
         List<Candle> cs = feed.getTimeSeriesIfSubscribed(Candle.class, CANDLE_SYMBOL, fromTime, toTime);
-        assertTrue(cs == null);
+        assertNull(cs);
         DXFeedSubscription<Candle> sub = feed.createSubscription(Candle.class);
         // wrong sub time
         sub.addSymbols(new TimeSeriesSubscriptionSymbol<>(CANDLE_SYMBOL, toTime));
         cs = feed.getTimeSeriesIfSubscribed(Candle.class, CANDLE_SYMBOL, fromTime, toTime);
-        assertTrue(cs == null);
+        assertNull(cs);
         // right sub time
         sub.addSymbols(new TimeSeriesSubscriptionSymbol<>(CANDLE_SYMBOL, fromTime));
         cs = feed.getTimeSeriesIfSubscribed(Candle.class, CANDLE_SYMBOL, fromTime, toTime);
-        assertTrue(cs != null);
+        assertNotNull(cs);
         assertTrue(cs.isEmpty());
         // publish something
         Candle c = new Candle(CANDLE_SYMBOL);
@@ -133,11 +144,11 @@ public class DXFeedGetIfSubscribedTest extends TestCase {
         c.setVolume(100);
         publisher.publishEvents(Collections.singletonList(c));
         cs = feed.getTimeSeriesIfSubscribed(Candle.class, CANDLE_SYMBOL, fromTime, toTime);
-        assertTrue(cs != null);
+        assertNotNull(cs);
         assertEquals(1, cs.size());
         c = cs.get(0);
         assertEquals(fromTime, c.getTime());
-        assertEquals(10.5, c.getClose());
+        assertEquals(10.5, c.getClose(), 0.0);
         assertEquals(100, c.getVolume());
     }
 }

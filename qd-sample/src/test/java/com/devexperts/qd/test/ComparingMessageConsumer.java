@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,10 +17,13 @@ import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.qtp.MessageConsumerAdapter;
 import com.devexperts.qd.qtp.MessageType;
-import junit.framework.Assert;
 
 import java.util.EnumMap;
 import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.fail;
 
 class ComparingMessageConsumer extends MessageConsumerAdapter {
     private final Map<MessageType, RecordBuffer> bufs = new EnumMap<MessageType, RecordBuffer>(MessageType.class);
@@ -33,17 +36,17 @@ class ComparingMessageConsumer extends MessageConsumerAdapter {
 
     @Override
     public void handleCorruptedStream() {
-        Assert.fail();
+        fail();
     }
 
     @Override
     public void handleCorruptedMessage(int messageTypeId) {
-        Assert.fail();
+        fail();
     }
 
     @Override
     public void handleUnknownMessage(int messageTypeId) {
-        Assert.fail();
+        fail();
     }
 
     public int getRecordCounter() {
@@ -66,16 +69,16 @@ class ComparingMessageConsumer extends MessageConsumerAdapter {
                 providers.get(messageType).retrieveData(buf);
             // Compare
             DataRecord expectedRecord = buf.nextRecord();
-            Assert.assertSame("record", expectedRecord, record);
-            Assert.assertEquals("cipher", buf.getCipher(), iterator.getCipher());
+            assertSame("record", expectedRecord, record);
+            assertEquals("cipher", buf.getCipher(), iterator.getCipher());
             String s1 = iterator.getSymbol();
             String s2 = buf.getSymbol();
             if (s1 != null && s2 != null)
-                Assert.assertEquals("symbol", s1, s2);
+                assertEquals("symbol", s1, s2);
             for (int i = 0, n = record.getIntFieldCount(); i < n; i++)
-                Assert.assertEquals("intField", buf.nextIntField(), iterator.nextIntField());
+                assertEquals("intField", buf.nextIntField(), iterator.nextIntField());
             for (int i = 0, n = record.getObjFieldCount(); i < n; i++)
-                Assert.assertEquals("objField", buf.nextObjField(), iterator.nextObjField());
+                assertEquals("objField", buf.nextObjField(), iterator.nextObjField());
         }
     }
 }

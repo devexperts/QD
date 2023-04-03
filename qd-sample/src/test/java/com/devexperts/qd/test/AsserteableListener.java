@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,18 +15,20 @@ import com.devexperts.qd.DataListener;
 import com.devexperts.qd.DataProvider;
 import com.devexperts.qd.SubscriptionListener;
 import com.devexperts.qd.SubscriptionProvider;
-import junit.framework.Assert;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 class AsserteableListener implements DataListener, SubscriptionListener {
     private boolean available;
 
     public void assertAvailable() {
-        Assert.assertTrue(available);
+        assertTrue(available);
         available = false;
     }
 
     public void assertNotAvailable() {
-        Assert.assertFalse(available);
+        assertFalse(available);
     }
 
     public void dataAvailable(DataProvider provider) {

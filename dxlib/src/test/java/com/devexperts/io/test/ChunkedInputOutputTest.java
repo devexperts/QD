@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,18 +16,22 @@ import com.devexperts.io.ChunkList;
 import com.devexperts.io.ChunkPool;
 import com.devexperts.io.ChunkedInput;
 import com.devexperts.io.ChunkedOutput;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Random;
 
-public class ChunkedInputOutputTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+public class ChunkedInputOutputTest {
     private static final int MAGIC = (int) Math.round(((Math.sqrt(5) - 1) / 2) * (1L << 32));
 
     public static final int CHUNK_SIZE = 8192; // default
 
     private static final int ITERATIONS = 1000;
 
+    @Test
     public void testInputBytes() throws IOException {
         ChunkedInput in = new ChunkedInput();
         Random r0 = new Random(20121226);
@@ -61,6 +65,7 @@ public class ChunkedInputOutputTest extends TestCase {
         }
     }
 
+    @Test
     public void testInputMark() throws IOException {
         ChunkedInput in = new ChunkedInput();
         // add 3.5 chunks worth of random bytes
@@ -127,6 +132,7 @@ public class ChunkedInputOutputTest extends TestCase {
         verifyFillAndClear(buf2, size2);
     }
 
+    @Test
     public void testWriteChunks() throws IOException {
         ChunkedOutput out1 = new ChunkedOutput();
         ChunkedOutput out2 = new ChunkedOutput();

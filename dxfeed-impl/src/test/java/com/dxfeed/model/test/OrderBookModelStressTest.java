@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,7 +22,9 @@ import com.dxfeed.event.market.Side;
 import com.dxfeed.model.ObservableListModelListener;
 import com.dxfeed.model.market.OrderBookModel;
 import com.dxfeed.model.market.OrderBookModelFilter;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -33,10 +35,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.Assert.fail;
+
 /**
  * This test is designed to detect "hangs" and NPEs in OrderBookModel.
  */
-public class OrderBookModelStressTest extends TestCase {
+public class OrderBookModelStressTest {
     public static final String[] SYMBOLS = {"GOOG", "AAPL", "IBM"};
     public static final int N_SECONDS = 3;
     public static final int MAX_PUB_EVENTS = 10;
@@ -50,8 +54,8 @@ public class OrderBookModelStressTest extends TestCase {
 
     private final Thread.UncaughtExceptionHandler uncaughtExceptionHandler = (t, e) -> exception.offer(e);
 
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         ThreadCleanCheck.before();
         executor = Executors.newFixedThreadPool(1, r -> {
             processingThread = new Thread(r);
@@ -62,8 +66,8 @@ public class OrderBookModelStressTest extends TestCase {
             .executor(executor);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         endpoint.close();
         if (publisherThread != null)
             publisherThread.interrupt();
@@ -72,6 +76,7 @@ public class OrderBookModelStressTest extends TestCase {
         ThreadCleanCheck.after();
     }
 
+    @Test
     public void testOrderBookUnderStress() throws InterruptedException {
         // connect order books to feed
         ArrayList<OrderBookModel> models = new ArrayList<>();
@@ -119,7 +124,7 @@ public class OrderBookModelStressTest extends TestCase {
     }
 
     static class PublisherThread extends Thread {
-        private DXPublisher publisher;
+        private final DXPublisher publisher;
 
         PublisherThread(DXPublisher publisher) {
             this.publisher = publisher;

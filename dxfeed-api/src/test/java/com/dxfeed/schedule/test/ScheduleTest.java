@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,7 +18,7 @@ import com.dxfeed.schedule.Schedule;
 import com.dxfeed.schedule.Session;
 import com.dxfeed.schedule.SessionFilter;
 import com.dxfeed.schedule.SessionType;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -36,14 +36,21 @@ import static com.devexperts.util.TimeUtil.DAY;
 import static com.devexperts.util.TimeUtil.HOUR;
 import static com.devexperts.util.TimeUtil.MINUTE;
 import static com.devexperts.util.TimeUtil.SECOND;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-public class ScheduleTest extends TestCase {
+public class ScheduleTest {
+
+    @Test
     public void testParsing() {
         assertEquals(0, gmt("0=").getDayById(42).getStartTime() % DAY);
         assertEquals(23 * HOUR, gmt("de=2300;0=").getDayById(42).getStartTime() % DAY);
         assertEquals(0, gmt("0=01000200").getDayById(42).getNextDay(DayFilter.NON_TRADING).getStartTime() % DAY);
         assertEquals(1, gmt("0=01000200").getDayById(42).getNextDay(DayFilter.NON_TRADING).getSessions().size());
-        assertEquals(HOUR, gmt("0=01000200").getNearestSessionByTime(System.currentTimeMillis(), SessionFilter.TRADING).getStartTime() % DAY);
+        assertEquals(HOUR, gmt("0=01000200").getNearestSessionByTime(System.currentTimeMillis(),
+            SessionFilter.TRADING).getStartTime() % DAY);
 
         check("0=", "000000", "NO_TRADING");
         check("0=01000200", "000000,010000,020000", "NO_TRADING,REGULAR,NO_TRADING");
@@ -54,14 +61,22 @@ public class ScheduleTest extends TestCase {
         check("0=r0100/0200", "000000,010000,020000", "NO_TRADING,REGULAR,NO_TRADING");
         check("0=r+-0100-+0200", "000000,010000,020000", "NO_TRADING,REGULAR,NO_TRADING");
         check("0=r+-0100/-+0200", "000000,010000,020000", "NO_TRADING,REGULAR,NO_TRADING");
-        check("0=010002000300040005000600", "000000,010000,020000,030000,040000,050000,060000", "NO_TRADING,REGULAR,NO_TRADING,REGULAR,NO_TRADING,REGULAR,NO_TRADING");
-        check("0=0100/02000300/04000500/0600", "000000,010000,020000,030000,040000,050000,060000", "NO_TRADING,REGULAR,NO_TRADING,REGULAR,NO_TRADING,REGULAR,NO_TRADING");
-        check("0=+-0100-+0200+-0300-+0400+-0500-+0600", "000000,010000,020000,030000,040000,050000,060000", "NO_TRADING,REGULAR,NO_TRADING,REGULAR,NO_TRADING,REGULAR,NO_TRADING");
-        check("0=+-0100/-+0200+-0300/-+0400+-0500/-+0600", "000000,010000,020000,030000,040000,050000,060000", "NO_TRADING,REGULAR,NO_TRADING,REGULAR,NO_TRADING,REGULAR,NO_TRADING");
-        check("0=p01000200r03000400a05000600", "000000,010000,020000,030000,040000,050000,060000", "NO_TRADING,PRE_MARKET,NO_TRADING,REGULAR,NO_TRADING,AFTER_MARKET,NO_TRADING");
-        check("0=p0100/0200r0300/0400a0500/0600", "000000,010000,020000,030000,040000,050000,060000", "NO_TRADING,PRE_MARKET,NO_TRADING,REGULAR,NO_TRADING,AFTER_MARKET,NO_TRADING");
-        check("0=p+-0100-+0200r+-0300-+0400a+-0500-+0600", "000000,010000,020000,030000,040000,050000,060000", "NO_TRADING,PRE_MARKET,NO_TRADING,REGULAR,NO_TRADING,AFTER_MARKET,NO_TRADING");
-        check("0=p+-0100/-+0200r+-0300/-+0400a+-0500/-+0600", "000000,010000,020000,030000,040000,050000,060000", "NO_TRADING,PRE_MARKET,NO_TRADING,REGULAR,NO_TRADING,AFTER_MARKET,NO_TRADING");
+        check("0=010002000300040005000600", "000000,010000,020000,030000,040000,050000,060000",
+            "NO_TRADING,REGULAR,NO_TRADING,REGULAR,NO_TRADING,REGULAR,NO_TRADING");
+        check("0=0100/02000300/04000500/0600", "000000,010000,020000,030000,040000,050000,060000",
+            "NO_TRADING,REGULAR,NO_TRADING,REGULAR,NO_TRADING,REGULAR,NO_TRADING");
+        check("0=+-0100-+0200+-0300-+0400+-0500-+0600", "000000,010000,020000,030000,040000,050000,060000",
+            "NO_TRADING,REGULAR,NO_TRADING,REGULAR,NO_TRADING,REGULAR,NO_TRADING");
+        check("0=+-0100/-+0200+-0300/-+0400+-0500/-+0600", "000000,010000,020000,030000,040000,050000,060000",
+            "NO_TRADING,REGULAR,NO_TRADING,REGULAR,NO_TRADING,REGULAR,NO_TRADING");
+        check("0=p01000200r03000400a05000600", "000000,010000,020000,030000,040000,050000,060000",
+            "NO_TRADING,PRE_MARKET,NO_TRADING,REGULAR,NO_TRADING,AFTER_MARKET,NO_TRADING");
+        check("0=p0100/0200r0300/0400a0500/0600", "000000,010000,020000,030000,040000,050000,060000",
+            "NO_TRADING,PRE_MARKET,NO_TRADING,REGULAR,NO_TRADING,AFTER_MARKET,NO_TRADING");
+        check("0=p+-0100-+0200r+-0300-+0400a+-0500-+0600", "000000,010000,020000,030000,040000,050000,060000",
+            "NO_TRADING,PRE_MARKET,NO_TRADING,REGULAR,NO_TRADING,AFTER_MARKET,NO_TRADING");
+        check("0=p+-0100/-+0200r+-0300/-+0400a+-0500/-+0600", "000000,010000,020000,030000,040000,050000,060000",
+            "NO_TRADING,PRE_MARKET,NO_TRADING,REGULAR,NO_TRADING,AFTER_MARKET,NO_TRADING");
 
         check("0=010203020406", "000000,010203,020406", "NO_TRADING,REGULAR,NO_TRADING");
         check("0=010203/020406", "000000,010203,020406", "NO_TRADING,REGULAR,NO_TRADING");
@@ -71,10 +86,18 @@ public class ScheduleTest extends TestCase {
         check("0=r010203/020406", "000000,010203,020406", "NO_TRADING,REGULAR,NO_TRADING");
         check("0=r+-010203-+020406", "000000,010203,020406", "NO_TRADING,REGULAR,NO_TRADING");
         check("0=r+-010203/-+020406", "000000,010203,020406", "NO_TRADING,REGULAR,NO_TRADING");
-        check("0=p010203020406r030507040608a050709060810", "000000,010203,020406,030507,040608,050709,060810", "NO_TRADING,PRE_MARKET,NO_TRADING,REGULAR,NO_TRADING,AFTER_MARKET,NO_TRADING");
-        check("0=p010203/020406r030507/040608a050709/060810", "000000,010203,020406,030507,040608,050709,060810", "NO_TRADING,PRE_MARKET,NO_TRADING,REGULAR,NO_TRADING,AFTER_MARKET,NO_TRADING");
-        check("0=p+-010203-+020406r+-030507-+040608a+-050709-+060810", "000000,010203,020406,030507,040608,050709,060810", "NO_TRADING,PRE_MARKET,NO_TRADING,REGULAR,NO_TRADING,AFTER_MARKET,NO_TRADING");
-        check("0=p+-010203/-+020406r+-030507/-+040608a+-050709/-+060810", "000000,010203,020406,030507,040608,050709,060810", "NO_TRADING,PRE_MARKET,NO_TRADING,REGULAR,NO_TRADING,AFTER_MARKET,NO_TRADING");
+        check("0=p010203020406r030507040608a050709060810",
+            "000000,010203,020406,030507,040608,050709,060810",
+            "NO_TRADING,PRE_MARKET,NO_TRADING,REGULAR,NO_TRADING,AFTER_MARKET,NO_TRADING");
+        check("0=p010203/020406r030507/040608a050709/060810",
+            "000000,010203,020406,030507,040608,050709,060810",
+            "NO_TRADING,PRE_MARKET,NO_TRADING,REGULAR,NO_TRADING,AFTER_MARKET,NO_TRADING");
+        check("0=p+-010203-+020406r+-030507-+040608a+-050709-+060810",
+            "000000,010203,020406,030507,040608,050709,060810",
+            "NO_TRADING,PRE_MARKET,NO_TRADING,REGULAR,NO_TRADING,AFTER_MARKET,NO_TRADING");
+        check("0=p+-010203/-+020406r+-030507/-+040608a+-050709/-+060810",
+            "000000,010203,020406,030507,040608,050709,060810",
+            "NO_TRADING,PRE_MARKET,NO_TRADING,REGULAR,NO_TRADING,AFTER_MARKET,NO_TRADING");
 
         check("0=rt0300r05000600", "000000,050000,060000", "NO_TRADING,REGULAR,NO_TRADING");
         check("0=rt+-0300r-+0500-+0600", "000000,050000,060000", "NO_TRADING,REGULAR,NO_TRADING");
@@ -89,6 +112,7 @@ public class ScheduleTest extends TestCase {
         check("0=d0100230005000600rt0300", "010000,050000,060000", "NO_TRADING,REGULAR,NO_TRADING");
     }
 
+    @Test
     public void testShortDaysStrategyEarlyClose () {
         Map<Integer, String> map = new HashMap<>();
         map.put(1, "07000930");
@@ -141,6 +165,7 @@ public class ScheduleTest extends TestCase {
         checkSessions("sd=20191224;sds=ec0330;0=p10001700r17001800a18001900", 20191224, map);
     }
 
+    @Test
     public void testBrokenStrategies() {
         checkException("(tz=GMT;sd=20191224;sds=0330;0=)", "broken sds strategy for ");
         checkException("(tz=GMT;sd=20191224;sds=ec;0=)", "broken sds strategy for ");
@@ -155,6 +180,7 @@ public class ScheduleTest extends TestCase {
         checkException("(tz=GMT;hd=20191224;hds=jntd2020;0=)", "broken hds strategy for ");
     }
 
+    @Test
     public void testSessionsValidation() {
         // unordered session bounds
         checkException("(tz=GMT;0=10000900)", "illegal session period 10000900 in 10000900 in ");
@@ -169,6 +195,7 @@ public class ScheduleTest extends TestCase {
     /**
      * Test day and session continuity for US holidays and disabled strategies
      */
+    @Test
     public void testContinuityForDisabledStrategies() {
         String def = "dis(tz=America/Chicago;hd=US;sd=US;td=12345;de=1605;0=p06000830r08301515;sds=ec0000;hds=jntd0)";
         Schedule schedule = Schedule.getInstance(def);
@@ -179,6 +206,7 @@ public class ScheduleTest extends TestCase {
     /**
      * Test day and session continuity for US holidays and related jntd strategies
      */
+    @Test
     public void testContinuityForUSJntdStrategies() {
         for (int i : new int[] {1, 2, 3, 5, 9}) {
             String def = "con(tz=America/Chicago;hd=US;sd=US;td=12345;de=1605;0=p06000830r08301515;hds=jntd" + i + ")";
@@ -191,6 +219,7 @@ public class ScheduleTest extends TestCase {
     /**
      * Test day and session continuity for TR holidays and related jntd strategies
      */
+    @Test
     public void testContinuityForTRJntdStrategies() {
         for (int i : new int[] {1, 2, 3, 5, 9}) {
             String def = "con(tz=America/Chicago;hd=TR;sd=TR;td=12345;de=1605;0=p06000830r08301515;hds=jntd" + i + ")";
@@ -203,6 +232,7 @@ public class ScheduleTest extends TestCase {
     /**
      * Test jntd strategy turning to fallback scenario (no jntd) when holiday is on a weekend
      */
+    @Test
     public void testJntdInapplicable() {
         String def = "miss(tz=America/Chicago;hd=20200704,20201227;td=12345;de=1605;0=p06000830r08301515;hds=jntd3)";
         Schedule schedule = Schedule.getInstance(def);
@@ -214,6 +244,7 @@ public class ScheduleTest extends TestCase {
     /**
      * Test jntd strategy turning to fallback scenario (no jntd) when jntd duration is less than necessary
      */
+    @Test
     public void testJntdTooShortToAct() {
         String def = "short(tz=America/Chicago;hd=20200703,20201225;td=12345;de=1605;0=p06000830r08301515;hds=jntd2)";
         Schedule schedule = Schedule.getInstance(def);
@@ -225,6 +256,7 @@ public class ScheduleTest extends TestCase {
     /**
      * Test jntd strategy when holiday is followed by trading day
      */
+    @Test
     public void testJntdWithFollowingTradingDay() {
         String def = "trading(tz=America/Chicago;hd=20200120,20201126;td=12345;de=1605;0=p06000830r08301515;hds=jntd1)";
         checkJntdInActionAllPermutations(def, 20200120, 20200121);
@@ -234,14 +266,17 @@ public class ScheduleTest extends TestCase {
     /**
      * Test jntd strategy when holiday is followed by more holidays and then by trading day
      */
+    @Test
     public void testJntdWithFollowingHolidayAndTradingDay() {
-        String def = "holidayTrading(tz=America/Chicago;hd=20200120,20200121,20200122;td=12345;de=1605;0=p06000830r08301515;hds=jntd3)";
+        String def = "holidayTrading(tz=America/Chicago;hd=20200120,20200121,20200122;" +
+            "td=12345;de=1605;0=p06000830r08301515;hds=jntd3)";
         checkJntdInActionAllPermutations(def, 20200120, 20200123);
     }
 
     /**
      * Test jntd strategy cases when holiday is followed by weekend
      */
+    @Test
     public void testJntdOverWeekend() {
         String def = "weekend(tz=America/Chicago;hd=20200703,20201225;td=12345;de=1605;0=p06000830r08301515;hds=jntd3)";
         checkJntdInActionAllPermutations(def, 20200703, 20200706);
@@ -251,22 +286,27 @@ public class ScheduleTest extends TestCase {
     /**
      * Test jntd strategy when holiday is followed by weekend which is also marked as holidays
      */
+    @Test
     public void testJntdOverHolidayWeekend() {
-        String def = "holidayWeekend(tz=America/Chicago;hd=20200703,20200704,20200705;td=12345;de=1605;0=p06000830r08301515;hds=jntd3)";
+        String def = "holidayWeekend(tz=America/Chicago;hd=20200703,20200704,20200705;" +
+            "td=12345;de=1605;0=p06000830r08301515;hds=jntd3)";
         checkJntdInActionAllPermutations(def, 20200703, 20200706);
     }
 
     /**
      * Test jntd strategy when holiday is followed by more holidays and then by weekend
      */
+    @Test
     public void testJntdDualHolidaysOverWeekend() {
-        String def = "longHolidayWeekend(tz=America/Chicago;hd=20201126,20201127;td=12345;de=1605;0=p06000830r08301515;hds=jntd5)";
+        String def = "longHolidayWeekend(tz=America/Chicago;hd=20201126,20201127;" +
+            "td=12345;de=1605;0=p06000830r08301515;hds=jntd5)";
         checkJntdInActionAllPermutations(def, 20201126, 20201130);
     }
 
     /**
      * Test hd sets union with default syntax
      */
+    @Test
     public void testHdSetsUnion() {
         String def = "hd=US,CA;0=08001800;td=1234567";
         assertFalse("US and CA not holiday", gmt(def).getDayByYearMonthDay(20210606).isHoliday());
@@ -278,6 +318,7 @@ public class ScheduleTest extends TestCase {
     /**
      * Test hd sets and days union with default syntax
      */
+    @Test
     public void testHdSetsAndDaysUnion() {
         String def = "hd=US,CA,20211010;0=08001800;td=1234567";
         assertFalse("US and CA not holiday", gmt(def).getDayByYearMonthDay(20210606).isHoliday());
@@ -290,6 +331,7 @@ public class ScheduleTest extends TestCase {
     /**
      * Test hd sets difference
      */
+    @Test
     public void testHdSetsDiff() {
         String def = "hd=US,-CA;0=08001800;td=1234567";
         assertFalse("US and CA not holiday", gmt(def).getDayByYearMonthDay(20210606).isHoliday());
@@ -301,6 +343,7 @@ public class ScheduleTest extends TestCase {
     /**
      * Test hd sets and days difference
      */
+    @Test
     public void testHdSetsDanDaysDiff() {
         String def = "hd=US,-CA,-20210531;0=08001800;td=1234567";
         assertFalse("US and CA not holiday", gmt(def).getDayByYearMonthDay(20210606).isHoliday());
@@ -313,6 +356,7 @@ public class ScheduleTest extends TestCase {
     /**
      * Test hd sets intersection
      */
+    @Test
     public void testHdSetsIntersect() {
         String def = "hd=US,*CA;0=08001800;td=1234567";
         assertFalse("US and CA not holiday", gmt(def).getDayByYearMonthDay(20210606).isHoliday());
@@ -324,6 +368,7 @@ public class ScheduleTest extends TestCase {
     /**
      * Test hd sets and days intersect
      */
+    @Test
     public void testHdSetsAndDaysIntersect() {
         String def = "hd=20210101,*US,*CA;0=08001800;td=1234567";
         assertFalse("US and CA not holiday", gmt(def).getDayByYearMonthDay(20210606).isHoliday());
@@ -336,6 +381,7 @@ public class ScheduleTest extends TestCase {
     /**
      * Test hd sets and days intersect with wrong syntax
      */
+    @Test
     public void testHdSetsAndDaysIntersectDay() {
         String def = "hd=US,CA,*20210101;0=08001800;td=1234567";
         assertFalse("US and CA not holiday", gmt(def).getDayByYearMonthDay(20210606).isHoliday());
@@ -381,7 +427,9 @@ public class ScheduleTest extends TestCase {
     }
 
     // check jntd strategy in action for given holiday; load days in order of given permutation
-    private void checkJntdInAction(Schedule schedule, Schedule fallback, int holidayYmd, int tradingYmd, int... permutation) {
+    private void checkJntdInAction(Schedule schedule, Schedule fallback, int holidayYmd, int tradingYmd,
+        int... permutation)
+    {
         for (int ymd : permutation) {
             int dayId = DayUtil.getDayIdByYearMonthDay(ymd);
             schedule.getDayById(dayId);
@@ -510,8 +558,11 @@ public class ScheduleTest extends TestCase {
         for (int i = 0; i < a.getSessions().size(); i++) {
             Session as = a.getSessions().get(i);
             Session bs = b.getSessions().get(i);
-            if (as.getType() != bs.getType() || as.getStartTime() != bs.getStartTime() || as.getEndTime() != bs.getEndTime())
+            if (as.getType() != bs.getType() ||
+                as.getStartTime() != bs.getStartTime() || as.getEndTime() != bs.getEndTime())
+            {
                 fail(message + " has " + a + " different from alternative " + b + " for session " + as + " vs " + bs);
+            }
         }
     }
 
@@ -583,5 +634,4 @@ public class ScheduleTest extends TestCase {
             assertEquals(SessionType.valueOf(typeArray[i]), s.getType());
         }
     }
-
 }

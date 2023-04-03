@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -29,12 +29,12 @@ public class TestDataScheme extends DefaultScheme {
         HAS_TIME(true, 2),
         HAS_TIME_AND_VALUE(true, 3);
 
-        final boolean has_time;
-        final int min_int_fields;
+        final boolean hasTime;
+        final int minIntFields;
 
-        Type(boolean has_time, int min_int_fields) {
-            this.has_time = has_time;
-            this.min_int_fields = min_int_fields;
+        Type(boolean hasTime, int minIntFields) {
+            this.hasTime = hasTime;
+            this.minIntFields = minIntFields;
         }
     }
 
@@ -56,30 +56,30 @@ public class TestDataScheme extends DefaultScheme {
         this(RECORD_COUNT, seed, type);
     }
 
-    public TestDataScheme(int record_count, long seed, Type type) {
-        this(record_count, seed, type, null);
+    public TestDataScheme(int recordCount, long seed, Type type) {
+        this(recordCount, seed, type, null);
     }
 
-    public TestDataScheme(int record_count, long seed, Type type, DataRecord record) {
-        super(new PentaCodec(), createRecords(record_count, seed, type, record));
+    public TestDataScheme(int recordCount, long seed, Type type, DataRecord record) {
+        super(new PentaCodec(), createRecords(recordCount, seed, type, record));
     }
 
-    private static DataRecord[] createRecords(int record_count, long seed, Type type, DataRecord record) {
+    private static DataRecord[] createRecords(int recordCount, long seed, Type type, DataRecord record) {
         Sequencer seq = new Sequencer(seed);
-        DataRecord[] records = new DataRecord[record_count];
-        for (int i = 0; i < record_count; i++)
+        DataRecord[] records = new DataRecord[recordCount];
+        for (int i = 0; i < recordCount; i++)
             if (record != null && i == record.getId())
                 records[i] = record;
             else {
                 String name = "Record" + i;
-                records[i] = new DefaultRecord(i, name, type.has_time,
-                    createIntFields(seq, name, type.min_int_fields), createObjFields(seq, name));
+                records[i] = new DefaultRecord(i, name, type.hasTime,
+                    createIntFields(seq, name, type.minIntFields), createObjFields(seq, name));
             }
         return records;
     }
 
-    private static DataIntField[] createIntFields(Sequencer seq, String name, int min_int_fields) {
-        int cnt = Math.max(seq.nextIntFieldsCount(), min_int_fields);
+    private static DataIntField[] createIntFields(Sequencer seq, String name, int minIntFields) {
+        int cnt = Math.max(seq.nextIntFieldsCount(), minIntFields);
         DataIntField[] fields = new DataIntField[cnt];
         for (int i = 0; i < cnt; i++)
             fields[i] = seq.nextIntField(i, name);
@@ -95,7 +95,7 @@ public class TestDataScheme extends DefaultScheme {
     }
 
     private static class Sequencer {
-        private int field_id;
+        private int fieldId;
         private final Random rnd;
 
         Sequencer(long seed) {
@@ -103,7 +103,7 @@ public class TestDataScheme extends DefaultScheme {
         }
 
         int nextFieldId() {
-            return field_id++;
+            return fieldId++;
         }
 
         int nextIntFieldsCount() {

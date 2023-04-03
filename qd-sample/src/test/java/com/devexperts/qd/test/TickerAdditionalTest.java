@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,12 +18,13 @@ import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.ng.RecordBuffer;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class TickerAdditionalTest extends TestCase {
+public class TickerAdditionalTest {
     private static final DataScheme SCHEME = new TestDataScheme(20081107);
     private static final DataRecord RECORD = SCHEME.getRecord(0);
 
+    @Test
     public void testTickerAddRemoveLong() {
         checkAddRemove(QDFactory.getDefaultFactory().createTicker(SCHEME), "Long symbol");
     }

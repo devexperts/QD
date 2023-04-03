@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,7 +15,7 @@ import com.devexperts.util.InvalidFormatException;
 import com.devexperts.util.TimeFormat;
 import com.devexperts.util.TimePeriod;
 import com.devexperts.util.TimeUtil;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -28,11 +28,19 @@ import java.util.Random;
 import java.util.TimeZone;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class TimeFormatTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+public class TimeFormatTest {
 
     private final TimeFormat GMT = TimeFormat.GMT;
     private final TimeFormat MSK = TimeFormat.getInstance(TimeZone.getTimeZone("GMT+3:00"));
 
+    @Test
     public void testZoneStability() {
         // try to parse in GMT a time with an explicit time-zone
         assertEquals(1197450000000L, GMT.parse("2007-12-12T12+0300").getTime());
@@ -40,6 +48,7 @@ public class TimeFormatTest extends TestCase {
         assertEquals("20140618-130218+0000", GMT.withTimeZone().format(new Date(1403096538000L)));
     }
 
+    @Test
     public void testTimePeriods() throws InvalidFormatException {
         assertEquals(0L, TimePeriod.valueOf("0").getTime());
         assertEquals(1000L, TimePeriod.valueOf("1s").getTime());
@@ -48,6 +57,7 @@ public class TimeFormatTest extends TestCase {
         assertEquals(TimePeriod.valueOf("1.23456789"), TimePeriod.valueOf("0d0h0m1.235s"));
     }
 
+    @Test
     public void testEqualTimePeriods() throws InvalidFormatException {
         ArrayList<TimePeriod> equalPeriods = new ArrayList<>();
 
@@ -63,6 +73,7 @@ public class TimeFormatTest extends TestCase {
         assertPeriodsAreEqual(equalPeriods, "P10DT2H30M0S");
     }
 
+    @Test
     public void testBadTimePeriods() {
         String[] badValues = {
             "t1d",
@@ -90,6 +101,7 @@ public class TimeFormatTest extends TestCase {
         }
     }
 
+    @Test
     public void testGoodTimePeriods() {
         String[] goodValues = {
             "P1234DT12H30M0S",
@@ -115,6 +127,7 @@ public class TimeFormatTest extends TestCase {
     }
 
     // WARNING: Following tests will pass only when running in MST time zone.
+    @Test
     public void testEqualDateTimes1() {
         assertEqual(GMT.parse("20071114-170523"), "20071114-170523+0000", GMT);
         assertEqual(GMT.parse("2007-11-14 17:05:23"), "20071114-170523+0000", GMT);
@@ -131,6 +144,7 @@ public class TimeFormatTest extends TestCase {
     }
 
     // WARNING: This test will pass only when running in MST time zone.
+    @Test
     public void testEqualDateTimes2() {
         assertEqual(GMT.parse("20060101"), "20060101-000000+0000", GMT);
         assertEqual(GMT.parse("2006-01-01"), "20060101-000000+0000", GMT);
@@ -142,6 +156,7 @@ public class TimeFormatTest extends TestCase {
         assertEqual(GMT.parse("1136073600000"), "20060101-000000+0000", GMT);
     }
 
+    @Test
     public void testEqualDateTimes3() {
         Date parsedToday = MSK.parse("t12:34:56");
         Calendar today = Calendar.getInstance(MSK.getTimeZone());
@@ -159,6 +174,7 @@ public class TimeFormatTest extends TestCase {
         assertEqual(GMT.parse(curDateInMSK + "T12:34:56+0300"), MSK.withTimeZone().format(today.getTime()), MSK);
     }
 
+    @Test
     public void testBadDateTimes() {
         String[] badValues = {
             "2007-1102-12:34:56",
@@ -193,6 +209,7 @@ public class TimeFormatTest extends TestCase {
         }
     }
 
+    @Test
     public void testGoodDateTimes() {
         String[] goodValues = {
             "2007-11-02-12:34:56",
@@ -228,6 +245,7 @@ public class TimeFormatTest extends TestCase {
         }
     }
 
+    @Test
     public void testDateAsLong() {
         Date a1 = GMT.parse("20010101"); // yyyymmdd
         Date a2 = GMT.parse("2001-01-01");
@@ -242,34 +260,16 @@ public class TimeFormatTest extends TestCase {
         assertEquals(c1, c2);
     }
 
+    @Test
     public void testNPE() {
-        try {
-            GMT.parse(null);
-            fail("NPE expected");
-        } catch (NullPointerException expected) {
-        }
-        try {
-            TimePeriod.valueOf(null);
-            fail("NPE expected");
-        } catch (NullPointerException expected) {
-        }
-        try {
-            ((TimePeriod) null).toString();
-            fail("NPE expected");
-        } catch (NullPointerException expected) {
-        }
-        try {
-            GMT.format(null);
-            fail("NPE expected");
-        } catch (NullPointerException expected) {
-        }
-        try {
-            GMT.withTimeZone().format(null);
-            fail("NPE expected");
-        } catch (NullPointerException expected) {
-        }
+        assertThrows("NPE expected", NullPointerException.class, () -> GMT.parse(null));
+        assertThrows("NPE expected", NullPointerException.class, () -> TimePeriod.valueOf(null));
+        assertThrows("NPE expected", NullPointerException.class, () -> ((TimePeriod) null).toString());
+        assertThrows("NPE expected", NullPointerException.class, () -> GMT.format(null));
+        assertThrows("NPE expected", NullPointerException.class, () -> GMT.withTimeZone().format(null));
     }
 
+    @Test
     public void testNoTimeZoneFormat() {
         Date d1 = new Date();
         String s = TimeFormat.DEFAULT.format(d1);
@@ -278,6 +278,7 @@ public class TimeFormatTest extends TestCase {
         assertEquals(GMT.withTimeZone().format(d1), GMT.withTimeZone().format(d2));
     }
 
+    @Test
     public void testDateOutsideIsoRangeFormat() {
         Date d1 = new Date(Long.MIN_VALUE);
         assertEquals(Long.toString(Long.MIN_VALUE), TimeFormat.GMT.format(d1));
@@ -289,6 +290,7 @@ public class TimeFormatTest extends TestCase {
         assertEquals(Long.toString(d3.getTime()), TimeFormat.GMT.format(d3));
     }
 
+    @Test
     public void testIsoFormat() {
         // Samples from http://www.w3schools.com/schema/schema_dtypes_date.asp
         // Test parsing
@@ -316,18 +318,21 @@ public class TimeFormatTest extends TestCase {
         }
     }
 
+    @Test
     public void testTimeWithoutTimeZone() {
         TimeFormat MSD = TimeFormat.getInstance(TimeZone.getTimeZone("Europe/Moscow"));
         Date withoutTZ = MSD.parse("20120406-182355");
         assertEquals(MSD.parse("20120406-182355+0400"), withoutTZ);
     }
 
+    @Test
     public void testTimeWithMillis() {
         TimeFormat MSD = TimeFormat.getInstance(TimeZone.getTimeZone("Europe/Moscow"));
         assertEquals(1333737666231L, MSD.parse("20120406-224106.231").getTime());
         assertEquals(1333737666231L, MSD.parse("20120406-224106.231+0400").getTime());
     }
 
+    @Test
     public void testZero() {
         assertEquals(0, GMT.parse("0").getTime());
         assertEquals("0", GMT.withTimeZone().format(new Date(0)));
@@ -336,6 +341,7 @@ public class TimeFormatTest extends TestCase {
         assertEquals("0", GMT.format(new Date(0)));
     }
 
+    @Test
     public void testEquivalence() throws ParseException {
         for (String tzName : "GMT,GMT+01:30,GMT-01:30,Europe/Moscow,America/Chicago".split(",")) {
             TimeZone tz = TimeZone.getTimeZone(tzName);
@@ -368,6 +374,7 @@ public class TimeFormatTest extends TestCase {
     }
 
     // test equivalence around daylight saving switches
+    @Test
     public void testDSTEquivalence() throws ParseException {
         TimeZone chicagoTz = TimeZone.getTimeZone("America/Chicago");
         TimeFormat format = TimeFormat.getInstance(chicagoTz);
@@ -404,6 +411,7 @@ public class TimeFormatTest extends TestCase {
         checkEquivalenceOnRange(format.asFullIso(), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX", true, begin, end, step);
     }
 
+    @Test
     public void testWeirdOffset() throws ParseException {
         TimeZone moscowTz = TimeZone.getTimeZone("Europe/Moscow");
         TimeFormat format = TimeFormat.getInstance(moscowTz);
@@ -419,9 +427,9 @@ public class TimeFormatTest extends TestCase {
         // From 1 Jul 1919 UTC+03:00 with DST
         // ...
         long begin = sdf.parse("19190701-000000").getTime();
-        assertTrue(moscowTz.getOffset(begin) % 60_000 != 0);
+        assertNotEquals(0, moscowTz.getOffset(begin) % 60_000);
         long end = sdf.parse("19190701-040000").getTime();
-        assertTrue(moscowTz.getOffset(end) % 60_000 == 0);
+        assertEquals(0, moscowTz.getOffset(end) % 60_000);
 
         int step = 5_000;
         checkEquivalenceOnRange(format, "yyyyMMdd-HHmmss", false, begin, end, step);
@@ -430,7 +438,6 @@ public class TimeFormatTest extends TestCase {
         checkEquivalenceOnRange(format.withMillis().withTimeZone(), "yyyyMMdd-HHmmss.SSSZ", true, begin, end, step);
         checkEquivalenceOnRange(format.asFullIso(), "yyyy-MM-dd'T'HH:mm:ss.SSSXXX", true, begin, end, step);
     }
-
 
     private void checkEquivalenceOnRange(TimeFormat format, String pattern, boolean withMillis,
         long begin, long end, long step) throws ParseException

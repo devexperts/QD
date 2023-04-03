@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,6 +17,7 @@ import com.devexperts.io.Marshaller;
 import com.devexperts.io.SerialClassContext;
 import com.devexperts.rmi.RMIException;
 import com.devexperts.rmi.RMIExceptionType;
+import com.devexperts.util.SystemProperties;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -27,6 +28,11 @@ import java.io.IOException;
  * {@link RMIException#getMessage() error message} if deserialization failed.
  */
 class RMIExceptionMarshaller extends Marshaller<RMIException> {
+
+    private static final StackTraceElement[] EMPTY_STACK = new StackTraceElement[0];
+
+    private static final boolean removeStackTraces =
+            SystemProperties.getBooleanProperty("com.devexperts.rmi.removeStackTraces", true);
 
     static final RMIExceptionMarshaller INSTANCE = new RMIExceptionMarshaller();
 
@@ -67,6 +73,8 @@ class RMIExceptionMarshaller extends Marshaller<RMIException> {
 
     @Override
     public void writeObjectTo(BufferedOutput out, RMIException object) throws IOException {
+        if (removeStackTraces)
+            removeStackTraces(object);
         out.writeCompactInt(object.getType().getId());
         out.writeUTFString(object.getMessage());
         out.writeObject(object);
@@ -91,5 +99,20 @@ class RMIExceptionMarshaller extends Marshaller<RMIException> {
                 new RMIException(type, t);
         }
         return result;
+    }
+
+    /**
+     * Remove all modifiable stack traces from an exception
+     */
+    private static void removeStackTraces(Throwable exception) {
+        Throwable current = exception;
+        while (current != null) {
+            current.setStackTrace(EMPTY_STACK);
+            for (Throwable t: current.getSuppressed()) {
+                removeStackTraces(t);
+            }
+            Throwable cause = current.getCause();
+            current = cause == current ? null : cause;
+        }
     }
 }

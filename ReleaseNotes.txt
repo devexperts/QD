@@ -1,3 +1,16 @@
+QDS 3.318:
+
+* [QD-1424] EVENT_FLAGS are not set when publishing to a tape file via DXPublisher
+* [QD-1429] dxFeed webservice: provide a subscription to event Message
+* [QD-1375] Logging facility unit tests spoil project tree by temporary files
+* [QD-1435] Migrate all tests to JUnit 4
+* [QD-1434] Sweeping snapshot in History causes endless TX_PENDING
+* [QD-1427] [RMI] Remove stack traces from remote-delivered exceptions
+  - By default RMI will remove all stack traces from exceptions delivered over network for security reasons.
+    Use "-Dcom.devexperts.rmi.removeStrackTraces=false" to disable the default behavior.
+* [QD-1431] Update build to maven 3.9
+* [QD-1430] [Schedule] Add new markets for EU exchanges
+
 QDS 3.317:
 
 * [QD-1428] dxFeed-OnDemand: Minor performance improvements

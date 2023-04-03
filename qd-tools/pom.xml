@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.317</version>
+        <version>3.318</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -89,7 +89,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <!-- some tests plays with global properties, so it's better to run isolated -->
+                    <!-- some tests play with global properties, so it's better to run isolated -->
                     <reuseForks>false</reuseForks>
                     <systemProperties>
                         <!-- speedup file-dump based tests -->

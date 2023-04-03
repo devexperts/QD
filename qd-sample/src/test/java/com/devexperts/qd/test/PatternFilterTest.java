@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,14 +20,20 @@ import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.qd.kit.FilterSyntaxException;
 import com.devexperts.qd.kit.PatternFilter;
 import com.devexperts.qd.sample.SampleScheme;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.Random;
 
-public class PatternFilterTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+public class PatternFilterTest {
     private static final DataScheme SCHEME = SampleScheme.getInstance();
     private static final SymbolCodec CODEC = SCHEME.getCodec();
 
+    @Test
     public void testPatterns() {
         assertTrue(accepts("", "HABA"));
         assertTrue(accepts("", "true"));
@@ -155,6 +161,7 @@ public class PatternFilterTest extends TestCase {
         assertTrue(accepts("A*b", "Ab"));
     }
 
+    @Test
     public void testDoubleAsteriskWildcard() {
         //non-ascii chars in symbol
         assertFalse(accepts("*IBM*", "привет"));
@@ -258,6 +265,7 @@ public class PatternFilterTest extends TestCase {
         assertFalse(accepts("*[&]Q*", "AAPL&F{=m,price=bid}"));
     }
 
+    @Test
     public void testErrors() {
         checkError("[*");
         checkError("[HABA*");
@@ -292,6 +300,7 @@ public class PatternFilterTest extends TestCase {
         checkError("haba");
     }
 
+    @Test
     public void testQuotedPattern() {
         assertEquals("Trade", PatternFilter.quote("Trade"));
         assertEquals("Trade[&]N", PatternFilter.quote("Trade&N"));
@@ -333,8 +342,7 @@ public class PatternFilterTest extends TestCase {
         try {
             PatternFilter.valueOf(pattern, null);
             fail("Invalid pattern passed: " + pattern);
-        } catch (FilterSyntaxException e) {
-            // ok
+        } catch (FilterSyntaxException expected) {
         }
     }
 }

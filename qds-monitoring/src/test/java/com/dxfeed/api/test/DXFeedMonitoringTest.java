@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,7 +18,7 @@ import com.devexperts.test.ThreadCleanCheck;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.event.market.Trade;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.lang.management.ManagementFactory;
 import java.util.Arrays;
@@ -29,7 +29,11 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import javax.management.ObjectName;
 
-public class DXFeedMonitoringTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+public class DXFeedMonitoringTest {
 
     private static final String TEST_SYMBOL = "TEST";
 
@@ -39,20 +43,21 @@ public class DXFeedMonitoringTest extends TestCase {
         return PORT_00 + offset;
     }
 
+    @Test
     public void testResourcesCleanup() throws InterruptedException {
         Set<String> initialBeans = getBeans();
         Set<String> initialThreads = getThreadsNames();
 
         // we just need a connector to test
-        String jmx_rmi_port = String.valueOf(getPort(93));
-        String jmx_html_port = String.valueOf(getPort(92));
-        String mars_address_port = ":" + getPort(94);
+        String jmxRmiPort = String.valueOf(getPort(93));
+        String jmxHtmlPort = String.valueOf(getPort(92));
+        String marsAddressPort = ":" + getPort(94);
         DXEndpoint endpoint = DXEndpoint.newBuilder()
             .withProperty(MonitoringEndpoint.NAME_PROPERTY, "testCleanup")
-            .withProperty(JMXEndpoint.JMX_HTML_PORT_PROPERTY, jmx_html_port)
-            .withProperty(JMXEndpoint.JMX_RMI_PORT_PROPERTY, jmx_rmi_port)
+            .withProperty(JMXEndpoint.JMX_HTML_PORT_PROPERTY, jmxHtmlPort)
+            .withProperty(JMXEndpoint.JMX_RMI_PORT_PROPERTY, jmxRmiPort)
             .withProperty(MARSNode.MARS_ROOT_PROPERTY, "testCleanupRoot")
-            .withProperty(MARSNode.MARS_ADDRESS_PROPERTY, mars_address_port)
+            .withProperty(MARSNode.MARS_ADDRESS_PROPERTY, marsAddressPort)
             .build();
 
         // we need to publish and process one event to get processing threads created
@@ -66,7 +71,7 @@ public class DXFeedMonitoringTest extends TestCase {
         endpoint.getPublisher().publishEvents(Arrays.asList(pubTrade));
         Trade subTrade = eventsQueue.take();
         assertEquals(TEST_SYMBOL, subTrade.getEventSymbol());
-        assertEquals(pubTrade.getPrice(), subTrade.getPrice());
+        assertEquals(pubTrade.getPrice(), subTrade.getPrice(), 0.0);
 
         // now perform connect-disconnect cycle
         for (int attempt = 1; attempt <= 2; attempt++) {
@@ -82,14 +87,15 @@ public class DXFeedMonitoringTest extends TestCase {
             assertTrue(createdBeans.contains("com.devexperts.qd.impl.matrix:name=testCleanup,scheme=DXFeed,c=Stream"));
             assertTrue(createdBeans.contains("com.devexperts.qd.impl.matrix:name=testCleanup,scheme=DXFeed,c=History"));
             // adaptors
-            assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=" + jmx_html_port));
-            assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=RmiServer,port=" + jmx_rmi_port));
+            assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=" + jmxHtmlPort));
+            assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=RmiServer,port=" + jmxRmiPort));
             // root stats
             assertTrue(createdBeans.contains("com.devexperts.qd.stats:name=testCleanup,c=Any,id=!AnyStats"));
             // named connector
             assertTrue(createdBeans.contains("com.devexperts.qd.qtp:type=Connector,name=testCleanupConn"));
             // connectors-specific JMXStats
-            assertTrue(containsStartingWith(createdBeans, "com.devexperts.qd.stats:name=testCleanup,connector=testCleanupConn,c=Any,id="));
+            assertTrue(containsStartingWith(createdBeans,
+                "com.devexperts.qd.stats:name=testCleanup,connector=testCleanupConn,c=Any,id="));
             // reader & writer threads
             assertTrue(createdThreads.contains("demo.dxfeed.com:7300-Reader"));
             assertTrue(createdThreads.contains("demo.dxfeed.com:7300-Writer"));
@@ -106,7 +112,8 @@ public class DXFeedMonitoringTest extends TestCase {
             createdThreads = getCreatedThreads(initialThreads);
 
             assertFalse(createdBeans.contains("com.devexperts.qd.qtp:type=Connector,name=testCleanupConn"));
-            assertFalse(containsStartingWith(createdBeans, "com.devexperts.qd.stats:name=testCleanup,connector=testCleanupConn,c=Any,id="));
+            assertFalse(containsStartingWith(createdBeans,
+                "com.devexperts.qd.stats:name=testCleanup,connector=testCleanupConn,c=Any,id="));
             assertFalse(createdThreads.contains("demo.dxfeed.com:7300-Reader"));
             assertFalse(createdThreads.contains("demo.dxfeed.com:7300-Writer"));
         }

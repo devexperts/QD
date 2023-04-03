@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -28,7 +28,6 @@ import com.dxfeed.event.market.TimeAndSale;
 import com.dxfeed.event.market.Trade;
 import com.dxfeed.event.market.TradeETH;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -39,6 +38,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.ToLongFunction;
+
+import static org.junit.Assert.assertTrue;
 
 @SuppressWarnings("unchecked")
 @RunWith(Parameterized.class)
@@ -117,9 +118,11 @@ public class TimeFieldReplacerTest {
         endpoint.closeAndAwaitTermination();
 
         // 4. Check that events are changed as required
-        for (T modifiedEvent : events)
-            for (ToLongFunction<T> timeExtractor : timeExtractors)
-                Assert.assertTrue(initialEvent + " --> " + modifiedEvent, checkTime(timeExtractor.applyAsLong(modifiedEvent)));
+        for (T modifiedEvent : events) {
+            for (ToLongFunction<T> timeExtractor : timeExtractors) {
+                assertTrue(initialEvent + " --> " + modifiedEvent, checkTime(timeExtractor.applyAsLong(modifiedEvent)));
+            }
+        }
     }
 
     @Test

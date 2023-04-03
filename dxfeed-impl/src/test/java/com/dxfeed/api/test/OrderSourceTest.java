@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -21,7 +21,9 @@ import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.OrderSource;
 import com.dxfeed.event.market.Quote;
 import com.dxfeed.event.market.Side;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.ArrayDeque;
 import java.util.Collections;
@@ -30,7 +32,13 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 
-public class OrderSourceTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+public class OrderSourceTest {
+
     private DXEndpoint endpoint;
     private DXFeedSubscription<Order> sub;
 
@@ -42,39 +50,43 @@ public class OrderSourceTest extends TestCase {
     private final Queue<Order> orders = new ArrayDeque<>();
     private final Random rnd = new Random(20140930);
 
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         ThreadCleanCheck.before();
         endpoint = DXEndpoint.create(DXEndpoint.Role.LOCAL_HUB);
         sub = endpoint.getFeed().createSubscription(Order.class);
         endpoint.executor(tasks::add);
-        endpoint.getPublisher().getSubscription(Order.class).addChangeListener(new ObservableSubscriptionChangeListener() {
-            @Override
-            public void symbolsAdded(Set<?> symbols) {
-                addOrderSub.addAll(symbols);
-            }
+        endpoint.getPublisher().getSubscription(Order.class).addChangeListener(
+            new ObservableSubscriptionChangeListener() {
+                @Override
+                public void symbolsAdded(Set<?> symbols) {
+                    addOrderSub.addAll(symbols);
+                }
 
-            @Override
-            public void symbolsRemoved(Set<?> symbols) {
-                removeOrderSub.addAll(symbols);
+                @Override
+                public void symbolsRemoved(Set<?> symbols) {
+                    removeOrderSub.addAll(symbols);
+                }
             }
-        });
-        endpoint.getPublisher().getSubscription(Quote.class).addChangeListener(new ObservableSubscriptionChangeListener() {
-            @Override
-            public void symbolsAdded(Set<?> symbols) {
-                addQuoteSub.addAll(symbols);
-            }
+        );
+        endpoint.getPublisher().getSubscription(Quote.class).addChangeListener(
+            new ObservableSubscriptionChangeListener() {
+                @Override
+                public void symbolsAdded(Set<?> symbols) {
+                    addQuoteSub.addAll(symbols);
+                }
 
-            @Override
-            public void symbolsRemoved(Set<?> symbols) {
-                removeQuoteSub.addAll(symbols);
+                @Override
+                public void symbolsRemoved(Set<?> symbols) {
+                    removeQuoteSub.addAll(symbols);
+                }
             }
-        });
+        );
         sub.addEventListener(orders::addAll);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         endpoint.close();
     }
 
@@ -83,6 +95,7 @@ public class OrderSourceTest extends TestCase {
             tasks.poll().run();
     }
 
+    @Test
     public void testPubSubDepthSource() throws InterruptedException {
         checkPubSubDepthSource(OrderSource.DEFAULT);
         checkPubSubDepthSource(OrderSource.NTV);
@@ -114,10 +127,11 @@ public class OrderSourceTest extends TestCase {
         assertEquals(0, orders.size());
         assertEquals(symbol, in.getEventSymbol());
         assertEquals(source, in.getSource());
-        assertEquals(expectedPrice, in.getPrice());
+        assertEquals(expectedPrice, in.getPrice(), 0.0);
         assertEquals(expectedSide, in.getOrderSide());
     }
 
+    @Test
     public void testPubSubAllSources() throws InterruptedException {
         // subscribe to all source using a plain string
         String symbol = "TEST2";
@@ -199,23 +213,28 @@ public class OrderSourceTest extends TestCase {
             assertEquals(bidSource, bidOrder.getSource());
             assertEquals(bidSize, bidOrder.getSize());
             assertEquals(exchange, bidOrder.getExchangeCode());
-        } else
-            assertTrue(bidOrder == null);
+        } else {
+            assertNull(bidOrder);
+        }
         // ask order
         if (askSource != null) {
             assertEquals(symbol, askOrder.getEventSymbol());
             assertEquals(askSource, askOrder.getSource());
             assertEquals(askSize, askOrder.getSize());
             assertEquals(exchange, askOrder.getExchangeCode());
-        } else
-            assertTrue(askOrder == null);
+        } else {
+            assertNull(askOrder);
+        }
     }
 
     // Mix subscription on different sources in a single subscription
+    @Test
     public void testMixSources() throws InterruptedException {
         String symbol = "TEST3";
-        IndexedEventSubscriptionSymbol<String> subBid = new IndexedEventSubscriptionSymbol<>(symbol, OrderSource.COMPOSITE_BID);
-        IndexedEventSubscriptionSymbol<String> subAsk = new IndexedEventSubscriptionSymbol<>(symbol, OrderSource.COMPOSITE_ASK);
+        IndexedEventSubscriptionSymbol<String> subBid =
+            new IndexedEventSubscriptionSymbol<>(symbol, OrderSource.COMPOSITE_BID);
+        IndexedEventSubscriptionSymbol<String> subAsk =
+            new IndexedEventSubscriptionSymbol<>(symbol, OrderSource.COMPOSITE_ASK);
         sub.addSymbols(subBid, subAsk);
         // check that quote subscription appears
         runTasks();
@@ -242,6 +261,7 @@ public class OrderSourceTest extends TestCase {
     }
 
     // Mix subscription on a source with generic subscription on all sources
+    @Test
     public void testMixSourceAndGeneric() {
         String symbol = "TEST4";
         OrderSource source = OrderSource.ISE;
@@ -258,7 +278,7 @@ public class OrderSourceTest extends TestCase {
         runTasks();
         assertEquals(Collections.emptySet(), takeSubSet(addOrderSub));
         assertEquals(Collections.emptySet(), takeSubSet(addQuoteSub));
-        assertTrue(!takeSubSet(removeOrderSub).contains(subIse));
+        assertFalse(takeSubSet(removeOrderSub).contains(subIse));
         assertEquals(allQuotesSet(symbol), takeSubSet(removeQuoteSub));
         // check that sourced event is still delivered
         checkEventWithSource(symbol, source);

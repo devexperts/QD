@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -72,8 +72,8 @@ public class RMIMonitoringTest {
             MARSNode.getRoot().subNode("test.fail").setValue("Version 1.0");
             // this shall reuse initialized MARS endpoint
             client = RMIEndpoint.createEndpoint();
-            String client_port = ":" + getPort(99);
-            client.connect(client_port);
+            String clientPort = ":" + getPort(99);
+            client.connect(clientPort);
             client.close();
         } finally {
             Thread.sleep(500); // wait a bit to let it settle writing to log
@@ -97,8 +97,8 @@ public class RMIMonitoringTest {
         client = RMIEndpoint.newBuilder().withName("testCleanup").build();
 
         for (int attempt = 1; attempt <= 2; attempt++) {
-            String client_port = ":" + getPort(45);
-            client.connect(client_port + "[name=testCleanupConn]");
+            String clientPort = ":" + getPort(45);
+            client.connect(clientPort + "[name=testCleanupConn]");
 
             // now check resources that ware created in the process
             Set<String> createdBeans = getCreatedBeans(initialBeans);
@@ -109,9 +109,10 @@ public class RMIMonitoringTest {
             // named connector
             assertTrue(createdBeans.contains("com.devexperts.qd.qtp:type=Connector,name=testCleanupConn"));
             // connectors-specific JMXStats
-            assertTrue(containsStartingWith(createdBeans, "com.devexperts.qd.stats:name=testCleanup,connector=testCleanupConn,c=Any,id="));
+            assertTrue(containsStartingWith(createdBeans,
+                "com.devexperts.qd.stats:name=testCleanup,connector=testCleanupConn,c=Any,id="));
             // acceptor thread
-            assertTrue(createdThreads.contains("testCleanupConn-" + client_port + "-Acceptor"));
+            assertTrue(createdThreads.contains("testCleanupConn-" + clientPort + "-Acceptor"));
             // something else might have been create -- we don't care
 
             // new disconnect endpoint
@@ -125,8 +126,9 @@ public class RMIMonitoringTest {
             createdThreads = getCreatedThreads(initialThreads);
 
             assertFalse(createdBeans.contains("com.devexperts.qd.qtp:type=Connector,name=testCleanupConn"));
-            assertFalse(containsStartingWith(createdBeans, "com.devexperts.qd.stats:name=testCleanup,connector=testCleanupConn,c=Any,id="));
-            assertFalse(createdThreads.contains("testCleanupConn-" + client_port + "-Acceptor"));
+            assertFalse(containsStartingWith(createdBeans,
+                "com.devexperts.qd.stats:name=testCleanup,connector=testCleanupConn,c=Any,id="));
+            assertFalse(createdThreads.contains("testCleanupConn-" + clientPort + "-Acceptor"));
         }
 
         // completely close endpoint
@@ -193,8 +195,10 @@ public class RMIMonitoringTest {
             // named client connector
             assertTrue(createdBeans.contains("com.devexperts.qd.qtp:type=Connector,name=ClientSocket-RMI"));
             // connectors-specific JMXStats
-            assertTrue(containsStartingWith(createdBeans, "com.devexperts.qd.stats:name=server,connector=ServerSocket-RMI,c=Any,id="));
-            assertTrue(containsStartingWith(createdBeans, "com.devexperts.qd.stats:name=client,connector=ClientSocket-RMI,c=Any,id="));
+            assertTrue(containsStartingWith(createdBeans,
+                "com.devexperts.qd.stats:name=server,connector=ServerSocket-RMI,c=Any,id="));
+            assertTrue(containsStartingWith(createdBeans,
+                "com.devexperts.qd.stats:name=client,connector=ClientSocket-RMI,c=Any,id="));
             // acceptor thread
             assertTrue(createdThreads.contains("ServerSocket-RMI-:" + port + "-Acceptor"));
             assertTrue(createdThreads.contains("localhost:" + port + "-Reader"));
@@ -238,8 +242,10 @@ public class RMIMonitoringTest {
 
             assertFalse(createdBeans.contains("com.devexperts.qd.qtp:type=Connector,name=ServerSocket-RMI"));
             assertFalse(createdBeans.contains("com.devexperts.qd.qtp:type=Connector,name=ClientSocket-RMI"));
-            assertFalse(containsStartingWith(createdBeans, "com.devexperts.qd.stats:name=server,connector=ServerSocket-RMI,c=Any,id="));
-            assertFalse(containsStartingWith(createdBeans, "com.devexperts.qd.stats:name=client,connector=ClientSocket-RMI,c=Any,id="));
+            assertFalse(containsStartingWith(createdBeans,
+                "com.devexperts.qd.stats:name=server,connector=ServerSocket-RMI,c=Any,id="));
+            assertFalse(containsStartingWith(createdBeans,
+                "com.devexperts.qd.stats:name=client,connector=ClientSocket-RMI,c=Any,id="));
             assertFalse(createdThreads.contains("localhost:" + port + "-Reader"));
             assertFalse(createdThreads.contains("localhost:" + port + "-Writer"));
         }

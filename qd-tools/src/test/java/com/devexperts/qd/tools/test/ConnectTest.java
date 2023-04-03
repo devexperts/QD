@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -47,7 +47,6 @@ import com.devexperts.qd.tools.AbstractTool;
 import com.devexperts.qd.tools.Tools;
 import com.devexperts.test.ThreadCleanCheck;
 import com.dxfeed.promise.Promise;
-import junit.framework.TestCase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -73,8 +72,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
+
 @RunWith(Parameterized.class)
-public class ConnectTest extends TestCase {
+public class ConnectTest {
     private static final DataScheme SCHEME = QDFactory.getDefaultScheme();
     private static final String CONNECT = "connect";
     private static final long CONNECTOR_INIT_TIMEOUT = 3_000; // max wait time for connector init (millis)
@@ -82,17 +85,17 @@ public class ConnectTest extends TestCase {
     private static final Random RNG = new Random();
 
     private static final DataRecord[] RECORDS = {
-            SCHEME.findRecordByName("Quote"),
-            SCHEME.findRecordByName("Trade.1hour"),
-            SCHEME.findRecordByName("Trade.1min"),
-            SCHEME.findRecordByName("Trade.30min")
+        SCHEME.findRecordByName("Quote"),
+        SCHEME.findRecordByName("Trade.1hour"),
+        SCHEME.findRecordByName("Trade.1min"),
+        SCHEME.findRecordByName("Trade.30min")
     };
 
     private static final String[] SYMBOLS = {
-            "AAPL",
-            "IBM",
-            "GOOG",
-            "SPX"
+        "AAPL",
+        "IBM",
+        "GOOG",
+        "SPX"
     };
 
     private static final int NUMBER_OF_EVENTS = 500;
@@ -130,8 +133,6 @@ public class ConnectTest extends TestCase {
         this.symbolsSpec = symbolsSpec;
     }
 
-
-    @Override
     @Before
     public void setUp() {
         ThreadCleanCheck.before();
@@ -142,7 +143,6 @@ public class ConnectTest extends TestCase {
         deleteFiles();
     }
 
-    @Override
     @After
     public void tearDown() {
         deleteFiles();
@@ -225,7 +225,8 @@ public class ConnectTest extends TestCase {
     }
 
     private void distributeOnSubscriptionArrived(RecordBuffer buffer, RecordBuffer subscription, QDEndpoint dataSource,
-            CountDownLatch subscribed, CountDownLatch send) {
+        CountDownLatch subscribed, CountDownLatch send)
+    {
         QDDistributor dataDistributor = dataSource.getStream().distributorBuilder().build();
         RecordProvider provider = dataDistributor.getAddedRecordProvider();
         RecordBuffer resultSubscription = new RecordBuffer(RecordMode.SUBSCRIPTION);
@@ -250,7 +251,8 @@ public class ConnectTest extends TestCase {
     }
 
     private void doConnect(String[] args, CountDownLatch subscribed, CountDownLatch send)
-            throws InterruptedException, IOException {
+        throws InterruptedException, IOException
+    {
         AbstractTool connect = Tools.getTool(CONNECT);
         connect.parse(args);
         Thread connectThread = new Thread(connect::execute, "connect-thread");
@@ -270,7 +272,7 @@ public class ConnectTest extends TestCase {
     }
 
     private void waitForSubscriptionAndData(CountDownLatch subscribed, CountDownLatch send,
-            long timeToSubscribe, long timeToWrite) throws InterruptedException, IOException
+        long timeToSubscribe, long timeToWrite) throws InterruptedException, IOException
     {
         // wait for subscription
         subscribed.await(timeToSubscribe, TimeUnit.MILLISECONDS);

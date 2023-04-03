@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -96,7 +96,7 @@ public class OptionEventTimeSeriesSubscriptionTest extends AbstractDXPublisherTe
     private void assertUnderlying(Underlying underlying, long time, double volatility, int eventFlags) {
         assertEquals(SYMBOL, underlying.getEventSymbol());
         assertEquals(time, underlying.getTime());
-        assertEquals(volatility, underlying.getVolatility(), 1e-6);
+        assertEquals(volatility, underlying.getVolatility(), 0.0);
         assertEquals(eventFlags, underlying.getEventFlags());
     }
 
@@ -112,8 +112,7 @@ public class OptionEventTimeSeriesSubscriptionTest extends AbstractDXPublisherTe
     private void assertTheoPrice(TheoPrice theoPrice, long time, double price, int eventFlags) {
         assertEquals(SYMBOL, theoPrice.getEventSymbol());
         assertEquals(time, theoPrice.getTime());
-        assertEquals(price, theoPrice.getPrice(), 1e-6);
+        assertEquals(price, theoPrice.getPrice(), 0.0);
         assertEquals(eventFlags, theoPrice.getEventFlags());
     }
-
 }

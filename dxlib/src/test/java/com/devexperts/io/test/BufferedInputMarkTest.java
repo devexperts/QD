@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,12 +17,14 @@ import com.devexperts.io.ByteArrayInput;
 import com.devexperts.io.Chunk;
 import com.devexperts.io.ChunkedInput;
 import com.devexperts.io.StreamInput;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Random;
 
-public class BufferedInputMarkTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+
+public class BufferedInputMarkTest {
     private static final int SIZE = 17;
 
     private ByteArrayInput createByteArrayInput() {
@@ -34,11 +36,13 @@ public class BufferedInputMarkTest extends TestCase {
         return in;
     }
 
+    @Test
     public void testByteArrayInput() throws IOException {
         ByteArrayInput in = createByteArrayInput();
         check(in);
     }
 
+    @Test
     public void testByteArrayInputPart() throws IOException {
         ByteArrayInput in = createByteArrayInput();
         in.mark();
@@ -47,6 +51,7 @@ public class BufferedInputMarkTest extends TestCase {
         check(part);
     }
 
+    @Test
     public void testByteArrayInputPart2() throws IOException {
         ByteArrayInput in = createByteArrayInput();
         in.mark();
@@ -58,12 +63,14 @@ public class BufferedInputMarkTest extends TestCase {
         check(part2);
     }
 
+    @Test
     public void testStreamInput() throws IOException {
         ByteArrayInput in = createByteArrayInput();
         StreamInput sin = new StreamInput(in);
         check(sin);
     }
 
+    @Test
     public void testStreamInputPart() throws IOException {
         ByteArrayInput in = createByteArrayInput();
         StreamInput sin = new StreamInput(in);
@@ -73,6 +80,7 @@ public class BufferedInputMarkTest extends TestCase {
         check(part);
     }
 
+    @Test
     public void testChunkedInputPart() throws IOException {
         Random r = new Random(20100213);
         for (int repeat = 0; repeat < 20; repeat++) {
@@ -150,5 +158,4 @@ public class BufferedInputMarkTest extends TestCase {
         assertEquals(15, in.read());
         assertEquals(16, in.read());
     }
-
 }

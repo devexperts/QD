@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,7 +15,9 @@ import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.SubscriptionIterator;
 import com.devexperts.qd.SubscriptionProvider;
 import com.devexperts.qd.SubscriptionVisitor;
-import junit.framework.Assert;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 /**
  * Compares visited subscription against given source.
@@ -23,30 +25,30 @@ import junit.framework.Assert;
 class ComparingSubscriptionVisitor implements SubscriptionVisitor {
     private final SubscriptionIterator source;
     private int count;
-    private DataRecord next_record;
+    private DataRecord nextRecord;
 
     public static void compare(SubscriptionProvider provider, SubscriptionIterator source) {
         ComparingSubscriptionVisitor visitor = new ComparingSubscriptionVisitor(source);
         provider.retrieveSubscription(visitor);
-        Assert.assertFalse("capacity", visitor.hasCapacity());
+        assertFalse("capacity", visitor.hasCapacity());
     }
 
     public ComparingSubscriptionVisitor(SubscriptionIterator source) {
         this.source = source;
         count = 1;
-        next_record = source.nextRecord();
+        nextRecord = source.nextRecord();
     }
 
     public boolean hasCapacity() {
-        return next_record != null;
+        return nextRecord != null;
     }
 
     public void visitRecord(DataRecord record, int cipher, String symbol, long time) {
-        Assert.assertEquals("record#" + count, record, next_record);
-        Assert.assertEquals("cipher#" + count, cipher, source.getCipher());
-        Assert.assertEquals("symbol#" + count, symbol, source.getSymbol());
-        Assert.assertEquals("time#" + count, time, source.getTime());
-        next_record = source.nextRecord();
+        assertEquals("record#" + count, record, nextRecord);
+        assertEquals("cipher#" + count, cipher, source.getCipher());
+        assertEquals("symbol#" + count, symbol, source.getSymbol());
+        assertEquals("time#" + count, time, source.getTime());
+        nextRecord = source.nextRecord();
         count++;
     }
 }

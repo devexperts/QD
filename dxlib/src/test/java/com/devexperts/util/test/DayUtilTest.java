@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,7 +13,7 @@ package com.devexperts.util.test;
 
 import com.devexperts.util.DayUtil;
 import com.devexperts.util.TimeUtil;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -21,14 +21,18 @@ import java.util.GregorianCalendar;
 import java.util.Random;
 import java.util.TimeZone;
 
-public class DayUtilTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+
+public class DayUtilTest {
+
+    @Test
     public void testDayIds() {
-        // test epoch
+        // Test epoch
         assertEquals(0, DayUtil.getDayIdByYearMonthDay(1970, 1, 1));
         assertEquals(0, DayUtil.getDayIdByYearMonthDay(19700101));
         assertEquals(19700101, DayUtil.getYearMonthDayByDayId(0));
 
-        // test with a lot of random dates
+        // Test with a lot of random dates
         Random r = new Random(1);
         int minYear = -9999;
         int maxYear = 9999;
@@ -50,18 +54,19 @@ public class DayUtilTest extends TestCase {
             cal.set(Calendar.DAY_OF_MONTH, day);
 
             int yearSign = year < 0 ? -1 : 1;
-            int yyyymmdd = yearSign * (Math.abs(year) * 10000 + month * 100 + day);
-            String yyyymmddString = "day " + yyyymmdd;
+            int ymd = yearSign * (Math.abs(year) * 10000 + month * 100 + day);
+            String ymdString = "day " + ymd;
 
             long millis = cal.getTimeInMillis();
-            assertEquals(year, cal.get(Calendar.ERA) == GregorianCalendar.AD ? cal.get(Calendar.YEAR) : 1 - cal.get(Calendar.YEAR));
+            assertEquals(year, cal.get(Calendar.ERA) == GregorianCalendar.AD ?
+                cal.get(Calendar.YEAR) : 1 - cal.get(Calendar.YEAR));
             assertEquals(month, cal.get(Calendar.MONTH) + 1);
             assertEquals(day, cal.get(Calendar.DAY_OF_MONTH));
             assertEquals(0, millis % TimeUtil.DAY);
             int dayId = (int) (millis / TimeUtil.DAY);
-            assertEquals(yyyymmddString, dayId, DayUtil.getDayIdByYearMonthDay(year, month, day));
-            assertEquals(yyyymmddString, dayId, DayUtil.getDayIdByYearMonthDay(yyyymmdd));
-            assertEquals(yyyymmddString, yyyymmdd, DayUtil.getYearMonthDayByDayId(dayId));
+            assertEquals(ymdString, dayId, DayUtil.getDayIdByYearMonthDay(year, month, day));
+            assertEquals(ymdString, dayId, DayUtil.getDayIdByYearMonthDay(ymd));
+            assertEquals(ymdString, ymd, DayUtil.getYearMonthDayByDayId(dayId));
         }
     }
 }

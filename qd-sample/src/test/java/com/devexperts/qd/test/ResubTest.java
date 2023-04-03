@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -21,26 +21,34 @@ import com.devexperts.qd.SubscriptionBuffer;
 import com.devexperts.qd.SubscriptionListener;
 import com.devexperts.qd.SubscriptionProvider;
 import com.devexperts.qd.SubscriptionVisitor;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.Random;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Tests ability to resubscribe properly when new distributor connects.
  */
-public class ResubTest extends TestCase {
+public class ResubTest {
     private static DataScheme SCHEME = new TestDataScheme(1, TestDataScheme.Type.HAS_TIME);
     private static final Random RND = new Random(2);
     private static final int REPEAT = 100;
 
+    @Test
     public void testResubTicker() {
         resubTest(QDFactory.getDefaultFactory().createTicker(SCHEME));
     }
 
+    @Test
     public void testResubStream() {
         resubTest(QDFactory.getDefaultFactory().createStream(SCHEME));
     }
 
+    @Test
     public void testResubHistory() {
         resubTest(QDFactory.getDefaultFactory().createHistory(SCHEME));
     }
@@ -48,54 +56,54 @@ public class ResubTest extends TestCase {
     private void resubTest(QDCollector collector) {
         for (int repeat = 0; repeat < REPEAT; repeat++) {
             TestSubscriptionProvider prov;
-            long sub_seed = RND.nextLong();
+            long subSeed = RND.nextLong();
 
             // Create distributor #1
             QDDistributor dist1 = collector.distributorBuilder().build();
-            SubListener dist1_sl = new SubListener();
-            SubListener dist1r_sl = new SubListener();
-            dist1.getAddedSubscriptionProvider().setSubscriptionListener(dist1_sl);
-            dist1.getRemovedSubscriptionProvider().setSubscriptionListener(dist1r_sl);
+            SubListener dist1AddSubListener = new SubListener();
+            SubListener dist1RemoveSubListener = new SubListener();
+            dist1.getAddedSubscriptionProvider().setSubscriptionListener(dist1AddSubListener);
+            dist1.getRemovedSubscriptionProvider().setSubscriptionListener(dist1RemoveSubListener);
 
             // Create agent with subscription
             QDAgent agent = collector.agentBuilder().build();
-            prov = new TestSubscriptionProvider(SCHEME, sub_seed);
+            prov = new TestSubscriptionProvider(SCHEME, subSeed);
             SubscriptionBuffer sub = new SubscriptionBuffer();
             prov.retrieveSubscription(sub);
             agent.addSubscription(sub);
-            SubscriptionMap expect_sub = new SubscriptionMap(SCHEME, new TestSubscriptionProvider(SCHEME, sub_seed));
+            SubscriptionMap expectSub = new SubscriptionMap(SCHEME, new TestSubscriptionProvider(SCHEME, subSeed));
 
             // Check that subscription in distributor #1 is Ok
-            dist1_sl.assertAvailable();
-            dist1r_sl.assertNotAvailable();
-            SubscriptionMap dist1_sub = new SubscriptionMap(SCHEME, dist1.getAddedRecordProvider());
-            assertEquals("dist1_sub", expect_sub, dist1_sub);
-            assertEmpty("dist1r_sub", dist1.getRemovedSubscriptionProvider());
+            dist1AddSubListener.assertAvailable();
+            dist1RemoveSubListener.assertNotAvailable();
+            SubscriptionMap dist1Sub = new SubscriptionMap(SCHEME, dist1.getAddedRecordProvider());
+            assertEquals("dist1Sub", expectSub, dist1Sub);
+            assertEmpty("dist1RSub", dist1.getRemovedSubscriptionProvider());
 
             // Close distributor #1 & create new one (#2)
             dist1.close();
             QDDistributor dist2 = collector.distributorBuilder().build();
-            SubListener dist2_sl = new SubListener();
-            SubListener dist2r_sl = new SubListener();
-            dist2.getAddedSubscriptionProvider().setSubscriptionListener(dist2_sl);
-            dist2.getRemovedSubscriptionProvider().setSubscriptionListener(dist2r_sl);
+            SubListener dist2AddSubListener = new SubListener();
+            SubListener dist2RemoveSubListener = new SubListener();
+            dist2.getAddedSubscriptionProvider().setSubscriptionListener(dist2AddSubListener);
+            dist2.getRemovedSubscriptionProvider().setSubscriptionListener(dist2RemoveSubListener);
 
             // Check that subscription in distributor #2 is Ok
-            dist2_sl.assertAvailable();
-            dist2r_sl.assertNotAvailable();
-            SubscriptionMap dist2_sub = new SubscriptionMap(SCHEME, dist2.getAddedRecordProvider());
-            assertEquals("dist2_sub", expect_sub, dist2_sub);
-            assertEmpty("dist2r_sub", dist2.getRemovedSubscriptionProvider());
+            dist2AddSubListener.assertAvailable();
+            dist2RemoveSubListener.assertNotAvailable();
+            SubscriptionMap dist2Sub = new SubscriptionMap(SCHEME, dist2.getAddedRecordProvider());
+            assertEquals("dist2Sub", expectSub, dist2Sub);
+            assertEmpty("dist2RSub", dist2.getRemovedSubscriptionProvider());
 
             // Close agent
             agent.close();
 
             // Check that all subscription was removed from distributor #2
-            dist2_sl.assertNotAvailable();
-            dist2r_sl.assertAvailable();
-            assertEmpty("dist2_sub*", dist2.getAddedSubscriptionProvider());
-            SubscriptionMap dist2r_sub = new SubscriptionMap(SCHEME, dist2.getRemovedRecordProvider());
-            assertEquals("dist2r_sub*", expect_sub, dist2r_sub);
+            dist2AddSubListener.assertNotAvailable();
+            dist2RemoveSubListener.assertAvailable();
+            assertEmpty("dist2Sub*", dist2.getAddedSubscriptionProvider());
+            SubscriptionMap dist2RSub = new SubscriptionMap(SCHEME, dist2.getRemovedRecordProvider());
+            assertEquals("dist2RSub*", expectSub, dist2RSub);
 
             // Close distributor #2
             dist2.close();

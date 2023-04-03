@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -23,7 +23,9 @@ import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordMode;
-import junit.framework.TestCase;
+import org.junit.Test;
+
+import static org.junit.Assert.fail;
 
 /**
  * Tests that distribution of events in big batches works correctly:
@@ -32,38 +34,46 @@ import junit.framework.TestCase;
  *
  * NOTE: Batches shall be big enough to trigger multi-pass processing during distribution.
  */
-public class BigBatchDistributionTest extends TestCase {
+public class BigBatchDistributionTest {
     private static final DataScheme SCHEME = new TestDataScheme(20160819, TestDataScheme.Type.HAS_TIME);
     private static final DataRecord RECORD = SCHEME.getRecord(0);
     private static final int SIZE = 150_000; // 150k is bigger than 100k default Distribution Bucket size
 
+    @Test
     public void testTickerSymbols() {
         checkCollector(QDContract.TICKER, true, true, true);
         checkCollector(QDContract.TICKER, true, false, false);
     }
 
+    @Test
     public void testStreamSymbols() {
         checkCollector(QDContract.STREAM, true, true, true);
         checkCollector(QDContract.STREAM, true, false, false);
     }
 
+    @Test
     public void testStreamTime() {
         checkCollector(QDContract.STREAM, false, true, true);
         checkCollector(QDContract.STREAM, false, false, false);
     }
 
+    @Test
     public void testHistorySymbols() {
         checkCollector(QDContract.HISTORY, true, true, true);
         checkCollector(QDContract.HISTORY, true, false, false);
     }
 
+    @Test
     public void testHistoryTime() {
         checkCollector(QDContract.HISTORY, false, true, false);
         checkCollector(QDContract.HISTORY, false, false, false);
     }
 
-    private void checkCollector(QDContract contract, boolean forSymbols, boolean sourceAscending, boolean resultAscending) {
-        String desc = " in test(" + contract + ", " + forSymbols + ", " + sourceAscending + ", " + resultAscending + ")";
+    private void checkCollector(QDContract contract, boolean forSymbols,
+        boolean sourceAscending, boolean resultAscending)
+    {
+        String desc = " in test(" + contract + ", " + forSymbols +
+            ", " + sourceAscending + ", " + resultAscending + ")";
         QDCollector collector = QDFactory.getDefaultFactory().collectorBuilder(contract)
             .withScheme(SCHEME)
             .withHistoryFilter(new HistorySubscriptionFilter() {
@@ -76,8 +86,7 @@ public class BigBatchDistributionTest extends TestCase {
                 public int getMaxRecordCount(DataRecord record, int cipher, String symbol) {
                     return Integer.MAX_VALUE;
                 }
-            })
-            .build();
+            }).build();
         RecordBuffer buffer = new RecordBuffer(RecordMode.DATA);
 
         QDAgent agent = collector.agentBuilder().build();
@@ -106,15 +115,20 @@ public class BigBatchDistributionTest extends TestCase {
             int cipher = getCipher(idx, forSymbols);
             int time = getTime(idx);
             RecordCursor cursor = buffer.next();
-            if (cursor == null)
+            if (cursor == null) {
                 fail("not enough data in buffer retrieved from agent for " + idx + desc);
-            if (cursor.getCipher() != cipher)
-                fail("wrong symbol " + SCHEME.getCodec().decode(cursor.getCipher()) + " instead of " + SCHEME.getCodec().decode(cipher) + " for " + idx + desc);
-            if (cursor.getTime() != time)
+            }
+            if (cursor.getCipher() != cipher) {
+                fail("wrong symbol " + SCHEME.getCodec().decode(cursor.getCipher()) + " instead of " +
+                    SCHEME.getCodec().decode(cipher) + " for " + idx + desc);
+            }
+            if (cursor.getTime() != time) {
                 fail("wrong time " + cursor.getTime() + " instead of " + time + " for " + idx + desc);
+            }
         }
-        if (buffer.next() != null)
+        if (buffer.next() != null) {
             fail("leftover data in buffer retrieved from agent" + desc);
+        }
     }
 
     private final char[] symbolChars = new char[6];

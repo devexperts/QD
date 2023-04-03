@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,9 +20,13 @@ import com.devexperts.qd.kit.MarshalledObjField;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordMode;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class RecordModeBufAppendTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+
+public class RecordModeBufAppendTest {
     private final DataRecord record = new DefaultRecord(
         0, "Test", true,
         new DataIntField[] {
@@ -36,6 +40,7 @@ public class RecordModeBufAppendTest extends TestCase {
         }
     );
 
+    @Test
     public void testDataToSubscription() {
         RecordBuffer buf0 = new RecordBuffer();
         RecordBuffer buf1 = new RecordBuffer(RecordMode.SUBSCRIPTION);
@@ -47,9 +52,10 @@ public class RecordModeBufAppendTest extends TestCase {
 
         assertSub(buf1.next(), 0, "TEST-SYM");
         assertSub(buf1.next(), 1234, null);
-        assertEquals(null, buf1.next());
+        assertNull(buf1.next());
     }
 
+    @Test
     public void testDataToHistorySubscription() {
         RecordBuffer buf0 = new RecordBuffer();
         RecordBuffer buf1 = new RecordBuffer(RecordMode.HISTORY_SUBSCRIPTION);
@@ -69,9 +75,10 @@ public class RecordModeBufAppendTest extends TestCase {
 
         assertHistorySub(buf1.next(), 0, "TEST-SYM", 55, 66);
         assertHistorySub(buf1.next(), 1234, null, 77, 88);
-        assertEquals(null, buf1.next());
+        assertNull(buf1.next());
     }
 
+    @Test
     public void testSubscriptionToData() {
         RecordBuffer buf0 = new RecordBuffer(RecordMode.SUBSCRIPTION);
         RecordBuffer buf1 = new RecordBuffer();
@@ -84,9 +91,10 @@ public class RecordModeBufAppendTest extends TestCase {
         assertEmptyData(buf1.next(), 0, "TEST-SYM");
         assertEmptyData(buf1.next(), 1234, null);
 
-        assertEquals(null, buf1.next());
+        assertNull(buf1.next());
     }
 
+    @Test
     public void testHistorySubscriptionToData() {
         RecordBuffer buf0 = new RecordBuffer(RecordMode.HISTORY_SUBSCRIPTION);
         RecordBuffer buf1 = new RecordBuffer();
@@ -106,9 +114,10 @@ public class RecordModeBufAppendTest extends TestCase {
 
         assertHistoryData(buf1.next(), 0, "TEST-SYM", 55, 66);
         assertHistoryData(buf1.next(), 1234, null, 77, 88);
-        assertEquals(null, buf1.next());
+        assertNull(buf1.next());
     }
 
+    @Test
     public void testHistorySubscriptionToSubscription() {
         RecordBuffer buf0 = new RecordBuffer(RecordMode.HISTORY_SUBSCRIPTION);
         RecordBuffer buf1 = new RecordBuffer(RecordMode.SUBSCRIPTION);
@@ -127,9 +136,10 @@ public class RecordModeBufAppendTest extends TestCase {
 
         assertSub(buf1.next(), 0, "TEST-SYM");
         assertSub(buf1.next(), 1234, null);
-        assertEquals(null, buf1.next());
+        assertNull(buf1.next());
     }
 
+    @Test
     public void testSubscriptionToHistorySubscription() {
         RecordBuffer buf0 = new RecordBuffer(RecordMode.SUBSCRIPTION);
         RecordBuffer buf1 = new RecordBuffer(RecordMode.HISTORY_SUBSCRIPTION);
@@ -141,9 +151,8 @@ public class RecordModeBufAppendTest extends TestCase {
 
         assertHistorySub(buf1.next(), 0, "TEST-SYM", 0, 0);
         assertHistorySub(buf1.next(), 1234, null, 0, 0);
-        assertEquals(null, buf1.next());
+        assertNull(buf1.next());
     }
-
 
     private void copyBuf0to1(RecordBuffer buf0, RecordBuffer buf1) {
         assertEquals(2, buf0.size());
@@ -154,6 +163,7 @@ public class RecordModeBufAppendTest extends TestCase {
     }
 
     private void assertSub(RecordCursor cur, int cipher, String symbol) {
+        assertNotNull(cur);
         assertEquals(record, cur.getRecord());
         assertEquals(cipher, cur.getCipher());
         assertEquals(symbol, cur.getSymbol());
@@ -162,6 +172,7 @@ public class RecordModeBufAppendTest extends TestCase {
     }
 
     private void assertHistorySub(RecordCursor cur, int cipher, String symbol, int i0, int i1) {
+        assertNotNull(cur);
         assertEquals(record, cur.getRecord());
         assertEquals(cipher, cur.getCipher());
         assertEquals(symbol, cur.getSymbol());
@@ -172,6 +183,7 @@ public class RecordModeBufAppendTest extends TestCase {
     }
 
     private void assertEmptyData(RecordCursor cur, int cipher, String symbol) {
+        assertNotNull(cur);
         assertEquals(record, cur.getRecord());
         assertEquals(cipher, cur.getCipher());
         assertEquals(symbol, cur.getSymbol());
@@ -180,11 +192,12 @@ public class RecordModeBufAppendTest extends TestCase {
         assertEquals(0, cur.getInt(0));
         assertEquals(0, cur.getInt(1));
         assertEquals(0, cur.getInt(2));
-        assertEquals(null, cur.getObj(0));
-        assertEquals(null, cur.getObj(1));
+        assertNull(cur.getObj(0));
+        assertNull(cur.getObj(1));
     }
 
     private void assertHistoryData(RecordCursor cur, int cipher, String symbol, int i0, int i1) {
+        assertNotNull(cur);
         assertEquals(record, cur.getRecord());
         assertEquals(cipher, cur.getCipher());
         assertEquals(symbol, cur.getSymbol());
@@ -193,7 +206,7 @@ public class RecordModeBufAppendTest extends TestCase {
         assertEquals(i0, cur.getInt(0));
         assertEquals(i1, cur.getInt(1));
         assertEquals(0, cur.getInt(2));
-        assertEquals(null, cur.getObj(0));
-        assertEquals(null, cur.getObj(1));
+        assertNull(cur.getObj(0));
+        assertNull(cur.getObj(1));
     }
 }

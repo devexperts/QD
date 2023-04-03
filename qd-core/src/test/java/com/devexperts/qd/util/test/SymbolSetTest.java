@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,18 +13,23 @@ package com.devexperts.qd.util.test;
 
 import com.devexperts.qd.kit.PentaCodec;
 import com.devexperts.qd.util.SymbolSet;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Random;
 import java.util.Set;
 
-public class SymbolSetTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+public class SymbolSetTest {
     private final SymbolSet set = SymbolSet.createInstance();
 
     private static final String[] STRINGS = { "A", "B", "C", "ZZZ", "UNBREAKABLE", "NOT HERE" };
 
+    @Test
     public void testSymbolSet() {
         assertSet();
         assertTrue(add("A"));
@@ -47,6 +52,7 @@ public class SymbolSetTest extends TestCase {
         assertSet("C");
     }
 
+    @Test
     public void testSymbolSetStress() {
         Random rnd = new Random(20140915);
         int n = 1000;
@@ -59,7 +65,7 @@ public class SymbolSetTest extends TestCase {
             } while (!symbols.add(symbol));
             assertTrue(add(symbol));
         }
-        assertSet(symbols.toArray(new String[symbols.size()]));
+        assertSet(symbols.toArray(new String[0]));
         // remove random half
         for (Iterator<String> it = symbols.iterator(); it.hasNext(); ) {
             String symbol = it.next();
@@ -68,7 +74,7 @@ public class SymbolSetTest extends TestCase {
                 it.remove();
             }
         }
-        assertSet(symbols.toArray(new String[symbols.size()]));
+        assertSet(symbols.toArray(new String[0]));
         // add more
         for (int i = 0; i < n; i++) {
             String symbol;
@@ -109,7 +115,7 @@ public class SymbolSetTest extends TestCase {
             assertTrue(set.contains(cipher, symbol));
             assertTrue(set.contains(cipher, symbol.toCharArray(), 0, symbol.length()));
             if (cipher == 0)
-                assertTrue(set.getSymbol(symbol.toCharArray(), 0, symbol.length()).equals(symbol));
+                assertEquals(symbol, set.getSymbol(symbol.toCharArray(), 0, symbol.length()));
         }
         // these symbols should not appear
         for (String symbol : STRINGS) {

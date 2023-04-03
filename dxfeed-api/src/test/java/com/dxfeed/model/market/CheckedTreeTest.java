@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,25 +11,26 @@
  */
 package com.dxfeed.model.market;
 
-import junit.framework.TestCase;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Iterator;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Unit test for {@link CheckedTreeList} class (test check/uncheck functionality).
  */
-public class CheckedTreeTest extends TestCase {
+public class CheckedTreeTest {
 
     private CheckedTreeList<Integer> tree;
 
-    public CheckedTreeTest(String s) {
-        super(s);
-    }
-
-    @Override
+    @Before
     public void setUp() {
-        tree = new CheckedTreeList<Integer>((o1, o2) -> o1 < o2 ? -1 : o1 > o2 ? 1 : 0)
-        {
+        tree = new CheckedTreeList<Integer>(Integer::compareTo) {
             @Override
             public boolean check(Node<Integer> node) {
                 if (node.getValue() % 2 == 0)
@@ -39,6 +40,7 @@ public class CheckedTreeTest extends TestCase {
         };
     }
 
+    @Test
     public void testCheckedTree() {
         tree.insert(1);
         tree.insert(6);
@@ -60,6 +62,7 @@ public class CheckedTreeTest extends TestCase {
         assert (tree.validateTree());
     }
 
+    @Test
     public void testCheckedTree1() {
         tree.insert(6);
         tree.insert(2);
@@ -72,6 +75,7 @@ public class CheckedTreeTest extends TestCase {
         assert (tree.validateTree());
     }
 
+    @Test
     public void testInsertDelete() {
         tree.insert(3);
         tree.insert(6);
@@ -86,14 +90,14 @@ public class CheckedTreeTest extends TestCase {
         assert (tree.validateTree());
 
         assertEquals(2, (int) tree.delete(2));
-        assertEquals(null, tree.delete(2));
-        assertEquals(null, tree.delete(10));
+        assertNull(tree.delete(2));
+        assertNull(tree.delete(10));
         assertEquals(4, (int) tree.delete(4));
-        assertEquals(null, tree.delete(0));
+        assertNull(tree.delete(0));
         assertEquals(8, (int) tree.delete(8));
-        assertEquals(null, tree.delete(8));
+        assertNull(tree.delete(8));
         assertEquals(7, (int) tree.delete(7));
-        assertEquals(null, tree.delete(5));
+        assertNull(tree.delete(5));
         assertEquals(3, (int) tree.delete(3));
         assertEquals(1, (int) tree.delete(1));
 
@@ -101,6 +105,7 @@ public class CheckedTreeTest extends TestCase {
         assert (tree.validateTree());
     }
 
+    @Test
     public void testListOperations() {
         assertTrue(tree.isEmpty());
 
@@ -126,7 +131,7 @@ public class CheckedTreeTest extends TestCase {
 
         for (int i = 49; i >= 0; --i) {
             assertEquals(i, (int) tree.delete(i));
-            assertTrue(!tree.contains(i));
+            assertFalse(tree.contains(i));
             assertEquals(-1, tree.indexOf(i));
             assertEquals((i + 1) / 2, tree.size());
             assert (tree.validateTree());
@@ -137,6 +142,7 @@ public class CheckedTreeTest extends TestCase {
     }
 
 
+    @Test
     public void testTreeOperations() {
         for (int i = 0; i < 50; i++)
             tree.insert(i);

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,14 +20,18 @@ import com.devexperts.qd.qtp.MessageConsumer;
 import com.devexperts.qd.qtp.text.TextQTPParser;
 import com.dxfeed.event.market.impl.ProfileMapping;
 import com.dxfeed.event.market.impl.TimeAndSaleMapping;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 
-public class TextByteArrayParserTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
+
+public class TextByteArrayParserTest {
+
+    @Test
     public void testParseWithNulls() {
         String text =
             "==QD_STREAM_DATA\n" +
@@ -40,26 +44,27 @@ public class TextByteArrayParserTest extends TestCase {
         TextQTPParser parser = new TextQTPParser(QDFactory.getDefaultScheme());
         parser.setInput(new ByteArrayInput(bytes));
         final RecordBuffer buf = RecordBuffer.getInstance();
-        parser.parse((MessageConsumer) Proxy.newProxyInstance(getClass().getClassLoader(), new Class[]{MessageConsumer.class}, new InvocationHandler() {
-            @Override
-            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        parser.parse((MessageConsumer) Proxy.newProxyInstance(getClass().getClassLoader(),
+            new Class[] { MessageConsumer.class },
+            (proxy, method, args) -> {
                 if (!method.getName().equals("processStreamData"))
                     fail("Unexpected method " + method);
                 buf.processData((DataIterator) args[0]);
                 return null;
             }
-        }));
+        ));
 
         assertEquals(2, buf.size());
 
         // event #1
         RecordCursor cur = buf.next();
+        assertNotNull(cur);
         assertEquals("TimeAndSale", cur.getRecord().getName());
         assertEquals("AAPL", cur.getSymbol());
 
         TimeAndSaleMapping tsm = cur.getRecord().getMapping(TimeAndSaleMapping.class);
         assertEquals(0, tsm.getExchange(cur));
-        assertEquals(577.93, tsm.getPrice(cur));
+        assertEquals(577.93, tsm.getPrice(cur), 0.0);
         assertEquals(0, tsm.getExchangeSaleConditions(cur));
         assertEquals(4, tsm.getFlags(cur));
 

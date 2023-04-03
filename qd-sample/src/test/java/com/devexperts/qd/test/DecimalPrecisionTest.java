@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,11 +12,15 @@
 package com.devexperts.qd.test;
 
 import com.devexperts.qd.util.Decimal;
-import junit.framework.TestCase;
+import org.junit.Test;
 
 import java.util.Random;
 
-public class DecimalPrecisionTest extends TestCase {
+import static org.junit.Assert.fail;
+
+public class DecimalPrecisionTest {
+
+    @Test
     public void testDecimalPrecisionListed() {
         check(0);
         check(1);
@@ -39,6 +43,7 @@ public class DecimalPrecisionTest extends TestCase {
         check(Double.NaN);
     }
 
+    @Test
     public void testDecimalPrecisionRnd() {
         double[] pow10 = new double[6];
         pow10[0] = 1;
@@ -60,5 +65,4 @@ public class DecimalPrecisionTest extends TestCase {
         if (Double.doubleToLongBits(d) != Double.doubleToLongBits(e))
             fail("Binary representation was lost: " + d + " != " + e);
     }
-
 }

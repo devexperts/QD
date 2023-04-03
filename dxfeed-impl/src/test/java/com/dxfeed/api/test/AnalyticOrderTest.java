@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,18 +20,23 @@ import com.dxfeed.event.market.AnalyticOrder;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.Scope;
 import com.dxfeed.event.market.Side;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Collections;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-public class AnalyticOrderTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+public class AnalyticOrderTest {
     private static final String SYMBOL = "TEST";
 
     private DXEndpoint endpoint;
-    private DXFeed feed;
     private DXPublisher publisher;
     private DXFeedSubscription<AnalyticOrder> sub;
 
@@ -39,23 +44,24 @@ public class AnalyticOrderTest extends TestCase {
     private final long t0 = System.currentTimeMillis() / 1000 * 1000; // round to seconds
     private final long t1 = t0 - 1000; // round to seconds
 
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         ThreadCleanCheck.before();
         endpoint = DXEndpoint.create(DXEndpoint.Role.LOCAL_HUB);
-        feed = endpoint.getFeed();
+        DXFeed feed = endpoint.getFeed();
         publisher = endpoint.getPublisher();
         sub = feed.createSubscription(AnalyticOrder.class);
         sub.addEventListener(queue::addAll);
         sub.addSymbols(SYMBOL);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         endpoint.close();
         ThreadCleanCheck.after();
     }
 
+    @Test
     public void testAnalyticOrder() throws InterruptedException {
         AnalyticOrder order = new AnalyticOrder(SYMBOL);
         order.setOrderSide(Side.BUY);
@@ -73,7 +79,7 @@ public class AnalyticOrderTest extends TestCase {
         assertEquals(SYMBOL, received.getEventSymbol());
         assertEquals(Side.BUY, received.getOrderSide());
         assertEquals(Scope.ORDER, received.getScope());
-        assertEquals(10.0, received.getPrice());
+        assertEquals(10.0, received.getPrice(), 0.0);
         assertEquals(1, received.getSize());
         // by default the following fields are turned off in the scheme
         assertTrue(Double.isNaN(received.getIcebergHiddenSize()));
@@ -81,6 +87,7 @@ public class AnalyticOrderTest extends TestCase {
         assertTrue(Double.isNaN(received.getIcebergExecutedSize()));
     }
 
+    @Test
     public void testOrderNotReceived() throws InterruptedException {
         Order order = new Order(SYMBOL);
         order.setOrderSide(Side.BUY);

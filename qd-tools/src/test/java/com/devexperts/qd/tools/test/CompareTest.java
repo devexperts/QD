@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,12 +15,16 @@ import com.devexperts.mars.common.MARSNode;
 import com.devexperts.qd.tools.Tools;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.event.market.Quote;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Random;
 
-public class CompareTest extends TestCase {
+import static org.junit.Assert.assertTrue;
+
+public class CompareTest {
     private static final String SYMBOL = "IBM";
     private static final String SYMBOL_A = "IBM&A";
 
@@ -31,8 +35,8 @@ public class CompareTest extends TestCase {
     Thread toolThread;
     volatile boolean toolOk = true;
 
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         // produce quotes constantly
         endpoint.connect(":" + randomPortOffset);
         publishThread = new Thread("Publish") {
@@ -59,8 +63,8 @@ public class CompareTest extends TestCase {
         publishThread.start();
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         toolThread.interrupt();
         toolThread.join();
         assertTrue(toolOk);
@@ -69,6 +73,7 @@ public class CompareTest extends TestCase {
         endpoint.close();
     }
 
+    @Test
     public void testCompareOtherAddress() throws InterruptedException {
         // start tool
         toolThread = new Thread("Compare") {
@@ -87,6 +92,7 @@ public class CompareTest extends TestCase {
         waitMatched("a/b");
     }
 
+    @Test
     public void testCompareOtherCollector() throws InterruptedException {
         // start tool
         toolThread = new Thread("Compare") {
@@ -105,6 +111,7 @@ public class CompareTest extends TestCase {
         waitMatched("c/d");
     }
 
+    @Test
     public void testCompareOtherRecord() throws InterruptedException {
         // start tool
         toolThread = new Thread("Compare") {

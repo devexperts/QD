@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,14 +20,18 @@ import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.Quote;
 import com.dxfeed.event.market.Scope;
 import com.dxfeed.event.market.Side;
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Collections;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class OrderThreadingTest extends TestCase {
+import static org.junit.Assert.assertEquals;
+
+public class OrderThreadingTest {
     private static final String SYMBOL = "TEST";
 
     private DXEndpoint endpoint;
@@ -42,8 +46,8 @@ public class OrderThreadingTest extends TestCase {
     private final long t1 = t0 - 1000; // round to seconds
     private final long t2 = t0 + 1000; // round to seconds
 
-    @Override
-    protected void setUp() throws Exception {
+    @Before
+    public void setUp() throws Exception {
         ThreadCleanCheck.before();
         endpoint = DXEndpoint.create(DXEndpoint.Role.LOCAL_HUB);
         feed = endpoint.getFeed();
@@ -54,12 +58,13 @@ public class OrderThreadingTest extends TestCase {
         sub.addSymbols(SYMBOL);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
+    @After
+    public void tearDown() throws Exception {
         endpoint.close();
         ThreadCleanCheck.after();
     }
 
+    @Test
     public void testConcurrency() {
         // publish composite quote
         Quote composite = new Quote(SYMBOL);
@@ -99,6 +104,4 @@ public class OrderThreadingTest extends TestCase {
         // ensure that order queue has 3 incoming orders
         assertEquals(3, queue.size());
     }
-
-
 }

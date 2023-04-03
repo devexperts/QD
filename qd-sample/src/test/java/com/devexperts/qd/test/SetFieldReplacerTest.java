@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -28,7 +28,6 @@ import com.dxfeed.event.market.SpreadOrder;
 import com.dxfeed.event.market.TimeAndSale;
 import com.dxfeed.event.market.Trade;
 import com.dxfeed.event.market.TradeETH;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -45,10 +44,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 @SuppressWarnings("unchecked")
 @RunWith(Parameterized.class)
 @Parameterized.UseParametersRunnerFactory(TraceRunnerWithParametersFactory.class)
 public class SetFieldReplacerTest {
+    //FIXME Switch to temporary folder when [QD-1436] is fixed
     private static final Path DIRECTORY_WRITE_TO = Paths.get("./target");
 
     private final boolean replace;
@@ -112,12 +115,12 @@ public class SetFieldReplacerTest {
 
             // 4. Check that events are changed as required
             for (T readEvent : events) {
-                Assert.assertTrue(initialEvent + " --> " + readEvent, eventsAreEqual(modifiedEvent, readEvent));
+                assertTrue(initialEvent + " --> " + readEvent, eventsAreEqual(modifiedEvent, readEvent));
             }
         } catch (IOException e) {
-            Assert.fail("I/O error: " + e.getMessage());
+            fail("I/O error: " + e.getMessage());
         } catch (Exception e) {
-            Assert.fail("Error: " + e.getMessage());
+            fail("Error: " + e.getMessage());
         }
     }
 
