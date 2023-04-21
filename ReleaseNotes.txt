@@ -1,3 +1,9 @@
+QDS 3.319:
+
+* [QD-1439] New price level book sources DEX and BZX
+  - new price level book sources were added for existed DEX and BZX order sources
+* [QD-1437] [Schedule] Update bond holidays/short days for 20230406, 20230407
+
 QDS 3.318:
 
 * [QD-1424] EVENT_FLAGS are not set when publishing to a tape file via DXPublisher

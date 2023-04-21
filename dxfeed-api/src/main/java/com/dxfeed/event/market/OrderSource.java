@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -191,6 +191,14 @@ public final class OrderSource extends IndexedEventSource {
     public static final OrderSource DEX = new OrderSource("DEX", PUB_ORDER);
 
     /**
+     * Direct-Edge EDGX Exchange. Record for price level book.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+
+    public static final OrderSource dex = new OrderSource("dex", PUB_ORDER);
+
+    /**
      * Bats BYX Exchange.
      * {@link Order} events are {@link #isPublishable(Class) publishable} on this
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
@@ -203,6 +211,13 @@ public final class OrderSource extends IndexedEventSource {
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
      */
     public static final OrderSource BZX = new OrderSource("BZX", PUB_ORDER);
+
+    /**
+     * Bats BZX Exchange. Record for price level book.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource bzx = new OrderSource("bzx", PUB_ORDER);
 
     /**
      * Bats Europe BXE Exchange.
