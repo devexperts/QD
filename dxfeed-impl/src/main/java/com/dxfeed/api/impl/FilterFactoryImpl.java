@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -65,18 +65,19 @@ public class FilterFactoryImpl extends QDFilterFactory {
     @SpecificSubscriptionFilter("accepts regional records forming exchange data feed")
     public static final String REGFEED = "regfeed";
 
-    @SpecificSubscriptionFilter("hash symbol filter of form \"hash<M>of<N>\" " +
-        "(where M and N are integers and M<N and N is a power of 2), " +
+    @SpecificSubscriptionFilter("hash symbol filter with spec \"hash<M>of<N>\", " +
+        "where M and N are integers and M<N and N is a power of 2, " +
         "accepts symbols that belong to hash group M out of N")
     public static final String HASH = HashFilter.HASH_FILTER_PREFIX;
 
-    @SpecificSubscriptionFilter("range symbol filter of form \"range_<A>_<B>_\" " +
-        "(where instead of '_' any character from the set of [_0-9a-zA-Z] can be used), " +
-        "accepts symbols that are equal or greater than A and less than B in dictionary order")
+    @SpecificSubscriptionFilter("range symbol filter with spec \"range-<A>-<B>-\", " +
+        "where A and B are range boundaries using dictionary [a-zA-Z0-9], " +
+        "accepts symbols that are greater or equal than A and less than B skipping non-dictionary prefix")
     public static final String RANGE = RangeFilter.RANGE_FILTER_PREFIX;
 
     private static final String SYMBOL_SUFFIX = "symbol";
 
+    // Do not reorder this documentation only filter description!
     @SpecificSubscriptionFilter("The following symbol-based filters exist in 2 variants:\n" +
         "symbol-only (record agnostic) or including additional \"feed\" filter, " +
         "e.g. \"opt = optsymbol & feed\", \"fx = fxsymbol & feed\", etc.")

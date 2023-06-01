@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -48,14 +48,14 @@ public class RangeStriperSingleBenchmark {
     public static final DataScheme scheme = DXFeedScheme.getInstance();
 
     @Param({
-        "byrange_A_",
-        "byrange_M_",
-        "byrange_U_",
-        "byrange_BA_CE_",
-        "byrange_MA_NZ_",
-        "byrange_CE_NZ_",
-        "byrange_SPSN22_SPSN23_",
-        "byrange_SPX22070_SPX22079_",
+        "byrange-A-",
+        "byrange-M-",
+        "byrange-U-",
+        "byrange-BA-CE-",
+        "byrange-MA-NZ-",
+        "byrange-CE-NZ-",
+        "byrange-SPSN22-SPSN23-",
+        "byrange-SPX22070-SPX22079-",
     })
     public String striperSpec;
 

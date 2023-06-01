@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -97,5 +97,28 @@ public class HashFilterStriperTest {
 
         assertTrue(filter.accept(null, null, SCHEME.getCodec().encode("IBM"), null));
         assertTrue(filter.accept(null, null, 0, "IBM"));
+    }
+
+    @Test
+    public void testHashFilterFormatting() {
+        assertEquals("hash0001of1024", HashFilter.formatName(1, 1024));
+
+        HashStriper striper = (HashStriper) HashStriper.valueOf(SCHEME, 1024);
+        assertEquals("hash0001of1024", new HashFilter(striper, 1).toString());
+    }
+
+    @Test
+    public void testHashDifferentFormatting() {
+        HashFilter f1 = (HashFilter) HashFilter.valueOf(SCHEME, "hash0of1024");
+        assertNotNull(f1);
+        assertEquals("hash0of1024", f1.toString());
+
+        HashFilter f2 = (HashFilter) HashFilter.valueOf(SCHEME, "hash00of1024");
+        assertNotNull(f2);
+        assertEquals("hash00of1024", f2.toString());
+
+        HashFilter f3 = (HashFilter) HashFilter.valueOf(SCHEME, "hash000of1024");
+        assertNotNull(f3);
+        assertEquals("hash000of1024", f3.toString());
     }
 }

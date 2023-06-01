@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -42,6 +42,7 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
@@ -113,11 +114,12 @@ public class RangeStringStriperGroupBenchmark {
         }
 
         // Create striper spec from formula:
-        // code2 == "byrange_AA_BB_..._ZZ_"
-        // text2 == "byrange_AA_BB_..._ZZ0123456789_"
-        String[] ranges = generateRanges(striperSpec.charAt(4) - '0');
+        // code2 == "byrange-AA-BB-...-ZZ-"
+        // text2 == "byrange-AA-BB-...-ZZ0123456789-"
+        List<String> ranges = generateRanges(striperSpec.charAt(4) - '0');
         if (striperSpec.startsWith("text")) {
-            ranges['Z' - 'A'] += "0123456789";
+            int index = 'Z' - 'A';
+            ranges.set(index, ranges.get(index) + "0123456789");
         }
 
         striper = RangeStriper.valueOf(scheme, ranges);
@@ -132,10 +134,10 @@ public class RangeStringStriperGroupBenchmark {
         }
     }
 
-    private static String[] generateRanges(int count) {
+    private static List<String> generateRanges(int count) {
         return IntStream.range(0, 26)
             .mapToObj(i -> String.join("", Collections.nCopies(count, String.valueOf((char) ('A' + i)))))
-            .toArray(String[]::new);
+            .collect(Collectors.toList());
     }
 
     public static void main(String[] args) throws RunnerException {

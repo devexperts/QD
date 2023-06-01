@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,6 +22,12 @@ import java.util.regex.Pattern;
 
 /**
  * Strategy that splits symbol universe into stripes by hash groups.
+ * 
+ * <p>Example: striper {@code byhash16} splits the symbol universe into 16 stripes by hash.
+ *
+ * <p>HashStriper can be matched by the following regex: <b>{@code byhash([0-9]+)}</b>,
+ * where the matched group defines the number of stripes (must be a power of 2).
+ *
  * @see HashFilter
  */
 public class HashStriper implements SymbolStriper {
@@ -41,20 +47,38 @@ public class HashStriper implements SymbolStriper {
     // Cached filters
     private final HashFilter[] filters;
 
+    /**
+     * Parses a given specification as hash striper for a given scheme.
+     *
+     * @param scheme the scheme.
+     * @param spec the striper specification.
+     * @return symbol striper.
+     * @throws NullPointerException if spec is null.
+     * @throws FilterSyntaxException if spec is invalid.
+     */
     public static HashStriper valueOf(DataScheme scheme, String spec) {
         Matcher m = STRIPER_PATTERN.matcher(Objects.requireNonNull(spec, "spec"));
         if (!m.matches())
-            throw new IllegalArgumentException("Invalid hash striper definition: " + spec);
+            throw new FilterSyntaxException("Invalid hash striper definition: " + spec);
         try {
             return new HashStriper(scheme, Integer.parseInt(m.group(1)));
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid number in hash striper definition: " + spec);
+            throw new FilterSyntaxException("Invalid number in hash striper definition: " + spec);
         }
     }
 
+    /**
+     * Constructs a symbol striper for a given number of hash stripes.
+     * Note that if the number of stripes is 1 then {@link MonoStriper#INSTANCE} striper will be returned.
+     *
+     * @param scheme the scheme.
+     * @param stripeCount the number of hash stripes.
+     * @return symbol striper.
+     * @throws FilterSyntaxException if spec is invalid.
+     */
     public static SymbolStriper valueOf(DataScheme scheme, int stripeCount) {
         if (stripeCount < 1)
-            throw new IllegalArgumentException("Invalid stripe count: " + stripeCount);
+            throw new FilterSyntaxException("Invalid stripe count: " + stripeCount);
         if (stripeCount == 1)
             return MonoStriper.INSTANCE;
         return new HashStriper(scheme, stripeCount);
@@ -63,7 +87,7 @@ public class HashStriper implements SymbolStriper {
     protected HashStriper(DataScheme scheme, int stripeCount) {
         Objects.requireNonNull(scheme, "scheme");
         if ((stripeCount < 2) || ((stripeCount & (stripeCount - 1)) != 0))
-            throw new IllegalArgumentException("Stripe count should a power of 2 and at least 2");
+            throw new FilterSyntaxException("Stripe count should a power of 2 and at least 2");
 
         this.name = HASH_STRIPER_PREFIX + stripeCount;
         this.scheme = scheme;
@@ -90,12 +114,12 @@ public class HashStriper implements SymbolStriper {
 
     @Override
     public int getStripeIndex(int cipher, String symbol) {
-        return index(cipher != 0 ? codec.hashCode(cipher) : symbol.hashCode());
+        return index(cipher != 0 ? codec.hashCode(cipher) : symbol.hashCode(), shift);
     }
 
     @Override
     public int getStripeIndex(String symbol) {
-        return index(symbol.hashCode());
+        return index(symbol.hashCode(), shift);
     }
 
     @Override
@@ -111,7 +135,12 @@ public class HashStriper implements SymbolStriper {
         return getName();
     }
 
-    private int index(int hash) {
+    protected int getShift() {
+        return shift;
+    }
+
+    // The same hashing function as in com.devexperts.qd.impl.stripe.StripedCollector#index(int)
+    protected static int index(int hash, int shift) {
         return hash * MAGIC >>> shift;
     }
 }

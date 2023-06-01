@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,7 +17,6 @@ import com.devexperts.qd.QDContract;
 import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.spi.QDFilterContext;
 import com.devexperts.qd.util.SymbolSet;
-import com.devexperts.util.InvalidFormatException;
 
 /**
  * Fast filter based on {@link SymbolSet}.
@@ -35,7 +34,7 @@ public final class SymbolSetFilter extends QDFilter implements QDFilter.UpdateLi
      * @param spec the filter specification.
      * @param scheme the scheme.
      * @return filter.
-     * @throws InvalidFormatException if spec is invalid.
+     * @throws FilterSyntaxException if spec is invalid.
      */
     public static SymbolSetFilter valueOf(String spec, DataScheme scheme) {
         if (spec.equals("*") || spec.equals("all"))
@@ -45,7 +44,7 @@ public final class SymbolSetFilter extends QDFilter implements QDFilter.UpdateLi
             return (SymbolSetFilter) filter;
         if (filter.getKind().isSymbolOnly() && filter.getSymbolSet() != null)
             return new SymbolSetFilter(filter); // return wrapped filter
-        throw new InvalidFormatException("\"" + spec + "\" does not specify a list of symbols");
+        throw new FilterSyntaxException("\"" + spec + "\" does not specify a list of symbols");
     }
 
     // ------- instance -------

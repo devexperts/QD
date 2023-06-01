@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -59,13 +59,13 @@ public class RangeFilterGroupBenchmark {
     public static final DataScheme scheme = DXFeedScheme.getInstance();
 
     @Param({
-        "range___",
-        "range_A_B_",
-        "range_U_Z_",
-        "range_BA_CE_",
-        "range_MA_NZ_",
-        "range_SPSN22_SPSN23_",
-        "range_SPX22070_SPX22079_",
+        "range---",
+        "range-A-B-",
+        "range-U-Z-",
+        "range-BA-CE-",
+        "range-MA-NZ-",
+        "range-SPSN22-SPSN23-",
+        "range-SPX22070-SPX22079-",
     })
     public String filterSpec;
 

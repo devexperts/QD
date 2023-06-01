@@ -17,9 +17,9 @@ import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.kit.CompositeFilters;
+import com.devexperts.qd.kit.FilterSyntaxException;
 import com.devexperts.qd.kit.SymbolSetFilter;
 import com.devexperts.qd.util.SymbolSet;
-import com.devexperts.util.InvalidFormatException;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -75,7 +75,7 @@ public class SymbolListFiltersTest {
     }
 
     private void assertNotSymbolList(String spec) {
-        assertThrows("Should not be supported: " + spec, InvalidFormatException.class,
+        assertThrows("Should not be supported: " + spec, FilterSyntaxException.class,
             () -> SymbolSetFilter.valueOf(spec, SCHEME));
     }
 

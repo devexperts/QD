@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,106 +11,42 @@
  */
 package com.devexperts.qd.benchmark.qd.kit.range;
 
-import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
-import com.devexperts.qd.QDContract;
-import com.devexperts.qd.QDFilter;
+import com.devexperts.qd.kit.RangeFilter;
 
 import java.util.Objects;
+import java.util.regex.Matcher;
 
 import static com.devexperts.qd.kit.RangeUtil.CODE_LENGTH;
-import static com.devexperts.qd.kit.RangeUtil.encodeSymbol;
 import static com.devexperts.qd.kit.RangeUtil.skipPrefix;
 
 // An attempt to create a range filter without iteration over char array and only work with long codes
-public class LongCodePrefixRangeFilter extends QDFilter {
-
-    public static final String RANGE_FILTER_PREFIX = "range";
-
-    protected final char[] leftChars;
-    protected final long leftCode;
-
-    protected final char[] rightChars;
-    protected final long rightCode;
-
-    protected final int wildcard;
+public class LongCodePrefixRangeFilter extends RangeFilter {
 
     public static LongCodePrefixRangeFilter valueOf(DataScheme scheme, String spec) {
-        Objects.requireNonNull(spec, "spec");
-        if (spec.length() < RANGE_FILTER_PREFIX.length() + 3)
+        Matcher m = FILTER_PATTERN.matcher(Objects.requireNonNull(spec, "spec"));
+        if (!m.matches())
             throw new IllegalArgumentException("Invalid range filter definition: " + spec);
 
-        char delimiter = spec.charAt(RANGE_FILTER_PREFIX.length());
-        int idx1 = spec.indexOf(delimiter, RANGE_FILTER_PREFIX.length() + 1);
-        if (idx1 < 0)
-            throw new IllegalArgumentException("Invalid range filter definition: " + spec);
-        int idx2 = spec.indexOf(delimiter, idx1 + 1);
-        if (idx2 < 0 || idx2 != spec.length() - 1)
-            throw new IllegalArgumentException("Invalid range filter definition: " + spec);
+        String left = m.group(1);
+        String right = m.group(2);
 
-        String left = spec.substring(RANGE_FILTER_PREFIX.length() + 1, idx1);
-        String right = spec.substring(idx1 + 1, idx2);
-        if (!left.isEmpty() && !right.isEmpty() && left.compareTo(right) >= 0)
-            throw new IllegalArgumentException("Invalid range filter definition: " + spec);
-
-        return new LongCodePrefixRangeFilter(scheme, spec, left, right);
+        return new LongCodePrefixRangeFilter(scheme, left, right, spec);
     }
 
-    protected LongCodePrefixRangeFilter(DataScheme scheme, String spec, String left, String right) {
-        super(scheme);
-        setName(spec);
-
-        this.leftChars = left.toCharArray();
-        this.leftCode = !left.isEmpty() ? encodeSymbol(left) : 0;
-        this.rightChars = right.toCharArray();
-        this.rightCode = !right.isEmpty() ? encodeSymbol(right) : Long.MAX_VALUE;
-
-        this.wildcard = getScheme().getCodec().getWildcardCipher();
+    protected LongCodePrefixRangeFilter(DataScheme scheme, String left, String right, String spec) {
+        super(scheme, left, right, spec);
     }
 
     @Override
-    public boolean isFast() {
-        return true;
-    }
-
-    @Override
-    public Kind getKind() {
-        return Kind.OTHER_SYMBOL_ONLY;
-    }
-
-    @Override
-    public QDFilter toStableFilter() {
-        return this;
-    }
-
-    @Override
-    public boolean accept(QDContract contract, DataRecord record, int cipher, String symbol) {
-        if (cipher == wildcard) {
-            // Always allow wildcard
-            return true;
-        }
-
-        if (symbol != null) {
-            return acceptString(symbol);
-        }
-
-        // Only cipher is specified
-        long code = getScheme().getCodec().decodeToLong(cipher);
-        if ((code >>> 56) == '=') {
-            // Use ineffective route for spread ciphers since they should never happen,
-            // e.g. PentaCodec can only encode cipher for 4-letter spread only ("=A+B")
-            return acceptString(getScheme().getCodec().decode(cipher));
-        }
-        return acceptCode(code);
-    }
-
-    private boolean acceptString(String symbol) {
+    protected boolean acceptString(String symbol) {
         int length = symbol.length();
         int symbolIdx = skipPrefix(symbol, length);
         return compareByCode(symbol, symbolIdx, length);
     }
 
-    private boolean acceptCode(long symbolCode) {
+    @Override
+    protected boolean acceptCode(long symbolCode) {
         long code = skipPrefix(symbolCode);
         return (leftCode <= code && code < rightCode);
     }
@@ -127,7 +63,7 @@ public class LongCodePrefixRangeFilter extends QDFilter {
         long mask = 0;
         int shift = 64;
         for (int i = 0; i < codeLength; i++) {
-            // If character is outside of the byte range replace it with the largest positive byte char
+            // If character is outside the byte range replace it with the largest positive byte char
             long c = Math.min(0x7F, s.charAt(from + i));
 
             shift -= 8;

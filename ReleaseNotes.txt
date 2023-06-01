@@ -1,3 +1,11 @@
+QDS 3.320:
+
+* [QD-1445] Adjust striper filters formatting
+  - BACKWARD-INCOMPATIBLE CHANGE: RangeStriper and RangeFilter format has changed to use "-" as delimiters.
+    see qds tools "stripers" and "filters" help article for more info.
+* [QD-1438] [Schedule] Add holidays for XPRA and CHIA
+* [QD-1442] Cleanup Maven configuration
+
 QDS 3.319:
 
 * [QD-1439] New price level book sources DEX and BZX

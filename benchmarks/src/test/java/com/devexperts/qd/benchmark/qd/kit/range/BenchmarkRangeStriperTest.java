@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -37,8 +37,8 @@ public class BenchmarkRangeStriperTest {
     public void testUniverse() throws Exception {
         List<InstrumentProfile> profiles = new InstrumentProfileReader().readFromFile("securities.ipf.zip");
 
-        //String spec = "byrange_EME220715_EME22071Z_";
-        String spec = "byrange_MSFT_";
+        //String spec = "byrange-EME220715-EME22071Z-";
+        String spec = "byrange-MSFT-";
         SymbolStriper s1 = RangeStriper.valueOf(SCHEME, spec);
         SymbolStriper s2 = LambdaBasedRangeStriper.valueOf(SCHEME, spec);
 

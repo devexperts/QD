@@ -590,7 +590,7 @@ Filters can be either simple or composite. Simple filters in their turn
 divide into pattern filters, built-in filters and project-specific filters.
 
 Pattern filters use simple glob-like format to specify matching symbols.
-The easiest way to define one symbol filter is just to use it's name, like
+The easiest way to define one symbol filter is just to use its name, like
 "MSFT" (here and further quotes for clarity). If the pattern ends with * then
 it will match all the symbols with specified prefix (for examlpe "NA*" will
 accept all symbols that start with NA, and ".*" will accept all option symbols).
@@ -625,7 +625,7 @@ records about option trades. "(:Trade,:Quote,:Fundamental)&MSFT" filter will
 accept one of three types of records about MSFT symbol.
 
 Note, that all composite filter structures which consist only of simple record
-filters are preprocessed effectively and they can be applied quickly not depending
+filters are preprocessed effectively, and they can be applied quickly not depending
 on their complexity. Other simple filters (symbol or project-specific) can
 not be composed effectively, so long symbol lists processing for example can slow
 down performance.
@@ -645,17 +645,17 @@ Empty string in striper configuration would default to mono striper.
 Each stripe is described by a hash filter, e.g. striper 'byhash4' has 4 stripes
 defined by filters: 'hash0of4', 'hash1of4', 'hash2of4', and 'hash3of4'.
 
-     'byrange_[<Ri>_]+'
+     'byrange-[<Ri>-]+'
 @br;Range striper that splits into stripes described by range filters,
-e.g. striper 'byrange_A_E_F_' has 4 stripes defined by filters:
-'range__A_', 'range_A_E_', 'range_E_F_', and 'range_F__'.
+e.g. striper 'byrange-D-M-T-' has 4 stripes defined by filters:
+'range--D-', 'range-D-M-', 'range-M-T-', and 'range-T--'.
 
 Note that range striper allows only limited set of characters in the pattern,
-namely [_a-zA-Z0-9] (to be safely used in filenames). In addition, unused symbol prefix
+namely [a-zA-Z0-9] (to be safely used in filenames). In addition, unused symbol prefix
 that contains other characters and futures/option/spread prefixes will be removed.
 So, for example, symbols "ES", "/ESU23", "./ESH23C1800", and "=2*/ESU22-/ESU23"
-will all start with "ES" after removing unused prefixes and will fall into
-"range_E_F_" stripe.
+will all start with "ES" after removing unused prefixes and will all fall into
+"range-ES-ET-" stripe.
 
 @# -----------------------------------------------------------------------------
 @article Time format

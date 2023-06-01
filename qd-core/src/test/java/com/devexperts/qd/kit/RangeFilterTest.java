@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -28,45 +28,40 @@ public class RangeFilterTest {
     @Test
     public void testInvalidRangeFilter() {
         assertInvalidFilter("range");
-        assertInvalidFilter("range_");
+        assertInvalidFilter("range-");
         assertInvalidFilter("rangeABC");
         assertInvalidFilter("rangexAxB");
-        assertInvalidFilter("range_A_B__");
-        assertInvalidFilter("range_A__B_");
+        assertInvalidFilter("range-A-B--");
+        assertInvalidFilter("range-A--B-");
         assertInvalidFilter("rangexAxBxx");
-        assertInvalidFilter("range_A_A_");
+        assertInvalidFilter("range-A-A-");
         assertInvalidFilter("rangexBxAx");
     }
 
     @Test
     public void testInvalidSymbolRangeFilter() {
-        assertInvalidFilter("range_#_%_");
-        assertInvalidFilter("range_\u1234_\u5678_");
-        assertInvalidFilter("range_A_B_\n");
-        assertInvalidFilter("range_A_B_123");
+        assertInvalidFilter("range-#-%-");
+        assertInvalidFilter("range-\u1234-\u5678-");
+        assertInvalidFilter("range-A-B-\n");
+        assertInvalidFilter("range-A-B-123");
     }
 
     @Test
     public void testValidSymbolRangeFilter() {
-        assertNotNull(filter("range___"));
-        assertNotNull(filter("range_A__"));
-        assertNotNull(filter("range__B_"));
-        assertNotNull(filter("range_A_B_"));
-
-        // Exotic valid filters
-        assertNotNull(filter("range01234567890_________0"));
-        assertNotNull(filter("rangeA_________AabcdefghiA"));
-        assertNotNull(filter("rangeABCDEFGHIJAabcdefghiA"));
+        assertNotNull(filter("range---"));
+        assertNotNull(filter("range-A--"));
+        assertNotNull(filter("range--B-"));
+        assertNotNull(filter("range-A-B-"));
     }
 
     @Test
     public void testUniversalFilter() {
-        assertSame(QDFilter.ANYTHING, filter("range___"));
+        assertSame(QDFilter.ANYTHING, filter("range---"));
     }
 
     @Test
     public void testSimpleRangeFilter() {
-        QDFilter f = filter("range_A_B_");
+        QDFilter f = filter("range-A-B-");
         assertFilter(f, "0", false);
 
         assertFilter(f, "A", true);
@@ -80,7 +75,7 @@ public class RangeFilterTest {
 
     @Test
     public void testSpreadSymbol() {
-        QDFilter f = filter("range_A_B_");
+        QDFilter f = filter("range-A-B-");
         assertFilter(f, "=A", true);
         assertFilter(f, "=-A", true);
         assertFilter(f, "=-2*A", true);
@@ -93,7 +88,7 @@ public class RangeFilterTest {
 
     @Test
     public void testLongSymbol() {
-        QDFilter f = filter("range_12345678A_12345678B_");
+        QDFilter f = filter("range-12345678A-12345678B-");
         assertFilter(f, "1234567", false);
         assertFilter(f, "12345678", false);
 
@@ -112,7 +107,7 @@ public class RangeFilterTest {
 
     @Test
     public void testLeftRangeSymbol() {
-        QDFilter f = filter("range__AAA_");
+        QDFilter f = filter("range--AAA-");
         assertFilter(f, "", true);
         assertFilter(f, "0", true);
         assertFilter(f, "000000000000", true);
@@ -125,7 +120,7 @@ public class RangeFilterTest {
 
     @Test
     public void testRightRangeSymbol() {
-        QDFilter f = filter("range_AAA__");
+        QDFilter f = filter("range-AAA--");
         assertFilter(f, "AAA", true);
         assertFilter(f, ".AAA", true);
         assertFilter(f, "/AAA", true);
@@ -136,14 +131,13 @@ public class RangeFilterTest {
         assertFilter(f, "/AAA00000000", true);
         assertFilter(f, "=-2.*AAA00000000", true);
         assertFilter(f, "ZZZZZZZZZZZZ", true);
-        assertFilter(f, "____________", true);
         assertFilter(f, "aaa", true);
         assertFilter(f, "zzz", true);
     }
 
     @Test
     public void testAllRangeSymbol() {
-        QDFilter f = filter("range___");
+        QDFilter f = filter("range---");
         assertFilter(f, "AAA", true);
         assertFilter(f, "@", true);
         assertFilter(f, "{}", true);
@@ -157,14 +151,14 @@ public class RangeFilterTest {
 
         assertNotEquals(RangeUtil.encodeSymbol("AA"), RangeUtil.encodeSymbol(pseudoAA));
 
-        QDFilter f = filter("range_AA_AB_");
+        QDFilter f = filter("range-AA-AB-");
         assertFilter(f, "AA", true);
         assertFilter(f, pseudoAA, false);
     }
 
     @Test
     public void testOutOfRangeSymbol() {
-        QDFilter f = filter("range__A_");
+        QDFilter f = filter("range--A-");
         assertFilter(f, "\u007E", true);
         assertFilter(f, "\u007F", true);
         assertFilter(f, "\u00FF", true);
@@ -173,14 +167,14 @@ public class RangeFilterTest {
 
     @Test
     public void testOutOfRangeCipher() {
-        QDFilter f = filter("range__A_");
+        QDFilter f = filter("range--A-");
         assertFilter(f, "\u007E", true);
         assertFilter(f, "{|}", true);
     }
 
     @Test
     public void testOutOfRangeInvalidSymbol() {
-        QDFilter f = filter("range_A_a_");
+        QDFilter f = filter("range-A-a-");
         // Use ASCII-code between A and a
         assertFilter(f, "[^]", false);
     }
@@ -188,7 +182,7 @@ public class RangeFilterTest {
     @Test
     public void testSimpleCode() {
         // Symbols with code larger than 255 should not be "truncated"
-        QDFilter f = filter("range_A_B_");
+        QDFilter f = filter("range-A-B-");
         assertFilter(f, "0", false);
 
         assertFilter(f, "A", true);
@@ -203,7 +197,7 @@ public class RangeFilterTest {
 
     @Test
     public void testLongSymbolCode() {
-        QDFilter f = filter("range_AAAA00000ZZZ_AABB0000ZZZ_");
+        QDFilter f = filter("range-AAAA00000ZZZ-AABB0000ZZZ-");
         assertFilter(f, "AAAA", false);
 
         assertFilter(f, "AABB", true);

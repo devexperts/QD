@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,6 +13,9 @@ package com.devexperts.qd.kit;
 
 import com.devexperts.qd.DataScheme;
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -25,70 +28,48 @@ public class RangeStriperTest {
 
     @Test
     public void testRangeStriperMono() {
-        assertSame(MonoStriper.INSTANCE, RangeStriper.valueOf(SCHEME));
-        assertSame(MonoStriper.INSTANCE, RangeStriper.valueOf(SCHEME, (String[]) null));
-        assertEquals(MonoStriper.MONO_STRIPER_NAME, RangeStriper.valueOf(SCHEME).toString());
-        //noinspection RedundantArrayCreation
-        assertSame(MonoStriper.INSTANCE, RangeStriper.valueOf(SCHEME, new String[0]));
+        assertThrows(NullPointerException.class, () -> RangeStriper.valueOf(SCHEME, (String) null));
+        assertThrows(NullPointerException.class, () -> RangeStriper.valueOf(SCHEME, (List<String>) null));
+        assertSame(MonoStriper.INSTANCE, RangeStriper.valueOf(SCHEME, new ArrayList<>()));
     }
 
     @Test
     public void testInvalidRangeStriper() {
         // Format
         assertInvalidStriper("byrange");
-        assertInvalidStriper("byrange_");
-        assertInvalidStriper("byrange__");
+        assertInvalidStriper("byrange-");
+        assertInvalidStriper("byrange--");
         assertInvalidStriper("byrangeABC");
-        assertInvalidStriper("byrange_A_B");
-        assertInvalidStriper("byrange_A_B__");
-        assertInvalidStriper("byrangeA_A_");
+        assertInvalidStriper("byrange-A-B");
+        assertInvalidStriper("byrangeA-B-C-");
+        assertInvalidStriper("byrangeAB-C-");
+        assertInvalidStriper("byrange-A-B--");
+        assertInvalidStriper("byrangeA-A-");
 
         // Range order
-        assertInvalidStriper("byrange_A_A_");
-        assertInvalidStriper("byrange_B_A_");
-        assertInvalidStriper("byrange_B_B_");
+        assertInvalidStriper("byrange-A-A-");
+        assertInvalidStriper("byrange-B-A-");
+        assertInvalidStriper("byrange-B-B-");
     }
 
     @Test
     public void testValidRangeStriper() {
-        assertValidStriper("byrange_A_");
-        assertValidStriper("byrange_A_B_");
-        assertValidStriper("byrangeeAeBe");
-        assertValidStriper("byrangexAxBx");
-        assertValidStriper("byrangeABACA");
-        assertValidStriper("byrange_AAA_AAAA_");
-        assertValidStriper("byrange_AAAAAAAAA_AAAAAAAAB_");
-    }
-
-    @Test
-    public void testCalculateDelimiter() {
-        assertEquals('_', RangeUtil.calculateDelimiter(new String[] { "A", "B", "C" }));
-        assertEquals('a', RangeUtil.calculateDelimiter(new String[] { "A", "B", "_" }));
-        assertEquals('0', RangeUtil.calculateDelimiter(new String[] {
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "_abcdefghijklmnopqrstuvwxyz" }));
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testCannotCalculateDelimiter() {
-        String[] ranges = {
-            "0123456789",
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-            "_abcdefghijklmnopqrstuvwxyz"
-        };
-        RangeUtil.calculateDelimiter(ranges);
+        assertValidStriper("byrange-A-");
+        assertValidStriper("byrange-A-B-");
+        assertValidStriper("byrange-AAA-AAAA-");
+        assertValidStriper("byrange-AAAAAAAAA-AAAAAAAAB-");
     }
 
     @Test
     public void testValidFilters() {
-        assertStriperFilter("byrange_A_", "__A_", "_A__");
-        assertStriperFilter("byrange_A_B_", "__A_", "_A_B_", "_B__");
-        assertStriperFilter("byrangeXAXBX", "XXAX", "XAXBX", "XBXX");
-        assertStriperFilter("byrange_AAAAA_aaaaa_", "__AAAAA_", "_AAAAA_aaaaa_", "_aaaaa__");
+        assertStriperFilter("byrange-A-", "--A-", "-A--");
+        assertStriperFilter("byrange-A-B-", "--A-", "-A-B-", "-B--");
+        assertStriperFilter("byrange-AAAAA-aaaaa-", "--AAAAA-", "-AAAAA-aaaaa-", "-aaaaa--");
     }
 
     @Test
     public void testShortRange() {
-        RangeStriper striper = RangeStriper.valueOf(SCHEME, "byrange_B_D_F_");
+        RangeStriper striper = RangeStriper.valueOf(SCHEME, "byrange-B-D-F-");
         assertStriper(striper, "A", 0);
         assertStriper(striper, "B", 1);
         assertStriper(striper, "C", 1);
@@ -100,7 +81,7 @@ public class RangeStriperTest {
 
     @Test
     public void testShortRangeLongSymbol() {
-        RangeStriper striper = RangeStriper.valueOf(SCHEME, "byrange_B_D_F_");
+        RangeStriper striper = RangeStriper.valueOf(SCHEME, "byrange-B-D-F-");
         assertStriper(striper, "AAAAAAAAAA", 0);
         assertStriper(striper, "BBBBBBBBBB", 1);
         assertStriper(striper, "CCCCCCCCCC", 1);
@@ -112,7 +93,7 @@ public class RangeStriperTest {
 
     @Test
     public void testLongRange() {
-        RangeStriper striper = RangeStriper.valueOf(SCHEME, "byrange_B0000000A_B0000000F_F_");
+        RangeStriper striper = RangeStriper.valueOf(SCHEME, "byrange-B0000000A-B0000000F-F-");
         assertStriper(striper, "A", 0);
         assertStriper(striper, "B", 0);
         assertStriper(striper, "C", 2);
@@ -123,7 +104,7 @@ public class RangeStriperTest {
 
     @Test
     public void testDenisRange() {
-        RangeStriper striper = RangeStriper.valueOf(SCHEME, "byrange_B1234567_");
+        RangeStriper striper = RangeStriper.valueOf(SCHEME, "byrange-B1234567-");
         assertStriper(striper, "B12345669", 0);
         assertStriper(striper, "B1234567", 1);
         assertStriper(striper, "B1234568", 1);
@@ -132,7 +113,7 @@ public class RangeStriperTest {
 
     @Test
     public void testLongRangeLongSymbol() {
-        RangeStriper striper = RangeStriper.valueOf(SCHEME, "byrange_B0000000A_B0000000C_B0000000F_F_");
+        RangeStriper striper = RangeStriper.valueOf(SCHEME, "byrange-B0000000A-B0000000C-B0000000F-F-");
         assertStriper(striper, "AAAAAAAAA", 0);
         assertStriper(striper, "B00000000", 0);
         assertStriper(striper, "B0000000A", 1);
@@ -146,7 +127,7 @@ public class RangeStriperTest {
 
     @Test
     public void testRangeStriperFilterCache() {
-        RangeStriper striper = RangeStriper.valueOf(SCHEME, "byrange_A_B_C_");
+        RangeStriper striper = RangeStriper.valueOf(SCHEME, "byrange-A-B-C-");
         assertNotNull(striper);
         assertSame(striper.getStripeFilter(2), striper.getStripeFilter(2));
     }
@@ -168,7 +149,7 @@ public class RangeStriperTest {
         assertEquals(filterSpec.length, s.getStripeCount());
         for (int i = 0; i < filterSpec.length; i++) {
             assertEquals("Invalid filter " + i + " of " + s,
-                RangeStriper.RANGE_STRIPER_PREFIX + filterSpec[i], s.getStripeFilter(i).toString());
+                RangeFilter.RANGE_FILTER_PREFIX + filterSpec[i], s.getStripeFilter(i).toString());
         }
     }
 

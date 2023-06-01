@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.319</version>
+    <version>3.320</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -118,13 +118,18 @@
              during install phase.
         -->
         <install.dir>../target/install</install.dir>
-        <deploy.extension>zip</deploy.extension>
+
         <!-- profiles declare "deploy.dir" property to define where artifacts are deployed
              and "deploy.suffix" property to define the suffix for file names.
-             Modules declare "deploy.file" and "deploy.prefix" properties if their need
+             Modules declare "deploy.file" and "deploy.name" properties if they need
              their artifact copies to "deploy.dir".
              Modules may overwrite "deploy.extension" if needed.
         -->
+        <deploy.name>${project.artifactId}</deploy.name>
+        <deploy.suffix />
+        <deploy.extension>zip</deploy.extension>
+        <deploy.version>${project.version}${deploy.suffix}</deploy.version>
+
         <!-- Internal modules set it to true  -->
         <deploy.skip>false</deploy.skip>
         <!-- Most modules don't produce javadoc -->
@@ -175,7 +180,7 @@
             </activation>
             <properties>
                 <deploy.dir>${deploy.host.mount}/Snapshot${deploy.branch.dir.suffix}</deploy.dir>
-                <deploy.suffix>${project.version}-${maven.build.timestamp}</deploy.suffix>
+                <deploy.suffix>-${maven.build.timestamp}</deploy.suffix>
             </properties>
         </profile>
         <!-- Define regular deployment location for release  -->
@@ -189,7 +194,6 @@
             </activation>
             <properties>
                 <deploy.dir>${deploy.host.mount}/Release${deploy.branch.dir.suffix}</deploy.dir>
-                <deploy.suffix>${project.version}</deploy.suffix>
             </properties>
         </profile>
         <profile>
@@ -266,43 +270,6 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <!--
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>license-maven-plugin</artifactId>
-                        <configuration>
-                            <licenseName>mpl-2</licenseName>
-                            <failOnMissingHeader>true</failOnMissingHeader>
-                            <failOnNotUptodateHeader>true</failOnNotUptodateHeader>
-                            <addJavaLicenseAfterPackage>false</addJavaLicenseAfterPackage>
-                            <canUpdateLicense>true</canUpdateLicense>
-                            <canUpdateCopyright>true</canUpdateCopyright>
-                            <canUpdateDescription>true</canUpdateDescription>
-                            <useJavaNoReformatCommentStartTag>false</useJavaNoReformatCommentStartTag>
-                            <sectionDelimiter>!-</sectionDelimiter>
-                            <processStartTag>!++</processStartTag>
-                            <processEndTag>!__</processEndTag>
-                            <excludes>
-                                <exclude>**/*.ftl</exclude>
-                                <exclude>**/*.css</exclude>
-                                <exclude>**/META-INF/services/**</exclude>
-                                <exclude>**/angularjs/angularjs-1.6.9.min.js</exclude>
-                                <exclude>**/jquery/jquery-1.9.0.js</exclude>
-                                <exclude>**/jquery/jquery-1.9.0.min.js</exclude>
-                            </excludes>
-                            <descriptionTemplate>${session.executionRootDirectory}/build-support/src/main/resources/description.ftl</descriptionTemplate>
-                            <licenseResolver>file:${session.executionRootDirectory}/build-support/src/main/resources</licenseResolver>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <phase>process-sources</phase>
-                                <goals>
-                                    <goal>check-file-header</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    -->
                 </plugins>
             </build>
         </profile>
@@ -317,6 +284,12 @@
                     <source>1.8</source>
                     <target>1.8</target>
                     <fork>true</fork>
+                    <compilerArgs>
+                        <!-- -XDignore.symbol.file use to prevent warnings about of usages Unsafe java api
+                             This param ignore symbol file for compilation and use directly rt.jar.
+                        -->
+                        <arg>-XDignore.symbol.file</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
             <!-- Don't add Maven descriptor to jars, but add default Implementation & Specification -->
@@ -335,7 +308,7 @@
                         </manifest>
                         <manifestEntries>
                             <Implementation-Title>${project.name}</Implementation-Title>
-                            <Implementation-Version>${deploy.suffix}</Implementation-Version>
+                            <Implementation-Version>${deploy.version}</Implementation-Version>
                             <Implementation-Vendor>${project.organization.name}</Implementation-Vendor>
                             <Built-By>${user.name}</Built-By>
                         </manifestEntries>
@@ -446,7 +419,7 @@
                 </configuration>
             </plugin>
             <!-- custom stuff with antrun plugin to upload key artifacts   -->
-            <!-- it is used by modules that define "deploy.file" and "deploy.prefix" properties -->
+            <!-- it is used by modules that define "deploy.file" and "deploy.name" properties -->
             <plugin>
                 <artifactId>maven-antrun-plugin</artifactId>
                 <executions>
@@ -481,10 +454,10 @@
                                 <mkdir dir="${install.dir}" />
                                 <!-- delete previous files from install dir -->
                                 <delete>
-                                    <fileset dir="${install.dir}" includes="${deploy.prefix}-*.${deploy.extension}" />
+                                    <fileset dir="${install.dir}" includes="${deploy.name}-*.${deploy.extension}" />
                                 </delete>
                                 <!-- copy new file to install dir -->
-                                <copy file="${project.build.directory}/${deploy.file}" tofile="${install.dir}/${deploy.prefix}-${deploy.suffix}.${deploy.extension}" />
+                                <copy file="${project.build.directory}/${deploy.file}" tofile="${install.dir}/${deploy.name}-${deploy.version}.${deploy.extension}" />
                             </target>
                         </configuration>
                         <goals>
@@ -500,14 +473,14 @@
                                 <mkdir dir="${deploy.dir}/old" />
                                 <!-- delete previous snapshots (keep releases!) from old dir -->
                                 <delete failonerror="false">
-                                    <fileset dir="${deploy.dir}/old" includes="${deploy.prefix}-*-SNAPSHOT-*.${deploy.extension}" />
+                                    <fileset dir="${deploy.dir}/old" includes="${deploy.name}-*-SNAPSHOT-*.${deploy.extension}" />
                                 </delete>
                                 <!-- move previous file to old dir -->
                                 <move todir="${deploy.dir}/old" failonerror="false">
-                                    <fileset dir="${deploy.dir}" includes="${deploy.prefix}-*.${deploy.extension}" />
+                                    <fileset dir="${deploy.dir}" includes="${deploy.name}-*.${deploy.extension}" />
                                 </move>
                                 <!-- copy new file from install dir -->
-                                <copy file="${install.dir}/${deploy.prefix}-${deploy.suffix}.${deploy.extension}" tofile="${deploy.dir}/${deploy.prefix}-${deploy.suffix}.${deploy.extension}" failonerror="false" />
+                                <copy file="${install.dir}/${deploy.name}-${deploy.version}.${deploy.extension}" tofile="${deploy.dir}/${deploy.name}${deploy.suffix}.${deploy.extension}" failonerror="false" />
                             </target>
                         </configuration>
                         <goals>
@@ -519,13 +492,12 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.19.1</version>
                 <configuration>
                     <skipAfterFailureCount>42</skipAfterFailureCount>
                     <redirectTestOutputToFile>true</redirectTestOutputToFile>
-                    <systemProperties>
+                    <systemPropertyVariables>
                         <com.devexperts.rmi.removeStackTraces>false</com.devexperts.rmi.removeStackTraces>
-                    </systemProperties>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
         </plugins>
@@ -543,7 +515,7 @@
                 </plugin>
                 <plugin>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.0.0-M8</version>
+                    <version>3.1.0</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-assembly-plugin</artifactId>

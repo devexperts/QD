@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -25,49 +25,116 @@ import static com.devexperts.qd.kit.RangeUtil.encodeSymbol;
 import static com.devexperts.qd.kit.RangeUtil.skipPrefix;
 
 /**
- * Range symbol filter of form {@code range_<A>_<B>_}
- * (where instead of '_' delimiter any character from the set of [_a-zA-Z0-9] can be used),
- * that accepts symbols that are equal or greater than A and less than B in dictionary order.
+ * Range symbol filter with specification {@code range-<A>-<B>-}, where A and B are range boundaries
+ * using dictionary [a-zA-Z0-9], accepts symbols that are greater or equal than A and less than B skipping
+ * non-dictionary prefix.
+ *
+ * <p>The {@link #SYMBOL_PATTERN} regex describes the symbol prefix that will be skipped so,
+ * for example, symbols "ES", "/ESU23", "./ESH23C1800", and ""=2*./ESU22-/ESU23"
+ * will all start with "ES" after removing unused prefixes and will all fall into {@code range-ES-ET-} stripe.
+ * The range boundary can be empty, so {@code range-M--} will accept all symbols starting from "M" and greater.
+ *
+ * <p>RangeFilter can be matched by the following regex: <b>{@code range-([a-zA-Z0-9]*)-([a-zA-Z0-9]*)-}</b>,
+ * where the first matched group defines range's left boundary, and the second group - range's right boundary.
+ *
+ * @see #SYMBOL_PATTERN
  */
 public class RangeFilter extends QDFilter {
 
+    /** Range filter prefix. */
     public static final String RANGE_FILTER_PREFIX = "range";
 
-    // Capture delimiter into group(1), reluctant match left(2) and right(3),
-    // greedy match tail(4) to capture extra delimiters - tail must be empty
-    private static final Pattern FILTER_PATTERN = Pattern.compile(
-        RANGE_FILTER_PREFIX + "([_a-zA-Z0-9])([_a-zA-Z0-9]*?)\\1([_a-zA-Z0-9]*?)\\1(.*)");
+    /** Range filter delimiter character. */
+    public static final char RANGE_DELIMITER_CHAR = '-';
 
-    private final char[] leftChars;
-    private final long leftCode;
+    /** Range filter delimiter string. */
+    public static final String RANGE_DELIMITER = String.valueOf(RANGE_DELIMITER_CHAR);
+    
+    /**
+     * Java regex {@link Pattern pattern} string that would capture the part of the symbol
+     * that would be used by {@link RangeStriper} and {@link RangeFilter}.
+     *
+     * <p>This pattern can be broken down to several parts:
+     * <ul>
+     *     <li>Optional spread prefix: {@code (?:=[-+]?[0-9]+(?:\.[0-9]*)?\\*)?}
+     *     <ul>
+     *         <li>Spread prefix: {@code =}</li>
+     *         <li>Optional sign: {@code [-+]?}</li>
+     *         <li>Decimal number: {@code [0-9]+(?:\.[0-9]*)?}</li>
+     *         <li>Multiplication sign: {@code \\*}</li>
+     *     </ul>
+     *     </li>
+     *     <li>Skipped symbol prefix: {@code [^a-zA-Z0-9]*}</li>
+     *     <li>Symbol (that would be used by stripers and filters) starting with one of
+     *     lower and capital letters, digits: {@code ([a-zA-Z0-9].*)}, or empty</li>
+     * </ul>
+     * If symbol contains characters out of [0..127] range they will be replaced with character 127 (0x7F).
+     */
+    public static final String SYMBOL_PATTERN = "(?:=[-+]?[0-9]+(?:\\.[0-9]*)?\\*)?[^a-zA-Z0-9]*(.*)";
 
-    private final char[] rightChars;
-    private final long rightCode;
+    protected static final String BOUNDARY_PATTERN = "([a-zA-Z0-9]*)";
+    protected static final Pattern FILTER_PATTERN = Pattern.compile(RANGE_FILTER_PREFIX +
+        RANGE_DELIMITER + BOUNDARY_PATTERN + RANGE_DELIMITER + BOUNDARY_PATTERN + RANGE_DELIMITER);
 
-    private final int wildcard;
+    protected final char[] leftChars;
+    protected final long leftCode;
 
+    protected final char[] rightChars;
+    protected final long rightCode;
+
+    protected final int wildcard;
+
+    /**
+     * Parses a given specification as range filter for a given scheme.
+     * Note that range filter "range---" that accepts everything is replaced with {@link QDFilter#ANYTHING}.
+     *
+     * @param scheme the scheme.
+     * @param spec the filter specification.
+     * @return filter.
+     * @throws NullPointerException if spec is null.
+     * @throws FilterSyntaxException if spec is invalid.
+     */
     public static QDFilter valueOf(DataScheme scheme, String spec) {
         Matcher m = FILTER_PATTERN.matcher(Objects.requireNonNull(spec, "spec"));
-        if (!m.matches() || !m.group(4).isEmpty())
-            throw new IllegalArgumentException("Invalid range filter definition: " + spec);
+        if (!m.matches())
+            throw new FilterSyntaxException("Invalid range filter definition: " + spec);
 
-        String left = m.group(2);
-        String right = m.group(3);
+        String left = m.group(1);
+        String right = m.group(2);
         if (left.isEmpty() && right.isEmpty())
             return QDFilter.ANYTHING;
 
-        if (!left.isEmpty() && !right.isEmpty() && left.compareTo(right) >= 0)
-            throw new IllegalArgumentException("Invalid range filter definition: " + spec);
-
-        return new RangeFilter(scheme, spec, left, right);
+        return new RangeFilter(scheme, left, right, spec);
     }
 
-    protected RangeFilter(DataScheme scheme, String spec, String left, String right) {
+    /**
+     * Returns default {@link RangeFilter} name. Note that input parameters are not validated.
+     *
+     * @param left range left boundary (inclusive)
+     * @param right range right boundary (exclusive)
+     * @return filter name
+     */
+    public static String formatName(String left, String right) {
+        return RANGE_FILTER_PREFIX + RANGE_DELIMITER + left + RANGE_DELIMITER + right + RANGE_DELIMITER;
+    }
+
+    protected RangeFilter(DataScheme scheme, String left, String right) {
+        this(scheme, left, right, null);
+    }
+
+    protected RangeFilter(DataScheme scheme, String left, String right, String spec) {
         super(scheme);
-        setName(spec);
+
+        // Constructor invariant: spec must be valid
+        assert(spec == null || spec.equals(formatName(left, right)));
+        setName((spec != null) ? spec : formatName(left, right));
+
+        if (!left.isEmpty() && !right.isEmpty() && left.compareTo(right) >= 0)
+            throw new FilterSyntaxException("Invalid range filter definition: " + this);
 
         this.leftChars = left.toCharArray();
         this.leftCode = !left.isEmpty() ? encodeSymbol(left) : 0;
+
         this.rightChars = right.toCharArray();
         this.rightCode = !right.isEmpty() ? encodeSymbol(right) : Long.MAX_VALUE;
 
@@ -111,7 +178,7 @@ public class RangeFilter extends QDFilter {
         return acceptCode(code);
     }
 
-    private boolean acceptString(String symbol) {
+    protected boolean acceptString(String symbol) {
         int length = symbol.length();
         int symbolIdx = skipPrefix(symbol, length);
 
@@ -119,7 +186,7 @@ public class RangeFilter extends QDFilter {
             (rightCode == Long.MAX_VALUE || compareByString(rightChars, symbol, symbolIdx) > 0);
     }
 
-    private boolean acceptCode(long symbolCode) {
+    protected boolean acceptCode(long symbolCode) {
         long code = skipPrefix(symbolCode);
         return (leftCode <= code && code < rightCode);
     }

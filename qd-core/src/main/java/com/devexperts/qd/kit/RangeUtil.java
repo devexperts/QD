@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,48 +11,20 @@
  */
 package com.devexperts.qd.kit;
 
-import java.util.Objects;
-
 /**
  * Utility class to strip symbols' prefixes for {@link RangeStriper} and {@link RangeFilter}.
- * @see #SYMBOL_PATTERN
+ * @see RangeFilter#SYMBOL_PATTERN
  */
 public class RangeUtil {
 
     public static final int CODE_LENGTH = 8;
 
-    /**
-     * Java regex {@link java.util.regex.Pattern pattern} string that would capture the part of the symbol
-     * that would be used by {@link RangeStriper} and {@link RangeFilter}.
-     *
-     * <p>This pattern can be broken down to several parts:
-     * <ul>
-     *     <li>Optional spread prefix: {@code (?:=[-+]?[0-9]+(?:\.[0-9]*)?\\*)?}
-     *     <ul>
-     *         <li>Spread prefix: {@code =}</li>
-     *         <li>Optional sign: {@code [-+]?}</li>
-     *         <li>Decimal number: {@code [0-9]+(?:\.[0-9]*)?}</li>
-     *         <li>Multiplication sign: {@code \\*}</li>
-     *     </ul>
-     *     </li>
-     *     <li>Skipped symbol prefix: {@code [^_a-zA-Z0-9]*}</li>
-     *     <li>Symbol (that would be used by stripers and filters) starting with one of underscore,
-     *     lower and capital letters, digits: {@code ([_a-zA-Z0-9].*)}, or empty</li>
-     * </ul>
-     * If symbol contains characters out of [0..127] range they will be replaced with character 127 (0x7F).
-     */
-    public static final String SYMBOL_PATTERN = "(?:=[-+]?[0-9]+(?:\\.[0-9]*)?\\*)?[^_a-zA-Z0-9]*(.*)";
-
     private RangeUtil() {} // do not create
-
-    // Special ordering for delimiters (underscore, lower letters, capital letters, digits)
-    private static final char[] DELIMITER_CHARS =
-        "_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".toCharArray();
 
     private static final boolean[] RANGE_CHARS = new boolean[128];
     static {
-        for (char c : DELIMITER_CHARS) {
-            RANGE_CHARS[c] = true;
+        for (int c = 0; c < RANGE_CHARS.length; c++) {
+            RANGE_CHARS[c] = String.valueOf((char) c).matches("[a-zA-Z0-9]");
         }
     }
 
@@ -84,7 +56,7 @@ public class RangeUtil {
         long code = 0;
         int shift = 64;
         for (int i = 0; i < length; i++) {
-            // If character is outside of the byte range replace it with the largest positive byte char
+            // If character is outside the byte range replace it with the largest positive byte char
             long c = Math.min(0x7F, s.charAt(from + i));
 
             shift -= 8;
@@ -149,40 +121,11 @@ public class RangeUtil {
     }
 
     /**
-     * Finds a delimiter character for the given array of ranges,
-     * i.e. a valid range character that is not present in any of the ranges.
-     *
-     * @param ranges array of ranges
-     * @return delimiter character
-     * @throws IllegalArgumentException if the delimiter cannot be calculated.
-     */
-    public static char calculateDelimiter(String[] ranges) {
-        Objects.requireNonNull(ranges, "ranges");
-        boolean[] seen = new boolean[RANGE_CHARS.length];
-        // Build histogram of occurrences
-        for (String range : ranges) {
-            for (int i = 0; i < range.length(); i++) {
-                char c = range.charAt(i);
-                if (isValidRangeChar(c)) {
-                    seen[c] = true;
-                }
-            }
-        }
-        // Find best delimiter using special ordering
-        for (char c : DELIMITER_CHARS) {
-            if (!seen[c]) {
-                return c;
-            }
-        }
-        throw new IllegalArgumentException("Ranges are too complex to find a delimiter!");
-    }
-
-    /**
      * Returns encoded string value stripped from unused prefix.
      *
      * @param symbolCode symbol encoded as a long value
      * @return stripped string encoded as a long value
-     * @see #SYMBOL_PATTERN
+     * @see RangeFilter#SYMBOL_PATTERN
      */
     public static long skipPrefix(long symbolCode) {
         while (symbolCode != 0 && !isValidRangeChar((char) (symbolCode >>> 56))) {
@@ -196,7 +139,7 @@ public class RangeUtil {
      *
      * @param symbol symbol string
      * @return stripped string encoded as a long value
-     * @see #SYMBOL_PATTERN
+     * @see RangeFilter#SYMBOL_PATTERN
      */
     public static int skipPrefix(String symbol) {
         return skipPrefix(symbol, symbol.length());
@@ -208,7 +151,7 @@ public class RangeUtil {
      * @param symbol symbol string
      * @param length symbol length
      * @return stripped string encoded as a long value
-     * @see #SYMBOL_PATTERN
+     * @see RangeFilter#SYMBOL_PATTERN
      */
     public static int skipPrefix(String symbol, int length) {
         if (length == 0)
