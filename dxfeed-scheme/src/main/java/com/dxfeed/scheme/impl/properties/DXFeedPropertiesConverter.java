@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,6 +14,7 @@ package com.dxfeed.scheme.impl.properties;
 import com.devexperts.qd.QDLog;
 import com.devexperts.util.GlobListUtil;
 import com.devexperts.util.SystemProperties;
+import com.dxfeed.event.market.MarketEventSymbols;
 import com.dxfeed.scheme.EmbeddedTypes;
 import com.dxfeed.scheme.SchemeException;
 import com.dxfeed.scheme.SchemeLoadingOptions;
@@ -84,23 +85,18 @@ public final class DXFeedPropertiesConverter {
     }
 
     private static void loadRegionalRecordVisibility(SchemeModel file, String rec) {
-        String prop = "com.dxfeed.event.market.impl." + rec + ".exchanges";
-
         // No property — use default (all letters), do nothing here
-        String toEnable = SystemProperties.getProperty(prop, null);
+        String toEnable = getExchanges(rec);
         if (toEnable == null) {
             return;
         }
 
         // Disable all which is not mentioned explicitly
         StringBuilder toDisable = new StringBuilder();
-        for (char exchange : "ABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray()) {
+        for (char exchange : MarketEventSymbols.SUPPORTED_EXCHANGES.toCharArray()) {
             if (toEnable.indexOf(exchange) == -1) {
                 toDisable.append(exchange);
             }
-        }
-        if (toDisable.length() == 0) {
-            return;
         }
         // Create visibility rule to disable all not-found characters and enable all found explicitly
         if (toEnable.length() > 0) {
@@ -114,7 +110,7 @@ public final class DXFeedPropertiesConverter {
         }
         if (toDisable.length() > 0) {
             file.addVisibilityRule(new VisibilityRule(
-                Pattern.compile(rec + "&[" + toDisable.toString() + "]"),
+                Pattern.compile(rec + "&[" + toDisable + "]"),
                 false,
                 null,
                 false,
@@ -127,16 +123,19 @@ public final class DXFeedPropertiesConverter {
         // Enable/disable Count fields
         enableOrderField(file, "Order", "Count");
         enableOrderField(file, "AnalyticOrder", "Count");
+        enableOrderField(file, "OtcMarketsOrder", "Count");
         enableOrderField(file, "SpreadOrder", "Count");
         // Enable MMID
         enableOrderField(file, "Order", "MarketMaker");
         enableOrderField(file, "AnalyticOrder", "MarketMaker");
+        enableOrderField(file, "OtcMarketsOrder", "MarketMaker");
         // Global FOB flag, default to false
         if (SystemProperties.getBooleanProperty("dxscheme.fob", false)) {
             // List of suffixes to enable FOB for
             String suffixes = SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV");
             enableFOB(file, suffixes, "Order");
             enableFOB(file, suffixes, "AnalyticOrder");
+            enableFOB(file, suffixes, "OtcMarketsOrder");
             enableFOB(file, suffixes, "SpreadOrder");
         }
     }
@@ -181,6 +180,7 @@ public final class DXFeedPropertiesConverter {
     private static void loadGenerators(SchemeModel file) {
         loadGenerator(file, "market.impl.Order", "Order", "#");
         loadGenerator(file, "market.impl.AnalyticOrder", "AnalyticOrder", "#");
+        loadGenerator(file, "market.impl.OtcMarketsOrder", "OtcMarketsOrder", "#");
         loadGenerator(file, "market.impl.SpreadOrder", "SpreadOrder", "#");
         loadGenerator(file, "candle.impl.Candle", "Candle", "");
         loadGenerator(file, "candle.impl.Trade", "OldStyleCandle", "");
@@ -296,5 +296,17 @@ public final class DXFeedPropertiesConverter {
             file.addType(new SchemeType(name, NamedEntity.Mode.UPDATE, targetType,
                 "Automatically created from environment, using property " + reason, file.getName()));
         }
+    }
+
+    /**
+     * Code of this method must be consistent with {@link com.dxfeed.api.impl.EventDelegateFactory}.getExchanges(String)
+     */
+    private static String getExchanges(String rec) {
+        String defaultPattern = null;
+        if (!rec.equals("Book"))
+            defaultPattern = SystemProperties.getProperty("dxscheme.exchanges", null);
+        String prop = "com.dxfeed.event.market.impl." + rec + ".exchanges";
+        String pattern = SystemProperties.getProperty(prop, defaultPattern);
+        return pattern != null ? MarketEventSymbols.getExchangesByPattern(pattern) : null;
     }
 }

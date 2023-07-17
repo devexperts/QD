@@ -40,7 +40,8 @@ public class FilterTransferTest {
     private static final String ACTUAL_SYMBOL = "ACTUAL";
     private static final String DXFEED_WILDCARD_ENABLE = "dxfeed.wildcard.enable";
     private static final int N = 10000; // number of filtered out events
-    private static final long MAX_BYTES_SENT = 4098; // 4KB max can be sent
+    private static final long SERVER_MAX_BYTES_SENT = 4096; // 4KB max can be sent
+    private static final long CLIENT_MAX_BYTES_SENT = 2 * 4096; // 62 regional subscriptions + 1 composite
 
     private DXEndpoint server;
     private DXEndpoint client;
@@ -103,9 +104,9 @@ public class FilterTransferTest {
         assertEquals(ACTUAL_SYMBOL, tradeReceived.getEventSymbol());
         // make sure only few bytes were sent by both sides
         long serverBytesSent = getTotalBytesSent(serverQDEndpoint);
-        assertTrue("serverBytesSent = " + serverBytesSent, serverBytesSent > 0 && serverBytesSent <= MAX_BYTES_SENT);
+        assertTrue("serverBytesSent = " + serverBytesSent, serverBytesSent > 0 && serverBytesSent <= SERVER_MAX_BYTES_SENT);
         long clientBytesSent = getTotalBytesSent(clientQDEndpoint);
-        assertTrue("clientBytesSent = " + clientBytesSent, clientBytesSent > 0 && clientBytesSent <= MAX_BYTES_SENT);
+        assertTrue("clientBytesSent = " + clientBytesSent, clientBytesSent > 0 && clientBytesSent <= CLIENT_MAX_BYTES_SENT);
     }
 
     private void publishTrade(String symbol) {

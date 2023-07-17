@@ -1,3 +1,15 @@
+QDS 3.321:
+
+* [QD-1451] QD scheme shall support alpha-numeric characters for exchange code
+  - new system property dxscheme.exchanges has been added. It defines the range of exchange codes for all regional
+    records (except Book). The system property 'com.dxfeed.event.market.impl.<record_name>.exchanges' for a individual
+    record is still supported and has a higher priority. The property value must be a valid character class (in regular
+    expression terminology). This character class must be a subset of [0-9A-Za-z]. The default value is [A-Z].
+* [QD-1447] Create OtcMarketsOrder record
+* [QD-1449] Tools: Adjust TDP tool for thread dumps of Java version 11+
+  - TDP accepts "-n|--name <regex>" option to limit report to specific thread names (by default report all)
+  - Option "-s|--state <regex>" now accepts regex instead of string
+
 QDS 3.320:
 
 * [QD-1445] Adjust striper filters formatting

@@ -171,15 +171,17 @@ public class OrderSourceTest {
         // now publish composite quote and check its arrival as two orders
         checkSyntheticQuoteOrders(symbol, '\0', OrderSource.COMPOSITE_BID, OrderSource.COMPOSITE_ASK);
         // now publish regionals quotes and check their arrival as two orders
-        for (char c = 'A'; c <= 'Z'; c++)
+        for (char c : MarketEventSymbols.DEFAULT_EXCHANGES.toCharArray()) {
             checkSyntheticQuoteOrders(symbol, c, OrderSource.REGIONAL_BID, OrderSource.REGIONAL_ASK);
+        }
     }
 
     private Set<Object> allQuotesSet(String symbol) {
         Set<Object> expectedQuoteSub = new HashSet<>();
         expectedQuoteSub.add(symbol);
-        for (char c = 'A'; c <= 'Z'; c++)
+        for (char c : MarketEventSymbols.DEFAULT_EXCHANGES.toCharArray()) {
             expectedQuoteSub.add(symbol + "&" + c);
+        }
         return expectedQuoteSub;
     }
 

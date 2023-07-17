@@ -19,6 +19,7 @@ import com.dxfeed.event.EventType;
 import com.dxfeed.event.candle.Candle;
 import com.dxfeed.event.candle.CandleSymbol;
 import com.dxfeed.event.market.AnalyticOrder;
+import com.dxfeed.event.market.OtcMarketsOrder;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.Profile;
 import com.dxfeed.event.market.Quote;
@@ -162,6 +163,15 @@ public class TimeFieldReplacerTest {
         initialEvent.setTime(INITIAL_TIME_MILLIS);
         initialEvent.setActionTime(INITIAL_TIME_MILLIS);
         testEvent(initialEvent, AnalyticOrder::getTime, AnalyticOrder::getActionTime);
+    }
+
+    @Test
+    public void testOtcMarketsOrder() throws Exception {
+        OtcMarketsOrder initialEvent = new OtcMarketsOrder("IBM");
+        initialEvent.setOrderSide(Side.BUY);
+        initialEvent.setTime(INITIAL_TIME_MILLIS);
+        initialEvent.setActionTime(INITIAL_TIME_MILLIS);
+        testEvent(initialEvent, OtcMarketsOrder::getTime, OtcMarketsOrder::getActionTime);
     }
 
     @Test

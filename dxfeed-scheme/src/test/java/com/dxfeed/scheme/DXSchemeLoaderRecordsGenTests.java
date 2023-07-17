@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,6 +15,7 @@ import com.devexperts.qd.DataField;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.SerialFieldType;
+import com.dxfeed.event.market.MarketEventSymbols;
 import com.dxfeed.scheme.impl.DXSchemeFactory;
 import org.junit.Test;
 
@@ -63,7 +64,7 @@ public class DXSchemeLoaderRecordsGenTests {
     public void testRecordsOkRegionals() {
         DataScheme s = loader.createDataScheme("ext:resource:records/03-records-ok-regionals.xml");
         assertNotNull(s);
-        assertEquals(27, s.getRecordCount());
+        assertEquals(MarketEventSymbols.SUPPORTED_EXCHANGES.length() + 1, s.getRecordCount());
 
         DataRecord r;
         r = s.findRecordByName("one");
@@ -73,7 +74,7 @@ public class DXSchemeLoaderRecordsGenTests {
         checkRecordField(r, "A", SerialFieldType.COMPACT_INT);
         checkRecordField(r, "B", SerialFieldType.COMPACT_INT);
 
-        for (char ex = 'A'; ex <= 'Z'; ex++) {
+        for (char ex : MarketEventSymbols.SUPPORTED_EXCHANGES.toCharArray()) {
             r = s.findRecordByName("one&" + ex);
             assertNotNull(r);
             assertFalse(r.hasTime());
@@ -164,7 +165,7 @@ public class DXSchemeLoaderRecordsGenTests {
     public void testRecordsOkFieldCompositeOnly() {
         DataScheme s = loader.createDataScheme("ext:resource:records/08-records-ok-fcompositeonly.xml");
         assertNotNull(s);
-        assertEquals(27, s.getRecordCount());
+        assertEquals(MarketEventSymbols.SUPPORTED_EXCHANGES.length() + 1, s.getRecordCount());
 
         DataRecord r;
         r = s.findRecordByName("one");
@@ -175,7 +176,7 @@ public class DXSchemeLoaderRecordsGenTests {
         checkRecordField(r, "B", SerialFieldType.COMPACT_INT);
         checkRecordField(r, "C", SerialFieldType.COMPACT_INT);
 
-        for (char ex = 'A'; ex <= 'Z'; ex++) {
+        for (char ex : MarketEventSymbols.SUPPORTED_EXCHANGES.toCharArray()) {
             r = s.findRecordByName("one&" + ex);
             assertNotNull(r);
             assertFalse(r.hasTime());

@@ -3,7 +3,7 @@
   !++
   QDS - Quick Data Signalling Library
   !-
-  Copyright (C) 2002 - 2021 Devexperts LLC
+  Copyright (C) 2002 - 2023 Devexperts LLC
   !-
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
   If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,17 +14,25 @@
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="https://www.dxfeed.com/datascheme dxfeed-schema.xsd">
     <visibility>
-        <!-- All other Book&X are disabled by default -->
+        <!-- Setup proper defaults for regional records -->
+        <disable record=".*&amp;."/>
+        <enable record=".*&amp;[A-Z]"/>
+
+        <!-- Enable only Book&I record for legacy reasons -->
+        <disable record="Book"/>
+        <disable record="Book&amp;."/>
         <enable record="Book&amp;I"/>
 
         <!-- When suffix is empty, enable Count -->
         <enable record="Order" field="Count"/>
         <enable record="AnalyticOrder" field="Count"/>
+        <enable record="OtcMarketsOrder" field="Count"/>
         <enable record="SpreadOrder" field="Count"/>
 
         <!-- Enable MMID for these suffixes -->
-        <enable record="Order(|#NTV|#BATE|#CHIX|#CEUX|#BXTR)" field="MarketMaker"/>
+        <enable record="Order(|#NTV|#BATE|#CHIX|#CEUX|#BXTR|#pink)" field="MarketMaker"/>
         <enable record="AnalyticOrder(|#NTV|#BATE|#CHIX|#CEUX|#BXTR)" field="MarketMaker"/>
+        <enable record="OtcMarketsOrder(|#pink)" field="MarketMaker"/>
 
         <!-- This disable BidVolume/AskVolume for BACS candles -->
         <disable record="Candle.*[{,]price=(bid|ask|mark|s)[,}].*" field="BidVolume|AskVolume"/>

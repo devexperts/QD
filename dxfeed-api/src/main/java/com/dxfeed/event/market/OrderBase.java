@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -30,7 +30,8 @@ import javax.xml.bind.annotation.XmlType;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 /**
- * Base class for common fields of {@link Order}, {@link AnalyticOrder} and {@link SpreadOrder} events.
+ * Base class for common fields of {@link Order}, {@link AnalyticOrder}, {@link OtcMarketsOrder}
+ * and {@link SpreadOrder} events.
  * Order events represent a snapshot for a full available market depth for a symbol.
  * The collection of order events of a symbol represents the most recent information that is
  * available about orders on the market at any given moment of time.
@@ -39,6 +40,10 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  *
  * <p>{@link AnalyticOrder} event represents market depth for a <b>specific symbol</b> extended with an analytic
  * information, for example, whether particular order represent an iceberg or not.
+ *
+ * <p>{@link OtcMarketsOrder} event represents market depth for a <b>specific symbol</b> traded on the OTC Markets.
+ * The event is extended with the additional OTC Markets quote data, such as Quote Access Payment (QAP) value,
+ * Quote Price Type, Open/Closed status, and Unsolicited state indication, when applicable.
  *
  * <p>{@link SpreadOrder} event represents market depth for
  *    <b>all spreads on a given underlying symbol</b>.

@@ -18,6 +18,7 @@ import com.dxfeed.event.candle.CandlePriceLevel;
 import com.dxfeed.event.candle.CandleSession;
 import com.dxfeed.event.candle.CandleSymbol;
 import com.dxfeed.event.candle.CandleType;
+import com.dxfeed.event.market.MarketEventSymbols;
 import org.junit.Test;
 
 import java.util.Random;
@@ -33,7 +34,7 @@ public class CandleSymbolTest {
             String baseSymbol = randomSymbol(rnd);
             CandleAlignment alignment = randomEnum(rnd, CandleAlignment.values());
             CandleExchange exchange = rnd.nextBoolean() ?
-                CandleExchange.DEFAULT : CandleExchange.valueOf(randomChar(rnd));
+                CandleExchange.DEFAULT : CandleExchange.valueOf(randomExchange(rnd));
             CandlePeriod period =
                 CandlePeriod.valueOf((rnd.nextInt(21) - 10) / 10.0, randomEnum(rnd, CandleType.values()));
             CandleSession session = randomEnum(rnd, CandleSession.values());
@@ -64,5 +65,10 @@ public class CandleSymbolTest {
 
     private char randomChar(Random rnd) {
         return (char) ('A' + rnd.nextInt('Z' - 'A' + 1));
+    }
+
+    private char randomExchange(Random rnd) {
+        return MarketEventSymbols.SUPPORTED_EXCHANGES.charAt(
+            rnd.nextInt(MarketEventSymbols.SUPPORTED_EXCHANGES.length()));
     }
 }

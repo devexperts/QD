@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -118,6 +118,89 @@ public class MarketAccessorImpl {
 
     public static int setOrderIcebergType(int flags, IcebergType type) {
         return Util.setBits(flags, AnalyticOrder.ICEBERG_TYPE_MASK, AnalyticOrder.ICEBERG_TYPE_SHIFT, type.getCode());
+    }
+
+
+    // ========== OtcMarketsOrder accessor methods ==========
+
+    public static int getOtcMarketsFlags(OtcMarketsOrder order) {
+        return order.getOtcMarketsFlags();
+    }
+
+    public static void setOtcMarketsFlags(OtcMarketsOrder order, int otcMarketsFlags) {
+        order.setOtcMarketsFlags(otcMarketsFlags);
+    }
+
+    public static int otcMarketsOpen(boolean open) {
+        return open ? OtcMarketsOrder.OPEN : 0;
+    }
+
+    public static boolean isOtcMarketsOpen(int flags) {
+        return (flags & OtcMarketsOrder.OPEN) != 0;
+    }
+
+    public static int setOtcMarketsOpen(int flags, boolean open) {
+        return open ? flags | OtcMarketsOrder.OPEN : flags & ~OtcMarketsOrder.OPEN;
+    }
+
+    public static int otcMarketsUnsolicited(boolean unsolicited) {
+        return unsolicited ? OtcMarketsOrder.UNSOLICITED : 0;
+    }
+
+    public static boolean isOtcMarketsUnsolicited(int flags) {
+        return (flags & OtcMarketsOrder.UNSOLICITED) != 0;
+    }
+
+    public static int setOtcMarketsUnsolicited(int flags, boolean unsolicited) {
+        return unsolicited ? flags | OtcMarketsOrder.UNSOLICITED : flags & ~OtcMarketsOrder.UNSOLICITED;
+    }
+
+    public static int otcMarketsPriceType(OtcMarketsPriceType priceType) {
+        return priceType.getCode() << OtcMarketsOrder.OTC_PRICE_TYPE_SHIFT;
+    }
+
+    public static OtcMarketsPriceType getOtcMarketsPriceType(int flags) {
+        return OtcMarketsPriceType.valueOf(Util.getBits(flags, OtcMarketsOrder.OTC_PRICE_TYPE_MASK, OtcMarketsOrder.OTC_PRICE_TYPE_SHIFT));
+    }
+
+    public static int setOtcMarketsPriceType(int flags, OtcMarketsPriceType priceType) {
+        return Util.setBits(flags, OtcMarketsOrder.OTC_PRICE_TYPE_MASK, OtcMarketsOrder.OTC_PRICE_TYPE_SHIFT, priceType.getCode());
+    }
+
+    public static int otcMarketsSaturated(boolean saturated) {
+        return saturated ? OtcMarketsOrder.SATURATED : 0;
+    }
+
+    public static boolean isOtcMarketsSaturated(int flags) {
+        return (flags & OtcMarketsOrder.SATURATED) != 0;
+    }
+
+    public static int setOtcMarketsSaturated(int flags, boolean saturated) {
+        return saturated ? flags | OtcMarketsOrder.SATURATED : flags & ~OtcMarketsOrder.SATURATED;
+    }
+
+    public static int otcMarketsAutoExecution(boolean autoExecution) {
+        return autoExecution ? OtcMarketsOrder.AUTO_EXECUTION : 0;
+    }
+
+    public static boolean isOtcMarketsAutoExecution(int flags) {
+        return (flags & OtcMarketsOrder.AUTO_EXECUTION) != 0;
+    }
+
+    public static int setOtcMarketsAutoExecution(int flags, boolean autoExecution) {
+        return autoExecution ? flags | OtcMarketsOrder.AUTO_EXECUTION : flags & ~OtcMarketsOrder.AUTO_EXECUTION;
+    }
+
+    public static int otcMarketsNmsConditional(boolean nmsConditional) {
+        return nmsConditional ? OtcMarketsOrder.NMS_CONDITIONAL : 0;
+    }
+
+    public static boolean isOtcMarketsNmsConditional(int flags) {
+        return (flags & OtcMarketsOrder.NMS_CONDITIONAL) != 0;
+    }
+
+    public static int setOtcMarketsNmsConditional(int flags, boolean nmsConditional) {
+        return nmsConditional ? flags | OtcMarketsOrder.NMS_CONDITIONAL : flags & ~OtcMarketsOrder.NMS_CONDITIONAL;
     }
 
 

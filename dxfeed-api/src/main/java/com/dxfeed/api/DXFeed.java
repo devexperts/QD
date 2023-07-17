@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -21,6 +21,7 @@ import com.dxfeed.event.IndexedEventSource;
 import com.dxfeed.event.LastingEvent;
 import com.dxfeed.event.TimeSeriesEvent;
 import com.dxfeed.event.market.AnalyticOrder;
+import com.dxfeed.event.market.OtcMarketsOrder;
 import com.dxfeed.event.market.MarketEvent;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.OrderSource;
@@ -461,7 +462,8 @@ public abstract class DXFeed {
      *
      * Use the {@link IndexedEventSource#DEFAULT DEFAULT} value for {@code source} with events that do not
      * have multiple sources (like {@link Series}). For events with multiple sources (like {@link Order},
-     * {@link AnalyticOrder}) and {@link SpreadOrder}, use an event-specific source class (for example, {@link OrderSource}).
+     * {@link AnalyticOrder}, {@link OtcMarketsOrder} and {@link SpreadOrder}), use an event-specific
+     * source class (for example, {@link OrderSource}).
      * This method does not support <em>synthetic</em> sources of orders (orders that are automatically
      * generated from {@link Quote} events).
      *
@@ -522,7 +524,8 @@ public abstract class DXFeed {
      *
      * Use the {@link IndexedEventSource#DEFAULT DEFAULT} value for {@code source} with events that do not
      * have multiple sources (like {@link Series}). For events with multiple sources (like {@link Order},
-     * {@link AnalyticOrder} and {@link SpreadOrder}), use an event-specific source class (for example, {@link OrderSource}).
+     * {@link AnalyticOrder}, {@link OtcMarketsOrder} and {@link SpreadOrder}), use an event-specific
+     * source class (for example, {@link OrderSource}).
      * This method does not support <em>synthetic</em> sources of orders (orders that are automatically
      * generated from {@link Quote} events).
      *

@@ -64,10 +64,16 @@
             <value name="NATIVE" ord="1"/>
             <value name="SYNTHETIC" ord="2"/>
         </enum>
+
+        <enum name="OtcMarketsPriceType">
+            <value name="UNPRICED" ord="0"/>
+            <value name="ACTUAL" ord="1"/>
+            <value name="WANTED" ord="2"/>
+        </enum>
     </enums>
 
     <records>
-        <!-- MarketFactoryImpl:49 -->
+        <!-- MarketFactoryImpl:51 -->
         <record name="Quote" regionals="true">
             <field name="Sequence" type="sequence" disabled="true"/>
             <field name="TimeNanoPart" type="time_nano_part" disabled="true"/>
@@ -81,7 +87,7 @@
             <field name="AskSize" type="size"><alias name="Ask.Size"/></field>
         </record>
 
-        <!-- MarketFactoryImpl:82 -->
+        <!-- MarketFactoryImpl:84 -->
         <record name="Trade" regionals="true">
             <field name="Time" type="time"><alias name="Last.Time"/></field>
             <field name="Sequence" type="sequence"><alias name="Last.Sequence"/></field>
@@ -103,7 +109,7 @@
             </field>
         </record>
 
-        <!-- MarketFactoryImpl:109 -->
+        <!-- MarketFactoryImpl:113 -->
         <record name="TradeETH" regionals="true">
             <field name="Time" type="time"><alias name="ETHLast.Time"/></field>
             <field name="Sequence" type="sequence"><alias name="ETHLast.Sequence"/></field>
@@ -124,7 +130,7 @@
             </field>
         </record>
 
-        <!-- MarketFactoryImpl:132 -->
+        <!-- MarketFactoryImpl:138 -->
         <record name="Summary" regionals="true">
             <field name="DayId" type="date"/>
             <field name="DayOpenPrice" type="price"><alias name="DayOpen.Price"/></field>
@@ -143,7 +149,7 @@
             </field>
         </record>
 
-        <!-- MarketFactoryImpl:155 -->
+        <!-- MarketFactoryImpl:161 -->
         <record name="Fundamental" regionals="true">
             <field name="OpenPrice" type="price"><alias name="Open.Price"/></field>
             <field name="HighPrice" type="price"><alias name="High.Price"/></field>
@@ -153,10 +159,10 @@
         </record>
 
         <!--
-        MarketFactoryImpl:168
+        MarketFactoryImpl:174
         Used with its own visibility rule to enable only "Book&I" by default
         -->
-        <record name="Book" regionals="true" disabled="true">
+        <record name="Book" regionals="true">
             <index field0="ID" />
             <field name="ID" type="compact_int"/>
             <!-- <field name="Sequence" type="void"/> -->
@@ -168,7 +174,7 @@
             <field name="Symbol" type="utf_char_array"/>
         </record>
 
-        <!-- MarketFactoryImpl:180 -->
+        <!-- MarketFactoryImpl:186 -->
         <record name="Profile">
             <field name="Beta" type="decimal"/>
             <field name="Eps" type="decimal"/>
@@ -193,7 +199,7 @@
             <field name="StatusReason" type="utf_char_array"/>
         </record>
 
-        <!-- MarketFactoryImpl:197 -->
+        <!-- MarketFactoryImpl:203 -->
         <record name="OrderBase" disabled="true">
             <index field1="Index"/>
             <field name="Index" type="compact_int"/>
@@ -234,7 +240,7 @@
             </field>
         </record>
 
-        <!-- MarketFactoryImpl:197 -->
+        <!-- MarketFactoryImpl:203 -->
         <generator name="Order" type="suffix" delimiter="#">
             <iterator>
                 <value/>
@@ -271,12 +277,13 @@
                 <value>iex</value>
                 <value>MEMX</value>
                 <value>memx</value>
+                <value>pink</value>
             </iterator>
             <!-- Simple copy from "OrderBase" -->
             <record name="Order" copyFrom="OrderIcebergBase"/>
         </generator>
 
-        <!-- MarketFactoryImpl:222 -->
+        <!-- MarketFactoryImpl:228 -->
         <generator name="AnalyticOrder" type="suffix" delimiter="#">
             <iterator>
                 <value/>
@@ -286,7 +293,28 @@
             <record name="AnalyticOrder" copyFrom="OrderIcebergBase"/>
         </generator>
 
-        <!-- MarketFactoryImpl:247 -->
+        <!-- MarketFactoryImpl:253 -->
+        <generator name="OtcMarketsOrder" type="suffix" delimiter="#">
+            <iterator>
+                <value/>
+                <value>pink</value>
+            </iterator>
+            <record name="OtcMarketsOrder" copyFrom="OrderBase">
+                <field name="QuoteAccessPayment" type="compact_int"/>
+                <field name="OtcMarketsFlags" type="flags">
+                    <bitfields>
+                        <field name="Open" offset="0" size="1"/>
+                        <field name="Unsolicited" offset="1" size="1"/>
+                        <field name="OtcMarketsPriceType" offset="2" size="2"/>
+                        <field name="Saturated" offset="4" size="1"/>
+                        <field name="AutoExecution" offset="5" size="1"/>
+                        <field name="NmsConditional" offset="6" size="1"/>
+                    </bitfields>
+                </field>
+            </record>
+        </generator>
+
+        <!-- MarketFactoryImpl:276 -->
         <generator name="SpreadOrder" type="suffix" delimiter="#">
             <iterator>
                 <value/>
@@ -297,7 +325,7 @@
             </record>
         </generator>
 
-        <!-- MarketFactoryImpl:268 -->
+        <!-- MarketFactoryImpl:297 -->
         <record name="MarketMaker">
             <index field0="MMExchange" field1="MMID"/>
             <field name="MMExchange" type="char"/>
@@ -312,7 +340,7 @@
             <field name="MMAskCount" type="count"><alias name="MMAsk.Count"/></field>
         </record>
 
-        <!-- MarketFactoryImpl:279 -->
+        <!-- MarketFactoryImpl:308 -->
         <record name="TimeAndSale" regionals="true">
             <index field0="Time" field1="Sequence"/>
             <field name="Time" type="time"/>
@@ -339,7 +367,7 @@
             <field name="Seller" type="string" disabled="true"/>
         </record>
 
-        <!-- MarketFactoryImpl:312 -->
+        <!-- MarketFactoryImpl:336 -->
         <record name="OptionSale">
             <index field0="" field1="Index"/>
             <field name="Index" type="compact_int"/>

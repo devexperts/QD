@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -29,6 +29,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.PriorityQueue;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Parses full thread dumps and organizes result data into performance profile.
@@ -43,48 +45,51 @@ import java.util.PriorityQueue;
 )
 @ServiceProvider
 public class TDP extends AbstractTool {
-    private final Option locks =
-        new Option('l', "locks", "Use full original stacktraces when concurrent lock in contended state.");
-    private final OptionInteger topdepth =
-        new OptionInteger('t', "topdepth", "<number>", "Depth of reverse stack trace in tops section, by default 50.", 0, 1000, 50);
-    private final OptionInteger methoddepth =
-        new OptionInteger('m', "methoddepth", "<number>", "Depth of stack trace in methods section, by default 50.", 0, 1000, 50);
-    private final OptionDouble threshold =
-        new OptionDouble('h', "threshold", "<number>", "Threshold for contribution to expand, by default 5 (%).", 0, 100, 5);
-    private final OptionString state =
-        new OptionString('s', "state", "<id>", "Limit report to a specific state, all states are reported by default");
-    private final OptionString output =
-        new OptionString('o', "output", "<file>", "Output file, by default 'profile.txt'.");
+    private final Option locks = new Option(
+        'l', "locks", "Use full original stack traces when concurrent lock in contended state.");
+    private final OptionInteger topdepth = new OptionInteger(
+        't', "topdepth", "<number>", "Depth of reverse stack trace in tops section, by default 50.", 0, 1000, 50);
+    private final OptionInteger methoddepth = new OptionInteger(
+        'm', "methoddepth", "<number>", "Depth of stack trace in methods section, by default 50.", 0, 1000, 50);
+    private final OptionDouble threshold = new OptionDouble(
+        'h', "threshold", "<number>", "Threshold for contribution to expand, by default 5 (%).", 0, 100, 5);
+    private final OptionString state = new OptionString(
+        's', "state", "<regex>", "Limit report to a specific thread states, by default report all");
+    private final OptionString name = new OptionString(
+        'n', "name", "<regex>", "Limit report to a specific thread names, by default report all");
+    private final OptionString output = new OptionString(
+        'o', "output", "<file>", "Output file, by default 'profile.txt'.");
+    private final OptionInteger count = new OptionInteger(
+        'c', "count", "<number>", "Dump count used for result scaling (experimental).");
 
     @Override
     protected Option[] getOptions() {
-        return new Option[] {locks, topdepth, methoddepth, state, output};
+        return new Option[] { locks, topdepth, methoddepth, threshold, count, state, name, output };
     }
 
     private static final String HEADER = "Profiling information at ";
 
-    private int onlyThreadState = -1; // -1 for all
+    private Matcher stateMatcher;
+    private Matcher nameMatcher;
 
     @Override
     protected void executeImpl(String[] args) {
         if (args.length == 0)
             noArguments();
-        if (state.isSet()) {
-            for (int i = 0; i < THREAD_STATES.length; i++) {
-                ThreadState threadState = THREAD_STATES[i];
-                if (threadState.abbreviation.equalsIgnoreCase(state.getValue())) {
-                    onlyThreadState = i;
-                    break;
-                }
-            }
-            if (onlyThreadState < 0)
-                throw new OptionParseException("State abbreviation is not found: " + state.getValue());
-        }
+        stateMatcher = state.isSet() ? Pattern.compile(state.getValue()).matcher("") : null;
+        nameMatcher = name.isSet() ?
+            Pattern.compile(name.getValue(), Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE).matcher("") : null;
+        if (stateMatcher != null && Arrays.stream(THREAD_STATES).noneMatch(s -> stateMatcher.reset(s.abbreviation).matches()))
+            throw new OptionParseException("No matching thread state abbreviation is found for regex " + state.getValue());
         try {
-            for (String file : args)
+            for (String file : args) {
                 processFile(file);
-            if (dumpsCount > 0)
+            }
+            if (dumpsCount > 0) {
+                if (count.isSet())
+                    dumpsCount = count.getValue();
                 dumpToFile(output.isSet() ? output.getValue() : "profile.txt");
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -97,10 +102,11 @@ public class TDP extends AbstractTool {
                 try (PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(file + "~"), 100000))) {
                     boolean top = false;
                     while (line != null) {
-                        if (line.startsWith("-----"))
+                        if (line.startsWith("-----")) {
                             top = false;
-                        else if (line.startsWith("Top "))
+                        } else if (line.startsWith("Top ")) {
                             top = true;
+                        }
                         int indent = 0;
                         while (indent < line.length() && (line.charAt(indent) == ' ' || line.charAt(indent) == '|'))
                             indent++;
@@ -109,20 +115,24 @@ public class TDP extends AbstractTool {
                         line = in.readLine();
                     }
                 }
-            } else
+            } else {
                 parse(in);
+            }
         }
     }
 
     // ========== Full Thread Dump metadata ==========
 
     private static final String DUMP_START = "Full thread dump";
+    private static final String SMR_INFO_START = "Threads class SMR info:";
+    private static final String LOCKED_SYNCHRONIZERS_START = "Locked ownable synchronizers";
+    private static final String NO_COMPILE_TASK = "No compile task";
     private static final String JAVA_LANG_THREAD_STATE = "java.lang.Thread.State:";
     private static final String STACK_LOCATION = "\tat ";
-    private static final String STACK_ANNOTATION = "\t- "; // annotation for lock status (locked, waiting, eliminated, parking, etc)
+    private static final String STACK_ANNOTATION = "\t- "; // annotation for lock status (locked, waiting, etc)
 
     private static final String METHOD_ROOT = "<root>"; // method that is considered to call every thread
-    private static final String METHOD_THIS = "<this>"; // special method name to profile CPU consumed by the method itself
+    private static final String METHOD_THIS = "<this>"; // method name to profile CPU consumed by the method itself
 
     private static class ThreadState {
         public final String abbreviation;
@@ -144,11 +154,17 @@ public class TDP extends AbstractTool {
         new ThreadState("E", "waiting for monitor entry"),
         new ThreadState("E", Thread.State.BLOCKED.name()),
         new ThreadState("e", "waiting for lock entry"),
-        new ThreadState("W", "in Object.wait()", "java.lang.Object.wait"), // native code for Object.wait() in Java 1.4
+        new ThreadState("W", "in Object.wait()",
+            "java.lang.Object.wait"), // native code for Object.wait() in Java 1.4
         new ThreadState("W", Thread.State.WAITING.name()),
         new ThreadState("w", "waiting on monitor"),
-        new ThreadState("P", "parking", "sun.misc.Unsafe.park"),
-        new ThreadState("P", "waiting on VM lock", "java.util.concurrent.locks.LockSupport.park", "java.util.concurrent.locks.LockSupport.parkNanos", "java.util.concurrent.locks.LockSupport.parkUntil"), // Zing VM, also non-Unsafe parking
+        new ThreadState("P", "parking",
+            "sun.misc.Unsafe.park",
+            "jdk.internal.misc.Unsafe.park"),
+        new ThreadState("P", "waiting on VM lock",
+            "java.util.concurrent.locks.LockSupport.park",
+            "java.util.concurrent.locks.LockSupport.parkNanos",
+            "java.util.concurrent.locks.LockSupport.parkUntil"), // Zing VM, also non-Unsafe parking
         new ThreadState("S", "sleeping", "java.lang.Thread.sleep"), // going to sleeping or awakening in Java 1.5
         new ThreadState("S", Thread.State.TIMED_WAITING.name()),
         new ThreadState("s", "waiting on condition"), // sleeping in Java 1.4
@@ -156,34 +172,59 @@ public class TDP extends AbstractTool {
         new ThreadState("N", Thread.State.NEW.name()),
         new ThreadState("T", Thread.State.TERMINATED.name()),
         // Terminating IO methods which block as 'runnable'. Use additional states with 2+ character names.
-        new ThreadState("FR", "File read", "java.io.FileInputStream.read", "java.io.FileInputStream.readBytes", "java.io.RandomAccessFile.read", "java.io.RandomAccessFile.readBytes"),
-        new ThreadState("FW", "File write", "java.io.FileOutputStream.write", "java.io.FileOutputStream.writeBytes", "java.io.RandomAccessFile.write", "java.io.RandomAccessFile.writeBytes"),
+        new ThreadState("FR", "File read",
+            "java.io.FileInputStream.read", "java.io.FileInputStream.readBytes",
+            "java.io.RandomAccessFile.read", "java.io.RandomAccessFile.readBytes"),
+        new ThreadState("FW", "File write",
+            "java.io.FileOutputStream.write", "java.io.FileOutputStream.writeBytes",
+            "java.io.RandomAccessFile.write", "java.io.RandomAccessFile.writeBytes"),
         new ThreadState("SA", "Socket accept", "java.net.PlainSocketImpl.socketAccept"),
         new ThreadState("SC", "Socket connect", "java.net.PlainSocketImpl.socketConnect"),
-        new ThreadState("SR", "Socket read", "java.net.SocketInputStream.socketRead", "java.net.SocketInputStream.socketRead0"),
-        new ThreadState("SW", "Socket write", "java.net.SocketOutputStream.socketWrite", "java.net.SocketOutputStream.socketWrite0"),
-        new ThreadState("NA", "NIO accept", "sun.nio.ch.ServerSocketChannelImpl.accept0"),
-        new ThreadState("NS", "NIO select", "sun.nio.ch.PollArrayWrapper.poll0", "sun.nio.ch.DevPollArrayWrapper.poll0", "sun.nio.ch.EPollArrayWrapper.epollWait"),
-        new ThreadState("DP", "Datagram peek", "java.net.PlainDatagramSocketImpl.peek", "java.net.PlainDatagramSocketImpl.peekData"),
-        new ThreadState("DR", "Datagram receive", "java.net.PlainDatagramSocketImpl.receive", "java.net.PlainDatagramSocketImpl.receive0", "java.net.TwoStacksPlainDatagramSocketImpl.receive0", "java.net.DualStackPlainDatagramSocketImpl.socketReceiveOrPeekData"),
-        new ThreadState("DS", "Datagram send", "java.net.PlainDatagramSocketImpl.send", "java.net.TwoStacksPlainDatagramSocketImpl.send", "java.net.DualStackPlainDatagramSocketImpl.socketSend"),
+        new ThreadState("SR", "Socket read",
+            "java.net.SocketInputStream.socketRead", "java.net.SocketInputStream.socketRead0"),
+        new ThreadState("SW", "Socket write",
+            "java.net.SocketOutputStream.socketWrite", "java.net.SocketOutputStream.socketWrite0"),
+        new ThreadState("NA", "NIO accept",
+            "sun.nio.ch.ServerSocketChannelImpl.accept0",
+            "sun.nio.ch.Net.accept"),
+        new ThreadState("NS", "NIO select",
+            "sun.nio.ch.PollArrayWrapper.poll0",
+            "sun.nio.ch.DevPollArrayWrapper.poll0",
+            "sun.nio.ch.EPollArrayWrapper.epollWait",
+            "sun.nio.ch.Net.poll"),
+        new ThreadState("DP", "Datagram peek",
+            "java.net.PlainDatagramSocketImpl.peek", "java.net.PlainDatagramSocketImpl.peekData"),
+        new ThreadState("DR", "Datagram receive",
+            "java.net.PlainDatagramSocketImpl.receive", "java.net.PlainDatagramSocketImpl.receive0",
+            "java.net.TwoStacksPlainDatagramSocketImpl.receive0",
+            "java.net.DualStackPlainDatagramSocketImpl.socketReceiveOrPeekData",
+            "sun.nio.ch.DatagramChannelImpl.receive", "sun.nio.ch.DatagramChannelImpl.receive0"),
+        new ThreadState("DS", "Datagram send",
+            "java.net.PlainDatagramSocketImpl.send",
+            "java.net.TwoStacksPlainDatagramSocketImpl.send",
+            "java.net.DualStackPlainDatagramSocketImpl.socketSend",
+            "sun.nio.ch.DatagramChannelImpl.send", "sun.nio.ch.DatagramChannelImpl.send0"),
     };
     private static final int WAITING_FOR_LOCK_ENTRY = findThreadState("waiting for lock entry", "", "");
 
     private static int findThreadState(String threadLine, String stateLine, String method) {
-        for (int threadState = 0; threadState < THREAD_STATES.length; threadState++)
-            for (String m : THREAD_STATES[threadState].methods)
+        for (int threadState = 0; threadState < THREAD_STATES.length; threadState++) {
+            for (String m : THREAD_STATES[threadState].methods) {
                 if (method.equals(m))
                     return threadState;
+            }
+        }
         int k = threadLine.indexOf('"', 1);
-        for (int threadState = 0; threadState < THREAD_STATES.length; threadState++)
+        for (int threadState = 0; threadState < THREAD_STATES.length; threadState++) {
             if (threadLine.indexOf(THREAD_STATES[threadState].state, k + 1) >= 0)
                 return threadState;
+        }
         if (stateLine.length() != 0) {
             k = stateLine.indexOf(JAVA_LANG_THREAD_STATE) + JAVA_LANG_THREAD_STATE.length();
-            for (int threadState = 0; threadState < THREAD_STATES.length; threadState++)
+            for (int threadState = 0; threadState < THREAD_STATES.length; threadState++) {
                 if (stateLine.indexOf(THREAD_STATES[threadState].state, k + 1) >= 0)
                     return threadState;
+            }
         }
         return 0;
     }
@@ -213,19 +254,16 @@ public class TDP extends AbstractTool {
         }
 
         boolean contributes(MethodStats outer, double thresholdPercent) {
-            for (int i = 0; i < counts.length; i++)
+            for (int i = 0; i < counts.length; i++) {
                 if (contributes(i, outer, thresholdPercent))
                     return true;
+            }
             return false;
         }
     }
 
-    private static final Comparator<MethodStats> METHOD_STATS_BY_TOTAL_COUNT = new Comparator<MethodStats>() {
-        @Override
-        public int compare(MethodStats o1, MethodStats o2) {
-            return Long.compare(o2.totalCount, o1.totalCount);
-        }
-    };
+    private static final Comparator<MethodStats> METHOD_STATS_BY_TOTAL_COUNT =
+        (o1, o2) -> Long.compare(o2.totalCount, o1.totalCount);
 
     private static class Top implements Comparable<Top> {
         final MethodStats ms;
@@ -268,41 +306,64 @@ public class TDP extends AbstractTool {
             dumpsCount++;
             line = in.readLine();
             while (line != null) { // Loop for all threads.
-                // Skip all empty lines.
                 while (line != null && line.isEmpty())
                     line = in.readLine();
+
+                // Skip Safe Memory Reclamation (SMR) info.
+                if (startsWith(line, SMR_INFO_START)) {
+                    while (line != null && !line.trim().startsWith("}"))
+                        line = in.readLine();
+                    if (line != null)
+                        line = in.readLine();
+                }
+                while (line != null && line.isEmpty())
+                    line = in.readLine();
+
+                // Skip synchronizers
+                if (startsWith(line, LOCKED_SYNCHRONIZERS_START)) {
+                    while (line != null && !line.trim().isEmpty())
+                        line = in.readLine();
+                }
+                while (line != null && line.isEmpty())
+                    line = in.readLine();
+
                 // Break if line is not describing the next thread.
                 if (line == null || line.charAt(0) != '"')
                     break;
                 String threadLine = line;
                 line = in.readLine();
-                String stateLine = line != null && line.trim().startsWith(JAVA_LANG_THREAD_STATE) ? line : "";
+                String stateLine = startsWith(line, JAVA_LANG_THREAD_STATE) ? line : "";
                 if (stateLine.length() != 0) // Java 1.6 thread state info.
                     line = in.readLine();
+
                 readStackTrace(in);
+                // Skip methods with no stack trace
+                if (startsWith(line, NO_COMPILE_TASK))
+                    line = in.readLine();
+
                 threadState = findThreadState(threadLine, stateLine, methods.get(0));
                 // Collapse new "concurrent locks" stacktrace when lock in contended state (i.e. blocking wait).
-                if (methods.get(0).equals("sun.misc.Unsafe.park") && !locks.isSet()) {
+                // The code below tries to remove classes from "java.util.concurrent.locks" and their ancestors
+                // from the analysis, so that real application methods where the locks are acquired show up
+                // in the result statistics
+                if (isUnsafePark(methods.get(0)) && !locks.isSet()) {
                     int i = 1;
                     while (i < methods.size() && methods.get(i).startsWith("java.util.concurrent.locks."))
                         i++;
                     String m = methods.get(i - 1);
-                    if (m.startsWith("java.util.concurrent.locks.") && (m.endsWith(".lock") || m.endsWith(".lockInterruptibly") || m.endsWith(".tryLock")) ||
-                        m.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer.acquire") ||
-                        m.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer.tryAcquire"))
-                    {
-                        while (i < methods.size() && (methods.get(i).endsWith(".lock") || methods.get(i).endsWith(".lockInterruptibly") ||
-                            methods.get(i).endsWith(".tryLock") || methods.get(i).endsWith(".acquire") || methods.get(i).endsWith(".tryAcquire")))
-                        {
+                    if (isWaitingForLockMethod1(m)) {
+                        while (i < methods.size() && isWaitingForLockMethod2(methods.get(i))) {
                             i++;
                         }
                         threadState = WAITING_FOR_LOCK_ENTRY;
                         methods.subList(0, i).clear();
                     }
                 }
-                // Check is were are collecting a single state only
-                if (onlyThreadState < 0 || threadState == onlyThreadState)
-                    updateStats();
+                if (!matches(stateMatcher, THREAD_STATES[threadState].abbreviation))
+                    continue;
+                if (!matches(nameMatcher, threadLine.substring(1, threadLine.indexOf('"', 1))))
+                    continue;
+                updateStats();
             }
         }
     }
@@ -334,9 +395,10 @@ public class TDP extends AbstractTool {
         methods.add(METHOD_THIS); // add this to the end of forward stats
         // collect forward stats from each method, but this, keep track of recursion
         seen.clear();
-        for (int i = methods.size() - 2; i >= 0; i--)
+        for (int i = methods.size() - 2; i >= 0; i--) {
             if (seen.add(methods.get(i)))
                 updateStatsAt(forwardStats, i);
+        }
     }
 
     private void updateStatsAt(IndexedSet<String, MethodStats> set, int i) {
@@ -357,6 +419,31 @@ public class TDP extends AbstractTool {
         return ms;
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    private static boolean matches(Matcher matcher, String value) {
+        return (matcher == null || matcher.reset(value).find());
+    }
+
+    private static boolean startsWith(String line, String pattern) {
+        return (line != null && line.trim().startsWith(pattern));
+    }
+
+    private static boolean isUnsafePark(String method) {
+        return (method.equals("sun.misc.Unsafe.park") || method.equals("jdk.internal.misc.Unsafe.park"));
+    }
+
+    private static boolean isWaitingForLockMethod1(String method) {
+        return method.startsWith("java.util.concurrent.locks.") &&
+            (method.endsWith(".lock") || method.endsWith(".lockInterruptibly") || method.endsWith(".tryLock")) ||
+            method.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer.acquire") ||
+            method.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer.tryAcquire");
+    }
+
+    private static boolean isWaitingForLockMethod2(String method) {
+        return method.endsWith(".lock") || method.endsWith(".lockInterruptibly") || method.endsWith(".tryLock") ||
+            method.endsWith(".acquire") || method.endsWith(".tryAcquire");
+    }
+
     private void dumpToFile(String file) throws IOException {
         try (PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(file), 100000))) {
             out.println(HEADER + new Date());
@@ -367,8 +454,9 @@ public class TDP extends AbstractTool {
     }
 
     private void dumpReverseTops(PrintWriter out) {
-        for (int threadState = 0; threadState < THREAD_STATES.length; threadState++)
+        for (int threadState = 0; threadState < THREAD_STATES.length; threadState++) {
             dumpReverseTopsForState(out, threadState);
+        }
     }
 
     private void dumpReverseTopsForState(PrintWriter out, int threadState) {
@@ -401,14 +489,16 @@ public class TDP extends AbstractTool {
             return;
         PriorityQueue<Top> tops = new PriorityQueue<>();
         int skipped = 0;
-        for (MethodStats ms : method.children)
+        for (MethodStats ms : method.children) {
             if (ms.counts[threadState] != 0) {
                 // Filter by contribution
-                if (ms.contributes(threadState, outer, threshold.getValue()))
+                if (ms.contributes(threadState, outer, threshold.getValue())) {
                     tops.add(new Top(ms, ms.counts[threadState]));
-                else
+                } else {
                     skipped++;
+                }
             }
+        }
         int n = tops.size();
         for (int i = 0; i < n; i++) {
             Top top = tops.poll();
@@ -452,10 +542,11 @@ public class TDP extends AbstractTool {
         int skipped = 0;
         int n = 0;
         for (int i = 0; i < sorted.length; i++) {
-            if (sorted[i].contributes(outer, threshold.getValue()))
+            if (sorted[i].contributes(outer, threshold.getValue())) {
                 sorted[n++] = sorted[i];
-            else
+            } else {
                 skipped++;
+            }
         }
         for (int i = 0; i < n; i++) {
             MethodStats ms = sorted[i];
@@ -471,21 +562,23 @@ public class TDP extends AbstractTool {
         out.print(prefix);
         out.print(method.name);
         int states = 0;
-        for (int count : method.counts)
+        for (int count : method.counts) {
             if (count != 0)
                 states++;
+        }
         if (states > 1) {
             out.print(" - ");
             dumpCount(out, method.totalCount);
         }
         out.print(" =");
-        for (int threadState = 0; threadState < THREAD_STATES.length; threadState++)
+        for (int threadState = 0; threadState < THREAD_STATES.length; threadState++) {
             if (method.counts[threadState] != 0) {
                 out.print(" ");
                 out.print(THREAD_STATES[threadState].abbreviation);
                 out.print(":");
                 dumpCount(out, method.counts[threadState]);
             }
+        }
         out.println();
     }
 
@@ -501,9 +594,8 @@ public class TDP extends AbstractTool {
         out.printf(Locale.US, "%d (%.2f%%)", count, 100.0 * count / dumpsCount);
     }
 
-    @SuppressWarnings("unchecked")
     private static MethodStats[] sort(Collection<MethodStats> c, Comparator<MethodStats> comparator) {
-        MethodStats[] a = c.toArray(new MethodStats[c.size()]);
+        MethodStats[] a = c.toArray(new MethodStats[0]);
         Arrays.sort(a, comparator);
         return a;
     }

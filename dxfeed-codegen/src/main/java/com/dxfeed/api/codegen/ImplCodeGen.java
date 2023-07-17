@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,6 +17,7 @@ import com.dxfeed.event.candle.CandleEventDelegateImpl;
 import com.dxfeed.event.candle.DailyCandle;
 import com.dxfeed.event.candle.impl.CandleEventMapping;
 import com.dxfeed.event.market.AnalyticOrder;
+import com.dxfeed.event.market.OtcMarketsOrder;
 import com.dxfeed.event.market.MarketEventDelegateImpl;
 import com.dxfeed.event.market.OptionSale;
 import com.dxfeed.event.market.Order;
@@ -252,7 +253,7 @@ public class ImplCodeGen {
             map("TradePrice", "TradePrice", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
             map("TradeSize", "TradeSize", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
             map("MarketMaker", "MMID", FieldType.SHORT_STRING).onlySuffixes(
-                "com.dxfeed.event.order.impl.Order.suffixes.mmid", "|#NTV|#BATE|#CHIX|#CEUX|#BXTR").
+                "com.dxfeed.event.order.impl.Order.suffixes.mmid", "|#NTV|#BATE|#CHIX|#CEUX|#BXTR|#pink").
             field("IcebergPeakSize", "IcebergPeakSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
             field("IcebergHiddenSize", "IcebergHiddenSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
             field("IcebergExecutedSize", "IcebergExecutedSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
@@ -299,6 +300,46 @@ public class ImplCodeGen {
             map("IcebergHiddenSize", "IcebergHiddenSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
             map("IcebergExecutedSize", "IcebergExecutedSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
             map("IcebergFlags", "IcebergFlags", FieldType.FLAGS).optional().disabledByDefault().
+            injectPutEventCode(
+                "if (index < 0)",
+                "    throw new IllegalArgumentException(\"Invalid index to publish\");",
+                "if ((event.getEventFlags() & (OrderBase.SNAPSHOT_END | OrderBase.SNAPSHOT_SNIP)) != 0 && index != 0)",
+                "    throw new IllegalArgumentException(\"SNAPSHOT_END and SNAPSHOT_SNIP orders must have index == 0\");",
+                "if (event.getOrderSide() == Side.UNDEFINED && event.hasSize())",
+                "    throw new IllegalArgumentException(\"only empty orders can have side == UNDEFINED\");"
+            ).
+            publishable();
+
+        ctx.delegate("OtcMarketsOrder", OtcMarketsOrder.class, "OtcMarketsOrder").
+            suffixes(getOrderSuffixes(OtcMarketsOrder.class)).
+            inheritDelegateFrom(ORDER_BASE_DELEGATE).
+            inheritMappingFrom(ORDER_BASE_MAPPING).
+            source("m.getRecordSource()").
+            withPlainEventFlags().
+            map("Void", "Void", FieldType.VOID).time(0).internal().
+            map("Index", "Index", FieldType.INDEX).time(1).internal().
+            assign("Index", "((long) getSource().id() << 32) | (#Index# & 0xFFFFFFFFL)").
+            injectPutEventCode(
+                "int index = (int) event.getIndex();",
+                "#Index=index#;"
+            ).
+            mapTimeAndSequence().
+            map("TimeNanoPart", "TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
+            map("ActionTime", "ActionTime", FieldType.TIME_MILLIS).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("OrderId", "OrderId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("AuxOrderId", "AuxOrderId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("Price", "Price", FieldType.PRICE).
+            map("Size", "Size", FieldType.SIZE).
+            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes("com.dxfeed.event.order.impl.OtcMarketsOrder.suffixes.count", "").
+            map("Flags", "Flags", FieldType.FLAGS).
+            map("TradeId", "TradeId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("TradePrice", "TradePrice", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("TradeSize", "TradeSize", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("MarketMaker", "MMID", FieldType.SHORT_STRING).onlySuffixes(
+                "com.dxfeed.event.order.impl.OtcMarketsOrder.suffixes.mmid", "|#pink").
+            map("QuoteAccessPayment", "QuoteAccessPayment", FieldType.INT).
+            map("OtcMarketsFlags", "OtcMarketsFlags", FieldType.FLAGS).
             injectPutEventCode(
                 "if (index < 0)",
                 "    throw new IllegalArgumentException(\"Invalid index to publish\");",
@@ -591,9 +632,9 @@ public class ImplCodeGen {
     /**
      * Get record suffixes for publishable order sources of specified type as a string delimited by '|' (pipe) symbol.
      *
-     * @param eventType - eventType with possible values <code>{@link Order}.<b>class</b></code>
-     *                  or <code>{@link AnalyticOrder}.<b>class</b></code>
-     *                  or <code>{@link SpreadOrder}.<b>class</b></code>.
+     * @param eventType eventType with possible values <code>{@link Order}.<b>class</b></code>,
+     *     <code>{@link AnalyticOrder}.<b>class</b></code>, <code>{@link OtcMarketsOrder}.<b>class</b></code>
+     *     or <code>{@link SpreadOrder}.<b>class</b></code>.
      * @return a list of publishable record suffixes delimited by '|' symbol.
      * @see OrderSource#publishable(Class)
      */

@@ -17,6 +17,7 @@ import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.api.DXPublisher;
 import com.dxfeed.event.market.AnalyticOrder;
+import com.dxfeed.event.market.OtcMarketsOrder;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.Quote;
 import com.dxfeed.event.market.Scope;
@@ -167,6 +168,21 @@ public class OrderTest {
         analyticOrder.setSize(1);
         analyticOrder.setIndex(1);
         publisher.publishEvents(Collections.singleton(analyticOrder));
+
+        Order received = queue.poll(2, TimeUnit.SECONDS);
+        assertNull(received);
+    }
+
+    @Test
+    public void testOtcMarketsOrderNotReceived() throws InterruptedException {
+        OtcMarketsOrder otcMarketsOrder = new OtcMarketsOrder(SYMBOL);
+        otcMarketsOrder.setOrderSide(Side.BUY);
+        otcMarketsOrder.setMarketMaker("NSDQ");
+        otcMarketsOrder.setScope(Scope.ORDER);
+        otcMarketsOrder.setPrice(10.0);
+        otcMarketsOrder.setSize(1);
+        otcMarketsOrder.setIndex(1);
+        publisher.publishEvents(Collections.singleton(otcMarketsOrder));
 
         Order received = queue.poll(2, TimeUnit.SECONDS);
         assertNull(received);

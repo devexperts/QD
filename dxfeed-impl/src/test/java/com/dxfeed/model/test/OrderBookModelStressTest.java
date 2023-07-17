@@ -16,6 +16,7 @@ import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.DXPublisher;
 import com.dxfeed.event.market.MarketEvent;
+import com.dxfeed.event.market.MarketEventSymbols;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.Quote;
 import com.dxfeed.event.market.Side;
@@ -181,7 +182,8 @@ public class OrderBookModelStressTest {
         }
 
         private char randomExchange(Random rnd) {
-            return (char) (rnd.nextInt(26) + 'A');
+            return MarketEventSymbols.SUPPORTED_EXCHANGES.charAt(
+                rnd.nextInt(MarketEventSymbols.SUPPORTED_EXCHANGES.length()));
         }
 
         private long randomSize(Random rnd) {

@@ -23,12 +23,12 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Identifies source of {@link Order}, {@link AnalyticOrder} and {@link SpreadOrder} events.
+ * Identifies source of {@link Order}, {@link AnalyticOrder}, {@link OtcMarketsOrder} and {@link SpreadOrder} events.
  * There are the following kinds of order sources:
  * <ul>
  * <li><em>Synthetic</em> sources {@link #COMPOSITE_BID}, {@link #COMPOSITE_ASK},
- *      {@link #REGIONAL_BID}, and {@link #REGIONAL_ASK} are provided for convenience of a consolidated
- *      order book and are automatically generated based on the corresponding {@link Quote} events.
+ *     {@link #REGIONAL_BID}, and {@link #REGIONAL_ASK} are provided for convenience of a consolidated
+ *     order book and are automatically generated based on the corresponding {@link Quote} events.
  * <li><em>Aggregate</em> sources {@link #AGGREGATE_BID} and {@link #AGGREGATE_ASK} provide
  *     futures depth (aggregated by price level) and NASDAQ Level II (top of book for each market maker).
  *     These source cannot be directly published to via dxFeed API.
@@ -49,9 +49,10 @@ public final class OrderSource extends IndexedEventSource {
 
     private static final int PUB_ORDER = 0x0001;
     private static final int PUB_ANALYTIC_ORDER = 0x0002;
-    private static final int PUB_SPREAD_ORDER = 0x0004;
-    private static final int FULL_ORDER_BOOK = 0x0008;
-    private static final int FLAGS_SIZE = 4;
+    private static final int PUB_OTC_MARKETS_ORDER = 0x0004;
+    private static final int PUB_SPREAD_ORDER = 0x0008;
+    private static final int FULL_ORDER_BOOK = 0x0010;
+    private static final int FLAGS_SIZE = 5;
 
     @SuppressWarnings("unchecked")
     private static final List<OrderSource>[] PUBLISHABLE_LISTS = new List[FLAGS_SIZE];
@@ -116,11 +117,12 @@ public final class OrderSource extends IndexedEventSource {
 
     /**
      * Default source for publishing custom order books.
-     * {@link Order}, {@link AnalyticOrder} and {@link SpreadOrder} events are {@link #isPublishable(Class) publishable}
-     * on this source and the corresponding subscription can be observed via {@link DXPublisher}.
+     * {@link Order}, {@link AnalyticOrder}, {@link OtcMarketsOrder} and {@link SpreadOrder}
+     * events are {@link #isPublishable(Class) publishable} on this source and the corresponding subscription
+     * can be observed via {@link DXPublisher}.
      */
     public static final OrderSource DEFAULT = new OrderSource(0, "DEFAULT",
-        PUB_ORDER | PUB_ANALYTIC_ORDER | PUB_SPREAD_ORDER | FULL_ORDER_BOOK);
+        PUB_ORDER | PUB_ANALYTIC_ORDER | PUB_OTC_MARKETS_ORDER | PUB_SPREAD_ORDER | FULL_ORDER_BOOK);
 
     // ======== BEGIN: Custom OrderSource definitions ========
 
@@ -359,6 +361,14 @@ public final class OrderSource extends IndexedEventSource {
      */
     public static final OrderSource memx = new OrderSource("memx", PUB_ORDER);
 
+    /**
+     * Pink Sheets. Record for price level book.
+     * Pink sheets are listings for stocks that trade over-the-counter (OTC).
+     * {@link Order} and {@link OtcMarketsOrder} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource pink = new OrderSource("pink", PUB_ORDER | PUB_OTC_MARKETS_ORDER);
+
     // ATTENTION: Every time a custom OrderSource constant is added run com.dxfeed.api.codegen.ImplCodeGen
     // and commit updated implementation classes.
 
@@ -409,11 +419,12 @@ public final class OrderSource extends IndexedEventSource {
      * their subscription can be observed directly via {@link DXPublisher}.
      * Subscription on such sources is observed via instances of {@link IndexedEventSubscriptionSymbol} class.
      *
-     * @param eventType <code>{@link Order}.<b>class</b></code> or <code>{@link AnalyticOrder}.<b>class</b></code>
-     *                  or <code>{@link SpreadOrder}.<b>class</b></code>.
+     * @param eventType <code>{@link Order}.<b>class</b></code>, <code>{@link AnalyticOrder}.<b>class</b></code>,
+     *     <code>{@link OtcMarketsOrder}.<b>class</b></code> or <code>{@link SpreadOrder}.<b>class</b></code>.
      * @return a list of publishable order sources.
      * @throws IllegalArgumentException if eventType is not in <code>{@link Order}.<b>class</b></code>,
-     * <code>{@link AnalyticOrder}.<b>class</b></code>, <code>{@link SpreadOrder}.<b>class</b></code>
+     *     <code>{@link AnalyticOrder}.<b>class</b></code>, <code>{@link OtcMarketsOrder}.<b>class</b></code>
+     *     or <code>{@link SpreadOrder}.<b>class</b></code>.
      */
     public static List<OrderSource> publishable(Class<? extends OrderBase> eventType) {
         return PUBLISHABLE_VIEWS[31 - Integer.numberOfLeadingZeros(getEventTypeMask(eventType))];
@@ -459,7 +470,7 @@ public final class OrderSource extends IndexedEventSource {
             throw new IllegalArgumentException("duplicate name");
 
         // Flag FULL_ORDER_BOOK requires that source must be publishable
-        if ((pubFlags & FULL_ORDER_BOOK) != 0 && (pubFlags & (PUB_ORDER | PUB_ANALYTIC_ORDER | PUB_SPREAD_ORDER)) == 0)
+        if (isFullOrderBookFlag(pubFlags) && !isPublishableFlag(pubFlags))
             throw new IllegalArgumentException("unpublishable full order book order");
 
         CACHE_SIZE = Math.max(CACHE_SIZE, SOURCES_BY_ID.size() * 4);
@@ -484,11 +495,13 @@ public final class OrderSource extends IndexedEventSource {
      * Subscription on such sources can be observed directly via {@link DXPublisher}.
      * Subscription on such sources is observed via instances of {@link IndexedEventSubscriptionSymbol} class.
      *
-     * @param eventType <code>{@link Order}.<b>class</b></code> or <code>{@link AnalyticOrder}.<b>class</b></code>
-     *                     or <code>{@link SpreadOrder}.<b>class</b></code>.
-     * @return {@code true} if {@link Order}, {@link AnalyticOrder} and {@link SpreadOrder} events can be directly published with this source.
-     * @throws IllegalArgumentException if eventType differs from
-     *         <code>{@link Order}.<b>class</b></code>, <code>{@link AnalyticOrder}.<b>class</b></code> and <code>{@link SpreadOrder}.<b>class</b></code>.
+     * @param eventType <code>{@link Order}.<b>class</b></code>, <code>{@link AnalyticOrder}.<b>class</b></code>,
+     *     <code>{@link OtcMarketsOrder}.<b>class</b></code> or <code>{@link SpreadOrder}.<b>class</b></code>.
+     * @return {@code true} if {@link Order}, {@link AnalyticOrder}, {@link OtcMarketsOrder} and {@link SpreadOrder}
+     *     events can be directly published with this source.
+     * @throws IllegalArgumentException if eventType differs from <code>{@link Order}.<b>class</b></code>,
+     *     <code>{@link AnalyticOrder}.<b>class</b></code>, <code>{@link OtcMarketsOrder}.<b>class</b></code>
+     *     or <code>{@link SpreadOrder}.<b>class</b></code>.
      */
     public boolean isPublishable(Class<? extends OrderBase> eventType) {
         return (pubFlags & getEventTypeMask(eventType)) != 0;
@@ -500,10 +513,18 @@ public final class OrderSource extends IndexedEventSource {
      * @return {@code true} if this source supports Full Order Book.
      */
     public boolean isFullOrderBook() {
-        return (pubFlags & FULL_ORDER_BOOK) != 0;
+        return isFullOrderBookFlag(pubFlags);
     }
 
     // ========================= private helper methods =========================
+
+    private static boolean isPublishableFlag(int pubFlags) {
+        return (pubFlags & (PUB_ORDER | PUB_ANALYTIC_ORDER | PUB_OTC_MARKETS_ORDER | PUB_SPREAD_ORDER)) != 0;
+    }
+
+    private static boolean isFullOrderBookFlag(int pubFlags) {
+        return (pubFlags & FULL_ORDER_BOOK) != 0;
+    }
 
     private static void checkChar(char c) {
         if (c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9')
@@ -544,6 +565,8 @@ public final class OrderSource extends IndexedEventSource {
             return PUB_ORDER;
         if (eventType == AnalyticOrder.class)
             return PUB_ANALYTIC_ORDER;
+        if (eventType == OtcMarketsOrder.class)
+            return PUB_OTC_MARKETS_ORDER;
         if (eventType == SpreadOrder.class)
             return PUB_SPREAD_ORDER;
         throw new IllegalArgumentException("Invalid order event type: " + eventType);

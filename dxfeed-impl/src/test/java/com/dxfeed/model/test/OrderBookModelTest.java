@@ -15,6 +15,7 @@ import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.DXPublisher;
 import com.dxfeed.event.IndexedEvent;
 import com.dxfeed.event.market.AnalyticOrder;
+import com.dxfeed.event.market.OtcMarketsOrder;
 import com.dxfeed.event.market.MarketEventSymbols;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.OrderSource;
@@ -187,6 +188,13 @@ public class OrderBookModelTest {
     @Test
     public void testOrderBookModelIgnoresAnalyticOrder() {
         publisher.publishEvents(Collections.singletonList(analyticOrderBuy(4, 500, Q, MMID)));
+        assertNBuyChangesQueued(0);
+        assertNSellChangesQueued(0);
+    }
+
+    @Test
+    public void testOrderBookModelIgnoresOtcMarketsOrder() {
+        publisher.publishEvents(Collections.singletonList(otcMarketOrderBuy(4, 500, Q, MMID)));
         assertNBuyChangesQueued(0);
         assertNSellChangesQueued(0);
     }
@@ -389,7 +397,8 @@ public class OrderBookModelTest {
         for (int i = 0; i < 10_000; i++) {
             // Note: every 1/10 order will have size == 0 and will "remove"
             int value = rnd.nextInt(10);
-            char exchange = (char) ('A' + rnd.nextInt(26));
+            char exchange = MarketEventSymbols.SUPPORTED_EXCHANGES.charAt(
+                rnd.nextInt(MarketEventSymbols.SUPPORTED_EXCHANGES.length()));
             int index = rnd.nextInt(bookSize);
             String mmid = rnd.nextBoolean() ? MMID : MMID2;
             switch (rnd.nextInt(4)) {
@@ -466,6 +475,26 @@ public class OrderBookModelTest {
         analyticOrder.setIcebergHiddenSize(value * 1.0);
         analyticOrder.setIcebergPeakSize(value * 1.0);
         return analyticOrder;
+    }
+
+    private OtcMarketsOrder otcMarketOrderBuy(int index, int value, char exchange, String mmid) {
+        return createOtcMarketsOrder(Scope.ORDER, Side.BUY, index, value, exchange, mmid);
+    }
+
+    private OtcMarketsOrder createOtcMarketsOrder(Scope scope, Side side, long index, int value, char exchange,
+        String mmid)
+    {
+        OtcMarketsOrder otcMarketsOrder = new OtcMarketsOrder();
+        otcMarketsOrder.setScope(scope);
+        otcMarketsOrder.setIndex(index);
+        otcMarketsOrder.setOrderSide(side);
+        otcMarketsOrder.setPrice(value * 10.0);
+        otcMarketsOrder.setSize(value);
+        otcMarketsOrder.setExchangeCode(exchange);
+        otcMarketsOrder.setMarketMaker(mmid);
+        otcMarketsOrder.setEventSymbol(symbol);
+        otcMarketsOrder.setQuoteAccessPayment(value);
+        return otcMarketsOrder;
     }
 
     private boolean same(Order order, Order old) {

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,6 +22,7 @@ import com.devexperts.qd.kit.PentaCodec;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.impl.ConfigurableDataScheme;
 import com.dxfeed.api.impl.VersionedRecord;
+import com.dxfeed.event.market.MarketEventSymbols;
 import com.dxfeed.scheme.impl.SchemeModelLoader;
 import com.dxfeed.scheme.impl.properties.DXFeedPropertiesConverter;
 import com.dxfeed.scheme.model.SchemeModel;
@@ -48,7 +49,6 @@ import java.util.Properties;
  * To load data scheme use {@link DXScheme.Loader}.
  */
 public class DXScheme extends DefaultScheme implements ConfigurableDataScheme {
-    private final static String REGIONALS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final boolean[] REGIONAL_RECORDS_BUILD_ORDER = new boolean[] { false, true };
 
     private static final Properties DEFAULT_PROPERTIES = System.getProperties();
@@ -130,8 +130,8 @@ public class DXScheme extends DefaultScheme implements ConfigurableDataScheme {
     {
         DataRecord dr;
         if (r.hasRegionals() && buildRegionals) {
-            for (int i = 0; i < REGIONALS.length(); i++) {
-                dr = buildOneRecord(result.size(), scheme, r, recordName + '&' + REGIONALS.charAt(i), true);
+            for (char exchange : MarketEventSymbols.SUPPORTED_EXCHANGES.toCharArray()) {
+                dr = buildOneRecord(result.size(), scheme, r, recordName + '&' + exchange, true);
                 if (dr != null) {
                     result.add(dr);
                 }

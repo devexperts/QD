@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -84,11 +84,18 @@ class FactoryImplGen {
                 cg.indent();
             }
             if (record.regional) { // Composite and regional records
+                //FIXME regionalOnly and exchangesDefault are used only for Book&I
                 if (!record.regionalOnly)
                     generateFieldCode(cg, recordEntry.getValue(), "\"" + record + "\"", false); // Composite
                 cg.addImport(new ClassName(SystemProperties.class));
-                cg.code("for (char exchange : SystemProperties.getProperty(" +
-                    "\"" + record.exchangesProperty + "\", \"" + record.exchangesDefault + "\")" + ".toCharArray()) {");
+                //FIXME regionalOnly and exchangesDefault are used only for Book&I
+                if (record.exchangesDefault != null) {
+                    cg.code("for (char exchange : SystemProperties.getProperty(" +
+                        "\"" + record.exchangesProperty + "\", \"" + record.exchangesDefault + "\")"
+                        + ".toCharArray()) {");
+                } else {
+                    cg.code("for (char exchange : getExchanges(\"" + record.exchangesProperty + "\")) {");
+                }
                 cg.indent();
                 cg.code("String recordName = \"" + record + "&\" + exchange;");
                 generateFieldCode(cg, recordEntry.getValue(), "recordName", true);

@@ -25,6 +25,7 @@ import com.devexperts.qd.kit.RecordOnlyFilter;
 import com.devexperts.qd.spi.QDFilterContext;
 import com.devexperts.qd.spi.QDFilterFactory;
 import com.devexperts.services.ServiceProvider;
+import com.dxfeed.event.market.MarketEventSymbols;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -168,7 +169,8 @@ public class FilterFactoryImpl extends QDFilterFactory {
             if (composite)
                 patterns.add(PatternFilter.valueOf(recordMask, "test", getScheme()));
             if (regional && !recordMask.endsWith("*")) // these multi-records cannot be "regional"
-                patterns.add(PatternFilter.valueOf(recordMask + "[&][A-Z]", "test", getScheme()));
+                patterns.add(PatternFilter.valueOf(
+                    recordMask + "[&]" + MarketEventSymbols.EXCHANGES_PATTERN.pattern(), "test", getScheme()));
         }
         Predicate<DataRecord> filter = r -> patterns.stream().anyMatch(f -> f.accept(null, null, 0, r.getName()));
         return CompositeFilters.forRecords(getScheme(), name, filter);
@@ -361,6 +363,8 @@ public class FilterFactoryImpl extends QDFilterFactory {
     }
 
     private static class ConversionRateFilter extends QDFilter {
+        private static final Pattern PATTERN =
+            Pattern.compile("Quote(&" + MarketEventSymbols.EXCHANGES_PATTERN.pattern() + ")?");
         private final int wildcard;
         private final boolean[] accepts;
 
@@ -368,9 +372,8 @@ public class FilterFactoryImpl extends QDFilterFactory {
             super(scheme);
             wildcard = scheme.getCodec().getWildcardCipher();
             accepts = new boolean[scheme.getRecordCount()];
-            Pattern regex = Pattern.compile("Quote(&[A-Z])?");
             for (int i = 0; i < accepts.length; i++)
-                accepts[i] = regex.matcher(scheme.getRecord(i).getName()).matches();
+                accepts[i] = PATTERN.matcher(scheme.getRecord(i).getName()).matches();
             setName(getDefaultName());
         }
 

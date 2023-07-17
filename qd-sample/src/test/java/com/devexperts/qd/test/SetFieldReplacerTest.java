@@ -20,6 +20,7 @@ import com.dxfeed.event.candle.CandlePeriod;
 import com.dxfeed.event.candle.CandleSymbol;
 import com.dxfeed.event.candle.CandleType;
 import com.dxfeed.event.market.AnalyticOrder;
+import com.dxfeed.event.market.OtcMarketsOrder;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.Profile;
 import com.dxfeed.event.market.Quote;
@@ -247,6 +248,30 @@ public class SetFieldReplacerTest {
     }
 
     @Test
+    public void testOtcMarketsOrder() throws Exception {
+        OtcMarketsOrder initialEvent = new OtcMarketsOrder("IBM");
+        initialEvent.setTime(123_000);
+        initialEvent.setPrice(1.0);
+        initialEvent.setSize(100);
+        initialEvent.setOrderSide(Side.BUY);
+        OtcMarketsOrder modifiedEvent = cloneEvent(initialEvent);
+        if (replace) {
+            switch (fields) {
+                case PRICE_SIZE:
+                    modifiedEvent.setPrice(modifiedEvent.getSizeAsDouble());
+                    break;
+                case BID_ASK:
+                case HIGH_LOW:
+                case HALT_START_END_TIME:
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unknown fields: " + fields.config);
+            }
+        }
+        testEvent(initialEvent, modifiedEvent);
+    }
+
+    @Test
     public void testSpreadOrder() throws Exception {
         SpreadOrder initialEvent = new SpreadOrder("IBM");
         initialEvent.setTime(123_000);
@@ -349,7 +374,7 @@ public class SetFieldReplacerTest {
 
     private enum FieldPairs {
         BID_ASK("BidPrice:AskPrice", "Quote,TimeAndSale"),
-        PRICE_SIZE("Price:Size", "TimeAndSale,Trade,TradeETH,Order,AnalyticOrder,SpreadOrder"),
+        PRICE_SIZE("Price:Size", "TimeAndSale,Trade,TradeETH,Order,AnalyticOrder,OtcMarketsOrder,SpreadOrder"),
         HIGH_LOW("High:Low", "Candle,Trade.*"),
         HALT_START_END_TIME("HaltStartTime:HaltEndTime", "Profile");
 

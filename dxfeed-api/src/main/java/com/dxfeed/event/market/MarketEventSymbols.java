@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,6 +15,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Helper class to compose and parse symbols for market events.
@@ -41,6 +44,23 @@ import java.util.Map;
  * The methods in this class always maintain attribute keys in alphabetic order.
  */
 public class MarketEventSymbols {
+    /**
+     * All exchange codes for regional events must match the following pattern
+     */
+    public static final Pattern EXCHANGES_PATTERN = Pattern.compile("[0-9A-Za-z]");
+    /**
+     * All exchange codes matching the exchange code pattern
+     */
+    public static final String SUPPORTED_EXCHANGES = IntStream.rangeClosed(0, 127)
+        .mapToObj(c -> String.valueOf((char) c))
+        .filter(s -> EXCHANGES_PATTERN.matcher(s).matches())
+        .collect(Collectors.joining());
+    /**
+     * Default exchange codes (if no overrides are specified)
+     */
+    public static final String DEFAULT_EXCHANGES =
+        IntStream.rangeClosed('A', 'Z').mapToObj(c -> String.valueOf((char) c)).collect(Collectors.joining());
+
     private static final char EXCHANGE_SEPARATOR = '&';
     private static final char ATTRIBUTES_OPEN = '{';
     private static final char ATTRIBUTES_CLOSE = '}';
@@ -214,6 +234,33 @@ public class MarketEventSymbols {
             sb.append(leg.symbol);
         }
         return sb.toString();
+    }
+
+    /**
+     * Returns string with all exchange codes matching the specified character class. For greater flexibility, the
+     * outer square brackets in the character class can be omitted.
+     *
+     * @param characterClass regex character class.
+     * @return all exchange codes matching the specified character class.
+     * @throws IllegalArgumentException if the exchange codes violate {@link MarketEventSymbols#EXCHANGES_PATTERN}
+     */
+    public static String getExchangesByPattern(String characterClass) {
+        if (characterClass.isEmpty())
+            return "";
+        if (characterClass.charAt(0) != '[' && characterClass.charAt(0) != '\\')
+            characterClass = '[' + characterClass + ']';
+        Pattern pattern = Pattern.compile(characterClass);
+        String exchanges = IntStream.rangeClosed(0, 127)
+            .mapToObj(c -> String.valueOf((char) c))
+            .filter(s -> pattern.matcher(s).matches())
+            .collect(Collectors.joining());
+        String unsupportedExchanges = exchanges.chars()
+            .mapToObj(c -> String.valueOf((char) c))
+            .filter(s -> !EXCHANGES_PATTERN.matcher(s).matches())
+            .collect(Collectors.joining(", "));
+        if (!unsupportedExchanges.isEmpty())
+            throw new IllegalArgumentException("Unsupported exchange codes: " + unsupportedExchanges);
+        return exchanges;
     }
 
     private static class SpreadLeg implements Comparable<SpreadLeg> {
