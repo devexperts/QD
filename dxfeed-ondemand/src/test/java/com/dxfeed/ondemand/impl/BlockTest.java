@@ -12,12 +12,12 @@
 package com.dxfeed.ondemand.impl;
 
 import com.devexperts.io.ByteArrayOutput;
+import com.devexperts.util.TimeUtil;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.TimeZone;
 
 import static org.junit.Assert.assertArrayEquals;
 
@@ -65,7 +65,7 @@ public class BlockTest {
 
     private long getTime(String s) throws ParseException {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
+        sdf.setTimeZone(TimeUtil.getTimeZoneGmt());
         return sdf.parse(s).getTime();
     }
 }

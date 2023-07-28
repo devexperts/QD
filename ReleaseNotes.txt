@@ -1,3 +1,11 @@
+QDS 3.322:
+
+* [QD-1453] [dxfeed-api] Fix 'BondUS()' trading hours
+* [QD-1441] [Schedule] Schedule definition accepts invalid time zones
+  - new method com.devexperts.util.TimeUtil.getTimeZone is introduced, that throws exception in case of
+    invalid time-zone ID. JDK option "-Dcom.devexperts.util.TimeUtil.skipTimeZoneValidation=true" can be used
+    to revert that behavior.
+
 QDS 3.321:
 
 * [QD-1451] QD scheme shall support alpha-numeric characters for exchange code

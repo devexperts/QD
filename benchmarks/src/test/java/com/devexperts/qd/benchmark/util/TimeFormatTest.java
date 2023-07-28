@@ -37,7 +37,7 @@ import static org.junit.Assert.fail;
 public class TimeFormatTest {
 
     private final TimeFormat GMT = TimeFormat.GMT;
-    private final TimeFormat MSK = TimeFormat.getInstance(TimeZone.getTimeZone("GMT+3:00"));
+    private final TimeFormat MSK = TimeFormat.getInstance(TimeUtil.getTimeZone("GMT+03:00"));
 
     @Test
     public void testZoneStability() {
@@ -299,10 +299,10 @@ public class TimeFormatTest {
         assertEqual(TimeFormat.GMT.parse("2002-05-30T09:30:10Z"), "20020530-093010+0000", TimeFormat.GMT);
         // test format
         assertEquals("2002-05-30T09:30:10.000-06:00",
-            TimeFormat.getInstance(TimeZone.getTimeZone("GMT-06:00")).asFullIso()
+            TimeFormat.getInstance(TimeUtil.getTimeZone("GMT-06:00")).asFullIso()
                 .format(TimeFormat.GMT.parse("20020530-153010")));
         assertEquals("2002-05-30T09:30:10.000+06:00",
-            TimeFormat.getInstance(TimeZone.getTimeZone("GMT+06:00")).asFullIso()
+            TimeFormat.getInstance(TimeUtil.getTimeZone("GMT+06:00")).asFullIso()
                 .format(TimeFormat.GMT.parse("20020530-033010")));
         assertEquals("2002-05-30T09:30:10.000Z", TimeFormat.GMT.asFullIso().format(
             TimeFormat.GMT.parse("20020530-093010")));
@@ -320,14 +320,14 @@ public class TimeFormatTest {
 
     @Test
     public void testTimeWithoutTimeZone() {
-        TimeFormat MSD = TimeFormat.getInstance(TimeZone.getTimeZone("Europe/Moscow"));
+        TimeFormat MSD = TimeFormat.getInstance(TimeUtil.getTimeZone("Europe/Moscow"));
         Date withoutTZ = MSD.parse("20120406-182355");
         assertEquals(MSD.parse("20120406-182355+0400"), withoutTZ);
     }
 
     @Test
     public void testTimeWithMillis() {
-        TimeFormat MSD = TimeFormat.getInstance(TimeZone.getTimeZone("Europe/Moscow"));
+        TimeFormat MSD = TimeFormat.getInstance(TimeUtil.getTimeZone("Europe/Moscow"));
         assertEquals(1333737666231L, MSD.parse("20120406-224106.231").getTime());
         assertEquals(1333737666231L, MSD.parse("20120406-224106.231+0400").getTime());
     }
@@ -344,7 +344,7 @@ public class TimeFormatTest {
     @Test
     public void testEquivalence() throws ParseException {
         for (String tzName : "GMT,GMT+01:30,GMT-01:30,Europe/Moscow,America/Chicago".split(",")) {
-            TimeZone tz = TimeZone.getTimeZone(tzName);
+            TimeZone tz = TimeUtil.getTimeZone(tzName);
             TimeFormat format = TimeFormat.getInstance(tz);
 
             assertSame(format.withMillis().withTimeZone(), format.withTimeZone().withMillis());
@@ -376,7 +376,7 @@ public class TimeFormatTest {
     // test equivalence around daylight saving switches
     @Test
     public void testDSTEquivalence() throws ParseException {
-        TimeZone chicagoTz = TimeZone.getTimeZone("America/Chicago");
+        TimeZone chicagoTz = TimeUtil.getTimeZone("America/Chicago");
         TimeFormat format = TimeFormat.getInstance(chicagoTz);
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd-HHmmss");
@@ -413,7 +413,7 @@ public class TimeFormatTest {
 
     @Test
     public void testWeirdOffset() throws ParseException {
-        TimeZone moscowTz = TimeZone.getTimeZone("Europe/Moscow");
+        TimeZone moscowTz = TimeUtil.getTimeZone("Europe/Moscow");
         TimeFormat format = TimeFormat.getInstance(moscowTz);
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd-HHmmss");

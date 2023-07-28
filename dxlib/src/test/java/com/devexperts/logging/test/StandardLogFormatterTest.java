@@ -12,10 +12,9 @@
 package com.devexperts.logging.test;
 
 import com.devexperts.logging.LogFormatter;
+import com.devexperts.util.TimeUtil;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.TimeZone;
 
 import static org.junit.Assert.assertEquals;
 
@@ -55,7 +54,7 @@ public class StandardLogFormatterTest extends LogFormatterTestBase {
 
     @Test
     public void testDaylightSwitchFormatting() {
-        LogFormatter log = new LogFormatter(TimeZone.getTimeZone("Europe/Moscow"));
+        LogFormatter log = new LogFormatter(TimeUtil.getTimeZone("Europe/Moscow"));
         long time = 1269725412345L; // 2010-03-28 - from winter time to summer time
         check(log, time, 0, "D 100328 003012.345 [qwe] asd - zxc");
         check(log, time, 1, "D 100328 013012.345 [qwe] asd - zxc");

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,6 +18,7 @@ import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimeFormat;
 import com.devexperts.util.TimePeriod;
+import com.devexperts.util.TimeUtil;
 import com.dxfeed.ipf.InstrumentProfile;
 import com.dxfeed.ipf.InstrumentProfileReader;
 import com.dxfeed.ipf.impl.InstrumentProfileParser;
@@ -35,7 +36,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.TimeZone;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -386,7 +386,7 @@ public class InstrumentProfileConnection {
             if (lastModified != 0 && !supportsLive && connection instanceof HttpURLConnection) {
                 // Use If-Modified-Since
                 SimpleDateFormat dateFormat = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
-                dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+                dateFormat.setTimeZone(TimeUtil.getTimeZoneGmt());
                 connection.setRequestProperty(IF_MODIFIED_SINCE, dateFormat.format(new Date(lastModified)));
                 if (((HttpURLConnection) connection).getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED)
                     return; // not modified

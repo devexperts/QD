@@ -11,6 +11,7 @@
  */
 package com.devexperts.util.test;
 
+import com.devexperts.util.TimeUtil;
 import com.devexperts.util.Timing;
 import org.junit.Test;
 
@@ -46,9 +47,9 @@ public class TimingTest {
     }
 
     private enum TestInstance {
-        GMT(TimeZone.getTimeZone("GMT"), Timing.GMT),
-        CST(TimeZone.getTimeZone("America/Chicago"), Timing.CST),
-        EST(TimeZone.getTimeZone("America/New_York"), Timing.EST);
+        GMT(TimeUtil.getTimeZoneGmt(), Timing.GMT),
+        CST(TimeUtil.getTimeZone("America/Chicago"), Timing.CST),
+        EST(TimeUtil.getTimeZone("America/New_York"), Timing.EST);
 
         // Note: Moscow timezone will not pass the test, since it is buggy on days 8122-8123 transition
         //MSK(TimeZone.getTimeZone("Europe/Moscow"), new Timing(TimeZone.getTimeZone("Europe/Moscow")));
@@ -81,7 +82,7 @@ public class TimingTest {
             dayId = randomDayId();
 
             long utcTime = (long) dayId * MS_IN_DAY;
-            Calendar utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+            Calendar utcCalendar = Calendar.getInstance(TimeUtil.getTimeZoneGmt());
             utcCalendar.setTimeInMillis(utcTime);
             yearMonthDayNumber =
                 10000 * utcCalendar.get(Calendar.YEAR) +

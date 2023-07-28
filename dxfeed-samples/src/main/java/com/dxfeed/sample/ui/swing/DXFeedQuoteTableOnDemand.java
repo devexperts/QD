@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.dxfeed.sample.ui.swing;
 
+import com.devexperts.util.TimeUtil;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.DXFeedSubscription;
@@ -33,7 +34,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.TimeZone;
 import javax.swing.BorderFactory;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
@@ -93,7 +93,7 @@ public class DXFeedQuoteTableOnDemand {
 
     {
         timeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss 'EST'");
-        timeFormat.setTimeZone(TimeZone.getTimeZone("America/New_York"));
+        timeFormat.setTimeZone(TimeUtil.getTimeZone("America/New_York"));
     }
 
     private final DXEndpoint endpoint = DXEndpoint.getInstance();

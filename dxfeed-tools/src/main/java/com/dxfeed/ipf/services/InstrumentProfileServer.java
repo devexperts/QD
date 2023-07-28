@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -27,6 +27,7 @@ import com.devexperts.util.InvalidFormatException;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimeFormat;
 import com.devexperts.util.TimePeriod;
+import com.devexperts.util.TimeUtil;
 import com.dxfeed.ipf.InstrumentProfile;
 import com.dxfeed.ipf.impl.InstrumentProfileComposer;
 import com.dxfeed.ipf.live.InstrumentProfileCollector;
@@ -45,7 +46,6 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
-import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -167,7 +167,7 @@ public class InstrumentProfileServer implements Closeable {
             super(factory, transportConnection);
             in.mark(); // mark at the beginning
             dateFormat = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
-            dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+            dateFormat.setTimeZone(TimeUtil.getTimeZoneGmt());
         }
 
         @Override

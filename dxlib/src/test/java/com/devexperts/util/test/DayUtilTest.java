@@ -19,7 +19,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Random;
-import java.util.TimeZone;
 
 import static org.junit.Assert.assertEquals;
 
@@ -40,7 +39,7 @@ public class DayUtilTest {
             int year = minYear + r.nextInt(maxYear - minYear + 1);
             int month = 1 + r.nextInt(12);
 
-            GregorianCalendar cal = new GregorianCalendar(TimeZone.getTimeZone("GMT"));
+            GregorianCalendar cal = new GregorianCalendar(TimeUtil.getTimeZoneGmt());
             // use pure Gregorian calendar
             cal.setGregorianChange(new Date(Long.MIN_VALUE));
             cal.set(Calendar.HOUR_OF_DAY, 0);

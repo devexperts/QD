@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -27,6 +27,7 @@ import com.devexperts.util.SynchronizedIndexedSet;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimeFormat;
 import com.devexperts.util.TimePeriod;
+import com.devexperts.util.TimeUtil;
 import com.dxfeed.ipf.InstrumentProfile;
 
 import java.io.BufferedReader;
@@ -675,14 +676,17 @@ public final class Schedule {
     private final AtomicLong usageCounter = new AtomicLong();
 
     private Schedule(String def) {
+        this(def, DEFAULTS); // Atomic volatile read.
+    }
+
+    private Schedule(String def, Defaults defaults) {
         if (!VENUE_PATTERN.matcher(def).matches())
             throw new IllegalArgumentException("broken schedule " + def);
         this.def = def;
-        init();
+        init(defaults);
     }
 
-    private void init() {
-        Defaults defaults = DEFAULTS; // Atomic volatile read.
+    private void init(Defaults defaults) {
         String venue = def.substring(0, def.indexOf('('));
         Map<String, String> props = new HashMap<>();
         if (defaults.venues.containsKey(venue))
@@ -694,9 +698,14 @@ public final class Schedule {
         String tz = props.get("tz");
         if (tz == null || tz.isEmpty())
             throw new IllegalArgumentException("missing time zone for " + def);
-        TimeZone timeZone = TimeZone.getTimeZone(tz);
-        LongHashSet holidays = readDays(defaults.holidays, props.get("hd"));
-        LongHashSet shortdays = readDays(defaults.shortdays, props.get("sd"));
+        TimeZone timeZone;
+        try {
+            timeZone = TimeUtil.getTimeZone(tz);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("unknown time zone for " + def + ": " + tz);
+        }
+        LongHashSet holidays = readDays("holiday", defaults.holidays, props.get("hd"));
+        LongHashSet shortdays = readDays("short", defaults.shortdays, props.get("sd"));
         Matcher ec = getStrategy(def, props, "sds", "ec", SDS_EC_PATTERN);
         long earlyClose = ec == null ? 0 : new TimeDef(def, ec.group(1)).offset();
         Matcher jntd = getStrategy(def, props, "hds", "jntd", HDS_JNTD_PATTERN);
@@ -1010,15 +1019,19 @@ public final class Schedule {
             String subkey = key.substring(dot + 1);
             String value = line.substring(eq + 1);
             if (key.startsWith("hd.")) {
-                if (newDef.holidays.put(subkey, readDays(newDef.holidays, value)) != null)
+                if (newDef.holidays.put(subkey, readDays("holiday", newDef.holidays, value)) != null)
                     throw new IllegalArgumentException("duplicate holiday list " + line);
             } else if (key.startsWith("sd.")) {
-                if (newDef.shortdays.put(subkey, readDays(newDef.shortdays, value)) != null)
+                if (newDef.shortdays.put(subkey, readDays("short", newDef.shortdays, value)) != null)
                     throw new IllegalArgumentException("duplicate short day list " + line);
             } else if (key.startsWith("tv.")) {
                 if (newDef.venues.put(subkey, readProps(value)) != null)
                     throw new IllegalArgumentException("duplicate venue " + line);
             }
+        }
+        // Validate each venue using simple un-cached schedule
+        for (String venue : newDef.venues.keySet()) {
+            new Schedule(venue + "(0=)", newDef);
         }
         Defaults oldDef = DEFAULTS; // Atomic volatile read.
         if (newDef.date < oldDef.date)
@@ -1028,14 +1041,14 @@ public final class Schedule {
             return "identical to current";
         for (Schedule schedule : SCHEDULES)
             try {
-                schedule.init();
+                schedule.init(newDef);
             } catch (Throwable t) {
                 log.error("Unexpected error", t);
             }
         return "newer than current - applied";
     }
 
-    private static LongHashSet readDays(Map<String, LongHashSet> refs, String list) {
+    private static LongHashSet readDays(String dayType, Map<String, LongHashSet> refs, String list) {
         if (list == null || list.isEmpty())
             return EMPTY_SET;
         LongHashSet days = new LongHashSet();
@@ -1059,7 +1072,8 @@ public final class Schedule {
                         days.add(d);
                     }
                 } catch (NumberFormatException e) {
-                    throw new IllegalArgumentException("cannot find day list " + s + " when parsing " + list);
+                    throw new IllegalArgumentException("cannot find " + dayType +
+                        " day list " + s + " when parsing " + list);
                 }
             } else {
                 if (minus) {

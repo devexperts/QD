@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.dxfeed.ipf.transform;
 
+import com.devexperts.util.TimeUtil;
 import com.dxfeed.glossary.PriceIncrements;
 import com.dxfeed.ipf.InstrumentProfileType;
 
@@ -21,7 +22,6 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
-import java.util.TimeZone;
 
 class CMEProductStatement extends Statement {
     private final Object description;
@@ -74,7 +74,7 @@ class CMEProductStatement extends Statement {
                 int commas = desc.indexOf(",,");
                 Date date = null;
                 if (commas >= 0 && ctx.currentProfile().getMMY().length() == 6) {
-                    Calendar c = Calendar.getInstance(TimeZone.getTimeZone("GMT"), Locale.US);
+                    Calendar c = Calendar.getInstance(TimeUtil.getTimeZoneGmt(), Locale.US);
                     c.set(Calendar.YEAR, Integer.parseInt(ctx.currentProfile().getMMY().substring(0, 4)));
                     c.set(Calendar.MONTH, Integer.parseInt(ctx.currentProfile().getMMY().substring(4)) - 1);
                     c.set(Calendar.DATE, 1);
@@ -132,7 +132,7 @@ class CMEProductStatement extends Statement {
 
     private static String formatDate(Date date) {
         SimpleDateFormat sdf = new SimpleDateFormat("MMM-yyyy", Locale.US);
-        sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
+        sdf.setTimeZone(TimeUtil.getTimeZoneGmt());
         return sdf.format(date);
     }
 }

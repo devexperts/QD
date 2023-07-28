@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -10,6 +10,8 @@
  * !__
  */
 package com.devexperts.util;
+
+import java.util.TimeZone;
 
 /**
  * A collection of static utility methods for manipulation of Java long time.
@@ -61,5 +63,35 @@ public class TimeUtil {
      */
     public static int getMillisFromTime(long timeMillis) {
         return (int) Math.floorMod(timeMillis, SECOND);
+    }
+
+    /**
+     * Returns GMT time-zone.
+     * @return GMT time-zone.
+     */
+    public static TimeZone getTimeZoneGmt() {
+        return TimeZone.getTimeZone("GMT");
+    }
+
+    // Allow default Java behavior of TimeZone#getTimeZone(String)
+    private static final boolean SKIP_TIME_ZONE_VALIDATION =
+        SystemProperties.getBooleanProperty(TimeUtil.class, "skipTimeZoneValidation", false);
+
+    /**
+     * Gets the {@code TimeZone} for the given ID similar same as {@link TimeZone#getTimeZone(String)} but
+     * throwing {@link IllegalArgumentException} if the time-zone cannot be parsed. Also note that shortened
+     * custom IDs are not allowed, e.g. "GMT-8:00" instead of "GMT-08:00" would throw an exception.
+     *
+     * @param tz the ID for a <code>TimeZone</code>, either an abbreviation
+     *     such as "PST", a full name such as "America/Los_Angeles", or a custom ID such as "GMT-08:00".
+     *     Note that the support of abbreviations is for compatibility only and full names should be used.
+     * @return the specified {@code TimeZone}.
+     * @throws IllegalArgumentException if the given ID cannot be understood.
+     */
+    public static TimeZone getTimeZone(String tz) {
+        TimeZone timeZone = TimeZone.getTimeZone(tz);
+        if (!SKIP_TIME_ZONE_VALIDATION && !timeZone.getID().equals(tz))
+            throw new IllegalArgumentException("Unknown time-zone: " + tz);
+        return timeZone;
     }
 }

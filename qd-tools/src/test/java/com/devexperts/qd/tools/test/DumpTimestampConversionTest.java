@@ -30,6 +30,7 @@ import com.devexperts.test.ThreadCleanCheck;
 import com.devexperts.test.isolated.Isolated;
 import com.devexperts.test.isolated.IsolatedRunner;
 import com.devexperts.util.TimeFormat;
+import com.devexperts.util.TimeUtil;
 import com.dxfeed.api.impl.SchemeBuilder;
 import com.dxfeed.api.impl.SchemeProperties;
 import org.junit.After;
@@ -517,7 +518,7 @@ public class DumpTimestampConversionTest {
         ThreadCleanCheck.before();
         deleteFiles();
         savedSchemeProp = System.setProperty(SCHEME_PROP, DumpSchemeProvider.class.getName());
-        TimeFormat.setDefaultTimeZone(TimeZone.getTimeZone("America/New_York"));
+        TimeFormat.setDefaultTimeZone(TimeUtil.getTimeZone("America/New_York"));
         QDFactory.setVersion("QDS-TEST");
     }
 

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,6 +17,7 @@ import com.devexperts.mars.common.MARSEndpoint;
 import com.devexperts.qd.QDLog;
 import com.devexperts.services.ServiceProvider;
 import com.devexperts.util.LogUtil;
+import com.devexperts.util.TimeUtil;
 import com.dxfeed.ipf.InstrumentProfile;
 import com.dxfeed.ipf.InstrumentProfileField;
 import com.dxfeed.ipf.InstrumentProfileReader;
@@ -48,7 +49,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TimeZone;
 import java.util.TreeSet;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -242,7 +242,7 @@ public class Instruments extends AbstractTool {
             if (bizdate.isSet()) {
                 try {
                     DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-                    df.setTimeZone(TimeZone.getTimeZone("GMT"));
+                    df.setTimeZone(TimeUtil.getTimeZoneGmt());
                     biz = df.parse(bizdate.getValue()).getTime();
                 } catch (ParseException e) {
                     throw new OptionParseException(e.getMessage());

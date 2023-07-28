@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -50,9 +50,9 @@ public class Timing {
 
     // Note: public instances below use US business schedule and US holidays calendar (because of compatibility issues)
     public static final Timing LOCAL = new Timing(TimeZone.getDefault());
-    public static final Timing GMT = new Timing(TimeZone.getTimeZone("GMT"));
-    public static final Timing EST = new Timing(TimeZone.getTimeZone("America/New_York"));
-    public static final Timing CST = new Timing(TimeZone.getTimeZone("America/Chicago"));
+    public static final Timing GMT = new Timing(TimeUtil.getTimeZoneGmt());
+    public static final Timing EST = new Timing(TimeUtil.getTimeZone("America/New_York"));
+    public static final Timing CST = new Timing(TimeUtil.getTimeZone("America/Chicago"));
 
     /**
      * The <code>Day</code> record holds all required data for a given day.
