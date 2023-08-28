@@ -77,11 +77,11 @@
         <record name="Quote" regionals="true">
             <field name="Sequence" type="sequence" disabled="true"/>
             <field name="TimeNanoPart" type="time_nano_part" disabled="true"/>
-            <field name="BidTime" type="time"><alias name="Bid.Time"/></field>
+            <field name="BidTime" type="bid_ask_time"><alias name="Bid.Time"/></field>
             <field name="BidExchangeCode" type="exchange" compositeOnly="true"><alias name="Bid.Exchange"/></field>
             <field name="BidPrice" type="price"><alias name="Bid.Price"/></field>
             <field name="BidSize" type="size"><alias name="Bid.Size"/></field>
-            <field name="AskTime" type="time"><alias name="Ask.Time"/></field>
+            <field name="AskTime" type="bid_ask_time"><alias name="Ask.Time"/></field>
             <field name="AskExchangeCode" type="exchange" compositeOnly="true"><alias name="Ask.Exchange"/></field>
             <field name="AskPrice" type="price"><alias name="Ask.Price"/></field>
             <field name="AskSize" type="size"><alias name="Ask.Size"/></field>
@@ -330,11 +330,11 @@
             <index field0="MMExchange" field1="MMID"/>
             <field name="MMExchange" type="char"/>
             <field name="MMID" type="short_string"/>
-            <field name="MMBidTime" type="time"><alias name="MMBid.Time"/></field>
+            <field name="MMBidTime" type="bid_ask_time"><alias name="MMBid.Time"/></field>
             <field name="MMBidPrice" type="price"><alias name="MMBid.Price"/></field>
             <field name="MMBidSize" type="size"><alias name="MMBid.Size"/></field>
             <field name="MMBidCount" type="count"><alias name="MMBid.Count"/></field>
-            <field name="MMAskTime" type="time"><alias name="MMAsk.Time"/></field>
+            <field name="MMAskTime" type="bid_ask_time"><alias name="MMAsk.Time"/></field>
             <field name="MMAskPrice" type="price"><alias name="MMAsk.Price"/></field>
             <field name="MMAskSize" type="size"><alias name="MMAsk.Size"/></field>
             <field name="MMAskCount" type="count"><alias name="MMAsk.Count"/></field>

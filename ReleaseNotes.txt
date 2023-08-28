@@ -1,3 +1,12 @@
+QDS 3.323:
+
+* [QD-1459] Incorrect QD version in jar manifests
+* [QD-1446] Extend bid ask timestamps to millisecond resolution for Quote and MM records
+  - new system property 'dxscheme.bat' has been added. It controls precision of BidTime & AskTime fields of Quote record
+    and MMBidTime & MMAskTime fields of MarketMaker record. Accepted values: 'seconds' (default) and 'millis'.
+* [QD-1457] Field type configuration properties don't work with DXScheme loader
+* [QD-1452] [Schedule] Add new markets for EU exchanges
+
 QDS 3.322:
 
 * [QD-1453] [dxfeed-api] Fix 'BondUS()' trading hours

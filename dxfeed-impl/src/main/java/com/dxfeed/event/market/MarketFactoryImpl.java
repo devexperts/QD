@@ -50,31 +50,31 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
     public void buildScheme(SchemeBuilder builder) {
         builder.addOptionalField("Quote", "Sequence", SerialFieldType.SEQUENCE, "Quote", "Sequence", false);
         builder.addOptionalField("Quote", "TimeNanoPart", SerialFieldType.COMPACT_INT, "Quote", "TimeNanoPart", false);
-        builder.addOptionalField("Quote", "Bid.Time", SerialFieldType.TIME_SECONDS, "Quote", "BidTime", true);
+        builder.addOptionalField("Quote", "Bid.Time", selectTime(SerialFieldType.TIME_SECONDS, "dxscheme.bat"), "Quote", "BidTime", true);
         builder.addOptionalField("Quote", "Bid.Exchange", SerialFieldType.UTF_CHAR, "Quote", "BidExchangeCode", true);
-        builder.addRequiredField("Quote", "Bid.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("Quote", "Bid.Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-        builder.addOptionalField("Quote", "Ask.Time", SerialFieldType.TIME_SECONDS, "Quote", "AskTime", true);
+        builder.addRequiredField("Quote", "Bid.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("Quote", "Bid.Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+        builder.addOptionalField("Quote", "Ask.Time", selectTime(SerialFieldType.TIME_SECONDS, "dxscheme.bat"), "Quote", "AskTime", true);
         builder.addOptionalField("Quote", "Ask.Exchange", SerialFieldType.UTF_CHAR, "Quote", "AskExchangeCode", true);
-        builder.addRequiredField("Quote", "Ask.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("Quote", "Ask.Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+        builder.addRequiredField("Quote", "Ask.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("Quote", "Ask.Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
         for (char exchange : getExchanges("com.dxfeed.event.market.impl.Quote.exchanges")) {
             String recordName = "Quote&" + exchange;
             builder.addOptionalField(recordName, "Sequence", SerialFieldType.SEQUENCE, "Quote", "Sequence", false);
             builder.addOptionalField(recordName, "TimeNanoPart", SerialFieldType.COMPACT_INT, "Quote", "TimeNanoPart", false);
-            builder.addOptionalField(recordName, "Bid.Time", SerialFieldType.TIME_SECONDS, "Quote", "BidTime", true);
-            builder.addRequiredField(recordName, "Bid.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Bid.Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-            builder.addOptionalField(recordName, "Ask.Time", SerialFieldType.TIME_SECONDS, "Quote", "AskTime", true);
-            builder.addRequiredField(recordName, "Ask.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Ask.Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addOptionalField(recordName, "Bid.Time", selectTime(SerialFieldType.TIME_SECONDS, "dxscheme.bat"), "Quote", "BidTime", true);
+            builder.addRequiredField(recordName, "Bid.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Bid.Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addOptionalField(recordName, "Ask.Time", selectTime(SerialFieldType.TIME_SECONDS, "dxscheme.bat"), "Quote", "AskTime", true);
+            builder.addRequiredField(recordName, "Ask.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Ask.Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
         }
 
         if (SystemProperties.getBooleanProperty("reuters.phantom", false)) {
-            builder.addRequiredField("Quote2", "Bid.Price", select(SerialFieldType.DECIMAL));
-            builder.addRequiredField("Quote2", "Bid.Size", select(SerialFieldType.DECIMAL));
-            builder.addRequiredField("Quote2", "Ask.Price", select(SerialFieldType.DECIMAL));
-            builder.addRequiredField("Quote2", "Ask.Size", select(SerialFieldType.DECIMAL));
+            builder.addRequiredField("Quote2", "Bid.Price", selectDecimal(SerialFieldType.DECIMAL));
+            builder.addRequiredField("Quote2", "Bid.Size", selectDecimal(SerialFieldType.DECIMAL));
+            builder.addRequiredField("Quote2", "Ask.Price", selectDecimal(SerialFieldType.DECIMAL));
+            builder.addRequiredField("Quote2", "Ask.Size", selectDecimal(SerialFieldType.DECIMAL));
             builder.addRequiredField("Quote2", "Bid.Price.Timestamp", SerialFieldType.TIME_SECONDS);
             builder.addRequiredField("Quote2", "Bid.Size.Timestamp", SerialFieldType.TIME_SECONDS);
             builder.addRequiredField("Quote2", "Ask.Price.Timestamp", SerialFieldType.TIME_SECONDS);
@@ -85,13 +85,13 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         builder.addOptionalField("Trade", "Last.Sequence", SerialFieldType.SEQUENCE, "Trade", "Sequence", true);
         builder.addOptionalField("Trade", "Last.TimeNanoPart", SerialFieldType.COMPACT_INT, "Trade", "TimeNanoPart", false);
         builder.addOptionalField("Trade", "Last.Exchange", SerialFieldType.UTF_CHAR, "Trade", "ExchangeCode", true);
-        builder.addRequiredField("Trade", "Last.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("Trade", "Last.Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+        builder.addRequiredField("Trade", "Last.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("Trade", "Last.Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
         builder.addOptionalField("Trade", "Last.Tick", SerialFieldType.COMPACT_INT, "Trade", "Tick", true);
-        builder.addOptionalField("Trade", "Last.Change", select(SerialFieldType.DECIMAL, "dxscheme.price"), "Trade", "Change", true);
+        builder.addOptionalField("Trade", "Last.Change", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "Trade", "Change", true);
         builder.addOptionalField("Trade", "DayId", SerialFieldType.DATE, "Trade", "DayId", true);
-        builder.addOptionalField("Trade", "Volume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Trade", "DayVolume", true);
-        builder.addOptionalField("Trade", "DayTurnover", select(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "Trade", "DayTurnover", true);
+        builder.addOptionalField("Trade", "Volume", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Trade", "DayVolume", true);
+        builder.addOptionalField("Trade", "DayTurnover", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "Trade", "DayTurnover", true);
         builder.addOptionalField("Trade", "Last.Flags", SerialFieldType.COMPACT_INT, "Trade", "Flags", true);
         builder.addOptionalField("Trade", "Date", SerialFieldType.COMPACT_INT, "Trade", "Date", SystemProperties.getBooleanProperty("reuters.phantom", false));
         builder.addOptionalField("Trade", "Operation", SerialFieldType.COMPACT_INT, "Trade", "Operation", SystemProperties.getBooleanProperty("reuters.phantom", false));
@@ -100,13 +100,13 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             builder.addOptionalField(recordName, "Last.Time", SerialFieldType.TIME_SECONDS, "Trade", "Time", true);
             builder.addOptionalField(recordName, "Last.Sequence", SerialFieldType.SEQUENCE, "Trade", "Sequence", true);
             builder.addOptionalField(recordName, "Last.TimeNanoPart", SerialFieldType.COMPACT_INT, "Trade", "TimeNanoPart", false);
-            builder.addRequiredField(recordName, "Last.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Last.Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addRequiredField(recordName, "Last.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Last.Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
             builder.addOptionalField(recordName, "Last.Tick", SerialFieldType.COMPACT_INT, "Trade", "Tick", true);
-            builder.addOptionalField(recordName, "Last.Change", select(SerialFieldType.DECIMAL, "dxscheme.price"), "Trade", "Change", true);
+            builder.addOptionalField(recordName, "Last.Change", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "Trade", "Change", true);
             builder.addOptionalField(recordName, "DayId", SerialFieldType.DATE, "Trade", "DayId", true);
-            builder.addOptionalField(recordName, "Volume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Trade", "DayVolume", true);
-            builder.addOptionalField(recordName, "DayTurnover", select(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "Trade", "DayTurnover", true);
+            builder.addOptionalField(recordName, "Volume", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Trade", "DayVolume", true);
+            builder.addOptionalField(recordName, "DayTurnover", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "Trade", "DayTurnover", true);
             builder.addOptionalField(recordName, "Last.Flags", SerialFieldType.COMPACT_INT, "Trade", "Flags", true);
         }
 
@@ -114,61 +114,61 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         builder.addOptionalField("TradeETH", "ETHLast.Sequence", SerialFieldType.SEQUENCE, "TradeETH", "Sequence", true);
         builder.addOptionalField("TradeETH", "Last.TimeNanoPart", SerialFieldType.COMPACT_INT, "TradeETH", "TimeNanoPart", false);
         builder.addOptionalField("TradeETH", "ETHLast.Exchange", SerialFieldType.UTF_CHAR, "TradeETH", "ExchangeCode", true);
-        builder.addRequiredField("TradeETH", "ETHLast.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("TradeETH", "ETHLast.Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-        builder.addOptionalField("TradeETH", "ETHLast.Change", select(SerialFieldType.DECIMAL, "dxscheme.price"), "TradeETH", "Change", true);
+        builder.addRequiredField("TradeETH", "ETHLast.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("TradeETH", "ETHLast.Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+        builder.addOptionalField("TradeETH", "ETHLast.Change", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "TradeETH", "Change", true);
         builder.addOptionalField("TradeETH", "DayId", SerialFieldType.DATE, "TradeETH", "DayId", true);
-        builder.addOptionalField("TradeETH", "ETHVolume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "TradeETH", "DayVolume", true);
-        builder.addOptionalField("TradeETH", "ETHDayTurnover", select(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "TradeETH", "DayTurnover", true);
+        builder.addOptionalField("TradeETH", "ETHVolume", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "TradeETH", "DayVolume", true);
+        builder.addOptionalField("TradeETH", "ETHDayTurnover", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "TradeETH", "DayTurnover", true);
         builder.addRequiredField("TradeETH", "ETHLast.Flags", SerialFieldType.COMPACT_INT);
         for (char exchange : getExchanges("com.dxfeed.event.market.impl.TradeETH.exchanges")) {
             String recordName = "TradeETH&" + exchange;
             builder.addOptionalField(recordName, "ETHLast.Time", SerialFieldType.TIME_SECONDS, "TradeETH", "Time", true);
             builder.addOptionalField(recordName, "ETHLast.Sequence", SerialFieldType.SEQUENCE, "TradeETH", "Sequence", true);
             builder.addOptionalField(recordName, "Last.TimeNanoPart", SerialFieldType.COMPACT_INT, "TradeETH", "TimeNanoPart", false);
-            builder.addRequiredField(recordName, "ETHLast.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "ETHLast.Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-            builder.addOptionalField(recordName, "ETHLast.Change", select(SerialFieldType.DECIMAL, "dxscheme.price"), "TradeETH", "Change", true);
+            builder.addRequiredField(recordName, "ETHLast.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "ETHLast.Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addOptionalField(recordName, "ETHLast.Change", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "TradeETH", "Change", true);
             builder.addOptionalField(recordName, "DayId", SerialFieldType.DATE, "TradeETH", "DayId", true);
-            builder.addOptionalField(recordName, "ETHVolume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "TradeETH", "DayVolume", true);
-            builder.addOptionalField(recordName, "ETHDayTurnover", select(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "TradeETH", "DayTurnover", true);
+            builder.addOptionalField(recordName, "ETHVolume", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "TradeETH", "DayVolume", true);
+            builder.addOptionalField(recordName, "ETHDayTurnover", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "TradeETH", "DayTurnover", true);
             builder.addRequiredField(recordName, "ETHLast.Flags", SerialFieldType.COMPACT_INT);
         }
 
         builder.addRequiredField("Summary", "DayId", SerialFieldType.DATE);
-        builder.addRequiredField("Summary", "DayOpen.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("Summary", "DayHigh.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("Summary", "DayLow.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addOptionalField("Summary", "DayClose.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"), "Summary", "DayClosePrice", true);
+        builder.addRequiredField("Summary", "DayOpen.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("Summary", "DayHigh.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("Summary", "DayLow.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addOptionalField("Summary", "DayClose.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "Summary", "DayClosePrice", true);
         builder.addRequiredField("Summary", "PrevDayId", SerialFieldType.DATE);
-        builder.addRequiredField("Summary", "PrevDayClose.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addOptionalField("Summary", "PrevDayVolume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Summary", "PrevDayVolume", true);
-        builder.addOptionalField("Summary", "OpenInterest", select(SerialFieldType.COMPACT_INT), "Summary", "OpenInterest", true);
+        builder.addRequiredField("Summary", "PrevDayClose.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addOptionalField("Summary", "PrevDayVolume", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Summary", "PrevDayVolume", true);
+        builder.addOptionalField("Summary", "OpenInterest", selectDecimal(SerialFieldType.COMPACT_INT), "Summary", "OpenInterest", true);
         builder.addOptionalField("Summary", "Flags", SerialFieldType.COMPACT_INT, "Summary", "Flags", true);
         for (char exchange : getExchanges("com.dxfeed.event.market.impl.Summary.exchanges")) {
             String recordName = "Summary&" + exchange;
             builder.addRequiredField(recordName, "DayId", SerialFieldType.DATE);
-            builder.addRequiredField(recordName, "DayOpen.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "DayHigh.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "DayLow.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addOptionalField(recordName, "DayClose.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"), "Summary", "DayClosePrice", true);
+            builder.addRequiredField(recordName, "DayOpen.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "DayHigh.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "DayLow.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addOptionalField(recordName, "DayClose.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "Summary", "DayClosePrice", true);
             builder.addRequiredField(recordName, "PrevDayId", SerialFieldType.DATE);
-            builder.addRequiredField(recordName, "PrevDayClose.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addOptionalField(recordName, "PrevDayVolume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Summary", "PrevDayVolume", true);
+            builder.addRequiredField(recordName, "PrevDayClose.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addOptionalField(recordName, "PrevDayVolume", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Summary", "PrevDayVolume", true);
             builder.addOptionalField(recordName, "Flags", SerialFieldType.COMPACT_INT, "Summary", "Flags", true);
         }
 
-        builder.addRequiredField("Fundamental", "Open.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("Fundamental", "High.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("Fundamental", "Low.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("Fundamental", "Close.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addOptionalField("Fundamental", "OpenInterest", select(SerialFieldType.COMPACT_INT), "Summary", "OpenInterest", true);
+        builder.addRequiredField("Fundamental", "Open.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("Fundamental", "High.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("Fundamental", "Low.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("Fundamental", "Close.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addOptionalField("Fundamental", "OpenInterest", selectDecimal(SerialFieldType.COMPACT_INT), "Summary", "OpenInterest", true);
         for (char exchange : getExchanges("com.dxfeed.event.market.impl.Fundamental.exchanges")) {
             String recordName = "Fundamental&" + exchange;
-            builder.addRequiredField(recordName, "Open.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "High.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Low.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Close.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Open.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "High.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Low.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Close.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
         }
 
         for (char exchange : SystemProperties.getProperty("com.dxfeed.event.market.impl.Book.exchanges", "I").toCharArray()) {
@@ -177,23 +177,23 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             builder.addRequiredField(recordName, "Sequence", SerialFieldType.VOID, SchemeFieldTime.SECOND_TIME_INT_FIELD);
             builder.addRequiredField(recordName, "Time", SerialFieldType.TIME_SECONDS);
             builder.addRequiredField(recordName, "Type", SerialFieldType.UTF_CHAR);
-            builder.addRequiredField(recordName, "Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addRequiredField(recordName, "Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
             builder.addRequiredField(recordName, "TimeInForce", SerialFieldType.UTF_CHAR);
             builder.addRequiredField(recordName, "Symbol", SerialFieldType.UTF_CHAR_ARRAY);
         }
 
-        builder.addOptionalField("Profile", "Beta", select(SerialFieldType.DECIMAL), "Profile", "Beta", true);
-        builder.addOptionalField("Profile", "Eps", select(SerialFieldType.DECIMAL), "Profile", "Eps", true);
-        builder.addOptionalField("Profile", "DivFreq", select(SerialFieldType.COMPACT_INT), "Profile", "DivFreq", true);
-        builder.addOptionalField("Profile", "ExdDiv.Amount", select(SerialFieldType.DECIMAL), "Profile", "ExdDivAmount", true);
+        builder.addOptionalField("Profile", "Beta", selectDecimal(SerialFieldType.DECIMAL), "Profile", "Beta", true);
+        builder.addOptionalField("Profile", "Eps", selectDecimal(SerialFieldType.DECIMAL), "Profile", "Eps", true);
+        builder.addOptionalField("Profile", "DivFreq", selectDecimal(SerialFieldType.COMPACT_INT), "Profile", "DivFreq", true);
+        builder.addOptionalField("Profile", "ExdDiv.Amount", selectDecimal(SerialFieldType.DECIMAL), "Profile", "ExdDivAmount", true);
         builder.addOptionalField("Profile", "ExdDiv.Date", SerialFieldType.DATE, "Profile", "ExdDivDate", true);
-        builder.addOptionalField("Profile", "52High.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"), "Profile", "HighPrice52", true);
-        builder.addOptionalField("Profile", "52Low.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"), "Profile", "LowPrice52", true);
-        builder.addOptionalField("Profile", "Shares", select(SerialFieldType.DECIMAL, "dxscheme.shares"), "Profile", "Shares", true);
-        builder.addOptionalField("Profile", "FreeFloat", select(SerialFieldType.DECIMAL, "dxscheme.shares"), "Profile", "FreeFloat", true);
-        builder.addOptionalField("Profile", "HighLimitPrice", select(SerialFieldType.DECIMAL, "dxscheme.price"), "Profile", "HighLimitPrice", true);
-        builder.addOptionalField("Profile", "LowLimitPrice", select(SerialFieldType.DECIMAL, "dxscheme.price"), "Profile", "LowLimitPrice", true);
+        builder.addOptionalField("Profile", "52High.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "Profile", "HighPrice52", true);
+        builder.addOptionalField("Profile", "52Low.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "Profile", "LowPrice52", true);
+        builder.addOptionalField("Profile", "Shares", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.shares"), "Profile", "Shares", true);
+        builder.addOptionalField("Profile", "FreeFloat", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.shares"), "Profile", "FreeFloat", true);
+        builder.addOptionalField("Profile", "HighLimitPrice", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "Profile", "HighLimitPrice", true);
+        builder.addOptionalField("Profile", "LowLimitPrice", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "Profile", "LowLimitPrice", true);
         builder.addOptionalField("Profile", "Halt.StartTime", SerialFieldType.TIME_SECONDS, "Profile", "HaltStartTime", true);
         builder.addOptionalField("Profile", "Halt.EndTime", SerialFieldType.TIME_SECONDS, "Profile", "HaltEndTime", true);
         builder.addOptionalField("Profile", "Flags", SerialFieldType.COMPACT_INT, "Profile", "Flags", true);
@@ -210,18 +210,18 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             builder.addOptionalField(recordName, "ActionTime", SerialFieldType.TIME_MILLIS, "Order", "ActionTime", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
             builder.addOptionalField(recordName, "OrderId", SerialFieldType.LONG, "Order", "OrderId", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
             builder.addOptionalField(recordName, "AuxOrderId", SerialFieldType.LONG, "Order", "AuxOrderId", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
-            builder.addRequiredField(recordName, "Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-            builder.addOptionalField(recordName, "ExecutedSize", select(SerialFieldType.DECIMAL), "Order", "ExecutedSize", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
-            builder.addOptionalField(recordName, "Count", select(SerialFieldType.COMPACT_INT), "Order", "Count", suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.Order.suffixes.count", "")));
+            builder.addRequiredField(recordName, "Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addOptionalField(recordName, "ExecutedSize", selectDecimal(SerialFieldType.DECIMAL), "Order", "ExecutedSize", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
+            builder.addOptionalField(recordName, "Count", selectDecimal(SerialFieldType.COMPACT_INT), "Order", "Count", suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.Order.suffixes.count", "")));
             builder.addRequiredField(recordName, "Flags", SerialFieldType.COMPACT_INT);
             builder.addOptionalField(recordName, "TradeId", SerialFieldType.LONG, "Order", "TradeId", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
-            builder.addOptionalField(recordName, "TradePrice", select(SerialFieldType.DECIMAL), "Order", "TradePrice", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
-            builder.addOptionalField(recordName, "TradeSize", select(SerialFieldType.DECIMAL), "Order", "TradeSize", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
+            builder.addOptionalField(recordName, "TradePrice", selectDecimal(SerialFieldType.DECIMAL), "Order", "TradePrice", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
+            builder.addOptionalField(recordName, "TradeSize", selectDecimal(SerialFieldType.DECIMAL), "Order", "TradeSize", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
             builder.addOptionalField(recordName, "MMID", SerialFieldType.SHORT_STRING, "Order", "MarketMaker", suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.Order.suffixes.mmid", "|#NTV|#BATE|#CHIX|#CEUX|#BXTR|#pink")));
-            builder.addOptionalField(recordName, "IcebergPeakSize", select(SerialFieldType.DECIMAL), "Order", "IcebergPeakSize", false);
-            builder.addOptionalField(recordName, "IcebergHiddenSize", select(SerialFieldType.DECIMAL), "Order", "IcebergHiddenSize", false);
-            builder.addOptionalField(recordName, "IcebergExecutedSize", select(SerialFieldType.DECIMAL), "Order", "IcebergExecutedSize", false);
+            builder.addOptionalField(recordName, "IcebergPeakSize", selectDecimal(SerialFieldType.DECIMAL), "Order", "IcebergPeakSize", false);
+            builder.addOptionalField(recordName, "IcebergHiddenSize", selectDecimal(SerialFieldType.DECIMAL), "Order", "IcebergHiddenSize", false);
+            builder.addOptionalField(recordName, "IcebergExecutedSize", selectDecimal(SerialFieldType.DECIMAL), "Order", "IcebergExecutedSize", false);
             builder.addOptionalField(recordName, "IcebergFlags", SerialFieldType.COMPACT_INT, "Order", "IcebergFlags", false);
         }
 
@@ -235,18 +235,18 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             builder.addOptionalField(recordName, "ActionTime", SerialFieldType.TIME_MILLIS, "AnalyticOrder", "ActionTime", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
             builder.addOptionalField(recordName, "OrderId", SerialFieldType.LONG, "AnalyticOrder", "OrderId", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
             builder.addOptionalField(recordName, "AuxOrderId", SerialFieldType.LONG, "AnalyticOrder", "AuxOrderId", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
-            builder.addRequiredField(recordName, "Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-            builder.addOptionalField(recordName, "ExecutedSize", select(SerialFieldType.DECIMAL), "AnalyticOrder", "ExecutedSize", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
-            builder.addOptionalField(recordName, "Count", select(SerialFieldType.COMPACT_INT), "AnalyticOrder", "Count", suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.AnalyticOrder.suffixes.count", "")));
+            builder.addRequiredField(recordName, "Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addOptionalField(recordName, "ExecutedSize", selectDecimal(SerialFieldType.DECIMAL), "AnalyticOrder", "ExecutedSize", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
+            builder.addOptionalField(recordName, "Count", selectDecimal(SerialFieldType.COMPACT_INT), "AnalyticOrder", "Count", suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.AnalyticOrder.suffixes.count", "")));
             builder.addRequiredField(recordName, "Flags", SerialFieldType.COMPACT_INT);
             builder.addOptionalField(recordName, "TradeId", SerialFieldType.LONG, "AnalyticOrder", "TradeId", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
-            builder.addOptionalField(recordName, "TradePrice", select(SerialFieldType.DECIMAL), "AnalyticOrder", "TradePrice", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
-            builder.addOptionalField(recordName, "TradeSize", select(SerialFieldType.DECIMAL), "AnalyticOrder", "TradeSize", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
+            builder.addOptionalField(recordName, "TradePrice", selectDecimal(SerialFieldType.DECIMAL), "AnalyticOrder", "TradePrice", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
+            builder.addOptionalField(recordName, "TradeSize", selectDecimal(SerialFieldType.DECIMAL), "AnalyticOrder", "TradeSize", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
             builder.addOptionalField(recordName, "MMID", SerialFieldType.SHORT_STRING, "AnalyticOrder", "MarketMaker", suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.AnalyticOrder.suffixes.mmid", "|#NTV|#BATE|#CHIX|#CEUX|#BXTR")));
-            builder.addOptionalField(recordName, "IcebergPeakSize", select(SerialFieldType.DECIMAL), "AnalyticOrder", "IcebergPeakSize", false);
-            builder.addOptionalField(recordName, "IcebergHiddenSize", select(SerialFieldType.DECIMAL), "AnalyticOrder", "IcebergHiddenSize", false);
-            builder.addOptionalField(recordName, "IcebergExecutedSize", select(SerialFieldType.DECIMAL), "AnalyticOrder", "IcebergExecutedSize", false);
+            builder.addOptionalField(recordName, "IcebergPeakSize", selectDecimal(SerialFieldType.DECIMAL), "AnalyticOrder", "IcebergPeakSize", false);
+            builder.addOptionalField(recordName, "IcebergHiddenSize", selectDecimal(SerialFieldType.DECIMAL), "AnalyticOrder", "IcebergHiddenSize", false);
+            builder.addOptionalField(recordName, "IcebergExecutedSize", selectDecimal(SerialFieldType.DECIMAL), "AnalyticOrder", "IcebergExecutedSize", false);
             builder.addOptionalField(recordName, "IcebergFlags", SerialFieldType.COMPACT_INT, "AnalyticOrder", "IcebergFlags", false);
         }
 
@@ -260,14 +260,14 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             builder.addOptionalField(recordName, "ActionTime", SerialFieldType.TIME_MILLIS, "OtcMarketsOrder", "ActionTime", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
             builder.addOptionalField(recordName, "OrderId", SerialFieldType.LONG, "OtcMarketsOrder", "OrderId", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
             builder.addOptionalField(recordName, "AuxOrderId", SerialFieldType.LONG, "OtcMarketsOrder", "AuxOrderId", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
-            builder.addRequiredField(recordName, "Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-            builder.addOptionalField(recordName, "ExecutedSize", select(SerialFieldType.DECIMAL), "OtcMarketsOrder", "ExecutedSize", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
-            builder.addOptionalField(recordName, "Count", select(SerialFieldType.COMPACT_INT), "OtcMarketsOrder", "Count", suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.OtcMarketsOrder.suffixes.count", "")));
+            builder.addRequiredField(recordName, "Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addOptionalField(recordName, "ExecutedSize", selectDecimal(SerialFieldType.DECIMAL), "OtcMarketsOrder", "ExecutedSize", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
+            builder.addOptionalField(recordName, "Count", selectDecimal(SerialFieldType.COMPACT_INT), "OtcMarketsOrder", "Count", suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.OtcMarketsOrder.suffixes.count", "")));
             builder.addRequiredField(recordName, "Flags", SerialFieldType.COMPACT_INT);
             builder.addOptionalField(recordName, "TradeId", SerialFieldType.LONG, "OtcMarketsOrder", "TradeId", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
-            builder.addOptionalField(recordName, "TradePrice", select(SerialFieldType.DECIMAL), "OtcMarketsOrder", "TradePrice", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
-            builder.addOptionalField(recordName, "TradeSize", select(SerialFieldType.DECIMAL), "OtcMarketsOrder", "TradeSize", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
+            builder.addOptionalField(recordName, "TradePrice", selectDecimal(SerialFieldType.DECIMAL), "OtcMarketsOrder", "TradePrice", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
+            builder.addOptionalField(recordName, "TradeSize", selectDecimal(SerialFieldType.DECIMAL), "OtcMarketsOrder", "TradeSize", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
             builder.addOptionalField(recordName, "MMID", SerialFieldType.SHORT_STRING, "OtcMarketsOrder", "MarketMaker", suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.OtcMarketsOrder.suffixes.mmid", "|#pink")));
             builder.addRequiredField(recordName, "QuoteAccessPayment", SerialFieldType.COMPACT_INT);
             builder.addRequiredField(recordName, "OtcMarketsFlags", SerialFieldType.COMPACT_INT);
@@ -283,36 +283,36 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             builder.addOptionalField(recordName, "ActionTime", SerialFieldType.TIME_MILLIS, "SpreadOrder", "ActionTime", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
             builder.addOptionalField(recordName, "OrderId", SerialFieldType.LONG, "SpreadOrder", "OrderId", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
             builder.addOptionalField(recordName, "AuxOrderId", SerialFieldType.LONG, "SpreadOrder", "AuxOrderId", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
-            builder.addRequiredField(recordName, "Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-            builder.addOptionalField(recordName, "ExecutedSize", select(SerialFieldType.DECIMAL), "SpreadOrder", "ExecutedSize", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
-            builder.addOptionalField(recordName, "Count", select(SerialFieldType.COMPACT_INT), "SpreadOrder", "Count", suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.SpreadOrder.suffixes.count", "")));
+            builder.addRequiredField(recordName, "Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addOptionalField(recordName, "ExecutedSize", selectDecimal(SerialFieldType.DECIMAL), "SpreadOrder", "ExecutedSize", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
+            builder.addOptionalField(recordName, "Count", selectDecimal(SerialFieldType.COMPACT_INT), "SpreadOrder", "Count", suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.SpreadOrder.suffixes.count", "")));
             builder.addRequiredField(recordName, "Flags", SerialFieldType.COMPACT_INT);
             builder.addOptionalField(recordName, "TradeId", SerialFieldType.LONG, "SpreadOrder", "TradeId", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
-            builder.addOptionalField(recordName, "TradePrice", select(SerialFieldType.DECIMAL), "SpreadOrder", "TradePrice", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
-            builder.addOptionalField(recordName, "TradeSize", select(SerialFieldType.DECIMAL), "SpreadOrder", "TradeSize", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
+            builder.addOptionalField(recordName, "TradePrice", selectDecimal(SerialFieldType.DECIMAL), "SpreadOrder", "TradePrice", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
+            builder.addOptionalField(recordName, "TradeSize", selectDecimal(SerialFieldType.DECIMAL), "SpreadOrder", "TradeSize", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV")));
             builder.addRequiredField(recordName, "SpreadSymbol", SerialFieldType.UTF_CHAR_ARRAY);
         }
 
         builder.addRequiredField("MarketMaker", "MMExchange", SerialFieldType.UTF_CHAR, SchemeFieldTime.FIRST_TIME_INT_FIELD);
         builder.addRequiredField("MarketMaker", "MMID", SerialFieldType.SHORT_STRING, SchemeFieldTime.SECOND_TIME_INT_FIELD);
-        builder.addOptionalField("MarketMaker", "MMBid.Time", SerialFieldType.TIME_SECONDS, "Order", "BidTime", true);
-        builder.addRequiredField("MarketMaker", "MMBid.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("MarketMaker", "MMBid.Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-        builder.addOptionalField("MarketMaker", "MMBid.Count", select(SerialFieldType.COMPACT_INT), "Order", "BidCount", true);
-        builder.addOptionalField("MarketMaker", "MMAsk.Time", SerialFieldType.TIME_SECONDS, "Order", "AskTime", true);
-        builder.addRequiredField("MarketMaker", "MMAsk.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("MarketMaker", "MMAsk.Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-        builder.addOptionalField("MarketMaker", "MMAsk.Count", select(SerialFieldType.COMPACT_INT), "Order", "AskCount", true);
+        builder.addOptionalField("MarketMaker", "MMBid.Time", selectTime(SerialFieldType.TIME_SECONDS, "dxscheme.bat"), "Order", "BidTime", true);
+        builder.addRequiredField("MarketMaker", "MMBid.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("MarketMaker", "MMBid.Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+        builder.addOptionalField("MarketMaker", "MMBid.Count", selectDecimal(SerialFieldType.COMPACT_INT), "Order", "BidCount", true);
+        builder.addOptionalField("MarketMaker", "MMAsk.Time", selectTime(SerialFieldType.TIME_SECONDS, "dxscheme.bat"), "Order", "AskTime", true);
+        builder.addRequiredField("MarketMaker", "MMAsk.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("MarketMaker", "MMAsk.Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+        builder.addOptionalField("MarketMaker", "MMAsk.Count", selectDecimal(SerialFieldType.COMPACT_INT), "Order", "AskCount", true);
 
         builder.addRequiredField("TimeAndSale", "Time", SerialFieldType.TIME_SECONDS, SchemeFieldTime.FIRST_TIME_INT_FIELD);
         builder.addRequiredField("TimeAndSale", "Sequence", SerialFieldType.SEQUENCE, SchemeFieldTime.SECOND_TIME_INT_FIELD);
         builder.addOptionalField("TimeAndSale", "TimeNanoPart", SerialFieldType.COMPACT_INT, "TimeAndSale", "TimeNanoPart", false);
         builder.addRequiredField("TimeAndSale", "Exchange", SerialFieldType.UTF_CHAR);
-        builder.addRequiredField("TimeAndSale", "Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("TimeAndSale", "Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-        builder.addRequiredField("TimeAndSale", "Bid.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("TimeAndSale", "Ask.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("TimeAndSale", "Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("TimeAndSale", "Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+        builder.addRequiredField("TimeAndSale", "Bid.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("TimeAndSale", "Ask.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
         builder.addRequiredField("TimeAndSale", "ExchangeSaleConditions", SerialFieldType.SHORT_STRING);
         builder.addRequiredField("TimeAndSale", "Flags", SerialFieldType.COMPACT_INT);
         builder.addOptionalField("TimeAndSale", "Buyer", SerialFieldType.UTF_CHAR_ARRAY, "TimeAndSale", "Buyer", false);
@@ -323,10 +323,10 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             builder.addRequiredField(recordName, "Sequence", SerialFieldType.SEQUENCE, SchemeFieldTime.SECOND_TIME_INT_FIELD);
             builder.addOptionalField(recordName, "TimeNanoPart", SerialFieldType.COMPACT_INT, "TimeAndSale", "TimeNanoPart", false);
             builder.addRequiredField(recordName, "Exchange", SerialFieldType.UTF_CHAR);
-            builder.addRequiredField(recordName, "Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-            builder.addRequiredField(recordName, "Bid.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Ask.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addRequiredField(recordName, "Bid.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Ask.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
             builder.addRequiredField(recordName, "ExchangeSaleConditions", SerialFieldType.SHORT_STRING);
             builder.addRequiredField(recordName, "Flags", SerialFieldType.COMPACT_INT);
             builder.addOptionalField(recordName, "Buyer", SerialFieldType.UTF_CHAR_ARRAY, "TimeAndSale", "Buyer", false);
@@ -339,15 +339,15 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         builder.addRequiredField("OptionSale", "Sequence", SerialFieldType.SEQUENCE);
         builder.addOptionalField("OptionSale", "TimeNanoPart", SerialFieldType.COMPACT_INT, "OptionSale", "TimeNanoPart", false);
         builder.addRequiredField("OptionSale", "ExchangeCode", SerialFieldType.UTF_CHAR);
-        builder.addRequiredField("OptionSale", "Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("OptionSale", "Size", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"));
-        builder.addRequiredField("OptionSale", "BidPrice", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("OptionSale", "AskPrice", select(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("OptionSale", "Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("OptionSale", "Size", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"));
+        builder.addRequiredField("OptionSale", "BidPrice", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("OptionSale", "AskPrice", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
         builder.addRequiredField("OptionSale", "ExchangeSaleConditions", SerialFieldType.SHORT_STRING);
         builder.addRequiredField("OptionSale", "Flags", SerialFieldType.COMPACT_INT);
-        builder.addRequiredField("OptionSale", "UnderlyingPrice", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("OptionSale", "Volatility", select(SerialFieldType.DECIMAL));
-        builder.addRequiredField("OptionSale", "Delta", select(SerialFieldType.DECIMAL));
+        builder.addRequiredField("OptionSale", "UnderlyingPrice", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("OptionSale", "Volatility", selectDecimal(SerialFieldType.DECIMAL));
+        builder.addRequiredField("OptionSale", "Delta", selectDecimal(SerialFieldType.DECIMAL));
         builder.addRequiredField("OptionSale", "OptionSymbol", SerialFieldType.UTF_CHAR_ARRAY);
     }
 

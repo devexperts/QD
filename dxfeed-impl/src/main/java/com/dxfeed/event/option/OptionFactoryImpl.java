@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -38,44 +38,44 @@ public final class OptionFactoryImpl extends EventDelegateFactory implements Rec
     public void buildScheme(SchemeBuilder builder) {
         builder.addOptionalField("Greeks", "Time", SerialFieldType.TIME_SECONDS, "Greeks", "Time", true, SchemeFieldTime.FIRST_TIME_INT_FIELD);
         builder.addOptionalField("Greeks", "Sequence", SerialFieldType.SEQUENCE, "Greeks", "Sequence", true, SchemeFieldTime.SECOND_TIME_INT_FIELD);
-        builder.addRequiredField("Greeks", "Greeks.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("Greeks", "Volatility", select(SerialFieldType.DECIMAL));
-        builder.addRequiredField("Greeks", "Delta", select(SerialFieldType.DECIMAL));
-        builder.addRequiredField("Greeks", "Gamma", select(SerialFieldType.DECIMAL));
-        builder.addRequiredField("Greeks", "Theta", select(SerialFieldType.DECIMAL));
-        builder.addRequiredField("Greeks", "Rho", select(SerialFieldType.DECIMAL));
-        builder.addRequiredField("Greeks", "Vega", select(SerialFieldType.DECIMAL));
+        builder.addRequiredField("Greeks", "Greeks.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("Greeks", "Volatility", selectDecimal(SerialFieldType.DECIMAL));
+        builder.addRequiredField("Greeks", "Delta", selectDecimal(SerialFieldType.DECIMAL));
+        builder.addRequiredField("Greeks", "Gamma", selectDecimal(SerialFieldType.DECIMAL));
+        builder.addRequiredField("Greeks", "Theta", selectDecimal(SerialFieldType.DECIMAL));
+        builder.addRequiredField("Greeks", "Rho", selectDecimal(SerialFieldType.DECIMAL));
+        builder.addRequiredField("Greeks", "Vega", selectDecimal(SerialFieldType.DECIMAL));
 
         builder.addRequiredField("TheoPrice", "Theo.Time", SerialFieldType.TIME_SECONDS, SchemeFieldTime.FIRST_TIME_INT_FIELD);
         builder.addOptionalField("TheoPrice", "Theo.Sequence", SerialFieldType.SEQUENCE, "TheoPrice", "Sequence", true, SchemeFieldTime.SECOND_TIME_INT_FIELD);
-        builder.addRequiredField("TheoPrice", "Theo.Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("TheoPrice", "Theo.UnderlyingPrice", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("TheoPrice", "Theo.Delta", select(SerialFieldType.DECIMAL));
-        builder.addRequiredField("TheoPrice", "Theo.Gamma", select(SerialFieldType.DECIMAL));
-        builder.addOptionalField("TheoPrice", "Theo.Dividend", select(SerialFieldType.DECIMAL), "TheoPrice", "Dividend", true);
-        builder.addOptionalField("TheoPrice", "Theo.Interest", select(SerialFieldType.DECIMAL), "TheoPrice", "Interest", true);
+        builder.addRequiredField("TheoPrice", "Theo.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("TheoPrice", "Theo.UnderlyingPrice", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("TheoPrice", "Theo.Delta", selectDecimal(SerialFieldType.DECIMAL));
+        builder.addRequiredField("TheoPrice", "Theo.Gamma", selectDecimal(SerialFieldType.DECIMAL));
+        builder.addOptionalField("TheoPrice", "Theo.Dividend", selectDecimal(SerialFieldType.DECIMAL), "TheoPrice", "Dividend", true);
+        builder.addOptionalField("TheoPrice", "Theo.Interest", selectDecimal(SerialFieldType.DECIMAL), "TheoPrice", "Interest", true);
 
         builder.addOptionalField("Underlying", "Time", SerialFieldType.TIME_SECONDS, "Underlying", "Time", true, SchemeFieldTime.FIRST_TIME_INT_FIELD);
         builder.addOptionalField("Underlying", "Sequence", SerialFieldType.SEQUENCE, "Underlying", "Sequence", true, SchemeFieldTime.SECOND_TIME_INT_FIELD);
-        builder.addOptionalField("Underlying", "Volatility", select(SerialFieldType.DECIMAL), "Underlying", "Volatility", true);
-        builder.addOptionalField("Underlying", "FrontVolatility", select(SerialFieldType.DECIMAL), "Underlying", "FrontVolatility", true);
-        builder.addOptionalField("Underlying", "BackVolatility", select(SerialFieldType.DECIMAL), "Underlying", "BackVolatility", true);
-        builder.addOptionalField("Underlying", "CallVolume", select(SerialFieldType.DECIMAL), "Underlying", "CallVolume", true);
-        builder.addOptionalField("Underlying", "PutVolume", select(SerialFieldType.DECIMAL), "Underlying", "PutVolume", true);
-        builder.addOptionalField("Underlying", "PutCallRatio", select(SerialFieldType.DECIMAL), "Underlying", "PutCallRatio", true);
+        builder.addOptionalField("Underlying", "Volatility", selectDecimal(SerialFieldType.DECIMAL), "Underlying", "Volatility", true);
+        builder.addOptionalField("Underlying", "FrontVolatility", selectDecimal(SerialFieldType.DECIMAL), "Underlying", "FrontVolatility", true);
+        builder.addOptionalField("Underlying", "BackVolatility", selectDecimal(SerialFieldType.DECIMAL), "Underlying", "BackVolatility", true);
+        builder.addOptionalField("Underlying", "CallVolume", selectDecimal(SerialFieldType.DECIMAL), "Underlying", "CallVolume", true);
+        builder.addOptionalField("Underlying", "PutVolume", selectDecimal(SerialFieldType.DECIMAL), "Underlying", "PutVolume", true);
+        builder.addOptionalField("Underlying", "PutCallRatio", selectDecimal(SerialFieldType.DECIMAL), "Underlying", "PutCallRatio", true);
 
         builder.addOptionalField("Series", "Void", SerialFieldType.VOID, "Series", "Void", true, SchemeFieldTime.FIRST_TIME_INT_FIELD);
         builder.addOptionalField("Series", "Index", SerialFieldType.COMPACT_INT, "Series", "Index", true, SchemeFieldTime.SECOND_TIME_INT_FIELD);
         builder.addOptionalField("Series", "Time", SerialFieldType.TIME_SECONDS, "Series", "Time", true);
         builder.addOptionalField("Series", "Sequence", SerialFieldType.SEQUENCE, "Series", "Sequence", true);
         builder.addRequiredField("Series", "Expiration", SerialFieldType.DATE);
-        builder.addRequiredField("Series", "Volatility", select(SerialFieldType.DECIMAL));
-        builder.addOptionalField("Series", "CallVolume", select(SerialFieldType.DECIMAL), "Series", "CallVolume", true);
-        builder.addOptionalField("Series", "PutVolume", select(SerialFieldType.DECIMAL), "Series", "PutVolume", true);
-        builder.addRequiredField("Series", "PutCallRatio", select(SerialFieldType.DECIMAL));
-        builder.addRequiredField("Series", "ForwardPrice", select(SerialFieldType.DECIMAL));
-        builder.addOptionalField("Series", "Dividend", select(SerialFieldType.DECIMAL), "Series", "Dividend", true);
-        builder.addOptionalField("Series", "Interest", select(SerialFieldType.DECIMAL), "Series", "Interest", true);
+        builder.addRequiredField("Series", "Volatility", selectDecimal(SerialFieldType.DECIMAL));
+        builder.addOptionalField("Series", "CallVolume", selectDecimal(SerialFieldType.DECIMAL), "Series", "CallVolume", true);
+        builder.addOptionalField("Series", "PutVolume", selectDecimal(SerialFieldType.DECIMAL), "Series", "PutVolume", true);
+        builder.addRequiredField("Series", "PutCallRatio", selectDecimal(SerialFieldType.DECIMAL));
+        builder.addRequiredField("Series", "ForwardPrice", selectDecimal(SerialFieldType.DECIMAL));
+        builder.addOptionalField("Series", "Dividend", selectDecimal(SerialFieldType.DECIMAL), "Series", "Dividend", true);
+        builder.addOptionalField("Series", "Interest", selectDecimal(SerialFieldType.DECIMAL), "Series", "Interest", true);
     }
 
     @Override

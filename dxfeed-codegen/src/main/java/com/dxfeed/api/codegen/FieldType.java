@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -42,6 +42,12 @@ enum FieldType {
         .addAccess(Access.createWithAccessPattern("Millis", "long", "0", "getInt(cursor, %s) * 1000L", "setInt(cursor, %s, TimeUtil.getSecondsFromTime(%s))"))
         .addAccess(Access.createWithAccessPattern("Seconds", "int", "0", "getInt(cursor, %s)", "setInt(cursor, %s, %s)"))
         .addImport(new ClassName(TimeUtil.class))
+        .setMapper(new DefaultMapper("Millis", long.class))
+    ),
+    BID_ASK_TIME(new Builder()
+        .addField(new Field(false, SerialFieldType.TIME_SECONDS, true, "dxscheme.bat"))
+        .addAccess(Access.createWithAccessPattern("Millis", "long", "0", "getAsTimeMillis(cursor, %s)", "setAsTimeMillis(cursor, %s, %s)"))
+        .addAccess(Access.createWithAccessPattern("Seconds", "int", "0", "getAsTimeSeconds(cursor, %s)", "setAsTimeSeconds(cursor, %s, %s)"))
         .setMapper(new DefaultMapper("Millis", long.class))
     ),
     TIME_NANO_PART(new Builder()
@@ -230,9 +236,7 @@ enum FieldType {
         final boolean required;
         final boolean isObject;
         final SerialFieldType serialType;
-        final boolean adaptiveDecimal;
-        //FIXME
-        //final boolean adaptiveTime; // no selectors
+        final boolean adaptiveType; // the field has a type controlled by external configuration (system properties)
         final String[] typeSelectors;
         final String suffix;
 
@@ -240,15 +244,15 @@ enum FieldType {
             this(true, isObject, "", serialType, false);
         }
 
-        Field(boolean isObject, SerialFieldType serialType, boolean adaptiveDecimal, String... typeSelectors) {
-            this(true, isObject, "", serialType, adaptiveDecimal, typeSelectors);
+        Field(boolean isObject, SerialFieldType serialType, boolean adaptiveType, String... typeSelectors) {
+            this(true, isObject, "", serialType, adaptiveType, typeSelectors);
         }
 
-        Field(boolean required, boolean isObject, String suffix, SerialFieldType serialType, boolean adaptiveDecimal, String... typeSelectors) {
+        Field(boolean required, boolean isObject, String suffix, SerialFieldType serialType, boolean adaptiveType, String... typeSelectors) {
             this.required = required;
             this.isObject = isObject;
             this.serialType = serialType;
-            this.adaptiveDecimal = adaptiveDecimal;
+            this.adaptiveType = adaptiveType;
             this.typeSelectors = typeSelectors;
             this.suffix = suffix;
         }

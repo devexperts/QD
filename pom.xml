@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.322</version>
+    <version>3.323</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -119,14 +119,15 @@
         -->
         <install.dir>../target/install</install.dir>
 
-        <!-- profiles declare "deploy.dir" property to define where artifacts are deployed
+        <!-- Profiles may override "deploy.dir" property to define where artifacts are deployed
              and "deploy.suffix" property to define the suffix for file names.
              Modules declare "deploy.file" and "deploy.name" properties if they need
              their artifact copies to "deploy.dir".
              Modules may overwrite "deploy.extension" if needed.
         -->
+        <deploy.dir>${deploy.host.mount}/Snapshot${deploy.branch.dir.suffix}</deploy.dir>
+        <deploy.suffix>-${maven.build.timestamp}</deploy.suffix>
         <deploy.name>${project.artifactId}</deploy.name>
-        <deploy.suffix />
         <deploy.extension>zip</deploy.extension>
         <deploy.version>${project.version}${deploy.suffix}</deploy.version>
 
@@ -172,18 +173,7 @@
     </properties>
 
     <profiles>
-        <!-- Define deployment location for SNAPSHOT  -->
-        <profile>
-            <id>snapshot-profile</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <deploy.dir>${deploy.host.mount}/Snapshot${deploy.branch.dir.suffix}</deploy.dir>
-                <deploy.suffix>-${maven.build.timestamp}</deploy.suffix>
-            </properties>
-        </profile>
-        <!-- Define regular deployment location for release  -->
+        <!-- Define deployment properties for release  -->
         <profile>
             <id>release-profile</id>
             <activation>
@@ -194,6 +184,7 @@
             </activation>
             <properties>
                 <deploy.dir>${deploy.host.mount}/Release${deploy.branch.dir.suffix}</deploy.dir>
+                <deploy.suffix />
             </properties>
         </profile>
         <profile>

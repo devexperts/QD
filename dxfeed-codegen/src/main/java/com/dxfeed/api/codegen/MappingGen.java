@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -87,7 +87,7 @@ class MappingGen {
             if (f.isActive()) {
                 for (Map.Entry<FieldType.Field, String> e : f.fieldToFullNameMap.entrySet()) {
                     boolean required = f.required && e.getKey().required;
-                    if (e.getKey().adaptiveDecimal) {
+                    if (e.getKey().adaptiveType) {
                         cg.code(e.getValue() + " = " + (e.getKey().isObject ? "findObjField" : "findIntField") +
                             "(\"" + e.getKey().getFullName(f.fieldName) + "\", " + required + ");");
                     } else {

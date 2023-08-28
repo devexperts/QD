@@ -33,8 +33,7 @@ public abstract class EventDelegateFactory {
         return recordName;
     }
 
-    //TODO rename to selectDecimal
-    protected SerialFieldType select(SerialFieldType type, String... typeSelectors) {
+    protected SerialFieldType selectDecimal(SerialFieldType type, String... typeSelectors) {
         if (SystemProperties.getBooleanProperty("dxscheme.wide", true))
             type = SerialFieldType.WIDE_DECIMAL;
         for (int i = typeSelectors.length; --i >= 0;) {
@@ -49,11 +48,24 @@ public abstract class EventDelegateFactory {
         return type;
     }
 
+    protected SerialFieldType selectTime(SerialFieldType type, String... typeSelectors) {
+        // opposing to decimal fields, we don't have a scheme-wide property for the moment
+        for (int i = typeSelectors.length; --i >= 0;) {
+            String selector = System.getProperty(typeSelectors[i]);
+            if ("millis".equalsIgnoreCase(selector))
+                type = SerialFieldType.TIME_MILLIS;
+            if ("seconds".equalsIgnoreCase(selector))
+                type = SerialFieldType.TIME_SECONDS;
+            // FIXME: Doesn't work in DXFeed API
+            // if ("none".equalsIgnoreCase(selector))
+            //    type = SerialFieldType.VOID;
+        }
+        return type;
+    }
+
     protected static char[] getExchanges(String recordProperty) {
         String patternStr = SystemProperties.getProperty(recordProperty,
             SystemProperties.getProperty("dxscheme.exchanges", MarketEventSymbols.DEFAULT_EXCHANGES));
         return MarketEventSymbols.getExchangesByPattern(patternStr).toCharArray();
     }
-
-    //FIXME implement selectTime
 }

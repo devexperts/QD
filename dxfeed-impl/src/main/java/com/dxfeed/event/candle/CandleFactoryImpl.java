@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -39,43 +39,43 @@ public final class CandleFactoryImpl extends EventDelegateFactory implements Rec
         builder.addRequiredField("TradeHistory", "Time", SerialFieldType.TIME_SECONDS, SchemeFieldTime.FIRST_TIME_INT_FIELD);
         builder.addRequiredField("TradeHistory", "Sequence", SerialFieldType.SEQUENCE, SchemeFieldTime.SECOND_TIME_INT_FIELD);
         builder.addOptionalField("TradeHistory", "Exchange", SerialFieldType.UTF_CHAR, "Candle", "ExchangeCode", true);
-        builder.addRequiredField("TradeHistory", "Price", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("TradeHistory", "Size", select(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-        builder.addOptionalField("TradeHistory", "Bid", select(SerialFieldType.DECIMAL, "dxscheme.price"), "Candle", "BidPrice", true);
-        builder.addOptionalField("TradeHistory", "Ask", select(SerialFieldType.DECIMAL, "dxscheme.price"), "Candle", "AskPrice", true);
+        builder.addRequiredField("TradeHistory", "Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("TradeHistory", "Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+        builder.addOptionalField("TradeHistory", "Bid", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "Candle", "BidPrice", true);
+        builder.addOptionalField("TradeHistory", "Ask", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "Candle", "AskPrice", true);
 
         for (String suffix : SystemProperties.getProperty("com.dxfeed.event.candle.impl.Candle.suffixes", "").split("\\|")) {
             String recordName = "Candle" + suffix;
             builder.addRequiredField(recordName, "Time", SerialFieldType.TIME_SECONDS, SchemeFieldTime.FIRST_TIME_INT_FIELD);
             builder.addRequiredField(recordName, "Sequence", SerialFieldType.SEQUENCE, SchemeFieldTime.SECOND_TIME_INT_FIELD);
-            builder.addOptionalField(recordName, "Count", select(SerialFieldType.DECIMAL), "Candle", "Count", true);
-            builder.addRequiredField(recordName, "Open", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "High", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Low", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Close", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addOptionalField(recordName, "Volume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Candle", "Volume", true);
-            builder.addOptionalField(recordName, "VWAP", select(SerialFieldType.DECIMAL, "dxscheme.price"), "Candle", "VWAP", true);
-            builder.addOptionalField(recordName, "Bid.Volume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Candle", "BidVolume", !suffix.matches(".*[{,]price=(bid|ask|mark|s)[,}].*"));
-            builder.addOptionalField(recordName, "Ask.Volume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Candle", "AskVolume", !suffix.matches(".*[{,]price=(bid|ask|mark|s)[,}].*"));
-            builder.addOptionalField(recordName, "ImpVolatility", select(SerialFieldType.DECIMAL), "Candle", "ImpVolatility", true);
-            builder.addOptionalField(recordName, "OpenInterest", select(SerialFieldType.DECIMAL, "dxscheme.oi"), "Candle", "OpenInterest", true);
+            builder.addOptionalField(recordName, "Count", selectDecimal(SerialFieldType.DECIMAL), "Candle", "Count", true);
+            builder.addRequiredField(recordName, "Open", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "High", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Low", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Close", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addOptionalField(recordName, "Volume", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Candle", "Volume", true);
+            builder.addOptionalField(recordName, "VWAP", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "Candle", "VWAP", true);
+            builder.addOptionalField(recordName, "Bid.Volume", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Candle", "BidVolume", !suffix.matches(".*[{,]price=(bid|ask|mark|s)[,}].*"));
+            builder.addOptionalField(recordName, "Ask.Volume", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Candle", "AskVolume", !suffix.matches(".*[{,]price=(bid|ask|mark|s)[,}].*"));
+            builder.addOptionalField(recordName, "ImpVolatility", selectDecimal(SerialFieldType.DECIMAL), "Candle", "ImpVolatility", true);
+            builder.addOptionalField(recordName, "OpenInterest", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.oi"), "Candle", "OpenInterest", true);
         }
 
         for (String suffix : SystemProperties.getProperty("com.dxfeed.event.candle.impl.Trade.suffixes", "133ticks|144ticks|233ticks|333ticks|400ticks|512ticks|1600ticks|3200ticks|1min|2min|3min|4min|5min|6min|10min|12min|15min|20min|30min|1hour|2hour|3hour|4hour|6hour|8hour|12hour|Day|2Day|3Day|4Day|Week|Month|OptExp").split("\\|")) {
             String recordName = "Trade." + suffix;
             builder.addRequiredField(recordName, "Time", SerialFieldType.TIME_SECONDS, SchemeFieldTime.FIRST_TIME_INT_FIELD);
             builder.addRequiredField(recordName, "Sequence", SerialFieldType.SEQUENCE, SchemeFieldTime.SECOND_TIME_INT_FIELD);
-            builder.addOptionalField(recordName, "Count", select(SerialFieldType.DECIMAL), "Candle", "Count", true);
-            builder.addRequiredField(recordName, "Open", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "High", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Low", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Close", select(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addOptionalField(recordName, "Volume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Candle", "Volume", true);
-            builder.addOptionalField(recordName, "VWAP", select(SerialFieldType.DECIMAL, "dxscheme.price"), "Candle", "VWAP", true);
-            builder.addOptionalField(recordName, "Bid.Volume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Candle", "BidVolume", !suffix.matches(".*[{,]price=(bid|ask|mark|s)[,}].*"));
-            builder.addOptionalField(recordName, "Ask.Volume", select(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Candle", "AskVolume", !suffix.matches(".*[{,]price=(bid|ask|mark|s)[,}].*"));
-            builder.addOptionalField(recordName, "ImpVolatility", select(SerialFieldType.DECIMAL), "Candle", "ImpVolatility", true);
-            builder.addOptionalField(recordName, "OpenInterest", select(SerialFieldType.DECIMAL, "dxscheme.oi"), "Candle", "OpenInterest", true);
+            builder.addOptionalField(recordName, "Count", selectDecimal(SerialFieldType.DECIMAL), "Candle", "Count", true);
+            builder.addRequiredField(recordName, "Open", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "High", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Low", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Close", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addOptionalField(recordName, "Volume", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Candle", "Volume", true);
+            builder.addOptionalField(recordName, "VWAP", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "Candle", "VWAP", true);
+            builder.addOptionalField(recordName, "Bid.Volume", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Candle", "BidVolume", !suffix.matches(".*[{,]price=(bid|ask|mark|s)[,}].*"));
+            builder.addOptionalField(recordName, "Ask.Volume", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "Candle", "AskVolume", !suffix.matches(".*[{,]price=(bid|ask|mark|s)[,}].*"));
+            builder.addOptionalField(recordName, "ImpVolatility", selectDecimal(SerialFieldType.DECIMAL), "Candle", "ImpVolatility", true);
+            builder.addOptionalField(recordName, "OpenInterest", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.oi"), "Candle", "OpenInterest", true);
         }
     }
 

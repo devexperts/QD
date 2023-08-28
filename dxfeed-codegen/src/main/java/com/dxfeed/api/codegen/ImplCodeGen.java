@@ -17,13 +17,13 @@ import com.dxfeed.event.candle.CandleEventDelegateImpl;
 import com.dxfeed.event.candle.DailyCandle;
 import com.dxfeed.event.candle.impl.CandleEventMapping;
 import com.dxfeed.event.market.AnalyticOrder;
-import com.dxfeed.event.market.OtcMarketsOrder;
 import com.dxfeed.event.market.MarketEventDelegateImpl;
 import com.dxfeed.event.market.OptionSale;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.OrderBase;
 import com.dxfeed.event.market.OrderBaseDelegateImpl;
 import com.dxfeed.event.market.OrderSource;
+import com.dxfeed.event.market.OtcMarketsOrder;
 import com.dxfeed.event.market.Profile;
 import com.dxfeed.event.market.Quote;
 import com.dxfeed.event.market.SpreadOrder;
@@ -51,6 +51,7 @@ import java.util.stream.Collectors;
  *   mvn exec:java -Dexec.mainClass="com.dxfeed.api.codegen.ImplCodeGen" -pl :dxfeed-codegen
  * </pre>
  */
+// CHECKSTYLE:OFF
 public class ImplCodeGen {
 
     private static final ClassName MARKET_EVENT_DELEGATE = new ClassName(MarketEventDelegateImpl.class);
@@ -98,11 +99,11 @@ public class ImplCodeGen {
             inheritMappingFrom(MARKET_EVENT_MAPPING).
             map("Sequence", FieldType.SEQUENCE).optional().disabledByDefault().internal(). // assign after bid/ask time
             map("TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
-            map("BidTime", "Bid.Time", FieldType.TIME_SECONDS).optional().
+            map("BidTime", "Bid.Time", FieldType.BID_ASK_TIME).optional().
             map("BidExchangeCode", "Bid.Exchange", FieldType.CHAR).alt("recordExchange").compositeOnly().optional().
             map("BidPrice", "Bid.Price", FieldType.PRICE).
             map("BidSize", "Bid.Size", FieldType.SIZE).
-            map("AskTime", "Ask.Time", FieldType.TIME_SECONDS).optional().
+            map("AskTime", "Ask.Time", FieldType.BID_ASK_TIME).optional().
             map("AskExchangeCode", "Ask.Exchange", FieldType.CHAR).alt("recordExchange").compositeOnly().optional().
             map("AskPrice", "Ask.Price", FieldType.PRICE).
             map("AskSize", "Ask.Size", FieldType.SIZE).
@@ -392,7 +393,7 @@ public class ImplCodeGen {
             subContract(QDContract.TICKER).
             source("m.getRecordExchange() == 0 ? OrderSource.COMPOSITE_BID : OrderSource.REGIONAL_BID").
             assign("Index", "((long) getSource().id() << 48) | ((long) m.getRecordExchange() << 32)").
-            map("Time", "BidTime", "Bid.Time", FieldType.TIME_SECONDS).optional().
+            map("Time", "BidTime", "Bid.Time", FieldType.BID_ASK_TIME).optional().
             assign("Sequence", "0").
             map("Price", "BidPrice", "Bid.Price", FieldType.PRICE).
             map("Size", "BidSize", "Bid.Size", FieldType.SIZE).
@@ -407,7 +408,7 @@ public class ImplCodeGen {
             subContract(QDContract.TICKER).
             source("m.getRecordExchange() == 0 ? OrderSource.COMPOSITE_ASK : OrderSource.REGIONAL_ASK").
             assign("Index", "((long) getSource().id() << 48) | ((long) m.getRecordExchange() << 32)").
-            map("Time", "AskTime", "Ask.Time", FieldType.TIME_SECONDS).optional().
+            map("Time", "AskTime", "Ask.Time", FieldType.BID_ASK_TIME).optional().
             assign("Sequence", "0").
             map("Price", "AskPrice", "Ask.Price", FieldType.PRICE).
             map("Size", "AskSize", "Ask.Size", FieldType.SIZE).
@@ -425,7 +426,7 @@ public class ImplCodeGen {
             assign("Index", "((long) getSource().id() << 48) | ((long) #ExchangeCode# << 32) | (#MarketMaker# & 0xFFFFFFFFL)").
             map("ExchangeCode", "MMExchange", FieldType.CHAR).time(0).
             map("MarketMaker", "MMID", FieldType.SHORT_STRING).time(1).
-            map("Time", "BidTime", "MMBid.Time", FieldType.TIME_SECONDS).optional().
+            map("Time", "BidTime", "MMBid.Time", FieldType.BID_ASK_TIME).optional().
             assign("Sequence", "0").
             map("Price", "BidPrice", "MMBid.Price", FieldType.PRICE).
             map("Size", "BidSize", "MMBid.Size", FieldType.SIZE).
@@ -440,7 +441,7 @@ public class ImplCodeGen {
             assign("Index", "((long) getSource().id() << 48) | ((long) #ExchangeCode# << 32) | (#MarketMaker# & 0xFFFFFFFFL)").
             map("ExchangeCode", "MMExchange", FieldType.CHAR).time(0).
             map("MarketMaker", "MMID", FieldType.SHORT_STRING).time(1).
-            map("Time", "AskTime", "MMAsk.Time", FieldType.TIME_SECONDS).optional().
+            map("Time", "AskTime", "MMAsk.Time", FieldType.BID_ASK_TIME).optional().
             assign("Sequence", "0").
             map("Price", "AskPrice", "MMAsk.Price", FieldType.PRICE).
             map("Size", "AskSize", "MMAsk.Size", FieldType.SIZE).

@@ -3,7 +3,7 @@
   !++
   QDS - Quick Data Signalling Library
   !-
-  Copyright (C) 2002 - 2021 Devexperts LLC
+  Copyright (C) 2002 - 2023 Devexperts LLC
   !-
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
   If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -60,7 +60,10 @@
         <type name="open_interest" base="int_or_decimal"/>
         <type name="count" base="int_or_decimal"/>
 
-        <!-- Default for unspecified decimal is tiny_decimal for now -->
+        <!-- Default for unspecified decimal is wide_decimal for now -->
         <type name="decimal" base="wide_decimal"/>
+
+        <!-- Special bid/ask time type (controlled by dxscheme.bat property). See selectTime in *FactoryImpl -->
+        <type name="bid_ask_time" base="time_seconds" />
     </types>
 </dxfeed>

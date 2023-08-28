@@ -91,7 +91,8 @@ public class DXScheme extends DefaultScheme implements ConfigurableDataScheme {
         if (properties == null) {
             properties = DEFAULT_PROPERTIES;
         }
-        SchemeModel propsModel = DXFeedPropertiesConverter.convertProperties(model.getEmbeddedTypes(), properties, options);
+        SchemeModel propsModel =
+            DXFeedPropertiesConverter.convertProperties(model.getEmbeddedTypes(), properties, options);
         if (propsModel != null) {
             merged = SchemeModel.newBuilder()
                 .withName("<with-props>")
@@ -99,6 +100,13 @@ public class DXScheme extends DefaultScheme implements ConfigurableDataScheme {
                 .build();
             merged.override(model);
             merged.override(propsModel);
+            // Perform validation of merged model to re-resolve types
+            List<SchemeException> errors = merged.validateState();
+            // Check errors and bail out
+            if (!errors.isEmpty()) {
+                // Throw wrapping exception
+                throw new SchemeException(errors, merged.getSources());
+            }
         }
 
         List<DataRecord> result = new ArrayList<>();
@@ -270,7 +278,7 @@ public class DXScheme extends DefaultScheme implements ConfigurableDataScheme {
     /**
      * Builder class for {@link DXScheme} that supports additional configuration properties.
      */
-    public final static class Loader {
+    public static final class Loader {
         private EmbeddedTypes embeddedTypes = SchemeModelLoader.DEFAULT_TYPES;
         private SchemeLoadingOptions options = new SchemeLoadingOptions();
         private final Properties properties = new Properties();

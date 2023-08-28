@@ -135,10 +135,11 @@ class FactoryImplGen {
             cg.addImport(new ClassName(SerialFieldType.class));
             for (FieldType.Field field : f.fieldType.fields) {
                 String typeExpr = "SerialFieldType." + field.serialType;
-                if (field.adaptiveDecimal || field.typeSelectors.length != 0) {
-                    typeExpr = "select(" + typeExpr;
+                if (field.adaptiveType || field.typeSelectors.length != 0) {
+                    String selectMethod = field.serialType.isTime() ? "selectTime" : "selectDecimal";
+                    typeExpr = selectMethod + "(" + typeExpr;
                     for (String typeSelector : field.typeSelectors) {
-                        typeExpr = typeExpr + ", \"" + typeSelector + "\"";
+                        typeExpr += ", \"" + typeSelector + "\"";
                     }
                     typeExpr = typeExpr + ")";
                 }

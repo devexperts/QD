@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -56,6 +56,15 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  *
  * This event is implemented on top of QDS records {@code Quote} and {@code Quote&X}
  * for regional exchange best quotes.
+ *
+ * <h3 a="bidAskTime">Bid & Ask time precision</h3>
+ *
+ * {@link #getBidTime() bidTime} & {@link #getAskTime() askTime} fields by default transferred with <em>seconds</em>
+ * precision. This behavior may be configured by <var>dxscheme.bat</var> system property that accepts the following values:
+ * <ul>
+ * <li><b>seconds</b> (default) - transfer the fields with seconds precision
+ * <li><b>millis</b> - transfer the fields with milliseconds precision
+ * </ul>
  */
 @XmlRootElement(name = "Quote")
 @XmlType(propOrder = {
@@ -168,8 +177,9 @@ public class Quote extends MarketEvent implements LastingEvent<String> {
      * Returns time of the last bid change.
      * Time is measured in milliseconds between the current time and midnight, January 1, 1970 UTC.
      *
-     * <p><b>This time is always transmitted with seconds precision, so the result of this method is
-     * usually a multiple of 1000.</b>
+     * <p><b><a href="#bidAskTime">By default</a> this time is transmitted with seconds precision,
+     * so the result of this method is usually a multiple of 1000.</b>
+     *
      * @return time of the last bid change.
      */
     @XmlJavaTypeAdapter(type=long.class, value=XmlTimeAdapter.class)
@@ -182,8 +192,11 @@ public class Quote extends MarketEvent implements LastingEvent<String> {
      * Changes time of the last bid change.
      * Time is measured in milliseconds between the current time and midnight, January 1, 1970 UTC.
      *
-     * <p>You can set the actual millisecond-precision time here to publish event and the millisecond part
+     * <p>You can set the actual millisecond-precision time here to publish an event, and the millisecond part
      * will make the {@link #getTime() time} of this quote even precise up to a millisecond.
+     *
+     * <p><b><a href="#bidAskTime">By default</a> this time is transmitted with seconds precision,
+     * so the value of this field for receiver usually a multiple of 1000.</b>
      *
      * @param bidTime time of the last bid change.
      */
@@ -262,8 +275,9 @@ public class Quote extends MarketEvent implements LastingEvent<String> {
      * Returns time of the last ask change.
      * Time is measured in milliseconds between the current time and midnight, January 1, 1970 UTC.
      *
-     * <p><b>This time is always transmitted with seconds precision, so the result of this method is
-     * usually a multiple of 1000.</b>
+     * <p><b><a href="#bidAskTime">By default</a> this time is transmitted with seconds precision,
+     * so the result of this method is usually a multiple of 1000.</b>
+     *
      * @return time of the last ask change.
      */
     @XmlJavaTypeAdapter(type=long.class, value=XmlTimeAdapter.class)
@@ -276,8 +290,11 @@ public class Quote extends MarketEvent implements LastingEvent<String> {
      * Changes time of the last ask change.
      * Time is measured in milliseconds between the current time and midnight, January 1, 1970 UTC.
      *
-     * <p>You can set the actual millisecond-precision time here to publish event and the millisecond part
+     * <p>You can set the actual millisecond-precision time here to publish an event, and the millisecond part
      * will make the {@link #getTime() time} of this quote even precise up to a millisecond.
+     *
+     * <p><b><a href="#bidAskTime">By default</a> this time is transmitted with seconds precision,
+     * so the value of this field for receiver usually a multiple of 1000.</b>
      *
      * @param askTime time of the last ask change.
      */
@@ -363,11 +380,11 @@ public class Quote extends MarketEvent implements LastingEvent<String> {
             ", time=" + TimeFormat.DEFAULT.withMillis().format(getTime()) +
             ", timeNanoPart=" + timeNanoPart +
             ", sequence=" + getSequence() +
-            ", bidTime=" + TimeFormat.DEFAULT.format(bidTime) +
+            ", bidTime=" + TimeFormat.DEFAULT.withMillis().format(bidTime) +
             ", bidExchange=" + Util.encodeChar(bidExchangeCode) +
             ", bidPrice=" + bidPrice +
             ", bidSize=" + bidSize +
-            ", askTime=" + TimeFormat.DEFAULT.format(askTime) +
+            ", askTime=" + TimeFormat.DEFAULT.withMillis().format(askTime) +
             ", askExchange=" + Util.encodeChar(askExchangeCode) +
             ", askPrice=" + askPrice +
             ", askSize=" + askSize +

@@ -252,20 +252,26 @@ public final class DXFeedPropertiesConverter {
      * which is used by {@link com.dxfeed.api.impl.EventDelegateFactory}.select()
      */
     private static void loadTypeOverrides(SchemeModel file) throws SchemeException {
-        overrideOneType(file, "price", "dxscheme.price");
-        overrideOneType(file, "size", "dxscheme.size");
-        overrideOneType(file, "volume", "dxscheme.volume", "dxscheme.size");
-        overrideOneType(file, "turnover", "dxscheme.turnover", "dxscheme.size");
+        // Keep in sync with dynamic type definitions in com.dxfeed.api.codegen.FieldType
+        overrideOneType(file, "price", "decimal", "dxscheme.price");
+        overrideOneType(file, "size", "compact_int", "dxscheme.size");
+        overrideOneType(file, "volume", "decimal", "dxscheme.volume", "dxscheme.size");
+        overrideOneType(file, "turnover", "decimal", "dxscheme.turnover", "dxscheme.size");
         // open_interest is simple int_or_decimal
-        overrideOneType(file, "oi", "dxscheme.oi");
+        overrideOneType(file, "oi", "decimal", "dxscheme.oi");
         // Convert "decimal" into "wide_decimal" or "tiny_decimal"
-        overrideOneType(file, "decimal");
+        overrideOneType(file, "decimal", "tiny_decimal");
         // Convert "int_or_decimal" to "wide_decimal" or "compact_int"
-        overrideOneType(file, "int_or_decimal");
+        overrideOneType(file, "int_or_decimal", "compact_int");
+
+        // Convert "bid_ask_time" (default "time_seconds")
+        overrideTimeType(file, "bid_ask_time", "time_seconds", "dxscheme.bat");
     }
 
-    private static void overrideOneType(SchemeModel file, String name, String... typeSelectors) throws SchemeException {
-        String targetType = null;
+    private static void overrideOneType(SchemeModel file, String name, String defaultType, String... typeSelectors)
+        throws SchemeException
+    {
+        String targetType = defaultType;
         String reason = null;
 
         if (SystemProperties.getBooleanProperty("dxscheme.wide", true)) {
@@ -273,10 +279,7 @@ public final class DXFeedPropertiesConverter {
             reason = "dxscheme.wide=true or default";
         }
 
-        /*
-        This code was copied from EventDelegateFactory.select() and replicates
-        its backward looping.
-         */
+        // This code was copied from EventDelegateFactory.select() and replicates its backward looping.
         for (int i = typeSelectors.length; --i >= 0;) {
             String selector = System.getProperty(typeSelectors[i]);
             if ("wide".equalsIgnoreCase(selector)) {
@@ -291,6 +294,35 @@ public final class DXFeedPropertiesConverter {
                 targetType = "compact_int";
                 reason = typeSelectors[i] + "=" + selector;
             }
+        }
+        if (targetType != null) {
+            file.addType(new SchemeType(name, NamedEntity.Mode.UPDATE, targetType,
+                "Automatically created from environment, using property " + reason, file.getName()));
+        }
+    }
+
+    private static void overrideTimeType(SchemeModel file, String name, String defaultType, String... typeSelectors)
+        throws SchemeException
+    {
+        String targetType = defaultType;
+        String reason = null;
+
+        // This code was copied from EventDelegateFactory.selectTime() and replicates its backward looping.
+        for (int i = typeSelectors.length; --i >= 0;) {
+            String selector = System.getProperty(typeSelectors[i]);
+            if ("millis".equalsIgnoreCase(selector)) {
+                targetType = "time_millis";
+                reason = typeSelectors[i] + "=" + selector;
+            }
+            if ("seconds".equalsIgnoreCase(selector)) {
+                targetType = "time_seconds";
+                reason = typeSelectors[i] + "=" + selector;
+            }
+            // FIXME: Doesn't work in DXFeed API
+            // if ("none".equalsIgnoreCase(selector)) {
+            //     targetType = "void";
+            //     reason = typeSelectors[i] + "=" + selector;
+            // }
         }
         if (targetType != null) {
             file.addType(new SchemeType(name, NamedEntity.Mode.UPDATE, targetType,
