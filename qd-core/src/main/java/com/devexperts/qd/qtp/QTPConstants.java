@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -54,4 +54,12 @@ public class QTPConstants {
      */
     public static final int COMPOSER_BUFFER_SIZE =
         SystemProperties.getIntProperty("com.devexperts.qd.qtp.composerBufferSize", (int) (1.5 * COMPOSER_THRESHOLD));
+
+    /**
+     * Defines the hard upper limit for packet size in QTP transfers.
+     * A packet of greater size will be considered corrupted by the QTP parser and rejected without further analysis.
+     * The value shall be big enough to accept any valid QTP packet.
+     */
+    public static final int MAX_MESSAGE_SIZE =
+        SystemProperties.getIntProperty("com.devexperts.qd.qtp.maxMessageSize", 100_000);
 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -320,8 +320,7 @@ public class IOUtil {
      */
     public static byte[] readByteArray(DataInput in) throws IOException {
         long length = readCompactLong(in);
-        if (length < -1 || length > Integer.MAX_VALUE)
-            throw new IOException("Illegal length.");
+        checkEncapsulatedLength(in, length);
         if (length == -1)
             return null;
         if (length == 0)
@@ -375,8 +374,7 @@ public class IOUtil {
      */
     public static char[] readCharArray(DataInput in) throws IOException {
         long length = readCompactLong(in);
-        if (length < -1 || length > Integer.MAX_VALUE)
-            throw new IOException("Illegal length.");
+        checkEncapsulatedLength(in, length);
         if (length == -1)
             return null;
         char[] chars = new char[(int) length];
@@ -514,7 +512,7 @@ public class IOUtil {
             return ((BufferedInput) in).readUTFString(); // Fewer garbage due to char buffer reuse.
         long utfLen = readCompactLong(in);
         if (utfLen < -1 || utfLen > Integer.MAX_VALUE * 4L)
-            throw new IOException("Illegal length");
+            throw new IOException("Illegal length: " + utfLen);
         if (utfLen == -1)
             return null;
         if (utfLen == 0)
@@ -663,6 +661,27 @@ public class IOUtil {
         if (serialContext == null)
             throw new NullPointerException();
         return ObjectDeserializer.readCompact(in, serialContext);
+    }
+
+    /**
+     * Validate <a href="IOUtil.html#compact-encapsulation">encapsulated content length</a> according to
+     * theoretical bounds and stream limits.
+     * <p>
+     * Data retrieval methods getting variable amount of data can invoke this method to check an upper bound
+     * of available data for validation.
+     *
+     * @param length encapsulated length value to be checked
+     * @throws IOException if {@code length < -1 || length > Integer.MAX_VALUE} or {@code length} bytes definitely
+     *     cannot be retrieved
+     * @see BufferedInput#checkEncapsulatedLength
+     */
+    private static void checkEncapsulatedLength(DataInput in, long length) throws IOException {
+        if (in instanceof BufferedInput) {
+            ((BufferedInput) in).checkEncapsulatedLength(length, -1, Integer.MAX_VALUE);
+            return;
+        }
+        if (length < -1 || length > Integer.MAX_VALUE)
+            throw new IOException("Illegal length: " + length);
     }
 
     // ---------- Compression API ----------

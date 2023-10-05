@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -182,17 +182,21 @@ public final class BufferedInputPart extends BufferedInput {
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
         IOUtil.checkRange(b, off, len);
-        long available = limit - position + availableSurplus;
-        len = (int) Math.min(len, available);
+        if (len == 0)
+            return 0;
         if (len <= limit - position) {
             System.arraycopy(buffer, position, b, off, len);
             position += len;
+            return len;
         } else {
+            long available = limit - position + availableSurplus;
+            if (available == 0)
+                return -1;
             syncInputPosition(); // sync input position before calling to "in" (!!!)
-            len = in.read(b, off, len);
-            initBuffer(available - Math.max(len, 0));
+            int result = in.read(b, off, (int) Math.min(len, available));
+            initBuffer(available - Math.max(result, 0));
+            return result;
         }
-        return len;
     }
 
     /**
@@ -205,7 +209,7 @@ public final class BufferedInputPart extends BufferedInput {
         if (n <= limit - position) {
             position += n;
         } else {
-            in.position = position;
+            syncInputPosition(); // sync input position before calling to "in" (!!!)
             n = in.skip(n);
             initBuffer(available - n);
         }
@@ -240,6 +244,15 @@ public final class BufferedInputPart extends BufferedInput {
         int result = in.readData();
         initBuffer(availableSurplus);
         return result;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void checkEncapsulatedLength(long length, long min, long max) throws IOException {
+        if (length < min || length > max || length > limit - position + availableSurplus)
+            throw new IOException("Illegal length: " + length);
     }
 
     private void initBuffer(long length) {

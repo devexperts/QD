@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.323</version>
+        <version>3.324</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -83,6 +83,11 @@
         <dependency>
             <groupId>com.devexperts.qd</groupId>
             <artifactId>dxfeed-ondemand</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.devexperts.qd</groupId>
+            <artifactId>dxlink-websocket</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

@@ -1,3 +1,16 @@
+QDS 3.324:
+
+* [QD-1468] QTP parser can allocate an unlimited amount of memory
+  - new system property 'com.devexperts.qd.qtp.maxMessageSize' defines the maximum size in bytes of a message
+    delivered over QTP connection with default 100000.
+* [QD-1454] [EXPERIMENTAL] [dxLink] dxLink QD connector
+* [QD-1467] Use dxfeed maven repo for missing dependencies
+* [QD-1465] [Schedule] Incorrect 'sds' value for XIST
+* [QD-1462] [Schedule] Add missing sds params and correct sd value for tv.XBUD
+* [QD-1460] [Schedule] Add schedule for tradegate
+* [QD-1455] Add OtcMarketsOrder record to 'feed' filter
+  - Records 'OtcMarketsOrder*' has been added to filters 'feed' and 'compfeed'
+
 QDS 3.323:
 
 * [QD-1459] Incorrect QD version in jar manifests

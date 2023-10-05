@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -102,6 +102,25 @@ public abstract class BufferedInput extends InputStream implements ObjectInput {
         if (position != limit)
             throw new IllegalStateException(position < limit ? "buffer has unprocessed data" : "buffer position is beyond limit");
     }
+
+    /**
+     * Validate <a href="IOUtil.html#compact-encapsulation">encapsulated content length</a> according to
+     * specified bounds and stream limits.
+     * <p>
+     * Data retrieval methods getting variable amount of data can invoke this method to check an upper bound
+     * of available data for validation.
+     *
+     * @param length encapsulated length value to be checked
+     * @param min minimal theoretically valid length value
+     * @param max maximal theoretically valid length value
+     * @throws IOException if {@code length < min || length > max} or {@code length} bytes definitely cannot
+     *     be retrieved
+     */
+    protected void checkEncapsulatedLength(long length, long min, long max) throws IOException {
+        if (length < min || length > max)
+            throw new IOException("Illegal length: " + length);
+    }
+
 
     // ========== InputStream, DataInput and ObjectInput API ==========
 
@@ -346,6 +365,7 @@ public abstract class BufferedInput extends InputStream implements ObjectInput {
         int utfLen = readUnsignedShort();
         if (utfLen == 0)
             return "";
+        checkEncapsulatedLength(utfLen, 0, Integer.MAX_VALUE);
         char[] chars = getCharBuffer(utfLen);
         return String.valueOf(chars, 0, readUTFBody(utfLen, chars, 0));
     }
@@ -435,8 +455,7 @@ public abstract class BufferedInput extends InputStream implements ObjectInput {
      */
     public final <T> Marshalled<T> readMarshalled(Marshaller<T> marshaller, SerialClassContext serialContext) throws IOException {
         long length = marshaller.readMarshalledLength(this);
-        if (length < -1 || length > Integer.MAX_VALUE)
-            throw new IOException("Illegal length: " + length);
+        checkEncapsulatedLength(length, -1, Integer.MAX_VALUE);
         if (serialContext == null)
             serialContext = SerialClassContext.getDefaultSerialContext(null);
         if (length == -1)
@@ -520,8 +539,7 @@ public abstract class BufferedInput extends InputStream implements ObjectInput {
      */
     public final byte[] readByteArray() throws IOException {
         long length = readCompactLong();
-        if (length < -1 || length > Integer.MAX_VALUE)
-            throw new IOException("Illegal length: " + length);
+        checkEncapsulatedLength(length, -1, Integer.MAX_VALUE);
         if (length == -1)
             return null;
         if (length == 0)
@@ -567,8 +585,7 @@ public abstract class BufferedInput extends InputStream implements ObjectInput {
      */
     public final String readUTFString() throws IOException {
         long utfLen = readCompactLong();
-        if (utfLen < -1 || utfLen > Integer.MAX_VALUE * 4L)
-            throw new IOException("Illegal length: " + utfLen);
+        checkEncapsulatedLength(utfLen, -1, Integer.MAX_VALUE * 4L);
         if (utfLen == -1)
             return null;
         if (utfLen == 0)

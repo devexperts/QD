@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -41,6 +41,7 @@ import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_DESCRIBE_RESERVED;
 import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_HEARTBEAT;
 import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_PART;
 import static com.devexperts.qd.qtp.MessageConstants.MESSAGE_TEXT_FORMAT;
+import static com.devexperts.qd.qtp.QTPConstants.MAX_MESSAGE_SIZE;
 
 /**
  * Parses QTP messages in binary format from byte stream.
@@ -107,6 +108,10 @@ public class BinaryQTPParser extends AbstractQTPParser {
 
     @Override
     protected void parseImpl(BufferedInput in, MessageConsumer consumer) throws IOException {
+        parseImpl(in, consumer, MAX_MESSAGE_SIZE); // delegate to internal method with size control
+    }
+
+    private void parseImpl(BufferedInput in, MessageConsumer consumer, long maxMessageSize) throws IOException {
         //
         // Each message consists of three elements:
         //
@@ -133,7 +138,7 @@ public class BinaryQTPParser extends AbstractQTPParser {
                     in.unmark();
                     break; // message is incomplete -- need more bytes
                 }
-                if (longMessageLength < 0 || longMessageLength > Integer.MAX_VALUE) {
+                if (longMessageLength < 0 || longMessageLength > maxMessageSize) {
                     dumpParseHeaderErrorReport(in, "Invalid messageLength=" + longMessageLength);
                     if (resyncOnCorrupted(in))
                         continue; // resync again
@@ -575,6 +580,7 @@ public class BinaryQTPParser extends AbstractQTPParser {
                     return;
                 long lengthPosition = msg.totalPosition();
                 long totalLength = msg.readCompactLong();
+                // TODO: control maximum length of partitioned (RMI) messages 
                 if (totalLength < 0 || totalLength > Integer.MAX_VALUE) {
                     dumpParseMessageErrorReport(msg, "Invalid totalLength=" + totalLength, null, -1);
                     throw new CorruptedException();
@@ -611,7 +617,7 @@ public class BinaryQTPParser extends AbstractQTPParser {
         }
         if (partitionedMessage.remaining <= 0) {
             try {
-                parseImpl(partitionedMessage.in, consumer);
+                parseImpl(partitionedMessage.in, consumer, partitionedMessage.totalLength);
             } finally {
                 partitionedMessages.remove(partitionedMessage);
                 partitionedMessage.in.clear(); // recycle all remaining unparsed chunks

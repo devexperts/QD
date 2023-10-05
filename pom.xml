@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.323</version>
+    <version>3.324</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -61,6 +61,8 @@
         <module>qd-tools</module>
         <module>qd-samplecert</module>
         <module>dxfeed-tools</module>
+
+        <module>dxlink-websocket</module>
 
         <!-- other (internal) modules -->
         <module>mars-sample</module>
@@ -170,6 +172,9 @@
         <jmh.version>1.21</jmh.version>
         <jmxtools.version>1.2.8</jmxtools.version>
         <mycila-license-maven-plugin.version>3.0</mycila-license-maven-plugin.version>
+
+        <netty-codec-http.version>4.1.86.Final</netty-codec-http.version>
+        <reflections.version>0.10.2</reflections.version>
     </properties>
 
     <profiles>
@@ -637,9 +642,9 @@
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
-            <id>devexperts-open</id>
-            <name>devexperts-open</name>
-            <url>https://devexperts.jfrog.io/artifactory/maven</url>
+            <id>dxfeed-open</id>
+            <name>dxfeed-open</name>
+            <url>https://dxfeed.jfrog.io/artifactory/maven-open</url>
         </repository>
     </repositories>
 
@@ -648,9 +653,9 @@
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
-            <id>devexperts-open</id>
-            <name>devexperts-open</name>
-            <url>https://devexperts.jfrog.io/artifactory/maven</url>
+            <id>dxfeed-open</id>
+            <name>dxfeed-open</name>
+            <url>https://dxfeed.jfrog.io/artifactory/maven-open</url>
         </pluginRepository>
     </pluginRepositories>
 

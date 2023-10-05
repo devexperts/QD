@@ -32,6 +32,7 @@
                 <include>com.devexperts.qd:qds-monitoring</include>
                 <include>com.devexperts.qd:qds-tools</include>
                 <include>com.devexperts.qd:dxfeed-ondemand</include>
+                <include>com.devexperts.qd:dxlink-websocket</include>
             </includes>
             <binaries>
                 <unpack>false</unpack>
@@ -51,6 +52,7 @@
                 <include>com.devexperts.qd:qds-monitoring</include>
                 <include>com.devexperts.qd:qds-tools</include>
                 <include>com.devexperts.qd:dxfeed-ondemand</include>
+                <include>com.devexperts.qd:dxlink-websocket</include>
             </includes>
             <binaries>
                 <attachmentClassifier>sources</attachmentClassifier>
@@ -77,4 +79,25 @@
         </fileSet>
     </fileSets>
 
+    <!--    to run com.devexperts.qd:dxlink-websocket-->
+    <!--    TODO Make sure there isn't a more universal solution (without manually keeping track of the dependency list). -->
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>/lib</outputDirectory>
+            <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
+            <includes>
+                <include>io.netty:netty-codec-http</include>
+                <include>io.netty:netty-common</include>
+                <include>io.netty:netty-buffer</include>
+                <include>io.netty:netty-transport</include>
+                <include>io.netty:netty-resolver</include>
+                <include>io.netty:netty-codec</include>
+                <include>io.netty:netty-handler</include>
+                <include>io.netty:netty-transport-native-unix-common</include>
+                <include>com.fasterxml.jackson.core:jackson-core</include>
+                <include>org.reflections:reflections</include>
+            </includes>
+            <unpack>false</unpack>
+        </dependencySet>
+    </dependencySets>
 </assembly>

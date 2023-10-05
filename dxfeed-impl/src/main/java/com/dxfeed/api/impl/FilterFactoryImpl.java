@@ -39,7 +39,8 @@ import java.util.regex.Pattern;
 @ServiceProvider(order = -100)
 public class FilterFactoryImpl extends QDFilterFactory {
     private static final String COMPFEED_RECORDS =
-        "Quote, Trade, TradeETH, Summary, Fundamental, Profile, Book, Order*, SpreadOrder*, MarketMaker, TimeAndSale, TradeHistory";
+        "Quote, Trade, TradeETH, Summary, Fundamental, Profile, Book, Order*, SpreadOrder*, OtcMarketsOrder*, " +
+            "MarketMaker, TimeAndSale, TradeHistory";
     private static final String CHARTDATA_RECORDS =
         "TradeHistory, Trade.*, Candle, Candle[{]*, " +
         "DividendHistory, SplitHistory, EarningsHistory, ConferenceCallHistory, NewsHistory";
