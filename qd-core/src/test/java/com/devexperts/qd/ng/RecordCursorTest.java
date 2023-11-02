@@ -9,7 +9,7 @@
  * http://mozilla.org/MPL/2.0/.
  * !__
  */
-package com.devexperts.qd.ng.test;
+package com.devexperts.qd.ng;
 
 import com.devexperts.qd.DataIntField;
 import com.devexperts.qd.DataObjField;
@@ -19,9 +19,6 @@ import com.devexperts.qd.kit.MarshalledObjField;
 import com.devexperts.qd.kit.PentaCodec;
 import com.devexperts.qd.kit.VoidIntField;
 import com.devexperts.qd.kit.WideDecimalField;
-import com.devexperts.qd.ng.RecordBuffer;
-import com.devexperts.qd.ng.RecordCursor;
-import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.util.WideDecimal;
 import org.junit.Test;
 

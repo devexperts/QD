@@ -9,7 +9,7 @@
  * http://mozilla.org/MPL/2.0/.
  * !__
  */
-package com.devexperts.qd.ng.test;
+package com.devexperts.qd.ng;
 
 import com.devexperts.qd.DataIntField;
 import com.devexperts.qd.DataObjField;
@@ -17,9 +17,6 @@ import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.kit.CompactIntField;
 import com.devexperts.qd.kit.DefaultRecord;
 import com.devexperts.qd.kit.MarshalledObjField;
-import com.devexperts.qd.ng.RecordBuffer;
-import com.devexperts.qd.ng.RecordCursor;
-import com.devexperts.qd.ng.RecordMode;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;

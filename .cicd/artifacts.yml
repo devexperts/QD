@@ -14,6 +14,7 @@ artifactory:
       - com.devexperts.qd:dxfeed-webservice-impl
       - com.devexperts.qd:dxfeed-scheme
       - com.devexperts.qd:dxlib
+      - com.devexperts.qd:dxlink-websocket
       - com.devexperts.qd:mars
       - com.devexperts.qd:QD
       - com.devexperts.qd:qd-core

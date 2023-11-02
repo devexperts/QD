@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -54,5 +54,19 @@ class Throws {
 
     static void throwDifferentNumberOfFields(DataRecord newRecord, DataRecord oldRecord) {
         throw new IllegalArgumentException("Cannot replace " + oldRecord.getName() + " with " + newRecord.getName() + " because of different number of fields");
+    }
+
+    static void throwInvalidStateOrParameters(int iFromPos, int oFromPos, int iToPos, int oToPos) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("Invalid state or input params, from: ");
+        RecordCursor.formatPosition(builder, iFromPos, oFromPos);
+        builder.append(", to: ");
+        RecordCursor.formatPosition(builder, iToPos, oToPos);
+        throw new IllegalArgumentException(builder.toString());
+    }
+
+    static void throwIndexOutOfBoundsRangeCheckException(int fromPos, int toPos, int limit) {
+        throw new IndexOutOfBoundsException(
+            "Invalid range: from position: " + fromPos + ", to position: " + toPos + ", limit: " + limit);
     }
 }

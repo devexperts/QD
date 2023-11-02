@@ -311,20 +311,18 @@ public class OtcMarketsOrder extends Order {
     }
 
     /**
-     * Returns string representation of this OTC Markets order event.
-     * @return string representation of this OTC Markets order event.
+     * {@inheritDoc}
      */
     @Override
-    public String toString() {
-        return "OtcMarketsOrder{" + baseFieldsToString() +
-                ", QAP=" + quoteAccessPayment +
-                ", open=" + isOpen() +
-                ", unsolicited=" + isUnsolicited() +
-                ", priceType=" + getOtcMarketsPriceType() +
-                ", saturated=" + isSaturated() +
-                ", autoEx=" + isAutoExecution() +
-                ", NMS=" + isNmsConditional() +
-                "}";
+    StringBuilder fieldsToString(StringBuilder sb) {
+        return super.fieldsToString(sb)
+            .append(", QAP=").append(quoteAccessPayment)
+            .append(", open=").append(isOpen())
+            .append(", unsolicited=").append(isUnsolicited())
+            .append(", priceType=").append(getOtcMarketsPriceType())
+            .append(", saturated=").append(isSaturated())
+            .append(", autoEx=").append(isAutoExecution())
+            .append(", NMS=").append(isNmsConditional());
     }
 
     // ========================= package private access for delegate =========================

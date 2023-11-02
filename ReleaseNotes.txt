@@ -1,3 +1,13 @@
+QDS 3.325:
+
+* [QD-1478] Implementation of toString in OtcMarketsOrder does not output the marketMaker field
+* [QD-1475] Enable qds-monitoring for GraalVM Native SDK
+* [QD-1476] [EXPERIMENTAL] [dxLink] allow to customize max frame payload length
+  - JVM parameter "-Dcom.devexperts.qd.dxlink.websocket.maxFramePayloadLength=65536" manages frame payload length.
+* [QD-1474] Automate publishing dxlink-websocket to dxFeed public repo
+* [QD-1301] Method RecordBuffer.removeAt breaks ongoing iteration
+* [QD-1469] [Schedule] Add the schedules for the MICs required for CornerBank
+
 QDS 3.324:
 
 * [QD-1468] QTP parser can allocate an unlimited amount of memory

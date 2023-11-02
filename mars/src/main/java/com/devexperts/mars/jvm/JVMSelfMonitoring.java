@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -289,7 +289,13 @@ public class JVMSelfMonitoring implements MARSPlugin, Runnable, JVMSelfMonitorin
     }
 
     private static double getUsage(MemoryUsage memory) {
-        return memory.getUsed() * 10000 / Math.max(memory.getMax(), memory.getCommitted()) / 100.0;
+        long maxMemory = Math.max(memory.getMax(), memory.getCommitted());
+        if (maxMemory <= 0) {
+            // Under Substrate VM in non-heap memory (see java.lang.management.MemoryMXBean#getNonHeapMemoryUsage),
+            // committed memory will be 0
+            return 100.0;
+        }
+        return memory.getUsed() * 10000 / maxMemory / 100.0;
     }
 
     private static String getUsageString(MemoryUsage memory) {
@@ -327,8 +333,14 @@ public class JVMSelfMonitoring implements MARSPlugin, Runnable, JVMSelfMonitorin
     }
 
     public int getThreadDeadlockedCount() {
-        long[] t = threadMXBean.findMonitorDeadlockedThreads();
-        return t == null ? 0 : t.length;
+        try {
+            long[] t = threadMXBean.findMonitorDeadlockedThreads();
+            return t == null ? 0 : t.length;
+        } catch (Throwable t) {
+            // An error will be thrown for unsupported operations,
+            // e.g. Substrate VM does not support calling threadMXBean.findMonitorDeadlockedThreads()
+            return 0;
+        }
     }
 
     public String getTimeZone() {

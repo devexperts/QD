@@ -727,34 +727,49 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
      */
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "{" + baseFieldsToString() + "}";
+        StringBuilder sb = new StringBuilder(getClass().getSimpleName());
+        sb.append('{');
+        fieldsToString(sb);
+        sb.append('}');
+        return sb.toString();
     }
 
-    // ========================= package private access for Order and SpreadOrder =========================
+    // ========================= package private access for other subclasses =========================
 
-    String baseFieldsToString() {
-        return getEventSymbol() +
-            ", eventTime=" + TimeFormat.DEFAULT.withMillis().format(getEventTime()) +
-            ", source=" + getSource() +
-            ", eventFlags=0x" + Integer.toHexString(getEventFlags()) +
-            ", index=0x" + Long.toHexString(index) +
-            ", time=" + TimeFormat.DEFAULT.withMillis().format(getTime()) +
-            ", sequence=" + getSequence() +
-            ", timeNanoPart=" + timeNanoPart +
-            ", action=" + getAction() +
-            ", actionTime=" + TimeFormat.DEFAULT.withMillis().format(actionTime) +
-            ", orderId=" + orderId +
-            ", auxOrderId=" + auxOrderId +
-            ", price=" + price +
-            ", size=" + size +
-            ", executedSize=" + executedSize +
-            ", count=" + count +
-            ", exchange=" + Util.encodeChar(getExchangeCode()) +
-            ", side=" + getOrderSide() +
-            ", scope=" + getScope() +
-            ", tradeId=" + tradeId +
-            ", tradePrice=" + tradePrice +
-            ", tradeSize=" + tradeSize;
+    /**
+     * Appends the field values of this event to a provided {@link StringBuilder}.
+     * This method is responsible for converting each field to a string representation and appending it
+     * to the {@link StringBuilder} passed as a parameter.
+     * <p> Inheritor classes are encouraged to override this method to add additional fields specific
+     * to their implementations. When overriding, the subclass should first call
+     * {@code super.fieldsToString(sb)} before appending its own fields to maintain the
+     * structure of the data representation.
+     * @param sb instance to which field values are appended.
+     * @return instance passed in, after field values have been appended.
+     */
+    StringBuilder fieldsToString(StringBuilder sb) {
+        return sb.append(getEventSymbol())
+            .append(", eventTime=").append(TimeFormat.DEFAULT.withMillis().format(getEventTime()))
+            .append(", source=").append(getSource())
+            .append(", eventFlags=0x").append(Integer.toHexString(getEventFlags()))
+            .append(", index=0x").append(Long.toHexString(index))
+            .append(", time=").append(TimeFormat.DEFAULT.withMillis().format(getTime()))
+            .append(", sequence=").append(getSequence())
+            .append(", timeNanoPart=").append(timeNanoPart)
+            .append(", action=").append(getAction())
+            .append(", actionTime=").append(TimeFormat.DEFAULT.withMillis().format(actionTime))
+            .append(", orderId=").append(orderId)
+            .append(", auxOrderId=").append(auxOrderId)
+            .append(", price=").append(price)
+            .append(", size=").append(size)
+            .append(", executedSize=").append(executedSize)
+            .append(", count=").append(count)
+            .append(", exchange=").append(Util.encodeChar(getExchangeCode()))
+            .append(", side=").append(getOrderSide())
+            .append(", scope=").append(getScope())
+            .append(", tradeId=").append(tradeId)
+            .append(", tradePrice=").append(tradePrice)
+            .append(", tradeSize=").append(tradeSize);
     }
 
     // ========================= package private access for delegate =========================

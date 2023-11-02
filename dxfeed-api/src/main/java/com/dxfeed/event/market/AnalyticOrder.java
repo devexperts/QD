@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -236,18 +236,15 @@ public class AnalyticOrder extends Order {
     }
 
     /**
-     * Returns string representation of this analytic order.
-     *
-     * @return string representation of this analytic order.
+     * {@inheritDoc}
      */
     @Override
-    public String toString() {
-        return "AnalyticOrder{" + baseFieldsToString() +
-            ", icebergPeakSize=" + icebergPeakSize +
-            ", icebergHiddenSize=" + icebergHiddenSize +
-            ", icebergExecutedSize=" + icebergExecutedSize +
-            ", icebergType=" + getIcebergType() +
-            "}";
+    StringBuilder fieldsToString(StringBuilder sb) {
+        return super.fieldsToString(sb)
+            .append(", icebergPeakSize=").append(icebergPeakSize)
+            .append(", icebergHiddenSize=").append(icebergHiddenSize)
+            .append(", icebergExecutedSize=").append(icebergExecutedSize)
+            .append(", icebergType=").append(getIcebergType());
     }
 
     // ========================= package private access for delegate =========================

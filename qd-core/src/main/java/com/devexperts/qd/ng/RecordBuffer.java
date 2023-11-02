@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -669,6 +669,13 @@ public final class RecordBuffer extends RecordSource implements
         if (mode.differentIntFieldCount(oldRecord, newRecord) || mode.differentObjFieldCount(oldRecord, newRecord))
             Throws.throwDifferentNumberOfFields(newRecord, oldRecord);
         objFlds[opos + OBJ_RECORD] = newRecord;
+
+        if (readCursor.getObjPositionInternal() == opos) {
+            readCursor.setRecordInternal(newRecord, mode);
+        }
+        if (writeCursor.getObjPositionInternal() == opos) {
+            writeCursor.setRecordInternal(newRecord, mode);
+        }
     }
 
     /**
@@ -687,32 +694,80 @@ public final class RecordBuffer extends RecordSource implements
             Throws.throwIndexOutOfBoundsException(opos, objLimit);
         intFlds[ipos + INT_CIPHER] = cipher;
         objFlds[opos + OBJ_SYMBOL] = symbol;
+
+        if (readCursor.getIntPositionInternal() == ipos && readCursor.getObjPositionInternal() == opos) {
+            readCursor.setSymbolInternal(cipher, symbol);
+        }
+        if (writeCursor.getIntPositionInternal() == ipos && writeCursor.getObjPositionInternal() == opos) {
+            writeCursor.setSymbolInternal(cipher, symbol);
+        }
     }
 
     /**
      * Removes record at the specified position. All records to the right are shifted.
-     * Limit is correspondingly decreased, but position is not changed.
+     * Limit is correspondingly decreased, position have correct value.
      * This method also resets both cursors to avoid accidental corruption of data.
      * @throws IndexOutOfBoundsException if position is invalid or above current limit.
      */
     public void removeAt(long position) {
         int ipos = (int) position;
         int opos = (int) (position >>> 32);
-        if (ipos < 0 || ipos >= intLimit || opos < 0 || opos >= objLimit)
-            throw new IndexOutOfBoundsException();
+
+        if (ipos < 0 || ipos >= intLimit) {
+            Throws.throwIndexOutOfBoundsException(ipos, intLimit);
+        }
+        if (opos < 0 || opos >= objLimit) {
+            Throws.throwIndexOutOfBoundsException(opos, objLimit);
+        }
+
         DataRecord record = (DataRecord) objFlds[opos + OBJ_RECORD];
         int iremove = mode.intBufOffset + mode.intFieldCount(record);
         int oremove = mode.objBufOffset + mode.objFieldCount(record);
-        if (intPosition > intLimit - iremove || objPosition > objLimit - oremove)
-            throw new IndexOutOfBoundsException();
-        System.arraycopy(intFlds, ipos + iremove, intFlds, ipos, intLimit - iremove - ipos);
-        System.arraycopy(objFlds, opos + oremove, objFlds, opos, objLimit - oremove - opos);
-        Arrays.fill(intFlds, intLimit - iremove, intLimit, 0);
-        Arrays.fill(objFlds, objLimit - oremove, objLimit, null);
-        resetCursorsAccess();
-        intLimit -= iremove;
-        objLimit -= oremove;
-        size--;
+
+        removeImpl(ipos, opos, iremove, oremove, 1);
+    }
+
+    /**
+     * Removes records from the specified fromPosition inclusive and toPosition exclusive.
+     * All records to the right are shifted. Limit is correspondingly decreased, position have correct value.
+     * This method also corrects both cursors or resets them in case the cursors belong to a remove range.
+     * @param fromPosition start position
+     * @param toPosition end position, exclusive
+     * @throws IndexOutOfBoundsException if position is invalid or above current limit.
+     * @throws IllegalArgumentException if input positions and internal state of buffer are mismatched.
+     */
+    public void removeRange(long fromPosition, long toPosition) {
+        int iFromPos = (int) fromPosition;
+        int oFromPos = (int) (fromPosition >>> 32);
+
+        int iToPos = (int) toPosition;
+        int oToPos = (int) (toPosition >>> 32);
+
+        if (iFromPos < 0 || iToPos > intLimit || iFromPos > iToPos) {
+            Throws.throwIndexOutOfBoundsRangeCheckException(iFromPos, iToPos, intLimit);
+        }
+        if (oFromPos < 0 || oToPos > objLimit || oFromPos > oToPos) {
+            Throws.throwIndexOutOfBoundsRangeCheckException(oFromPos, oToPos, objLimit);
+        }
+
+        int count = 0;
+        int iPos = iFromPos;
+        int oPos = oFromPos;
+        while (iPos < iToPos && oPos < oToPos) {
+            DataRecord record = (DataRecord) objFlds[oPos + OBJ_RECORD];
+            iPos += mode.intBufOffset + mode.intFieldCount(record);
+            oPos += mode.objBufOffset + mode.objFieldCount(record);
+            count++;
+        }
+
+        // additional check integrity of internal structure and input params
+        if (iPos != iToPos || oPos != oToPos) {
+            Throws.throwInvalidStateOrParameters(iFromPos, oFromPos, iToPos, oToPos);
+        }
+
+        if (count > 0) {
+            removeImpl(iFromPos, oFromPos, iToPos - iFromPos, oToPos - oFromPos, count);
+        }
     }
 
     /**
@@ -1278,6 +1333,44 @@ public final class RecordBuffer extends RecordSource implements
             s++;
         }
         return s;
+    }
+
+    private void removeImpl(int ipos, int opos, int iremove, int oremove, int count) {
+        System.arraycopy(intFlds, ipos + iremove, intFlds, ipos, intLimit - iremove - ipos);
+        System.arraycopy(objFlds, opos + oremove, objFlds, opos, objLimit - oremove - opos);
+        Arrays.fill(intFlds, intLimit - iremove, intLimit, 0);
+        Arrays.fill(objFlds, objLimit - oremove, objLimit, null);
+
+        correctCursor(readCursor, ipos, opos, iremove, oremove);
+        correctCursor(writeCursor, ipos, opos, iremove, oremove);
+
+        if (intPosition >= ipos + iremove) {
+            intPosition -= iremove;
+        } else if (intPosition > ipos) {
+            intPosition = ipos;
+        }
+        if (objPosition >= opos + oremove) {
+            objPosition -= oremove;
+        } else if (objPosition > opos) {
+            objPosition = opos;
+        }
+
+        intLimit -= iremove;
+        objLimit -= oremove;
+        size -= count;
+    }
+
+    private void correctCursor(RecordCursor cursor, int ipos, int opos, int iremove, int oremove) {
+        int intCursorPosition = cursor.getIntPositionInternal();
+        int objCursorPosition = cursor.getObjPositionInternal();
+
+        if (intCursorPosition >= ipos + iremove && objCursorPosition >= opos + oremove) {
+            cursor.setOffsetsInternal(
+                intCursorPosition - iremove + mode.intBufOffset,
+                objCursorPosition - oremove + mode.objBufOffset);
+        } else if (intCursorPosition >= ipos || objCursorPosition >= opos) {
+            cursor.resetAccessInternal();
+        }
     }
 
     private void incPosition(RecordCursor cursor) {

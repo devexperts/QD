@@ -90,6 +90,8 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
     private static final String VERBOSE = SystemProperties.getProperty("com.devexperts.qd.qtp.socket.verbose", null);
     private static final int MAX_TEXT_MESSAGE_BUFFER_SIZE =
         SystemProperties.getIntProperty("com.devexperts.qd.dxlink.websocket.maxTextMessageBufferSize", 65536);
+    public static final int MAX_FRAME_PAYLOAD_LENGTH =
+        SystemProperties.getIntProperty("com.devexperts.qd.dxlink.websocket.maxFramePayloadLength", 65536);
 
     /**
      * The <code>CloseListener</code> interface allows tracking of handler death.
@@ -431,7 +433,7 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
             this.handshakeFuture = handshakeFuture;
             this.session = session;
             handshaker = WebSocketClientHandshakerFactory.newHandshaker(webSocketURL, WebSocketVersion.V13, null,
-                true, new DefaultHttpHeaders());
+                true, new DefaultHttpHeaders(), MAX_FRAME_PAYLOAD_LENGTH);
         }
 
         @Override
