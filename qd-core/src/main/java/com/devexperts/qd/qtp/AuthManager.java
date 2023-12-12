@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,7 +15,7 @@ import com.devexperts.auth.AuthSession;
 import com.devexperts.auth.AuthToken;
 import com.devexperts.auth.SessionCloseListener;
 import com.devexperts.connector.proto.TransportConnection;
-import com.devexperts.qd.QDLog;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.qtp.auth.QDAuthRealm;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimePeriod;
@@ -32,6 +32,8 @@ class AuthManager implements PromiseHandler<AuthSession> {
 
     private static final long AUTHENTICATE_TIMEOUT = TimePeriod.valueOf(
         SystemProperties.getProperty(AuthManager.class, "authenticateTimeout", "5m")).getTime();
+
+    private static final Logging log = Logging.getLogging(AuthManager.class);
 
     /**
      * <pre>
@@ -142,7 +144,7 @@ class AuthManager implements PromiseHandler<AuthSession> {
     @Override
     public void promiseDone(Promise<? extends AuthSession> promise) {
         if (promise.hasResult()) {
-            QDLog.log.info(messageAdapter + " authentication success");
+            log.info(messageAdapter + " authentication success");
             messageAdapter.reinitConfiguration(promise.getResult());
             boolean addMask = successSync(promise.getResult());
             if (addMask)
@@ -150,7 +152,7 @@ class AuthManager implements PromiseHandler<AuthSession> {
         } else if (promise.hasException() && !promise.isCancelled()) {
             if (failSync(promise.getException().getMessage()))
                 messageAdapter.addMask(MessageAdapter.getMessageMask(MessageType.DESCRIBE_PROTOCOL));
-            QDLog.log.warn(messageAdapter + " authentication FAIL: " + reason);
+            log.warn(messageAdapter + " authentication FAIL: " + reason);
         }
         syncRemovePromise(promise);
     }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -10,7 +10,6 @@
  * !__
  */
 package com.devexperts.rmi.impl;
-
 
 import com.devexperts.connector.proto.EndpointId;
 import com.devexperts.logging.Logging;
@@ -32,6 +31,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 
 public class ServiceRouter<T> implements RMIObservableServiceDescriptors {
+
+    private static final Logging log = Logging.getLogging(ServiceRouter.class);
 
     // ==================== fields ====================
 
@@ -186,7 +187,7 @@ public class ServiceRouter<T> implements RMIObservableServiceDescriptors {
             try {
                 listener.descriptorsUpdated(Collections.singletonList(descriptor));
             } catch (Throwable t) {
-                Logging.getLogging(ServiceRouter.class).error("Failed to update service descriptors", t);
+                log.error("Failed to update service descriptors", t);
             }
     }
 

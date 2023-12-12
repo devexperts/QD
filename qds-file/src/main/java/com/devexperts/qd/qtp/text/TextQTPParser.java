@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,10 +12,10 @@
 package com.devexperts.qd.qtp.text;
 
 import com.devexperts.io.BufferedInput;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataField;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.kit.VoidIntField;
 import com.devexperts.qd.ng.EventFlag;
 import com.devexperts.qd.ng.RecordBuffer;
@@ -46,6 +46,8 @@ public class TextQTPParser extends AbstractQTPParser {
 
     private static final DataField EVENT_TIME_DESC = new VoidIntField(Integer.MAX_VALUE, "EventTimePlaceHolder");
 
+    private static final Logging log = Logging.getLogging(TextQTPParser.class);
+    
     private final LineTokenizer tokenizer;
     private MessageType defaultMessageType;
     private MessageType lastMessageType;
@@ -103,7 +105,7 @@ public class TextQTPParser extends AbstractQTPParser {
                 break;
             } catch (CorruptedTextFormatException e) {
                 processPending(consumer); // process all good so far
-                QDLog.log.error("Invalid text format", e);
+                log.error("Invalid text format", e);
                 consumer.handleCorruptedStream();
                 break;
             }
@@ -136,7 +138,7 @@ public class TextQTPParser extends AbstractQTPParser {
                     MessageType messageType = MessageType.findByName(messageName);
                     if (messageType == null) {
                         processPending(consumer); // process all good so far
-                        QDLog.log.error("Unknown message type \"" + messageName + "\"");
+                        log.error("Unknown message type \"" + messageName + "\"");
                         consumer.handleUnknownMessage(MessageType.TEXT_FORMAT.getId());
                     } else {
                         // note that everything following message type header is ignored (reserved for future extension)
@@ -198,7 +200,7 @@ public class TextQTPParser extends AbstractQTPParser {
         try {
             heartbeatPayload.appendFromTextTokens(tokenizer.getTokens(), tokenizer.getNextIndex());
         } catch (InvalidFormatException e) {
-            QDLog.log.error(e.getMessage(), e);
+            log.error(e.getMessage(), e);
             return false;
         }
         consumer.processHeartbeat(heartbeatPayload);
@@ -218,7 +220,7 @@ public class TextQTPParser extends AbstractQTPParser {
         DataField[] fieldsRearrangement = describedRecords.get(recordName);
         if (record == null) {
             if (fieldsRearrangement == null) {
-                QDLog.log.error("Unknown record \"" + recordName + "\"");
+                log.error("Unknown record \"" + recordName + "\"");
                 return false;
             } else {
                 // This record was not initially described in our scheme, but was described later.
@@ -229,7 +231,7 @@ public class TextQTPParser extends AbstractQTPParser {
 
         String symbol = tokenizer.nextToken();
         if (symbol == null) {
-            QDLog.log.error("Symbol name expected for record \"" + recordName + "\"");
+            log.error("Symbol name expected for record \"" + recordName + "\"");
             return false;
         }
         int cipher = scheme.getCodec().encode(symbol);
@@ -267,7 +269,7 @@ public class TextQTPParser extends AbstractQTPParser {
                 cursor.setEventTimeSequence(TimeSequenceUtil.getTimeSequenceFromTimeMillis(
                     TimeFormat.DEFAULT.parse(value).getTime()));
             } catch (IllegalArgumentException e) {
-                QDLog.log.error("Cannot parse \"" + BuiltinFields.EVENT_TIME_FIELD_NAME + "\" field: " + e.getMessage());
+                log.error("Cannot parse \"" + BuiltinFields.EVENT_TIME_FIELD_NAME + "\" field: " + e.getMessage());
             }
     }
 
@@ -275,7 +277,7 @@ public class TextQTPParser extends AbstractQTPParser {
         try {
             field.setString(cursor, value);
         } catch (IllegalArgumentException e) {
-            QDLog.log.error("Cannot parse record field \"" + field.getName() + "\": " + e.getMessage());
+            log.error("Cannot parse record field \"" + field.getName() + "\": " + e.getMessage());
         }
     }
 
@@ -291,7 +293,7 @@ public class TextQTPParser extends AbstractQTPParser {
         DataField[] fieldsRearrangement = describedRecords.get(recordName);
         if (record == null) {
             if (fieldsRearrangement == null) {
-                QDLog.log.error("Subscription to unknown record \"" + recordName + "\"");
+                log.error("Subscription to unknown record \"" + recordName + "\"");
                 return false;
             } else {
                 // This record was not initially described in our scheme, but was described later.
@@ -302,7 +304,7 @@ public class TextQTPParser extends AbstractQTPParser {
 
         String symbol = tokenizer.nextToken();
         if (symbol == null) {
-            QDLog.log.error("Symbol name expected for record \"" + recordName + "\"");
+            log.error("Symbol name expected for record \"" + recordName + "\"");
             return false;
         }
         int cipher = scheme.getCodec().encode(symbol);
@@ -317,7 +319,7 @@ public class TextQTPParser extends AbstractQTPParser {
                     if (timeStr != null)
                         time |= record.getIntField(1).parseString(timeStr) & 0xFFFFFFFFL;
                 } catch (IllegalArgumentException e) {
-                    QDLog.log.error("Cannot parse time for historySubscriptionAdd subscription");
+                    log.error("Cannot parse time for historySubscriptionAdd subscription");
                     return false;
                 }
             }
@@ -335,7 +337,7 @@ public class TextQTPParser extends AbstractQTPParser {
             String s = tokenizer.nextToken();
             int i = s.indexOf('=');
             if (i < 0) {
-                QDLog.log.error("Skipping extra token \"" + s + "\". Expected '=' is not found");
+                log.error("Skipping extra token \"" + s + "\". Expected '=' is not found");
                 continue;
             }
             String key = s.substring(0, i);
@@ -351,11 +353,11 @@ public class TextQTPParser extends AbstractQTPParser {
                 if (data) {
                     DataField field = cur.getRecord().findFieldByName(key);
                     if (field == null)
-                        QDLog.log.error("Skipping extra token \"" + s + "\". Field is not found");
+                        log.error("Skipping extra token \"" + s + "\". Field is not found");
                     else
                         trySetField(field, cur, value);
                 } else
-                    QDLog.log.error("Skipping extra token \"" + s + "\" in subscription");
+                    log.error("Skipping extra token \"" + s + "\" in subscription");
             }
         }
     }
@@ -370,7 +372,7 @@ public class TextQTPParser extends AbstractQTPParser {
         if (!BuiltinFields.SYMBOL_FIELD_NAME.equals(symbolString) &&
             !BuiltinFields.EVENT_SYMBOL_FIELD_NAME.equals(symbolString))
         {
-            QDLog.log.error("Invalid symbol field name '" + symbolString + "'");
+            log.error("Invalid symbol field name '" + symbolString + "'");
             return false;
         }
         DataRecord record = scheme.findRecordByName(recordName);

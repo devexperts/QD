@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,9 +13,9 @@ package com.devexperts.qd.tools;
 
 import com.devexperts.io.Chunk;
 import com.devexperts.io.ChunkedInput;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.kit.VoidIntField;
 import com.devexperts.qd.qtp.BuiltinFields;
 import com.devexperts.qd.qtp.MessageType;
@@ -27,6 +27,9 @@ import java.io.InputStreamReader;
 import java.util.StringTokenizer;
 
 class PostingThread extends Thread {
+
+    private static final Logging log = Logging.getLogging(PostingThread.class);
+
     private final DataScheme scheme;
     private final PostMessageQueue queue;
     private final ChunkedInput input = new ChunkedInput();
@@ -45,7 +48,7 @@ class PostingThread extends Thread {
         try {
             processConsole();
         } catch (InterruptedException e) {
-            QDLog.log.error("Interrupted", e);
+            log.error("Interrupted", e);
         }
     }
 
@@ -71,7 +74,7 @@ class PostingThread extends Thread {
     }
 
     private void processConsole() throws InterruptedException {
-        QDLog.log.info("Type '?' on console for help");
+        log.info("Type '?' on console for help");
 
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
         try {
@@ -80,7 +83,7 @@ class PostingThread extends Thread {
                 processLine(line);
             }
         } catch (IOException e ) {
-            QDLog.log.error("Unexpected IOException in 'Post' tool", e);
+            log.error("Unexpected IOException in 'Post' tool", e);
         }
 
         queue.waitDone();

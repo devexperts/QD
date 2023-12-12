@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,16 +11,16 @@
  */
 package com.devexperts.qd.logger;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataRecord;
-import com.devexperts.qd.QDLog;
 
-public class Logger {
+class Logger {
     private final String name;
-    private final QDLog log;
+    private final Logging log;
 
     private final String header;
 
-    public Logger(QDLog log, String name) {
+    public Logger(Logging log, String name) {
         if (log == null)
             throw new NullPointerException("log");
         if (name == null)
@@ -36,10 +36,10 @@ public class Logger {
         sb.append(record.getName());
     }
 
-    static void appendTime(StringBuilder sb, DataRecord record, int time_hi) {
-        if (record.hasTime() && time_hi != 0) {
+    static void appendTime(StringBuilder sb, DataRecord record, int timeHi) {
+        if (record.hasTime() && timeHi != 0) {
             sb.append('@');
-            sb.append(record.getIntField(0).toString(time_hi));
+            sb.append(record.getIntField(0).toString(timeHi));
         }
     }
 

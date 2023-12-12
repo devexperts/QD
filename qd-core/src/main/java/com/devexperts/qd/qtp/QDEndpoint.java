@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,6 +13,7 @@ package com.devexperts.qd.qtp;
 
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.connector.proto.EndpointId;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDAgent;
@@ -20,7 +21,6 @@ import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDHistory;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.QDStream;
 import com.devexperts.qd.QDTicker;
 import com.devexperts.qd.kit.RecordOnlyFilter;
@@ -81,6 +81,8 @@ public class QDEndpoint implements Closeable {
 
     // ------------------ instance ------------------
 
+    protected final Logging log = Logging.getLogging(getClass());
+
     // everything is modified only under SYNC(lock)
     private final Object lock = new Lock();
 
@@ -134,7 +136,7 @@ public class QDEndpoint implements Closeable {
     private void initCollectors(List<QDCollector.Factory> collectorFactories) {
         if (collectorFactories.isEmpty())
             return; // don't log when there are no collectors
-        QDLog.log.info(name + " with collectors " + collectorFactories);
+        log.info(name + " with collectors " + collectorFactories);
         QDFactory defaultFactory = QDFactory.getDefaultFactory();
         for (QDCollector.Factory factory : collectorFactories) {
             QDCollector.Builder<?> builder = defaultFactory.collectorBuilder(factory.getContract())
@@ -709,7 +711,7 @@ public class QDEndpoint implements Closeable {
                 String value = props.getProperty(key).trim();
                 if (value.isEmpty())
                     continue;
-                QDLog.log.info(endpoint.getName() + " with " + key + "=" + value);
+                endpoint.log.info(endpoint.getName() + " with " + key + "=" + value);
                 QDContract contract;
                 try {
                     contract = QDContract.valueOf(

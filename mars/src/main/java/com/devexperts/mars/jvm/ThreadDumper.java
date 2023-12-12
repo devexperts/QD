@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -36,7 +36,6 @@ class ThreadDumper extends Thread {
     private SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss.sssZ", Locale.US);
     private String header;
 
-
     ThreadDumper(JVMSelfMonitoring selfMonitoring, String file) {
         super("ThreadDumper-" + (file.isEmpty() ? "stdout" : file));
         setDaemon(true);
@@ -48,6 +47,10 @@ class ThreadDumper extends Thread {
 
     String getFile() {
         return file;
+    }
+
+    private static Logging log() {
+        return Logging.getLogging(JVMSelfMonitoring.class);
     }
 
     @Override
@@ -76,7 +79,7 @@ class ThreadDumper extends Thread {
         } catch (InterruptedException e) {
             // interrupted from JVMSelfMonitoring -- quit
         } catch (Throwable t) {
-            Logging.getLogging(ThreadDumper.class).error("Failed to make thread dumps", t);
+            log().error("Failed to make thread dumps", t);
         } finally {
             selfMonitoring.threadDumperTerminated(this);
         }

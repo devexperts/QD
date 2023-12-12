@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.rmi.impl;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.rmi.message.RMIRequestMessage;
 import com.devexperts.rmi.task.BalanceResult;
 import com.devexperts.rmi.task.RMILoadBalancer;
@@ -25,6 +26,8 @@ import javax.annotation.Nonnull;
 
 // Guarded by ClientSideService or ServerSideServices
 class LoadBalancers {
+    private static final Logging log = Logging.getLogging(LoadBalancers.class);
+
     private final Map<String, RMILoadBalancer> loadBalancers = new HashMap<>();
     private final List<RMILoadBalancerFactory> factories;
     private boolean closed = false;
@@ -37,7 +40,7 @@ class LoadBalancers {
     Promise<BalanceResult> balance(RMIRequestMessage<?> message) {
         if (closed) {
             // This should never happen
-            RMILog.log.error("Attempt to balance a message on closed endpoint: " + message, new Exception());
+            log.error("Attempt to balance a message on closed endpoint: " + message, new Exception());
             return Promise.failed(new RMIFailedException("Attempt to balance a message on closed endpoint"));
         }
         try {
@@ -78,8 +81,7 @@ class LoadBalancers {
         try {
             loadBalancer.updateServiceDescriptor(descriptor);
         } catch (Exception e) {
-            RMILog.log.error("Error updating descriptor " + descriptor +
-                " in RMI load balancer " + loadBalancer, e);
+            log.error("Error updating descriptor " + descriptor + " in RMI load balancer " + loadBalancer, e);
         }
     }
 
@@ -93,13 +95,13 @@ class LoadBalancers {
         try {
             loadBalancer.close();
         } catch (Exception e) {
-            RMILog.log.error("Error closing RMI load balancer " + loadBalancer, e);
+            log.error("Error closing RMI load balancer " + loadBalancer, e);
         }
     }
 
     private RMILoadBalancer createLoadBalancer(String serviceName) {
         if (RMIEndpointImpl.RMI_TRACE_LOG)
-            RMILog.log.trace("Creating RMI load balancer for service " + serviceName);
+            log.trace("Creating RMI load balancer for service " + serviceName);
 
         for (RMILoadBalancerFactory factory : factories) {
             RMILoadBalancer loadBalancer = factory.createLoadBalancer(serviceName);

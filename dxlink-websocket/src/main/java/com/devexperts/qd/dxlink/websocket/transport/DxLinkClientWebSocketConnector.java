@@ -17,6 +17,7 @@ import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.qtp.AbstractMessageConnector;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.MessageConnectorState;
+import com.devexperts.qd.qtp.ReconnectHelper;
 import com.devexperts.qd.qtp.help.MessageConnectorProperty;
 import com.devexperts.qd.qtp.help.MessageConnectorSummary;
 import com.devexperts.qd.stats.QDStats;
@@ -40,6 +41,7 @@ public class DxLinkClientWebSocketConnector extends AbstractMessageConnector
     protected String proxyHost = SystemProperties.getProperty("https.proxyHost", "");
     protected int proxyPort = SystemProperties.getIntProperty("https.proxyPort", 80);
     private volatile WebSocketTransportConnection transportConnection;
+    private final ReconnectHelper reconnectHelper;
 
     /**
      * Creates new client WebSocket connector.
@@ -56,6 +58,7 @@ public class DxLinkClientWebSocketConnector extends AbstractMessageConnector
             MessageConnector.class.getName());
         QDConfig.setDefaultProperties(this, DxLinkClientWebSocketConnectorMBean.class,
             DxLinkClientWebSocketConnector.class.getName());
+        this.reconnectHelper =  new ReconnectHelper(getReconnectDelay());
         this.address = url;
     }
 
@@ -153,33 +156,26 @@ public class DxLinkClientWebSocketConnector extends AbstractMessageConnector
 
     @Override
     public synchronized void start() {
-        if (transportConnection != null) {
+        if (transportConnection != null)
             return;
-        }
         log.info("Starting DxLinkClientWebSocketConnector to " + LogUtil.hideCredentials(getAddress()));
         // create default stats instance if specific one was not provided.
-        if (getStats() == null) {
+        if (getStats() == null)
             setStats(QDFactory.getDefaultFactory().createStats(QDStats.SType.CLIENT_SOCKET_CONNECTOR, null));
-        }
-        transportConnection = new WebSocketTransportConnection(this, this.address);
+        reconnectHelper.setReconnectDelay(getReconnectDelay()); // update reconnect delay
+        transportConnection = new WebSocketTransportConnection(this, address);
         transportConnection.setCloseListener(this);
         transportConnection.start();
     }
 
     @Override
     protected synchronized Joinable stopImpl() {
-        WebSocketTransportConnection transportConnection = this.transportConnection;
-        this.transportConnection = null; // Clear before actual close to avoid recursion.
-        if (transportConnection != null) {
-            log.info("Stopping DxLinkClientWebSocketConnector");
-            transportConnection.close();
-        }
-        return transportConnection;
+        return stopImpl(true);
     }
 
     @Override
     protected synchronized void restartImpl(boolean fullStop) {
-        stopImpl();
+        stopImpl(fullStop);
         start();
     }
 
@@ -189,6 +185,22 @@ public class DxLinkClientWebSocketConnector extends AbstractMessageConnector
             return;
         this.transportConnection = null;
         start();
+    }
+
+    private Joinable stopImpl(boolean fullStop) {
+        if (fullStop)
+            reconnectHelper.reset();
+        WebSocketTransportConnection transportConnection = this.transportConnection;
+        this.transportConnection = null; // Clear before actual close to avoid recursion.
+        if (transportConnection != null) {
+            log.info("Stopping DxLinkClientWebSocketConnector");
+            transportConnection.close();
+        }
+        return transportConnection;
+    }
+
+    public ReconnectHelper getReconnectHelper() {
+        return reconnectHelper;
     }
 }
 

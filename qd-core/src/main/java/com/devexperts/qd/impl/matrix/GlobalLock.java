@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,7 +11,7 @@
  */
 package com.devexperts.qd.impl.matrix;
 
-import com.devexperts.qd.QDLog;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.impl.matrix.management.CollectorCounters;
 import com.devexperts.qd.impl.matrix.management.CollectorManagement;
 import com.devexperts.qd.impl.matrix.management.CollectorOperation;
@@ -25,6 +25,8 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
  */
 final class GlobalLock {
     private static final boolean TRACE_LOG = GlobalLock.class.desiredAssertionStatus();
+
+    private static final Logging log = Logging.getLogging(GlobalLock.class);
 
     // ability to statically turn off all fancy features, so that they will not even be compiled by HotSpot
     private static final boolean MANAGED = SystemProperties.getBooleanProperty(GlobalLock.class, "Managed", true);
@@ -79,7 +81,7 @@ final class GlobalLock {
         last_op = op;
         state.makeAcquired(LockedThreadState.LOCK_GLOBAL);
         if (TRACE_LOG)
-            QDLog.log.trace(management.getContract() + " global lock locked for " + op);
+            log.trace(management.getContract() + " global lock locked for " + op);
     }
 
     private void acquireContended(int arg, CollectorOperation op) {
@@ -105,7 +107,7 @@ final class GlobalLock {
 
     void unlock() {
         if (TRACE_LOG)
-            QDLog.log.trace(management.getContract() + " global lock unlocking after " + last_op);
+            log.trace(management.getContract() + " global lock unlocking after " + last_op);
         keeper.reset();
         sync.release(0);
         LockedThreadState state = getLockedThreadState();
@@ -120,7 +122,7 @@ final class GlobalLock {
             exception = new Exception("Last owner thread was " + lastOwner.getName() + ". Current stack trace is");
             exception.setStackTrace(lastOwner.getStackTrace());
         }
-        QDLog.log.warn(
+        log.warn(
             String.format("%s %s lock is taking too long to acquire for %s operation. Last operation was %s.",
             management.getContract(), type, op, last_op),
             exception);

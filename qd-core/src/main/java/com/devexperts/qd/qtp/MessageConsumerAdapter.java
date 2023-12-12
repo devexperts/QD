@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,9 +13,9 @@ package com.devexperts.qd.qtp;
 
 import com.devexperts.io.BufferedInput;
 import com.devexperts.io.ByteArrayInput;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataConsumer;
 import com.devexperts.qd.DataIterator;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.SubscriptionConsumer;
 import com.devexperts.qd.SubscriptionIterator;
 import com.devexperts.qd.SymbolCodec;
@@ -27,6 +27,8 @@ import com.devexperts.qd.ng.RecordSource;
  * all functional methods skip incoming data and call {@link #handleUnknownMessage}.
  */
 public class MessageConsumerAdapter implements MessageConsumer, MessageConstants, SymbolCodec.Resolver {
+
+    private static final Logging log = Logging.getLogging(MessageConsumerAdapter.class);
 
     /**
      * Returns symbol used for specified characters or <code>null</code> if not found.
@@ -40,17 +42,17 @@ public class MessageConsumerAdapter implements MessageConsumer, MessageConstants
 
     @Override
     public void handleCorruptedStream() {
-        QDLog.log.error("Corrupted QTP byte stream!!!");
+        log.error("Corrupted QTP byte stream!!!");
     }
 
     @Override
     public void handleCorruptedMessage(int messageTypeId) {
-        QDLog.log.error("Corrupted QTP message " + messageTypeIdToString(messageTypeId) + "!!!");
+        log.error("Corrupted QTP message " + messageTypeIdToString(messageTypeId) + "!!!");
     }
 
     @Override
     public void handleUnknownMessage(int messageTypeId) {
-        QDLog.log.error("Unknown QTP message " + messageTypeIdToString(messageTypeId) + "!!!");
+        log.error("Unknown QTP message " + messageTypeIdToString(messageTypeId) + "!!!");
     }
 
     private static String messageTypeIdToString(int messageTypeId) {

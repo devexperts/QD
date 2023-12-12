@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,9 +11,9 @@
  */
 package com.devexperts.qd.impl.matrix;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDAgent;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.stats.QDStats;
 
@@ -23,6 +23,9 @@ import java.util.Arrays;
  * This class contains helper methods and classes for debugging {@link Collector}.
  */
 public class CollectorDebug {
+
+    private static final Logging log = Logging.getLogging(CollectorDebug.class);
+
     static void visitAgentSymbols(SymbolReferenceVisitor srv, RehashCrashInfo rci, Agent agent) {
         SymbolReferenceLocation srl = new SymbolReferenceLocation();
         srl.object = agent;
@@ -69,8 +72,8 @@ public class CollectorDebug {
     }
 
     static class Log {
-        public void info(String message) { QDLog.log.info(message); }
-        public void warn(String message) { QDLog.log.warn(message); }
+        public void info(String message) { log.info(message); }
+        public void warn(String message) { log.warn(message); }
     }
 
     public static final Log DEFAULT = new Log();

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,7 +18,6 @@ import com.devexperts.qd.QDContract;
 import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDErrorHandler;
 import com.devexperts.qd.QDFilter;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.impl.AbstractCollector;
@@ -46,7 +45,6 @@ abstract class StripedCollector<C extends QDCollector> extends AbstractCollector
         this.shift = 32 - Integer.numberOfTrailingZeros(n);
         this.stats = builder.getStats();
         this.wildcard = scheme.getCodec().getWildcardCipher();
-        QDLog.log.debug("Creating striped " + getContract() + "[" + stats.getFullKeyProperties() + "], N=" + n);
     }
 
     abstract C[] collectors();

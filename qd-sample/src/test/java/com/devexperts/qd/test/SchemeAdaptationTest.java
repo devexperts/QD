@@ -12,6 +12,7 @@
 package com.devexperts.qd.test;
 
 import com.devexperts.io.IOUtil;
+import com.devexperts.logging.Logging;
 import com.devexperts.mars.common.MARSEndpoint;
 import com.devexperts.qd.DataBuffer;
 import com.devexperts.qd.DataIntField;
@@ -25,7 +26,6 @@ import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDFactory;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.SubscriptionBuffer;
 import com.devexperts.qd.SubscriptionListener;
 import com.devexperts.qd.SubscriptionProvider;
@@ -110,6 +110,8 @@ public class SchemeAdaptationTest {
     private static final DataScheme SRC_SCHEME = new TestDataScheme(100, 7543, TestDataScheme.Type.SIMPLE, SRC_REC);
     private static final DataScheme DST_SCHEME = new TestDataScheme(100, 3255, TestDataScheme.Type.SIMPLE, DST_REC);
     private static final SymbolCodec CODEC = SRC_SCHEME.getCodec();
+
+    private static final Logging log = Logging.getLogging(SchemeAdaptationTest.class);
 
     private final String[] symbols = { "A", "GE", "IBM", "MSFT", "OGGZY", ".IBMGQ", "SIXCHR", "$NIKKEI" };
     private final int[] ciphers = new int[SYMBOL_COUNT];
@@ -266,7 +268,7 @@ public class SchemeAdaptationTest {
         public void start() {
             connector.setStats(rootStats.create(QDStats.SType.CLIENT_SOCKET_CONNECTOR));
             marsEndpoint = MARSEndpoint.newBuilder().acquire();
-            monitoring = new ConnectorsMonitoringTask(null, QDLog.log, rootStats, marsEndpoint.getRoot(),
+            monitoring = new ConnectorsMonitoringTask(null, log, rootStats, marsEndpoint.getRoot(),
                 Collections.singletonList(connector));
             connector.start();
             thread.start();

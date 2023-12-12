@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,10 +13,10 @@ package com.devexperts.qd.impl.matrix.management.impl;
 
 import com.devexperts.io.BufferedOutput;
 import com.devexperts.io.StreamOutput;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDFactory;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.impl.matrix.Collector;
 import com.devexperts.qd.impl.matrix.SubscriptionDumpVisitor;
@@ -27,6 +27,8 @@ import java.io.IOException;
 import java.util.List;
 
 public class SubscriptionDumpImpl implements SubscriptionDumpVisitor {
+    private static final Logging log = Logging.getLogging(SubscriptionDumpImpl.class);
+
     public static void makeDump(final String file, final DataScheme scheme, final List<Collector> list) {
         Exec.EXEC.execute(new Runnable() {
             @Override
@@ -34,22 +36,23 @@ public class SubscriptionDumpImpl implements SubscriptionDumpVisitor {
                 try {
                     makeDumpImpl(file, scheme, list);
                 } catch (Throwable t) {
-                    QDLog.log.error("Failed to dump subscription to " + LogUtil.hideCredentials(file), t);
+                    log.error("Failed to dump subscription to " + LogUtil.hideCredentials(file), t);
                 }
             }
         });
     }
 
     private static void makeDumpImpl(String file, DataScheme scheme, List<Collector> list) throws IOException {
-        QDLog.log.info("Dumping subscription for " + list.size() + " collector(s) to " + LogUtil.hideCredentials(file));
+        log.info("Dumping subscription for " + list.size() + " collector(s) to " + LogUtil.hideCredentials(file));
         try (StreamOutput out = new StreamOutput(new FileOutputStream(file), 100000)) {
             SubscriptionDumpImpl visitor = new SubscriptionDumpImpl(scheme, out);
             visitor.writeHeader();
-            for (Collector collector : list)
+            for (Collector collector : list) {
                 collector.dumpSubscription(visitor);
+            }
             visitor.writeEndOfFile();
         }
-        QDLog.log.info("Subscription dump completed");
+        log.info("Subscription dump completed");
     }
 
     // ------------------------------ INSTANCE ------------------------------
@@ -96,8 +99,9 @@ public class SubscriptionDumpImpl implements SubscriptionDumpVisitor {
             out.writeCompactInt(-rid - 2);
             out.writeUTFString(record.getName());
             seenRecords[rid] = true;
-        } else
+        } else {
             out.writeCompactInt(rid);
+        }
     }
 
     @Override

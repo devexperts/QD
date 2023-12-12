@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.325</version>
+        <version>3.326</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -24,8 +24,6 @@
     <description>Collection of reusable utility classes from Devexperts</description>
 
     <properties>
-        <deploy.file>${project.artifactId}-${project.version}-javadoc.jar</deploy.file>
-        <deploy.name>${project.artifactId}-javadoc</deploy.name>
         <!-- public module - deploy to Maven repo  -->
         <deploy.skip>false</deploy.skip>
         <!-- generate JavaDoc -->

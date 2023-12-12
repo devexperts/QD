@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -19,7 +19,6 @@ import com.devexperts.qd.QDContract;
 import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDErrorHandler;
 import com.devexperts.qd.QDFilter;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.impl.AbstractCollector;
 import com.devexperts.qd.impl.matrix.management.CollectorCounters;
@@ -1537,7 +1536,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
         DataRecord r = scheme.findRecordByName(record);
         if (r != null)
             return r.getId();
-        QDLog.log.warn("Record is not found for " + record);
+        log.warn("Record is not found for " + record);
         return -1;
     }
 
@@ -1548,7 +1547,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
         key = mapper.getMapping().getKey(symbol);
         if (key != 0)
             return key;
-        QDLog.log.warn("Key is not found for " + symbol);
+        log.warn("Key is not found for " + symbol);
         return -1;
     }
 

@@ -1,3 +1,19 @@
+QDS 3.326:
+
+* [QD-1432] [build] Update build scripts to allow incremental builds
+  - NOTE: Internal delivery via Maven repository only.
+* [QD-1483] [dxLink] Time between reconnection attempts should be increased
+* [QD-1481] [dxLink] Error messaging from client to server
+* [QD-1493] [Schedule] Access schedule definition
+* [QD-1305] QD internal logging cleanup
+  - Logging in QD project now conforms to industry common practices:
+    - NOTE: Use of default log category "com.devexperts.QD" is changed to individual class names
+    - Log levels INFO, WARN, ERROR are used to report status of QD library and DEBUG for developer purposes
+    - NOTE: Expect more DEBUG logging from QD in the future - fix logging configuration in projects using QD
+    - QDLog.log is deprecated and is subject for future removal - create specific instances of Logging instead
+* [QD-1487] [dxLink] dxLink QD connector on some machines the native image often fails to connect
+* [QD-1444] [build] qd-samplecert module shall not be bundled in qds-tools.jar
+
 QDS 3.325:
 
 * [QD-1478] Implementation of toString in OtcMarketsOrder does not output the marketMaker field

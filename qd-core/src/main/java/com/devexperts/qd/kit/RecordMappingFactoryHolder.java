@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,7 +11,7 @@
  */
 package com.devexperts.qd.kit;
 
-import com.devexperts.qd.QDLog;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.ng.RecordMapping;
 import com.devexperts.qd.ng.RecordMappingFactory;
 import com.devexperts.services.Services;
@@ -21,7 +21,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 class RecordMappingFactoryHolder {
+
     private static final List<RecordMappingFactory> RECORD_MAPPING_FACTORIES = new ArrayList<RecordMappingFactory>();
+
+    private static final Logging log = Logging.getLogging(RecordMappingFactoryHolder.class);
 
     static {
         for (RecordMappingFactory factory : Services.createServices(RecordMappingFactory.class, null))
@@ -43,11 +46,13 @@ class RecordMappingFactoryHolder {
         try {
             mapping = factory.createMapping(record);
         } catch (IllegalArgumentException e) {
-            QDLog.log.warn("Invalid record " + record.getName() + ": " + e.getMessage());
+            log.warn("Invalid record " + record.getName() + ": " + e.getMessage());
         }
         if (mapping != null) {
-            if (mapping.getRecord() != record)
-                throw new IllegalArgumentException("Created mapping " + mapping + " uses record " + mapping.getRecord() + " instead of record " + record);
+            if (mapping.getRecord() != record) {
+                throw new IllegalArgumentException("Created mapping " + mapping +
+                    " uses record " + mapping.getRecord() + " instead of record " + record);
+            }
             return mapping;
         }
         return null;

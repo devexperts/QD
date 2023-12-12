@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,7 +13,6 @@ package com.devexperts.qd.monitoring;
 
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.impl.matrix.Collector;
 import com.devexperts.qd.impl.matrix.management.CollectorCounters;
 import com.devexperts.qd.qtp.MessageConnector;
@@ -39,7 +38,8 @@ public class MonitoredQDEndpoint extends QDEndpoint {
     private EnumMap<QDContract, CollectorCounters> lastCounters; // only when LOG_COLLECTOR_COUNTERS
 
     protected MonitoredQDEndpoint(MonitoringEndpoint monitoringEndpoint, List<QDCollector.Factory> collectors,
-        boolean withEventTimeSequence, boolean storeEverything) {
+        boolean withEventTimeSequence, boolean storeEverything)
+    {
         super(monitoringEndpoint.getName(), monitoringEndpoint.getScheme(), monitoringEndpoint.getRootStats(),
             collectors, withEventTimeSequence, storeEverything);
         this.monitoringEndpoint = monitoringEndpoint;
@@ -94,7 +94,7 @@ public class MonitoredQDEndpoint extends QDEndpoint {
             CollectorCounters delta = counters.since(lastCounters.get(contract));
             lastCounters.put(contract, counters);
             String text = delta.textReport().replaceAll("\\r?\\n", "\n    ");
-            QDLog.log.info("\b{" + collector.toString() + "} " + text);
+            log.info("\b{" + collector.toString() + "} " + text);
         }
     }
 
@@ -109,8 +109,8 @@ public class MonitoredQDEndpoint extends QDEndpoint {
 
         @Override
         public QDEndpoint build() {
-            MonitoredQDEndpoint endpoint = new MonitoredQDEndpoint(monitoringEndpointBuilder.
-                withScheme(getSchemeOrDefault()).withProperties(props).acquire(),
+            MonitoredQDEndpoint endpoint = new MonitoredQDEndpoint(
+                monitoringEndpointBuilder.withScheme(getSchemeOrDefault()).withProperties(props).acquire(),
                 collectors, withEventTimeSequence, storeEverything);
             subscribe(endpoint);
             return endpoint;

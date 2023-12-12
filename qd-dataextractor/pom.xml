@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.325</version>
+        <version>3.326</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -22,8 +22,7 @@
     <packaging>war</packaging>
 
     <properties>
-        <deploy.file>${project.artifactId}-${project.version}.war</deploy.file>
-        <deploy.extension>war</deploy.extension>
+        <!--<deploy.file.skip>false</deploy.file.skip>-->
         <!-- public module - deploy to Maven repo  -->
         <deploy.skip>false</deploy.skip>
     </properties>

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,8 +11,6 @@
  */
 package com.devexperts.qd.tools;
 
-import com.devexperts.logging.Logging;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.qtp.AgentAdapter;
 import com.devexperts.qd.qtp.DistributorAdapter;
 import com.devexperts.qd.qtp.MessageAdapter;
@@ -57,7 +55,6 @@ public class Multiplexor extends AbstractTool {
 
     private final List<Closeable> closeOnExit = new ArrayList<>();
 
-
     private QDEndpoint endpoint;
 
     @Override
@@ -82,7 +79,6 @@ public class Multiplexor extends AbstractTool {
 
         String distributorAddress = args[0];
         String agentAddress = args[1];
-        Logging log = QDLog.log;
 
         if (delay.isSet())
             log.info("Configured to delay data for " + delay.getValue() + " secs");
@@ -107,7 +103,6 @@ public class Multiplexor extends AbstractTool {
         }
         if (route.isSet())
             closeOnExit.add(route);
-
 
         log.info("Using distributor address " + LogUtil.hideCredentials(distributorAddress));
 

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,8 +11,6 @@
  */
 package com.devexperts.qd.tools;
 
-import com.devexperts.logging.Logging;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.qtp.AgentAdapter;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.MessageConnectors;
@@ -72,8 +70,6 @@ public class Feed extends AbstractTool {
             throw new BadToolParametersException("Options \"" + delay + "\" and \"" + buffer + "\" shall be used only together");
         }
 
-        Logging log = QDLog.log;
-
         QDEndpoint endpoint = collector.createEndpoint(name.getName());
 
         FeedFileHandler feedFileHandler = file.initFile(endpoint, true);
@@ -82,7 +78,7 @@ public class Feed extends AbstractTool {
         FeedDelayer delayer = null;
         if (delay.isSet() && buffer.isSet()) {
             log.info("Creating Delayer for delay " + delay.getValue() + " seconds, buffer size " + buffer.getValue() + " records");
-            delayer = new FeedDelayer(delay.getValue().getTime(), (long) buffer.getValue());
+            delayer = new FeedDelayer(delay.getValue().getTime(), (long) buffer.getValue(), log);
         }
 
         String feed_address = args[0];
@@ -102,7 +98,7 @@ public class Feed extends AbstractTool {
 
         endpoint.addConnectors(connectors).startConnectors();
         if (delayer != null)
-            endpoint.registerMonitoringTask(new FeedDelayerMonitoringTask(delayer));
+            endpoint.registerMonitoringTask(new FeedDelayerMonitoringTask(delayer, log));
     }
 
     @Override

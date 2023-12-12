@@ -11,10 +11,10 @@
  */
 package com.devexperts.qd.dxlink.websocket.application;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDContract;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.services.Services;
 import com.devexperts.util.IndexedSet;
@@ -45,6 +45,8 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlTransient;
 
 final class Delegates {
+    private static final Logging log = Logging.getLogging(Delegates.class);
+
     private static final Delegates.VoidSetter VOID_SETTER = new Delegates.VoidSetter();
     private final IndexedSet<Class<?>, EventDelegateSet<EventType<?>, EventDelegate<EventType<?>>>>
         delegateSetsByEventType =
@@ -98,7 +100,7 @@ final class Delegates {
     EventBuilder getEventBuilder(String eventType, List<String> fields) {
         EventBuilder eventBuilder = builderByEventType.getByKey(eventType);
         if (eventBuilder == null) {
-            QDLog.log.warn(String.format("Unknown event type: '%s'.", eventType));
+            log.warn(String.format("Unknown event type: '%s'.", eventType));
             LinkedHashMap<String, Delegates.Setter> setters = new LinkedHashMap<>();
             for (String field : fields) {
                 setters.put(field, VOID_SETTER);

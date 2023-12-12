@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,9 +11,9 @@
  */
 package com.devexperts.qd.tools;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.mars.common.MARSNode;
 import com.devexperts.qd.DataScheme;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.util.SymbolObjectMap;
 import com.devexperts.qd.util.SymbolObjectVisitor;
@@ -24,6 +24,9 @@ import java.util.Arrays;
 import java.util.Locale;
 
 final class Comparer implements Runnable {
+
+    private static final Logging log = Logging.getLogging(Comparer.class);
+
     private final SymbolObjectMap<CompareBuffer>[] buffers1;
     private final SymbolObjectMap<CompareBuffer>[] buffers2;
     private final String alias1;
@@ -87,6 +90,7 @@ final class Comparer implements Runnable {
         public boolean hasCapacity() {
             return true;
         }
+
         @Override
         public void visitEntry(int cipher, String symbol, ComparisonData data) {
             data.process();
@@ -247,7 +251,7 @@ final class Comparer implements Runnable {
             }
             sb.append(" / Unmatched buf: ").append(unmatchedLeft1);
             sb.append(" vs ").append(unmatchedLeft2);
-            QDLog.log.info(sb.toString());
+            log.info(sb.toString());
         }
     }
 

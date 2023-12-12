@@ -42,7 +42,7 @@ import static org.junit.Assert.assertTrue;
 @Isolated({"com.dxfeed.api", "com.dxfeed.event"})
 public class DXSchemeDefaultSchemeTest {
 
-    public static final Logging log = Logging.getLogging(DXSchemeDefaultSchemeTest.class);
+    private static final Logging log = Logging.getLogging(DXSchemeDefaultSchemeTest.class);
 
     @Parameter
     public String property;

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,10 +11,10 @@
  */
 package com.devexperts.qd.tools;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataVisitor;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDCollector;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.SymbolList;
 import com.devexperts.qd.ng.AbstractRecordSink;
 import com.devexperts.qd.ng.RecordBuffer;
@@ -35,6 +35,8 @@ import java.util.List;
  * @see NetTestWorkingThread
  */
 class NetTestConsumerAgentThread extends NetTestWorkingThread {
+
+    private static final Logging log = Logging.getLogging(NetTestConsumerAgentThread.class);
 
     private final List<QDAgent> agents;
     private boolean signalled;
@@ -105,7 +107,7 @@ class NetTestConsumerAgentThread extends NetTestWorkingThread {
             sub.rewind();
         }
         sub.release();
-        QDLog.log.info("Consumer #" + index + " subscribed to " +
+        log.info("Consumer #" + index + " subscribed to " +
             (side.config.wildcard ? "wildcard" : num + " symbols"));
     }
 

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,10 +11,10 @@
  */
 package com.devexperts.qd.kit;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDFilter;
-import com.devexperts.qd.QDLog;
 
 import java.util.function.Predicate;
 
@@ -22,6 +22,9 @@ import java.util.function.Predicate;
  * Fast implementation for {@link RecordOnlyFilter} via boolean array.
  */
 final class FastRecordFilter extends RecordOnlyFilter {
+
+    private static final Logging log = Logging.getLogging(FastRecordFilter.class);
+
     private final QDFilter delegate;
     private final boolean[] accepts;
     private final SyntaxPrecedence syntaxPrecedence;
@@ -63,9 +66,9 @@ final class FastRecordFilter extends RecordOnlyFilter {
         if (doWarn) {
             int acceptedCount = countAccepted();
             if (acceptedCount == 0)
-                QDLog.log.warn("WARNING: Filter \"" + this + "\" matches no records.");
+                log.warn("WARNING: Filter \"" + this + "\" matches no records.");
             if (acceptedCount == getScheme().getRecordCount())
-                QDLog.log.warn("WARNING: Filter \"" + this + "\" matches all records.");
+                log.warn("WARNING: Filter \"" + this + "\" matches all records.");
         }
         return this;
     }

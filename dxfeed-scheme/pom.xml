@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.325</version>
+        <version>3.326</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 

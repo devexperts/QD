@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,9 +15,9 @@ import com.devexperts.connector.proto.ApplicationConnection;
 import com.devexperts.connector.proto.TransportConnection;
 import com.devexperts.io.ChunkList;
 import com.devexperts.io.ChunkPool;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.TimeMarkUtil;
 import com.devexperts.util.SystemProperties;
@@ -32,6 +32,8 @@ class MessageAdapterConnection extends ApplicationConnection<MessageAdapterConne
         SystemProperties.getIntProperty(MessageAdapterConnection.class, "bytesToHeartbeat", 32768);
 
     private static final int DELTA_MARK_UNKNOWN = Integer.MAX_VALUE;
+
+    private static final Logging log = Logging.getLogging(MessageAdapterConnection.class);
 
     private final MessageAdapter adapter;
     private final ConnectionQTPComposer composer;
@@ -90,7 +92,7 @@ class MessageAdapterConnection extends ApplicationConnection<MessageAdapterConne
     @Override
     public long examine(long currentTime) {
         if (currentTime >= heartbeatDisconnectTime) {
-            QDLog.log.info(adapter +  " heartbeat timeout exceeded: disconnecting");
+            log.info(adapter +  " heartbeat timeout exceeded: disconnecting");
             close();
         }
         long nextRetrieveTime = Math.min(adapter.nextRetrieveTime(currentTime), nextHeartbeatTime);

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -44,10 +44,6 @@ import java.util.concurrent.Executors;
  */
 public class InstrumentProfileCollector {
     private static final Logging log = Logging.getLogging(InstrumentProfileCollector.class);
-
-    static {
-        log.configureDebugEnabled(false);
-    }
 
     // =====================  private instance fields =====================
 
@@ -146,8 +142,6 @@ public class InstrumentProfileCollector {
                     // the rest of removal
                     removeEntryImpl(entry);
                     removed = true;
-                    if (log.debugEnabled())
-                        log.debug("Removing " + debugString(entry.ip));
                 }
             }
             if (removed)
@@ -281,9 +275,6 @@ public class InstrumentProfileCollector {
             oldEntry.generation = generation;
             return false;
         }
-        if (log.debugEnabled())
-            log.debug((oldEntry == null ? "Adding " : "Updating ") + debugString(ip) +
-                (oldEntry != null && oldEntry.ip == ip ? " (same instance)" : ""));
         // CONCURRENCY NOTE: The order of numbered operations is important
         // [0] Create a copy of the instrument (if copyInstrumentProfile is overridden is a subclass)
         //     This captures this instrument profile state in case of its concurrent modifications

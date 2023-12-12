@@ -50,7 +50,7 @@ import static org.junit.Assert.assertTrue;
 @RunWith(TraceRunner.class)
 public class DXEndpointReconnectTest {
 
-    static final Logging log = Logging.getLogging(DXEndpointReconnectTest.class);
+    private static final Logging log = Logging.getLogging(DXEndpointReconnectTest.class);
 
     private static final int PUB_COUNT = 10;
     private static final int WAIT_TIMEOUT = 30; // seconds

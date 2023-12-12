@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,11 +11,11 @@
  */
 package com.devexperts.qd.kit;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDContract;
 import com.devexperts.qd.QDFilter;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.StableSubscriptionFilter;
 import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.SubscriptionFilterFactory;
@@ -56,6 +56,8 @@ public class CompositeFilters {
     private static final char ANY = '*';
 
     private static final Comparator<QDFilter> FILTERS_BY_KIND = (f1, f2) -> f1.getKind().compareTo(f2.getKind());
+
+    private static final Logging log = Logging.getLogging(CompositeFilters.class);
 
     private CompositeFilters() {}
 
@@ -588,10 +590,9 @@ public class CompositeFilters {
                 }
                 list.subList(j, list.size()).clear();
                 if (set.isEmpty()) {
-                    // it can be only empty if it was AndList.. but here is a sanity check just in case...
-                    QDLog.log.info("WARNING: Filter \"" + new AndFilter(symbolSetCombines, source) + "\" " +
-                        "matches no symbol. " +
-                        "You must quote '&' character using \"[&]\" to use it in symbol.");
+                    // it can be only empty if it was AndList. but here is a sanity check just in case...
+                    log.warn("WARNING: Filter \"" + new AndFilter(symbolSetCombines, source) + "\" " +
+                        "matches no symbol. You must quote '&' character using \"[&]\" to use it in symbol.");
                     return QDFilter.NOTHING;
                 }
                 list.set(iRecordOnly, createSymbolSetFilter(original, symbolSetCombines, set));

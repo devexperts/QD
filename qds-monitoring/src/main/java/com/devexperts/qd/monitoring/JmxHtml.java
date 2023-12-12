@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,8 +11,8 @@
  */
 package com.devexperts.qd.monitoring;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.management.Management;
-import com.devexperts.qd.QDLog;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimePeriod;
 import com.sun.jdmk.comm.AuthInfo;
@@ -34,6 +34,7 @@ import javax.net.ssl.SSLServerSocketFactory;
  * Separate class so that <code>HtmlAdaptorServer</code> class is loaded only when needed.
  */
 class JmxHtml {
+    private static final Logging log = Logging.getLogging(JmxHtml.class);
 
     // server socket bind retry delay
     static final long BIND_RETRY_DELAY =
@@ -59,7 +60,7 @@ class JmxHtml {
             for (String token : auth.split(",")) {
                 String[] info = token.split(":", 2);
                 if (info.length != 2) {
-                    QDLog.log.error(JMXEndpoint.JMX_HTML_AUTH_PROPERTY +
+                    log.error(JMXEndpoint.JMX_HTML_AUTH_PROPERTY +
                         " should contain comma-separated list of <login>:<password> pairs");
                 } else {
                     server.addUserAuthenticationInfo(new AuthInfo(info[0], info[1]));
@@ -77,7 +78,7 @@ class JmxHtml {
             try {
                 return InetAddress.getByName(bind);
             } catch (UnknownHostException e) {
-                QDLog.log.error("Could not resolve bind address, will use unbound socket", e);
+                log.error("Could not resolve bind address, will use unbound socket", e);
             }
         }
         return null;
@@ -99,9 +100,9 @@ class JmxHtml {
                 field.set(this, null); // Invoke now to truly test accessibility.
                 serverSocketField = field;
             } catch (NoSuchFieldException e) {
-                QDLog.log.error("Could not resolve socket field, will use default socket", e);
+                log.error("Could not resolve socket field, will use default socket", e);
             } catch (IllegalAccessException e) {
-                QDLog.log.error("Could not access socket field, will use default socket", e);
+                log.error("Could not access socket field, will use default socket", e);
             }
         }
 
@@ -110,11 +111,11 @@ class JmxHtml {
             while (true) {
                 try {
                     tryBind();
-                    QDLog.log.info("HTML management port is " + getPort() + (ssl ? " [SSL]" : "") +
+                    log.info("HTML management port is " + getPort() + (ssl ? " [SSL]" : "") +
                         (bindAddress != null ? " bound to " + bindAddress : ""));
                     return;
                 } catch (CommunicationException e) {
-                    QDLog.log.error("Failed to bind HTML management port", e);
+                    log.error("Failed to bind HTML management port", e);
                     if (JmxHtml.BIND_RETRY_DELAY == 0)
                         return;
                     Thread.sleep(JmxHtml.BIND_RETRY_DELAY);
@@ -150,7 +151,7 @@ class JmxHtml {
 
         @Override
         protected void doError(Exception e) throws CommunicationException {
-            QDLog.log.error("HTML management adaptor initialization error", e);
+            log.error("HTML management adaptor initialization error", e);
             super.doError(e);
         }
     }

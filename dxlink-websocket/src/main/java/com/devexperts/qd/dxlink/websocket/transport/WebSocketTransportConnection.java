@@ -27,12 +27,16 @@ import com.devexperts.transport.stats.ConnectionStats;
 import com.devexperts.util.JMXNameBuilder;
 import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimePeriod;
 import com.dxfeed.api.DXEndpoint;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
@@ -59,8 +63,10 @@ import io.netty.util.CharsetUtil;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLException;
 
@@ -93,6 +99,11 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
     public static final int MAX_FRAME_PAYLOAD_LENGTH =
         SystemProperties.getIntProperty("com.devexperts.qd.dxlink.websocket.maxFramePayloadLength", 65536);
 
+    private static final long CONNECT_TIMEOUT = TimePeriod.valueOf(
+        SystemProperties.getProperty("com.devexperts.qd.dxlink.websocket.connectTimeout", "5m")).getTime();
+    public static final long HANDSHAKE_TIMEOUT = TimePeriod.valueOf(
+        SystemProperties.getProperty("com.devexperts.qd.dxlink.websocket.handshakeTimeout", "10s")).getTime();
+
     /**
      * The <code>CloseListener</code> interface allows tracking of handler death.
      */
@@ -106,7 +117,6 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
 
     final boolean verbose;
 
-    private final ReconnectHelper reconnectHelper;
     private final String address;
     private WebSocketWriter writer;
     private EventLoopGroup socketThread;
@@ -120,7 +130,6 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
         this.connector = connector;
         this.log = connector.getLogging();
         this.address = address;
-        this.reconnectHelper = new ReconnectHelper(connector.getReconnectDelay());
         this.verbose = VERBOSE != null && connector.getName().contains(VERBOSE);
     }
 
@@ -186,6 +195,8 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
         ConnectionStats connectionStats = new ConnectionStats();
 
         public void writeAndFlush(ByteBuf message) {
+            if (WebSocketTransportConnection.this.verbose && log.debugEnabled())
+                log.debug("SNT: " + message.toString(StandardCharsets.UTF_8));
             channel.writeAndFlush(new TextWebSocketFrame(message));
             connectionStats.addWrittenBytes(message.readableBytes());
         }
@@ -205,6 +216,16 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
             }
             connector.addClosedConnectionStats(connectionStats);
             if (channel != null) {
+                if (reason != null) {
+                    try {
+                        String errorJson = String.format(
+                            "{\"type\":\"ERROR\",\"channel\":0,\"error\":\"UNKNOWN\",\"message\":\"%s\"}",
+                            reason.getMessage());
+                        writeAndFlush(Unpooled.copiedBuffer(errorJson.getBytes(StandardCharsets.UTF_8)));
+                    } catch (Throwable t) {
+                        log.error("Error occurred while sending an error to " + LogUtil.hideCredentials(address), t);
+                    }
+                }
                 try {
                     channel.close();
                     if (reason == null || reason instanceof IOException) {
@@ -231,7 +252,8 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
         if (this.address == null)
             return null;
 
-        this.reconnectHelper.sleepBeforeConnection();
+        // wait if needed to prevent abuse
+        connector.getReconnectHelper().sleepBeforeConnection();
         log.info("Connecting to " + LogUtil.hideCredentials(this.address));
 
         final Address adr;
@@ -267,12 +289,19 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
                     );
                 }
             };
-            session.channel = new Bootstrap()
+            ChannelFuture connect = new Bootstrap()
                 .group(socketThread)
                 .channel(OioSocketChannel.class)
-                .handler(channelInitializer)
-                .connect(adr.host, adr.port).sync().channel();
-            handshakeFuture[0].sync();
+                .handler(channelInitializer).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) CONNECT_TIMEOUT)
+                .connect(adr.host, adr.port);
+
+            // Wait for connection to the server
+            wait(connect, CONNECT_TIMEOUT);
+
+            // Wait until Handshake arrives, which means that WebSocket connection is established
+            wait(handshakeFuture[0], HANDSHAKE_TIMEOUT);
+
+            session.channel = connect.channel();
             log.info("Connected to " + LogUtil.hideCredentials(address));
         } catch (Throwable e) {
             session.close(e);
@@ -289,6 +318,22 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
         }
         connector.notifyMessageConnectorListeners();
         return session;
+    }
+
+    /**
+     * Waits for a connection to be established with the given ChannelFuture, with a specified timeout.
+     *
+     * @param future the ChannelFuture object representing the connection attempt
+     * @param timeoutInMs the timeout duration in milliseconds
+     * @throws IOException if the connection attempt is cancelled or fails
+     */
+    private static void wait(ChannelFuture future, long timeoutInMs) throws IOException {
+        future.awaitUninterruptibly(timeoutInMs, TimeUnit.MILLISECONDS);
+        if (future.isCancelled()) {
+            throw new SocketTimeoutException();
+        } else if (!future.isSuccess()) {
+            throw new IOException(future.cause().getMessage(), future.cause());
+        }
     }
 
     private DxLinkWebSocketApplicationConnection createApplicationConnection(QDStats stats) {
@@ -380,7 +425,7 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
     // ========== TransportConnection implementation ==========
 
     @Override
-    public void markForImmediateRestart() { this.reconnectHelper.reset(); }
+    public void markForImmediateRestart() { connector.getReconnectHelper().reset(); }
 
     @Override
     public void connectionClosed() { close(); }
@@ -424,7 +469,6 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
     }
 
     private class WebSocketChannelInboundHandler extends SimpleChannelInboundHandler<Object> {
-        protected final Logging log = Logging.getLogging(getClass().getName());
         final WebSocketClientHandshaker handshaker;
         private final ChannelPromise[] handshakeFuture;
         private final Session session;

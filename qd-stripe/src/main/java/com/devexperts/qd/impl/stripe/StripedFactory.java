@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.qd.impl.stripe;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDCollector;
@@ -22,6 +23,8 @@ import com.devexperts.util.SystemProperties;
 
 public class StripedFactory extends QDFactory {
     private static final String STRIPE_PROP = "com.devexperts.qd.impl.stripe";
+
+    private static final Logging log = Logging.getLogging(StripedFactory.class);
 
     private final QDFactory base = new MatrixFactory();
     private final int n;
@@ -52,19 +55,24 @@ public class StripedFactory extends QDFactory {
             @Override
             public QDCollector build() {
                 int n = getStripeProp(contract.toString());
-                if (n <= 1)
+                if (n <= 1) {
                     return base.collectorBuilder(getContract())
                         .copyFrom(this)
                         .build();
+                }
+
+                log.info("Creating striped " + getContract() +
+                    "[" + getStats().getFullKeyProperties() + "], N=" + n);
+
                 switch (contract) {
-                case TICKER:
-                    return new StripedTicker(base, this, n);
-                case STREAM:
-                    return new StripedStream(base, this, n);
-                case HISTORY:
-                    return new StripedHistory(base, this, n);
-                default:
-                    throw new IllegalArgumentException();
+                    case TICKER:
+                        return new StripedTicker(base, this, n);
+                    case STREAM:
+                        return new StripedStream(base, this, n);
+                    case HISTORY:
+                        return new StripedHistory(base, this, n);
+                    default:
+                        throw new IllegalArgumentException();
                 }
             }
 

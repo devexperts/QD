@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,11 +12,11 @@
 package com.devexperts.qd.tools;
 
 import com.devexperts.connector.proto.JVMId;
+import com.devexperts.logging.Logging;
 import com.devexperts.management.Management;
 import com.devexperts.mars.common.MARSEndpoint;
 import com.devexperts.mars.common.MARSNode;
 import com.devexperts.mars.common.MARSPlugin;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.qtp.QTPWorkerThread;
 import com.devexperts.services.ServiceProvider;
 import com.devexperts.util.SystemProperties;
@@ -62,6 +62,8 @@ public class TimeSyncTracker implements TimeSyncTrackerMBean, MARSPlugin {
     private static final long TICK_PERIOD = 10000;
     private static final int EXPIRATION_TICKS = 10; // expire after 10 ticks
     private static final int REPORT_TICKS = 6; // report every ~minute
+
+    private static final Logging log = Logging.getLogging(TimeSyncTracker.class);
 
     // initialize only when getInstance is called
     private static class InstanceHolder {
@@ -121,7 +123,7 @@ public class TimeSyncTracker implements TimeSyncTrackerMBean, MARSPlugin {
             //noinspection SocketOpenedButNotSafelyClosed
             socket = new MulticastSocket(port);
         } catch (IOException e) {
-            QDLog.log.error("Failed to create multicast socket for time synchronization tracker", e);
+            log.error("Failed to create multicast socket for time synchronization tracker", e);
             return;
         }
         try {
@@ -130,9 +132,9 @@ public class TimeSyncTracker implements TimeSyncTrackerMBean, MARSPlugin {
             // Workaround for JDK-8178161 (see QD-1131, QD-1262)
             String osName = System.getProperty("os.name");
             if (e.getMessage().contains("assign requested address") && osName.toLowerCase().startsWith("mac")) {
-                QDLog.log.info("Time synchronization tracker initialization failed - unsupported on MacOS");
+                log.info("Time synchronization tracker initialization failed - unsupported on MacOS");
             } else {
-                QDLog.log.error("Failed to join multicast group for time synchronization tracker", e);
+                log.error("Failed to join multicast group for time synchronization tracker", e);
             }
             closeSocket();
             return;
@@ -203,7 +205,7 @@ public class TimeSyncTracker implements TimeSyncTrackerMBean, MARSPlugin {
     private synchronized void handleClose(Throwable reason) {
         if (socket == null)
             return;
-        QDLog.log.error("Stopped time synchronization tracker", reason);
+        log.error("Stopped time synchronization tracker", reason);
         closeSocket();
         sender.close();
         receiver.close();
@@ -230,7 +232,7 @@ public class TimeSyncTracker implements TimeSyncTrackerMBean, MARSPlugin {
         try {
             send(TYPE_REQUEST, null, 0);
         } catch (IOException e) {
-            QDLog.log.error("Failed to send request", e);
+            log.error("Failed to send request", e);
         }
     }
 
@@ -306,7 +308,7 @@ public class TimeSyncTracker implements TimeSyncTrackerMBean, MARSPlugin {
         // WARNING! msgJvmId reuses uid, but this method does not keep it, so it's ok not to clone it.
         long delta = msg_time - (original_time + time) / 2;
         if (verboseRequest || visitedRequests.add(new JvmIdWithAddress(new byte[0], msgJvmId.address)))
-            QDLog.log.info("Peer " + msgJvmId + ": delta " + delta + " ms, roundtrip " + (time - original_time) + " ms");
+            log.info("Peer " + msgJvmId + ": delta " + delta + " ms, roundtrip " + (time - original_time) + " ms");
     }
 
     private synchronized void tick() {
@@ -350,9 +352,9 @@ public class TimeSyncTracker implements TimeSyncTrackerMBean, MARSPlugin {
         if (forceLog || Math.abs(medianDelta) > DRIFT_LIMIT && tick >= nextReportTick) {
             String msg = "Local time delta is " + medianDelta + " ms against median of " + infos.size() + " stable hosts (" + stablePeers + "/" + peers.size() + " peers), range is " + range + " ms";
             if (Math.abs(medianDelta) > DRIFT_LIMIT)
-                QDLog.log.error(msg);
+                log.error(msg);
             else
-                QDLog.log.info(msg);
+                log.info(msg);
             nextReportTick = tick + REPORT_TICKS;
         }
     }
@@ -362,7 +364,7 @@ public class TimeSyncTracker implements TimeSyncTrackerMBean, MARSPlugin {
         Set<JVMId> visited = new HashSet<>();
         for (JvmInfo info : peers.values()) {
             if (verbose || info.deviation < MAX_DEVIATION && visited.add(new JvmIdWithAddress(new byte[0], info.jvmId.address)))
-                QDLog.log.info("Peer " + info.jvmId + ": delta " + fmt(info.delta) + " ms, deviation " + fmt(info.deviation) + " ms");
+                log.info("Peer " + info.jvmId + ": delta " + fmt(info.delta) + " ms, deviation " + fmt(info.deviation) + " ms");
         }
     }
 

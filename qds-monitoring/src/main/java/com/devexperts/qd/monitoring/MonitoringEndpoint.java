@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,11 +11,11 @@
  */
 package com.devexperts.qd.monitoring;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.mars.common.MARSEndpoint;
 import com.devexperts.mars.common.MARSNode;
 import com.devexperts.mars.common.MARSScheduler;
 import com.devexperts.qd.DataScheme;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.QDEndpoint;
 import com.devexperts.qd.stats.JMXStats;
@@ -49,6 +49,8 @@ public class MonitoringEndpoint {
      */
     public static final String MONITORING_STAT_PROPERTY = "monitoring.stat";
 
+    private static final Logging log = Logging.getLogging(MonitoringEndpoint.class);
+    
     public static Builder newBuilder() {
         return new Builder();
     }
@@ -85,7 +87,7 @@ public class MonitoringEndpoint {
             MARSScheduler.MARS_DELAY * 1000L : // use mars delay (in seconds!) by default
             configuredStartPeriodMillis; // or explicitly configured period
         cmt = new ConnectorsMonitoringTask(name,
-            configuredStartPeriodMillis != 0 ? QDLog.log : null, // use log only when start period was explicitly configured
+            configuredStartPeriodMillis != 0 ? log : null, // use log only when start period was explicitly configured
             registration.getRootStats(), marsEndpoint.getRoot(), null);
         registerMonitoringTask(cmt);
     }
@@ -242,7 +244,7 @@ public class MonitoringEndpoint {
             String name = getOrCreateName();
             for (String key : SUPPORTED_PROPERTIES) {
                 if (props.containsKey(key) && !key.equals(NAME_PROPERTY)) {
-                    QDLog.log.info(name + " MonitoringEndpoint with " + key + "=" + props.getProperty(key));
+                    log.info(name + " MonitoringEndpoint with " + key + "=" + props.getProperty(key));
                 }
             }
             String statProp = props.getProperty(MONITORING_STAT_PROPERTY);

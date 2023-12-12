@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,7 +11,7 @@
  */
 package com.devexperts.qd.impl.matrix;
 
-import com.devexperts.qd.QDLog;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.impl.matrix.management.DebugDump;
 import com.devexperts.services.Services;
 import com.devexperts.util.LogUtil;
@@ -35,6 +35,8 @@ public class FatalError extends Error {
 
     private static final String HOTSPOT_DIAGNOSTIC = "com.sun.management:type=HotSpotDiagnostic";
 
+    private static final Logging log = Logging.getLogging(FatalError.class);
+
     /**
      * This method returns new {@code FatalError} with the corresponding message when
      * {@link #SURVIVE_PROPERTY} system property is set; by default, this method
@@ -48,14 +50,14 @@ public class FatalError extends Error {
     }
 
     private static void dumpAndDie(Object owner, FatalError fatal) {
-        QDLog.log.error("FATAL ERROR. Recovery from this error is unlikely. This process will be terminated.\n" +
+        log.error("FATAL ERROR. Recovery from this error is unlikely. This process will be terminated.\n" +
             "To avoid termination and to continue execution despite fatal errors, use the following JVM argument:\n" +
             "\"-D" + SURVIVE_PROPERTY + "\"", fatal);
-        if (DUMP.length() > 0)
+        if (!DUMP.isEmpty())
             makeDump(DUMP, owner, fatal);
-        if (HPROF.length() > 0)
+        if (!HPROF.isEmpty())
             makeHProf(HPROF);
-        QDLog.log.info("EXIT");
+        log.info("EXIT");
         System.exit(1);
     }
 
@@ -65,19 +67,19 @@ public class FatalError extends Error {
             try {
                 dump.makeDump(file, owner, fatal);
             } catch (Throwable t) {
-                QDLog.log.error("Failed to dump to " + LogUtil.hideCredentials(file), t);
+                log.error("Failed to dump to " + LogUtil.hideCredentials(file), t);
             }
     }
 
     private static void makeHProf(String file) {
-        QDLog.log.info("Dumping all heap memory in HPROF format to " + LogUtil.hideCredentials(file));
+        log.info("Dumping all heap memory in HPROF format to " + LogUtil.hideCredentials(file));
         try {
             MBeanServer server = ManagementFactory.getPlatformMBeanServer();
             server.invoke(new ObjectName(HOTSPOT_DIAGNOSTIC), "dumpHeap",
                 new Object[] { file, true },
                 new String[] { "java.lang.String", "boolean" });
         } catch (Throwable t) {
-            QDLog.log.error("Failed to dump to " + LogUtil.hideCredentials(file), t);
+            log.error("Failed to dump to " + LogUtil.hideCredentials(file), t);
         }
     }
 

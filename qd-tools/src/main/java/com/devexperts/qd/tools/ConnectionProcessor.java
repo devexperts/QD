@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,9 +11,9 @@
  */
 package com.devexperts.qd.tools;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataProvider;
 import com.devexperts.qd.QDContract;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.SubscriptionProvider;
 import com.devexperts.qd.SubscriptionVisitor;
 import com.devexperts.qd.ng.RecordBuffer;
@@ -34,6 +34,8 @@ import com.devexperts.util.InvalidFormatException;
 import java.io.Closeable;
 
 final class ConnectionProcessor extends Thread implements Closeable, ConnectorRecordsSymbols.Listener, MessageListener {
+
+    private static final Logging log = Logging.getLogging(ConnectionProcessor.class);
 
     private final RecordBuffer localBuf = new RecordBuffer(RecordMode.FLAGGED_DATA);
 
@@ -126,8 +128,8 @@ final class ConnectionProcessor extends Thread implements Closeable, ConnectorRe
                         process((RecordProvider) result[0], (MessageType) result[1]);
                     }
                 } catch (Exception e) {
-                    QDLog.log.error("Unexpected exception while processing data for " + result[0], e);
-                    // enqueue here again again, because otherwise this agent may not notify again
+                    log.error("Unexpected exception while processing data for " + result[0], e);
+                    // enqueue here again, because otherwise this agent may not notify again
                     enqueue(result[0], (MessageType) result[1]);
                 }
             } catch (InterruptedException e) {

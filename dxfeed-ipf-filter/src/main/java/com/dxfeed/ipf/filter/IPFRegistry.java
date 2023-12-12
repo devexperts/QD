@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -36,6 +36,8 @@ class IPFRegistry implements IPFRegistryMXBean {
     private static final ReferenceQueue<IPFSymbolFilter> QUEUE = new ReferenceQueue<IPFSymbolFilter>();
 
     private static final IndexedSet<Key, FilterReference> REFS = IndexedSet.create((IndexerFunction<Key, FilterReference>) ref -> ref.key);
+
+    private static final Logging log = Logging.getLogging(IPFRegistry.class);
 
     private static Management.Registration registration;
 
@@ -161,7 +163,7 @@ class IPFRegistry implements IPFRegistryMXBean {
             for (String s : a)
                 text.append(s).append("    ");
         }
-        Logging.getLogging(getClass()).info(text.toString());
+        log.info(text.toString());
 
         return html.toString();
     }

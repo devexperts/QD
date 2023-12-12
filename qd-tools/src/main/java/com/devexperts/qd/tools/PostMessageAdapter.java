@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,8 +11,8 @@
  */
 package com.devexperts.qd.tools;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataScheme;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.SubscriptionIterator;
 import com.devexperts.qd.qtp.MessageAdapter;
 import com.devexperts.qd.qtp.MessageListener;
@@ -24,6 +24,9 @@ import com.devexperts.qd.qtp.QDEndpoint;
 import com.devexperts.qd.stats.QDStats;
 
 class PostMessageAdapter extends MessageAdapter implements MessageListener {
+
+    private static final Logging log = Logging.getLogging(PostMessageAdapter.class);
+
     private final DataScheme scheme;
     private final PostMessageQueue.Subscriber subscriber;
     private boolean receivedProtocolDescriptor;
@@ -35,7 +38,6 @@ class PostMessageAdapter extends MessageAdapter implements MessageListener {
         useDescribeProtocol();
         subscriber.setMessageListener(this);
     }
-
 
     @Override
     public void prepareProtocolDescriptor(ProtocolDescriptor desc) {
@@ -85,7 +87,7 @@ class PostMessageAdapter extends MessageAdapter implements MessageListener {
         int c = 0;
         while (iterator.nextRecord() != null)
             c++;
-        QDLog.log.warn("Ignored " + c + " " + message + " messages");
+        log.warn("Ignored " + c + " " + message + " messages");
     }
 
     @Override

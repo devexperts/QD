@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,7 +16,6 @@ import com.devexperts.connector.codec.CodecFactory;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.connector.proto.ConfigurationKey;
 import com.devexperts.qd.QDFactory;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.qtp.AbstractMessageConnector;
 import com.devexperts.qd.qtp.MessageAdapter;
 import com.devexperts.qd.qtp.MessageConnector;
@@ -173,7 +172,7 @@ public class ServerSocketConnector extends AbstractMessageConnector implements S
             this.useTls = useTls;
             reconfigure();
         }
-        QDLog.log.warn("WARNING: DEPRECATED use \"setTls()\" method from program or \"tls\" property from address string. " +
+        log.warn("WARNING: DEPRECATED use \"setTls()\" method from program or \"tls\" property from address string. " +
             "Use tls or ssl codec in address string. For example tls+<address>");
     }
 

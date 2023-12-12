@@ -138,7 +138,7 @@ public class JVMSelfMonitoring implements MARSPlugin, Runnable, JVMSelfMonitorin
         try {
             root.subNode("jvm.props.host").setValue(InetAddress.getLocalHost().toString());
         } catch (Exception e) {
-            Logging.getLogging(getClass()).warn("Cannot get host address: " + e);
+            log().warn("Cannot get host address: " + e);
         }
 
         uptimeNode = root.subNode("jvm.uptime", "Uptime in days, hours, mins, secs.");
@@ -300,6 +300,10 @@ public class JVMSelfMonitoring implements MARSPlugin, Runnable, JVMSelfMonitorin
 
     private static String getUsageString(MemoryUsage memory) {
         return getUsage(memory) + "%: " + (memory.getUsed() >> 20) + "M of " + (Math.max(memory.getMax(), memory.getCommitted()) >> 20) + "M";
+    }
+
+    private static Logging log() {
+        return Logging.getLogging(JVMSelfMonitoring.class);
     }
 
     // ========== MXBean Implementation ==========

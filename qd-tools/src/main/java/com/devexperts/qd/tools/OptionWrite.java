@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,9 +11,12 @@
  */
 package com.devexperts.qd.tools;
 
-import com.devexperts.qd.QDLog;
+import com.devexperts.logging.Logging;
 
 public class OptionWrite extends OptionTimePeriod {
+
+    private static final Logging log = Logging.getLogging(OptionWrite.class);
+
     private final OptionFile file;
 
     public OptionWrite(OptionFile file) {
@@ -41,7 +44,7 @@ public class OptionWrite extends OptionTimePeriod {
                         try {
                             handler.writeFile();
                         } catch (Throwable t) {
-                            QDLog.log.error("Fatal exception in writer thread. Will try to continue anyway", t);
+                            log.error("Fatal exception in writer thread. Will try to continue anyway", t);
                         }
                     }
                 } catch (InterruptedException e) {

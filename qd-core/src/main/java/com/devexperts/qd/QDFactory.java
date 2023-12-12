@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.qd;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.impl.matrix.MatrixFactory;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.services.Services;
@@ -20,6 +21,8 @@ import com.devexperts.util.SystemProperties;
  * The <code>QDFactory</code> creates implementations for core QD components.
  */
 public abstract class QDFactory {
+
+    private static final Logging log = Logging.getLogging(QDFactory.class);
 
     /**
      * Creates builder for an collector that has specified contract.
@@ -127,7 +130,7 @@ public abstract class QDFactory {
      */
     public static synchronized void showVersion() {
         if (!versionShown) {
-            QDLog.log.info("Using " + getVersion() + ", (C) Devexperts");
+            log.info("Using " + getVersion() + ", (C) Devexperts");
             versionShown = true;
         }
     }
@@ -147,7 +150,7 @@ public abstract class QDFactory {
             return defaultScheme; // double check under synchronization
         showVersion();
         defaultScheme = createDefaultScheme(null);
-        QDLog.log.info("Using scheme " + defaultScheme.getClass().getName() + " " + defaultScheme.getDigest());
+        log.info("Using scheme " + defaultScheme.getClass().getName() + " " + defaultScheme.getDigest());
         return defaultScheme;
     }
 
@@ -250,5 +253,4 @@ public abstract class QDFactory {
     public static DataScheme getDefaultScheme() {
         return defaultScheme == null ? createDefaultScheme() : defaultScheme;
     }
-
 }

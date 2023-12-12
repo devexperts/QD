@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,10 +11,10 @@
  */
 package com.devexperts.qd.util;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataListener;
 import com.devexperts.qd.DataProvider;
 import com.devexperts.qd.DataVisitor;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.SubscriptionIterator;
 import com.devexperts.qd.SubscriptionListener;
 import com.devexperts.qd.SubscriptionProvider;
@@ -34,6 +34,9 @@ import com.devexperts.qd.ng.RecordSource;
  * NG interfaces defined this package.
  */
 public class LegacyAdapter {
+
+    private static final Logging log = Logging.getLogging(LegacyAdapter.class);
+
     private static volatile boolean legacyDataVisitorWarningShown;
     private static volatile boolean legacySubscriptionVisitorWarningShown;
     private static volatile boolean legacyDataProviderWarningShown;
@@ -213,7 +216,7 @@ public class LegacyAdapter {
         if (legacyDataVisitorWarningShown)
             return;
         legacyDataVisitorWarningShown = true;
-        QDLog.log.warn("WARNING: DEPRECATED use of custom DataVisitor implementation class " + visitor.getClass().getName() +
+        log.warn("WARNING: DEPRECATED use of custom DataVisitor implementation class " + visitor.getClass().getName() +
             " from " + getSource() + ". Do not implement DataVisitor interface. Use AbstractRecordSink instead.");
     }
 
@@ -221,7 +224,7 @@ public class LegacyAdapter {
         if (legacySubscriptionVisitorWarningShown)
             return;
         legacySubscriptionVisitorWarningShown = true;
-        QDLog.log.warn("WARNING: DEPRECATED use of custom SubscriptionVisitor implementation class " + visitor.getClass().getName() +
+        log.warn("WARNING: DEPRECATED use of custom SubscriptionVisitor implementation class " + visitor.getClass().getName() +
             " from " + getSource() + ". Do not implement SubscriptionVisitor interface. Use AbstractRecordSink instead.");
     }
 
@@ -229,7 +232,7 @@ public class LegacyAdapter {
         if (legacyDataProviderWarningShown)
             return;
         legacyDataProviderWarningShown = true;
-        QDLog.log.warn("WARNING: DEPRECATED use of custom DataProvider implementation class " + provider.getClass().getName() +
+        log.warn("WARNING: DEPRECATED use of custom DataProvider implementation class " + provider.getClass().getName() +
             " from " + getSource() + ". Do not implement DataProvider interface. Use AbstractRecordProvider instead.");
     }
 
@@ -237,7 +240,7 @@ public class LegacyAdapter {
         if (legacySubscriptionProviderWarningShown)
             return;
         legacySubscriptionProviderWarningShown = true;
-        QDLog.log.warn("WARNING: DEPRECATED use of custom SubscriptionProvider implementation class " + provider.getClass().getName() +
+        log.warn("WARNING: DEPRECATED use of custom SubscriptionProvider implementation class " + provider.getClass().getName() +
             " from " + getSource() + ". Do not implement SubscriptionProvider interface. Use AbstractRecordProvider instead.");
     }
 
@@ -245,7 +248,7 @@ public class LegacyAdapter {
         if (legacyDataListenerWarningShown)
             return;
         legacyDataListenerWarningShown = true;
-        QDLog.log.warn("WARNING: DEPRECATED use of legacy DataListener interface implementation " + listener.getClass().getName() +
+        log.warn("WARNING: DEPRECATED use of legacy DataListener interface implementation " + listener.getClass().getName() +
             " from " + getSource() + ". Do not implement DataListener interface. Implement RecordListener instead.");
     }
 
@@ -253,7 +256,7 @@ public class LegacyAdapter {
         if (legacySubscriptionListenerWarningShown)
             return;
         legacySubscriptionListenerWarningShown = true;
-        QDLog.log.warn("WARNING: DEPRECATED use of legacy SubscriptionListener interface implementation " + listener.getClass().getName() +
+        log.warn("WARNING: DEPRECATED use of legacy SubscriptionListener interface implementation " + listener.getClass().getName() +
             " from " + getSource() + ". Do not implement SubscriptionListener interface. Implement RecordListener instead.");
     }
 
@@ -261,7 +264,7 @@ public class LegacyAdapter {
         if (legacySubscriptionIteratorWarningShown)
             return;
         legacySubscriptionIteratorWarningShown = true;
-        QDLog.log.warn("WARNING: DEPRECATED use of legacy SubscriptionIterator interface implementation " + iterator.getClass().getName() +
+        log.warn("WARNING: DEPRECATED use of legacy SubscriptionIterator interface implementation " + iterator.getClass().getName() +
             " from " + getSource() + ". Do not implement SubscriptionIterator interface. Use RecordBuffer instead.");
     }
 

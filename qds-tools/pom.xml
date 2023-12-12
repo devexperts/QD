@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.325</version>
+        <version>3.326</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -58,7 +58,6 @@
                                     <include>com.devexperts.qd:qd-nio</include>
                                     <include>com.devexperts.qd:qd-stripe</include>
                                     <include>com.devexperts.qd:qd-tools</include>
-                                    <include>com.devexperts.qd:qd-samplecert</include>
                                     <include>com.devexperts.qd:dxfeed-tools</include>
                                 </includes>
                             </artifactSet>
@@ -105,11 +104,6 @@
         <dependency>
             <groupId>com.devexperts.qd</groupId>
             <artifactId>qd-tools</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.devexperts.qd</groupId>
-            <artifactId>qd-samplecert</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

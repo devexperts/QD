@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,7 +11,7 @@
  */
 package com.devexperts.qd.tools;
 
-import com.devexperts.qd.QDLog;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordConsumer;
 import com.devexperts.qd.ng.RecordCursor;
@@ -20,8 +20,8 @@ import com.devexperts.qd.ng.RecordSource;
 /**
  * Delays stream of data records by specified time duration within specified record number limit.
  * The delayed records are stored in baskets with fixed size and time duration; new basket is
- * allocated if either basket size or time duration is exceeded. Therefore data records are
- * automatically aggregated or splitted in bunches depending on incoming stream rate.
+ * allocated if either basket size or time duration is exceeded. Therefore, data records are
+ * automatically aggregated or split in bunches depending on incoming stream rate.
  */
 class FeedDelayer implements Runnable {
 
@@ -36,6 +36,7 @@ class FeedDelayer implements Runnable {
         Basket() {}
     }
 
+    private final Logging log;
     private final long delay;
     private final int max_baskets;
     private final int basket_size;
@@ -49,12 +50,13 @@ class FeedDelayer implements Runnable {
     private long incoming_records;
     private long outgoing_records;
 
-    FeedDelayer(long delay, long max_records) {
+    FeedDelayer(long delay, long max_records, Logging log) {
         if (delay <= BASKET_DURATION)
             throw new IllegalArgumentException("delay is too short");
         this.delay = delay;
         max_baskets = (int) Math.max(2 * delay / BASKET_DURATION, max_records / MAX_BASKET_SIZE) + 1;
         basket_size = (int) Math.max(max_records / max_baskets + 1, MIN_BASKET_SIZE);
+        this.log = log;
 
         baskets = new Basket[max_baskets + 5];
         for (int i = 0; i < baskets.length; i++)
@@ -135,7 +137,7 @@ class FeedDelayer implements Runnable {
     }
 
     public synchronized void run() {
-        while (true)
+        while (true) {
             try {
                 long time = System.currentTimeMillis();
                 while (!baskets[head].buffer.isEmpty() && time - baskets[head].timestamp >= delay)
@@ -145,7 +147,8 @@ class FeedDelayer implements Runnable {
                 else
                     wait(Math.max(delay - (time - baskets[head].timestamp), 1)); // remaining delay; made positive
             } catch (Throwable t) {
-                QDLog.log.error("Error in delayer thread. Will try to continue anyway", t);
+                log.error("Error in delayer thread. Will try to continue anyway", t);
             }
+        }
     }
 }

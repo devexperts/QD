@@ -11,6 +11,7 @@
  */
 package com.dxfeed.api.test;
 
+import com.devexperts.logging.Logging;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.api.osub.IndexedEventSubscriptionSymbol;
@@ -47,6 +48,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 public class DXPublisherTest extends AbstractDXPublisherTest {
+    private static final Logging log = Logging.getLogging(DXPublisherTest.class);
+
     // Note that '9' and '~' are not a supported "exchange codes" and subscription to
     // "SYM&9" and "SYM&~" should go via composite record
     private static final char[] EXCHANGE_CODES = "A~Z\0X9B".toCharArray();

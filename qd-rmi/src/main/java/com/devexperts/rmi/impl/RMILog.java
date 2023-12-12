@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,15 +20,15 @@ import com.dxfeed.promise.Promise;
 import javax.annotation.Nonnull;
 
 class RMILog {
-    private RMILog() {} // utility class, do not create
+    private static final Logging log = Logging.getLogging(RMILog.class);
 
-    static final Logging log = Logging.getLogging("com.devexperts.rmi.RMI"); // for errors
+    private RMILog() {} // utility class, do not create
 
     static void logFailedTask(RMIExceptionType type, String info, RMIConnection connection,
         long requestId, long channelId, RMIRequestType requestType)
     {
-        log.error(type.getMessage() + ". Details: " + info + ", " + composeExecutionTaskString(connection, requestId, channelId,
-            "reqType=" + requestType.toString()));
+        log.error(type.getMessage() + ". Details: " + info + ", " +
+            composeExecutionTaskString(connection, requestId, channelId, "reqType=" + requestType.toString()));
     }
 
     static <T> void logExecutionError(RMIExecutionTaskImpl<T> execution, RMIExceptionType type, Throwable e) {

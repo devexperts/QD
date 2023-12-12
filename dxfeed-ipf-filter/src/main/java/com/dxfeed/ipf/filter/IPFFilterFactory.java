@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,8 +11,8 @@
  */
 package com.dxfeed.ipf.filter;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.QDFilter;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.SpecificSubscriptionFilter;
 import com.devexperts.qd.kit.FilterSyntaxException;
 import com.devexperts.qd.kit.SymbolSetFilter;
@@ -22,6 +22,8 @@ import com.devexperts.services.ServiceProvider;
 
 @ServiceProvider(order = -200)
 public class IPFFilterFactory extends QDFilterFactory {
+    private static final Logging log = Logging.getLogging(IPFFilterFactory.class);
+
     @SpecificSubscriptionFilter("IPF symbol filter for specified <url> (file, ftp or http), " +
         "accepts all records, " +
         "accepts optional symbol parameters like {tho=true} or {price=bid}. " +
@@ -48,7 +50,7 @@ public class IPFFilterFactory extends QDFilterFactory {
             try {
                 filter = IPFSymbolFilter.create(getScheme(), IPFSymbolFilter.FILTER_NAME_PREFIX + "[" + spec + "]");
             } catch (FilterSyntaxException e) {
-                QDLog.log.error("Failed to read potential IPF \"" + spec + "\", treating as individual symbol or pattern", e);
+                log.error("Failed to read potential IPF \"" + spec + "\", treating as individual symbol or pattern", e);
             }
         if (context == QDFilterContext.SYMBOL_SET && filter != null)
             // Convert symbol sets with attributes into plain symbol set in this context

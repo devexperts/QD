@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.325</version>
+        <version>3.326</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -35,7 +35,16 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <compilerArgument>-proc:none</compilerArgument>
+                    <!-- Make IDEA & Maven happy (see https://youtrack.jetbrains.com/issue/IDEA-279848 issue) -->
+                    <!--<compilerArgument>-proc:none</compilerArgument>-->
+                    <annotationProcessorPaths>
+                        <path>
+                            <!-- just a most simple project dependency without any annotation processors :-) -->
+                            <groupId>com.google.code.findbugs</groupId>
+                            <artifactId>jsr305</artifactId>
+                            <version>${jsr305.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
         </plugins>

@@ -11,8 +11,8 @@
  */
 package com.devexperts.qd.dxlink.websocket.application;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.QDContract;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.dxfeed.event.EventType;
 import com.fasterxml.jackson.core.JsonParser;
@@ -27,6 +27,9 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 class ChannelEventsParser implements DxLinkClientReceiver.EventsParser {
+
+    private static final Logging log = Logging.getLogging(ChannelEventsParser.class);
+
     private final QDContract contract;
     private final Delegates delegates;
     private final DataParser compactDataParser;
@@ -131,7 +134,7 @@ class ChannelEventsParser implements DxLinkClientReceiver.EventsParser {
             }
 
             public void readEvent(Consumer<EventType<?>> recordBuffer) throws IOException {
-                QDLog.log.warn(String.format("Unknown event type: '%s'.", eventType));
+                log.warn(String.format("Unknown event type: '%s'.", eventType));
                 while (json.currentToken() != JsonToken.END_ARRAY) {
                     expectedValue(json);
                     json.nextToken();
@@ -185,8 +188,7 @@ class ChannelEventsParser implements DxLinkClientReceiver.EventsParser {
                     if (setter != null) {
                         setter.setValue(event, json);
                     } else {
-                        QDLog.log.warn(String.format(
-                            "Unknown field: '%s' for event type '%s'.", fieldName, eventType));
+                        log.warn(String.format("Unknown field: '%s' for event type '%s'.", fieldName, eventType));
                     }
                     json.nextValue();
                 }
@@ -203,7 +205,7 @@ class ChannelEventsParser implements DxLinkClientReceiver.EventsParser {
             }
 
             public void readEvent(Consumer<EventType<?>> recordBuffer) throws IOException {
-                QDLog.log.warn(String.format("Unknown event type: '%s'.", eventType));
+                log.warn(String.format("Unknown event type: '%s'.", eventType));
                 while (json.currentToken() != JsonToken.END_OBJECT) {
                     expectedValue(json);
                     json.nextValue();

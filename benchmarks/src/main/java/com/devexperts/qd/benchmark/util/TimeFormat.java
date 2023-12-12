@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -41,8 +41,6 @@ import javax.annotation.concurrent.ThreadSafe;
  * Utility class for parsing and formatting dates and times in ISO-compatible format.
  */
 public class TimeFormat {
-
-    private static final Logging LOG = Logging.getLogging(TimeFormat.class);
 
     public static final String NO_CACHE = "NONE";
     public static final String CACHE_SHARED_BIN_MASK = "SHARED_BIN_MASK";
@@ -116,8 +114,8 @@ public class TimeFormat {
      */
     @Deprecated()
     public static void setDefaultTimeZone(TimeZone timezone) {
-        Logging.getLogging(TimeFormat.class)
-            .warn("Changing DEFAULT time zone to " + timezone.getID() + ". Do not use in production code.");
+        Logging.getLogging(TimeFormat.class).warn(
+            "Changing DEFAULT time zone to " + timezone.getID() + ". Do not use in production code.");
         DEFAULT.timezone = (TimeZone) timezone.clone();
         DEFAULT.formats.setTimeZone(DEFAULT.timezone);
     }

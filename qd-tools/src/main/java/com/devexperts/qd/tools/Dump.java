@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,7 +17,6 @@ import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDContract;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDFilter;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.SubscriptionIterator;
 import com.devexperts.qd.ng.AbstractRecordProvider;
 import com.devexperts.qd.ng.AbstractRecordSink;
@@ -132,13 +131,13 @@ public class Dump extends AbstractTool {
         File file = new File(filename);
         if (!file.exists() || !file.isFile())
             return subscription;
-        QDLog.log.info("Reading subscription from " + LogUtil.hideCredentials(filename));
+        log.info("Reading subscription from " + LogUtil.hideCredentials(filename));
         byte[] buffer = new byte[(int) file.length()];
         int length = 0;
         try (FileInputStream in = new FileInputStream(file)) {
             length = in.read(buffer);
         } catch (IOException e) {
-            QDLog.log.error("Error reading subscription", e);
+            log.error("Error reading subscription", e);
         }
         AbstractQTPParser parser = FileFormat.detectFormat(buffer).createQTPParser(QDFactory.getDefaultScheme());
         parser.setInput(new ByteArrayInput(buffer, 0, length));
@@ -148,7 +147,7 @@ public class Dump extends AbstractTool {
                 subscription.processSubscription(iterator);
             }
         });
-        QDLog.log.info("Done reading subscription from " + LogUtil.hideCredentials(filename) + ": read " + subscription.size() + " elements");
+        log.info("Done reading subscription from " + LogUtil.hideCredentials(filename) + ": read " + subscription.size() + " elements");
         return subscription;
     }
 

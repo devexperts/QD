@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -156,7 +156,6 @@ public class MARSScheduler {
         INSTANCE.cancelInternal(o);
     }
 
-
     // ========== Implementation Details ==========
 
     private final HashMap<Long, Task> tasks = new HashMap<>();
@@ -239,14 +238,14 @@ public class MARSScheduler {
                         try {
                             command.run();
                         } catch (Throwable t) {
-                            error("Error running scheduled command:", t);
+                            log().error("Error running scheduled command:", t);
                         }
                     task.updateTime();
                     queue.add(task);
                 } catch (InterruptedException e) {
                     return; // stopped because queue was emptied
                 } catch (Throwable t) {
-                    error("Scheduling error:", t);
+                    log().error("Scheduling error:", t);
                 }
             }
         } finally {
@@ -255,12 +254,8 @@ public class MARSScheduler {
         }
     }
 
-    private void error(String message, Throwable t) {
-        try {
-            Logging.getLogging(getClass()).error(message, t);
-        } catch (Throwable tt) {
-            // Ignored
-        }
+    private static Logging log() {
+        return Logging.getLogging(MARSScheduler.class);
     }
 
     private static class Task implements Delayed {

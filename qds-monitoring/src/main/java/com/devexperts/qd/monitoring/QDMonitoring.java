@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,10 +11,10 @@
  */
 package com.devexperts.qd.monitoring;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.management.Management;
 import com.devexperts.mars.common.MARSScheduler;
 import com.devexperts.qd.DataScheme;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.QDEndpoint;
 import com.devexperts.qd.stats.JMXStats;
@@ -32,6 +32,8 @@ import java.util.concurrent.TimeUnit;
  * monitoring properties.
  */
 public class QDMonitoring {
+    private static final Logging log = Logging.getLogging(QDMonitoring.class);
+
     /** @deprecated Use {@link JMXEndpoint#JMX_HTML_PORT_PROPERTY} */
     public static final String JMX_HTML_PORT_PROPERTY = JMXEndpoint.JMX_HTML_PORT_PROPERTY;
     /** @deprecated Use {@link JMXEndpoint#JMX_HTML_BIND_PROPERTY} */
@@ -91,7 +93,7 @@ public class QDMonitoring {
         try {
             JmxHtml.init(props);
         } catch (Throwable t) {
-            QDLog.log.error("Failed to initialize JMX HTML Adaptor", t);
+            log.error("Failed to initialize JMX HTML Adaptor", t);
         }
     }
 
@@ -99,7 +101,7 @@ public class QDMonitoring {
         try {
             JmxRmi.init(props);
         } catch (Throwable t) {
-            QDLog.log.error("Failed to initialize JMX RMI Connector", t);
+            log.error("Failed to initialize JMX RMI Connector", t);
         }
     }
 

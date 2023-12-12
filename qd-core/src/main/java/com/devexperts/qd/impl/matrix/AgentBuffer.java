@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,9 +11,9 @@
  */
 package com.devexperts.qd.impl.matrix;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.QDAgent;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordFilter;
@@ -25,6 +25,8 @@ class AgentBuffer implements RecordFilter {
     public static final int BASE = 1;
 
     private static final int DEFAULT_REBASE_THRESHOLD = Integer.MAX_VALUE / 2;
+
+    private static final Logging log = Logging.getLogging(AgentBuffer.class);
 
     private final QDStats stats;
     private final Agent agent;
@@ -238,7 +240,7 @@ class AgentBuffer implements RecordFilter {
         if (time - lastLogTime < agent.collector.management.getBufferOverflowLogIntervalSeconds())
             return;
         lastLogTime = time;
-        QDLog.log.error(
+        log.error(
             agent.collector.getContract() +
             " buffer overflow - " + droppedRecords + " records skipped for agent [" +
             agent.getStats().getFullKeyProperties() + "]." +

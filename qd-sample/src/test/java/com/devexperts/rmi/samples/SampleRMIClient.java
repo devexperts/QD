@@ -12,7 +12,6 @@
 package com.devexperts.rmi.samples;
 
 import com.devexperts.logging.Logging;
-import com.devexperts.qd.QDLog;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.RMIException;
 import com.devexperts.rmi.RMIOperation;
@@ -21,8 +20,9 @@ import com.devexperts.rmi.RMIRequest;
 import java.util.Random;
 
 public class SampleRMIClient {
+    private static final Logging log = Logging.getLogging(SampleRMIClient.class);
+
     private static RMIEndpoint client;
-    private static Logging log = QDLog.log;
     private static Random rnd = new Random();
     @SuppressWarnings("unchecked")
     private static RMIOperation<Void> print = DifferentServices.PrintService.PRINT;

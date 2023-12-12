@@ -38,6 +38,8 @@ public class MarketDataAccess {
     /** Configuration parameter for banned users. */
     public static final String DENY_LIST = "deny_list";
 
+    private static final Logging log = Logging.getLogging(MarketDataAccess.class);
+
     private static final MarketDataAccess instance = new MarketDataAccess();
 
     /**
@@ -46,7 +48,6 @@ public class MarketDataAccess {
     public static MarketDataAccess getInstance() {
         return instance;
     }
-
 
     // ========== Instance API ==========
 
@@ -123,8 +124,6 @@ public class MarketDataAccess {
     // ========== Implementation ==========
 
     private class Watcher implements Runnable {
-        private final Logging log = Logging.getLogging(getClass());
-
         private final String url;
         private final String cache;
         private final long period;

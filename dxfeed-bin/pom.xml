@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.325</version>
+        <version>3.326</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -23,7 +23,10 @@
     <packaging>pom</packaging>
 
     <properties>
-        <deploy.file>${project.artifactId}-${project.version}-assembly.zip</deploy.file>
+        <deploy.file.skip>false</deploy.file.skip>
+        <deploy.classifier>assembly</deploy.classifier>
+        <deploy.extension>zip</deploy.extension>
+
         <!-- public module - deploy to Maven repo  -->
         <deploy.skip>false</deploy.skip>
     </properties>

@@ -398,6 +398,16 @@ public final class Schedule {
     }
 
     /**
+     * Returns the string used to define this schedule instance (see {@link Schedule#getSchedule})
+     *
+     * @return schedule definition string
+     * @see Schedule#getSchedule
+     */
+    public String getDefinition() {
+        return def;
+    }
+
+    /**
      * Returns time zone in which this schedule is defined.
      *
      * @return time zone in which this schedule is defined
@@ -407,7 +417,7 @@ public final class Schedule {
     }
 
     public String toString() {
-        return "Schedule(" + name + ")";
+        return "Schedule{" + def + "}";
     }
 
     // ========== Implementation Details ==========

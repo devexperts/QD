@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,7 +12,7 @@
 package com.devexperts.qd.qtp.file;
 
 import com.devexperts.io.URLInputStream;
-import com.devexperts.qd.QDLog;
+import com.devexperts.logging.Logging;
 import com.devexperts.util.LogUtil;
 
 import java.io.Closeable;
@@ -21,6 +21,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 class FileUtils {
+    private static final Logging log = Logging.getLogging(FileUtils.class);
 
     public static final String TIME_FILE_EXTENSION = ".time";
     public static final String TIMESTAMP_MARKER = "~";
@@ -67,11 +68,12 @@ class FileUtils {
     }
 
     public static void tryClose(Closeable closeable, String address) {
-        if (closeable != null)
+        if (closeable != null) {
             try {
                 closeable.close();
             } catch (Throwable t) {
-                QDLog.log.error("Failed to close " + LogUtil.hideCredentials(address), t);
+                log.error("Failed to close " + LogUtil.hideCredentials(address), t);
             }
+        }
     }
 }

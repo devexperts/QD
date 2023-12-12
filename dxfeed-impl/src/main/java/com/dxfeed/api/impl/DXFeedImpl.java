@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,11 +11,11 @@
  */
 package com.dxfeed.api.impl;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDContract;
 import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.QDHistory;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.QDTicker;
 import com.devexperts.qd.kit.ArrayListAttachmentStrategy;
 import com.devexperts.qd.ng.AbstractRecordSink;
@@ -62,6 +62,8 @@ import javax.annotation.Nullable;
 
 public class DXFeedImpl extends DXFeed {
     private static boolean TRACE_LOG = DXFeedImpl.class.desiredAssertionStatus();
+
+    private static final Logging log = Logging.getLogging(DXFeedImpl.class);
 
     private static final String INVALID_EVENT_MSG = "Invalid event type and/or role";
     private static final QDContract[] CONTRACTS = QDContract.values();
@@ -1005,7 +1007,7 @@ public class DXFeedImpl extends DXFeed {
 
         private void signalNoMoreDataToProcess() {
             if (TRACE_LOG)
-                QDLog.log.trace("signalNoMoreDataToProcess on " + this);
+                log.trace("signalNoMoreDataToProcess on " + this);
             CountDownLatch latch = terminationLatch.get();
             if (latch != null)
                 latch.countDown();
@@ -1015,7 +1017,7 @@ public class DXFeedImpl extends DXFeed {
             if (!hasMoreDataToProcess()) {
                 // happy path
                 if (TRACE_LOG)
-                    QDLog.log.trace("awaitTermination on " + this + " -- no more data to process");
+                    log.trace("awaitTermination on " + this + " -- no more data to process");
                 return;
             }
             CountDownLatch latch = terminationLatch.get();
@@ -1025,11 +1027,11 @@ public class DXFeedImpl extends DXFeed {
             }
             if (hasMoreDataToProcess()) {
                 if (TRACE_LOG)
-                    QDLog.log.trace("awaitTermination on " + this + " -- await");
+                    log.trace("awaitTermination on " + this + " -- await");
                 latch.await();
             } else {
                 if (TRACE_LOG)
-                    QDLog.log.trace("awaitTermination on " + this + " -- no more data to process");
+                    log.trace("awaitTermination on " + this + " -- no more data to process");
             }
         }
 

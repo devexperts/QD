@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -42,6 +42,9 @@ import java.util.List;
  * @param <T> the type of the monitored bean.
  */
 public class MARSMonitoredBean<T> implements Runnable {
+
+    private static final Logging log = Logging.getLogging(MARSMonitoredBean.class);
+
     // --------------------------------- instance fields ---------------------------------
 
     private final List<Prop> props;
@@ -173,7 +176,7 @@ public class MARSMonitoredBean<T> implements Runnable {
             try {
                 lastValue = readMethod.invoke(bean);
             } catch (Exception e) {
-                Logging.getLogging(MARSMonitoredBean.class).error("Failed to retrieve monitored value", e);
+                log.error("Failed to retrieve monitored value", e);
                 lastValue = null;
                 return;
             }

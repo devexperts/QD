@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-CONFIG/1.0.0 https://maven.apache.org/xsd/build-cache-config-1.0.0.xsd">
+    <configuration>
+        <enabled>true</enabled>
+        <hashAlgorithm>XX</hashAlgorithm>
+        <validateXml>true</validateXml>
+        <projectVersioning adjustMetaInf="true"/>
+        <local>
+            <maxBuildsCached>10</maxBuildsCached>
+        </local>
+    </configuration>
+
+    <input>
+        <global>
+            <glob>
+                {*.java,*.js,*.jsp,*.css,*.html,*.groovy,*.yaml,*.svcd,*.proto,*assembly.xml,assembly*.xml,*logback.xml,*.vm,*.ini,*.jks,*.properties,*.sh,*.bat,*.xsd,*.svg,*.yml,*.md}
+            </glob>
+            <includes>
+                <include>src/</include>
+            </includes>
+            <excludes>
+                <exclude>pom.xml</exclude>
+                <exclude>dxfeed-webservice/target/web.xml</exclude>
+            </excludes>
+        </global>
+        <plugins>
+            <plugin artifactId="minify-maven-plugin">
+                <dirScan mode="auto">
+                    <excludes>
+                        <exclude tagName="jsSourceDir"/>
+                        <exclude tagName="jsTargetDir"/>
+                    </excludes>
+                </dirScan>
+            </plugin>
+            <plugin artifactId="maven-war-plugin">
+                <dirScan mode="auto">
+                    <excludes>
+                        <exclude tagName="targetPath"/>
+                    </excludes>
+                </dirScan>
+            </plugin>
+            <plugin artifactId="jetty-maven-plugin">
+                <dirScan>
+                    <excludes>
+                        <exclude tagName="contextPath"/>
+                    </excludes>
+                </dirScan>
+            </plugin>
+            <plugin artifactId="maven-antrun-plugin">
+                <effectivePom>
+                    <excludeProperties>
+                        <excludeProperty>target</excludeProperty>
+                    </excludeProperties>
+                </effectivePom>
+            </plugin>
+            <plugin artifactId="maven-dependency-plugin">
+                <effectivePom>
+                    <excludeProperties>
+                        <excludeProperty>skip</excludeProperty>
+                        <excludeProperty>stripVersion</excludeProperty>
+                        <excludeProperty>outputDirectory</excludeProperty>
+                        <excludeProperty>destFileName</excludeProperty>
+                    </excludeProperties>
+                </effectivePom>
+                <executions>
+                    <execution>
+                        <execIds>
+                            <execId>copy-local-packages</execId>
+                            <execId>install-artifact-file</execId>
+                        </execIds>
+                        <dirScan>
+                            <excludes>
+                                <exclude tagName="outputDirectory"/>
+                            </excludes>
+                        </dirScan>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- id doesn't matter if cached artifact was tested -->
+            <plugin artifactId="maven-surefire-plugin">
+                <effectivePom>
+                    <excludeProperties>
+                        <excludeProperty>skip</excludeProperty>
+                        <excludeProperty>skipTests</excludeProperty>
+                        <excludeProperty>skipExec</excludeProperty>
+                        <excludeProperty>testFailureIgnore</excludeProperty>
+                        <excludeProperty>argLine</excludeProperty>
+                    </excludeProperties>
+                </effectivePom>
+            </plugin>
+        </plugins>
+    </input>
+    <executionControl>
+        <runAlways>
+            <plugins>
+                <plugin artifactId="maven-failsafe-plugin"/>
+            </plugins>
+
+            <executions>
+                <execution artifactId="maven-antrun-plugin">
+                    <execIds>
+                        <execId>install-artifact-file</execId>
+                        <execId>deploy-artifact-file</execId>
+                    </execIds>
+                </execution>
+                <execution artifactId="build-helper-maven-plugin">
+                    <execIds>
+                        <execId>set-props</execId>
+                    </execIds>
+                </execution>
+                <execution artifactId="maven-dependency-plugin">
+                    <execIds>
+                        <execId>copy-local-packages</execId>
+                        <execId>install-artifact-file</execId>
+                    </execIds>
+                </execution>
+            </executions>
+            <goalsLists>
+                <goalsList artifactId="maven-install-plugin">
+                    <goals>
+                        <goal>install</goal>
+                    </goals>
+                </goalsList>
+                <goalsList artifactId="maven-deploy-plugin">
+                    <goals>
+                        <goal>deploy</goal>
+                    </goals>
+                </goalsList>
+            </goalsLists>
+        </runAlways>
+        <reconcile>
+            <plugins>
+                <plugin artifactId="maven-compiler-plugin" goal="compile">
+                    <reconciles>
+                        <reconcile propertyName="source"/>
+                        <reconcile propertyName="target"/>
+                        <reconcile propertyName="debug" skipValue="true"/>
+                        <reconcile propertyName="debuglevel" skipValue="true"/>
+                    </reconciles>
+                </plugin>
+                <plugin artifactId="maven-surefire-plugin" goal="test">
+                    <reconciles>
+                        <reconcile propertyName="skip" skipValue="true"/>
+                        <reconcile propertyName="skipExec" skipValue="true"/>
+                        <reconcile propertyName="skipTests" skipValue="true"/>
+                        <reconcile propertyName="testFailureIgnore" skipValue="true"/>
+                    </reconciles>
+                </plugin>
+                <!--
+
+                                <plugin artifactId="maven-enforcer-plugin" goal="enforce">
+                                    <reconciles>
+                                        <reconcile propertyName="skip" skipValue="true"/>
+                                    </reconciles>
+                                </plugin>
+                -->
+                <!--
+                                <plugin artifactId="maven-antrun-plugin" goal="run">
+                                    <reconciles>
+                                        <reconcile propertyName="target" skipValue="true"/>
+                                    </reconciles>
+                                </plugin>
+                -->
+            </plugins>
+        </reconcile>
+    </executionControl>
+</cache>

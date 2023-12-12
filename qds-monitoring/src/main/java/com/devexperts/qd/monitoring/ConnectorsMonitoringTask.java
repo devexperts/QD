@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,7 +15,6 @@ import com.devexperts.logging.Logging;
 import com.devexperts.mars.common.MARSNode;
 import com.devexperts.mars.jvm.CpuCounter;
 import com.devexperts.qd.QDFactory;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.stats.QDStats;
 
@@ -76,7 +75,7 @@ public class ConnectorsMonitoringTask implements Runnable {
      * and an empty list of connectors.
      */
     public ConnectorsMonitoringTask() {
-        this(null, QDLog.log, null, MARSNode.getRoot(), null);
+        this(null, Logging.getLogging(ConnectorsMonitoringTask.class), null, MARSNode.getRoot(), null);
     }
 
     /**
@@ -85,7 +84,7 @@ public class ConnectorsMonitoringTask implements Runnable {
      * and an empty list of connectors.
      */
     public ConnectorsMonitoringTask(QDStats rootStats) {
-        this(null, QDLog.log, rootStats, MARSNode.getRoot(), null);
+        this(null, Logging.getLogging(ConnectorsMonitoringTask.class), rootStats, MARSNode.getRoot(), null);
     }
 
     /**
@@ -93,18 +92,7 @@ public class ConnectorsMonitoringTask implements Runnable {
      * default log, and default root {@link MARSNode#getRoot() MARSNode},
      */
     public ConnectorsMonitoringTask(QDStats rootStats, List<MessageConnector> connectors) {
-        this(null, QDLog.log, rootStats, MARSNode.getRoot(), connectors);
-    }
-
-    /**
-     * Creates connection monitoring task with a specified log, root QDStats, a list of connectors,
-     * and default root {@link MARSNode#getRoot() MARSNode},
-     * @deprecated Because {@link QDLog} is deprecated. It is not used by this constructor.
-     *             Use other constructors and configuration methods.
-     */
-    public ConnectorsMonitoringTask(QDLog log, QDStats rootStats, List<MessageConnector> connectors) {
-        this(null, QDLog.log, rootStats, MARSNode.getRoot(), connectors);
-        QDLog.log.warn("WARNING: Using DEPRECATED ConnectorsMonitoringTask constructor with deprecated QDLog instance");
+        this(null, Logging.getLogging(ConnectorsMonitoringTask.class), rootStats, MARSNode.getRoot(), connectors);
     }
 
     /**
@@ -112,7 +100,7 @@ public class ConnectorsMonitoringTask implements Runnable {
      * default log and an empty list of connectors,
      */
     public ConnectorsMonitoringTask(QDStats rootStats, MARSNode rootNode) {
-        this(null, QDLog.log, rootStats, rootNode, null);
+        this(null, Logging.getLogging(ConnectorsMonitoringTask.class), rootStats, rootNode, null);
     }
 
     /**

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -35,7 +35,7 @@ import javax.servlet.ServletResponse;
  * It maintains a list of connections and static {@link #checkAndHeartbeatAll} method.
  */
 public abstract class SSEConnection implements AsyncListener, Serializable {
-    protected static final Logging log = Logging.getLogging(SSEConnection.class);
+    protected final Logging log = Logging.getLogging(getClass());
 
     private static final long serialVersionUID = 0;
 

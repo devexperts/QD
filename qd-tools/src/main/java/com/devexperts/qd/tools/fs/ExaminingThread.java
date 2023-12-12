@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,9 +11,9 @@
  */
 package com.devexperts.qd.tools.fs;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDDistributor;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.QDTicker;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordMode;
@@ -26,6 +26,9 @@ import com.devexperts.qd.ng.RecordMode;
  * @see FilteredStream
  */
 class ExaminingThread extends Thread {
+
+    private static final Logging log = Logging.getLogging(ExaminingThread.class);
+
     private final QDTicker ticker;
     private final QDDistributor distributor;
     private final long dataFrequency;
@@ -48,7 +51,7 @@ class ExaminingThread extends Thread {
                 // Step 1. Revise new data to update subscription
                 if (ticker.examineData(subscriptionBuffer)) {
                     // Some data was not examined
-                    QDLog.log.error("WARNING: Not all data was examined in ticker inside filtered stream.");
+                    log.warn("WARNING: Not all data was examined in ticker inside filtered stream.");
                 }
                 agent.addSubscription(subscriptionBuffer);
                 subscriptionBuffer.clear();
@@ -64,7 +67,7 @@ class ExaminingThread extends Thread {
         } catch (InterruptedException ie) {
             // do nothing
         } catch (Throwable t) {
-            QDLog.log.error("Exception in " + getName(), t);
+            log.error("Exception in " + getName(), t);
         }
     }
 }

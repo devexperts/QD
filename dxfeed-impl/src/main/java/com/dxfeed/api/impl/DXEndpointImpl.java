@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,6 +12,7 @@
 package com.dxfeed.api.impl;
 
 import com.devexperts.io.URLInputStream;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDAgent;
@@ -19,7 +20,6 @@ import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
 import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDFactory;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.ng.RecordBuffer;
@@ -69,7 +69,10 @@ import javax.annotation.concurrent.GuardedBy;
 public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConnectorListener, RMISupportingDXEndpoint {
     private static final boolean TRACE_LOG = DXEndpointImpl.class.desiredAssertionStatus();
 
-    private static final ExecutorProvider DEFAULT_EXECUTOR_PROVIDER = new ExecutorProvider("DXEndpoint-DXExecutorThread", QDLog.log);
+    private static final Logging log = Logging.getLogging(DXEndpointImpl.class);
+
+    private static final ExecutorProvider DEFAULT_EXECUTOR_PROVIDER =
+        new ExecutorProvider("DXEndpoint-DXExecutorThread", log);
 
     private final Role role;
     private final QDEndpoint qdEndpoint;
@@ -137,7 +140,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
         // Configures executor provide (either common built-in or custom)
         if (hasProperty(DXFEED_THREAD_POOL_SIZE_PROPERTY)) {
             executorProvider = new ExecutorProvider(Integer.decode(getProperty(DXFEED_THREAD_POOL_SIZE_PROPERTY)),
-                "DXEndpoint-" + qdEndpoint.getName() +  "-DXExecutorThread", QDLog.log);
+                "DXEndpoint-" + qdEndpoint.getName() +  "-DXExecutorThread", log);
         } else
             executorProvider = DEFAULT_EXECUTOR_PROVIDER;
         executorReference = executorProvider.newReference();
@@ -450,7 +453,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
             try {
                 listener.propertyChange(event);
             } catch (Throwable t) {
-                QDLog.log.error("Exception in DXEndpoint state change listener", t);
+                log.error("Exception in DXEndpoint state change listener", t);
             }
     }
 
@@ -621,7 +624,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
         private void loadPropertiesDefaultsFromStream(InputStream in, String name, String propFileKey) {
             if (in == null)
                 return;
-            QDLog.log.info("DXEndpoint is loading properties from " + name);
+            log.info("DXEndpoint is loading properties from " + name);
             Properties props = new Properties();
             try {
                 try {
@@ -645,7 +648,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
         }
 
         private void failedToLoadFrom(String name, String propFileKey, IOException e) {
-            QDLog.log.error("Failed to load " + propFileKey + " from " + LogUtil.hideCredentials(name), e);
+            log.error("Failed to load " + propFileKey + " from " + LogUtil.hideCredentials(name), e);
         }
 
         @Override
@@ -669,7 +672,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
             for (Map.Entry<Object, Object> entry : new TreeMap<>(props).entrySet()) {
                 String key = (String) entry.getKey();
                 if (!qdEndpointBuilder.supportsProperty(key) && supportsProperty(key))
-                    QDLog.log.info(qdEndpoint.getName() + " DXEndpoint with " + key + "=" +
+                    log.info(qdEndpoint.getName() + " DXEndpoint with " + key + "=" +
                         (MASKED_PROPERTIES.contains(key) ? "****" : props.getProperty(key)));
             }
             // create DXEndpoint
@@ -788,7 +791,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
         @GuardedBy("this")
         private void scheduleImpl() {
             if (TRACE_LOG)
-                QDLog.log.trace("Schedule state update to " + state);
+                log.trace("Schedule state update to " + state);
             if (scheduled++ > 0) {
                 notifyAll(); // wakeup awaitInner
                 return;

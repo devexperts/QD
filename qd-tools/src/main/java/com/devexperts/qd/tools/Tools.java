@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,9 +11,9 @@
  */
 package com.devexperts.qd.tools;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.SymbolReceiver;
 import com.devexperts.qd.kit.RecordOnlyFilter;
@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.concurrent.locks.LockSupport;
 
 public class Tools {
+
+    private static final Logging log = Logging.getLogging(Tools.class);
     private static final List<Class<? extends AbstractTool>> TOOLS = Services.loadServiceClasses(AbstractTool.class, null);
 
     private static class ToolArgs {
@@ -127,7 +129,7 @@ public class Tools {
             for (ToolArgs ta : tools)
                 closeOnExit(ta.tool.closeOnExit());
         } catch (Throwable t) {
-            QDLog.log.error(t.toString(), t);
+            log.error(t.toString(), t);
             return false;
         }
         return true; // success
@@ -142,12 +144,13 @@ public class Tools {
         } else if (t instanceof InvalidFormatException) {
             // Log with stack trace first, then show help message on the screen as last line
             // See [QD-251] Better logging when QD-filter can't be created/loaded
-            QDLog.log.error(t.getMessage(), t);
+            log.error(t.getMessage(), t);
             System.err.println();
             System.err.println(name + ": " + t.getMessage());
             System.err.println("Use \"Help " + name + "\" for usage info.");
-        } else
-            QDLog.log.error(t.toString(), t);
+        } else {
+            log.error(t.toString(), t);
+        }
     }
 
     private static boolean waitWhileActive(List<MessageConnector> messageConnectors) {
@@ -180,11 +183,11 @@ public class Tools {
         if (list == null)
             return;
         for (Closeable closeable : list) {
-            QDLog.log.info("Closing " + closeable);
+            log.info("Closing " + closeable);
             try {
                 closeable.close();
             } catch (IOException e) {
-                QDLog.log.error("Failed to close " + closeable, e);
+                log.error("Failed to close " + closeable, e);
             }
         }
     }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,9 +13,9 @@ package com.devexperts.rmi.impl;
 
 import com.devexperts.auth.AuthSession;
 import com.devexperts.io.BufferedInput;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataIterator;
 import com.devexperts.qd.DataScheme;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.SubscriptionIterator;
 import com.devexperts.qd.kit.DefaultScheme;
 import com.devexperts.qd.kit.PentaCodec;
@@ -62,6 +62,8 @@ class RMIMessageAdapter extends MessageAdapter implements MasterMessageAdapter {
     private static final int RETRIEVE_COUNT = 4;
 
     private static final MessageType ATTACHED_ADAPTER_MASK_TYPE = MessageType.RAW_DATA; // just for flag
+
+    private static final Logging log = Logging.getLogging(RMIMessageAdapter.class);
 
     // ==================== private static helper methods ====================
 
@@ -317,7 +319,7 @@ class RMIMessageAdapter extends MessageAdapter implements MasterMessageAdapter {
     }
 
     private void processLegacyConnection() {
-        QDLog.log.warn("Legacy connection (pre QDS 3.69) is detected. Assuming RMI is supported at " +
+        log.warn("Legacy connection (pre QDS 3.69) is detected. Assuming RMI is supported at " +
             LogUtil.hideCredentials(getRemoteHostAddress()));
         setRemoteReceiveSet(EnumSet.of(
             MessageType.RMI_DESCRIBE_SUBJECT, MessageType.RMI_DESCRIBE_OPERATION,

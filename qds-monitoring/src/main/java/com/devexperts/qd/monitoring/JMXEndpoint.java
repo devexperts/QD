@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,7 +11,7 @@
  */
 package com.devexperts.qd.monitoring;
 
-import com.devexperts.qd.QDLog;
+import com.devexperts.logging.Logging;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,6 +54,8 @@ public class JMXEndpoint {
      */
     public static final String JMX_RMI_PORT_PROPERTY = "jmx.rmi.port";
 
+    private static final Logging log = Logging.getLogging(JMXEndpoint.class);
+
     public static Builder newBuilder() {
         return new Builder();
     }
@@ -84,11 +86,11 @@ public class JMXEndpoint {
                 return;
             INSTANCES.remove(builder);
             for (JmxConnector jmxConnector : jmxConnectors) {
-                QDLog.log.info("Stopping JMX Connector " + jmxConnector);
+                log.info("Stopping JMX Connector " + jmxConnector);
                 try {
                     jmxConnector.stop();
                 } catch (Exception e) {
-                    QDLog.log.error("Failed to stop JMX Connector " + jmxConnector, e);
+                    log.error("Failed to stop JMX Connector " + jmxConnector, e);
                 }
             }
         }
@@ -152,7 +154,7 @@ public class JMXEndpoint {
             for (String key : SUPPORTED_PROPERTIES) {
                 if (props.containsKey(key)) {
                     String v = props.getProperty(key);
-                    QDLog.log.info("JMXEndpoint with " + key + "=" + (JMX_HTML_AUTH_PROPERTY.equals(key) ? "****" : v));
+                    log.info("JMXEndpoint with " + key + "=" + (JMX_HTML_AUTH_PROPERTY.equals(key) ? "****" : v));
                 }
             }
             // create connectors
@@ -163,7 +165,7 @@ public class JMXEndpoint {
                     if (connector != null)
                         jmxConnectors.add(connector);
                 } catch (Throwable e) {
-                    QDLog.log.error("Failed to initialize JMX HTML Adaptor", e);
+                    log.error("Failed to initialize JMX HTML Adaptor", e);
                 }
             }
             if (props.containsKey(JMX_RMI_PORT_PROPERTY)) {
@@ -172,7 +174,7 @@ public class JMXEndpoint {
                     if (connector != null)
                         jmxConnectors.add(connector);
                 } catch (Throwable e) {
-                    QDLog.log.error("Failed to initialize JMX RMI Connector", e);
+                    log.error("Failed to initialize JMX RMI Connector", e);
                 }
             }
             JMXEndpoint endpoint = new JMXEndpoint(this, jmxConnectors);

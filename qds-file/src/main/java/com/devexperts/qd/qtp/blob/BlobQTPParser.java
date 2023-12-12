@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,8 +12,8 @@
 package com.devexperts.qd.qtp.blob;
 
 import com.devexperts.io.BufferedInput;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataRecord;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.qtp.AbstractQTPParser;
@@ -34,6 +34,7 @@ import java.io.IOException;
  * @see AbstractQTPParser
  */
 public class BlobQTPParser extends AbstractQTPParser {
+    private static final Logging log = Logging.getLogging(BlobQTPParser.class);
 
     private final DataRecord record;
     private final int cipher;
@@ -67,7 +68,7 @@ public class BlobQTPParser extends AbstractQTPParser {
             stats.updateIOReadRecordBytes(record.getId(), in.totalPosition() - position);
             stats.updateIOReadDataRecord();
         } catch (IOException e) {
-            QDLog.log.error("Cannot parse data blob", e);
+            log.error("Cannot parse data blob", e);
             consumer.handleCorruptedStream();
         }
     }

@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.325</version>
+        <version>3.326</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -24,8 +24,6 @@
     <description>dxFeed API classes</description>
 
     <properties>
-        <deploy.file>${project.artifactId}-${project.version}-javadoc.jar</deploy.file>
-        <deploy.name>dxfeed-javadoc</deploy.name>
         <deploy.skip>false</deploy.skip>
         <javadoc.skip>false</javadoc.skip>
     </properties>
@@ -92,7 +90,10 @@
                         <source>${project.build.sourceDirectory}/com/dxfeed/event/market/Summary.java</source>
                         <source>${project.build.sourceDirectory}/com/dxfeed/event/market/Profile.java</source>
                         <source>${project.build.sourceDirectory}/com/dxfeed/event/market/TimeAndSale.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/market/OptionSale.java</source>
                         <source>${project.build.sourceDirectory}/com/dxfeed/event/market/Order.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/market/AnalyticOrder.java</source>
+                        <source>${project.build.sourceDirectory}/com/dxfeed/event/market/OtcMarketsOrder.java</source>
                         <source>${project.build.sourceDirectory}/com/dxfeed/event/market/SpreadOrder.java</source>
                         <source>${project.build.sourceDirectory}/com/dxfeed/event/candle/package-info.java</source>
                         <source>${project.build.sourceDirectory}/com/dxfeed/event/candle/Candle.java</source>

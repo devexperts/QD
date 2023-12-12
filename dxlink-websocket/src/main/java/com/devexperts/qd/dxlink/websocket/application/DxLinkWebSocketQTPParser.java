@@ -12,8 +12,8 @@
 package com.devexperts.qd.dxlink.websocket.application;
 
 import com.devexperts.io.BufferedInput;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataScheme;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.qtp.AbstractQTPParser;
 import com.devexperts.qd.qtp.MessageConsumer;
 import com.devexperts.qd.qtp.ProtocolDescriptor;
@@ -41,6 +41,8 @@ import static com.devexperts.qd.qtp.MessageType.forData;
  */
 class DxLinkWebSocketQTPParser extends AbstractQTPParser {
     private static final long MILLISECOND_IN_SECOND = 1000L;
+    private static final Logging log = Logging.getLogging(DxLinkWebSocketQTPParser.class);
+
     private final DxLinkJsonMessageParser messageParser;
     private final HeartbeatProcessor heartbeatProcessor;
     private ProtocolDescriptor descriptor = ProtocolDescriptor.newPeerProtocolDescriptor(null);
@@ -73,7 +75,7 @@ class DxLinkWebSocketQTPParser extends AbstractQTPParser {
 
     private class DxLinkClientReceiverImpl implements DxLinkClientReceiver {
         @Override
-        public void receiveError(int channel, String error, String message) { QDLog.log.error(message); }
+        public void receiveError(int channel, String error, String message) { log.error(message); }
 
         @Override
         public void receiveKeepalive(int channel) { currentConsumer.processHeartbeat(null); }

@@ -18,11 +18,11 @@ import com.devexperts.connector.proto.ConfigurableObject;
 import com.devexperts.connector.proto.ConfigurationException;
 import com.devexperts.connector.proto.EndpointId;
 import com.devexperts.connector.proto.TransportConnection;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.QDHistory;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.QDStream;
 import com.devexperts.qd.QDTicker;
 import com.devexperts.qd.SubscriptionFilter;
@@ -32,6 +32,7 @@ import com.devexperts.qd.qtp.auth.QDAuthRealm;
 import com.devexperts.qd.qtp.auth.QDLoginHandler;
 import com.devexperts.qd.qtp.fieldreplacer.FieldReplacersCache;
 import com.devexperts.qd.stats.QDStats;
+import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TypedMap;
 
@@ -62,7 +63,7 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
      * was closed in turn, it shall attempt to recreate message adapter and
      * reconnect as specified by its contract.
      */
-    public interface    CloseListener {
+    public interface CloseListener {
         public void adapterClosed(MessageAdapter adapter);
     }
 
@@ -267,6 +268,8 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
     private enum State {
         NEW, STARTED, CLOSED
     }
+
+    private static final Logging log = Logging.getLogging(MessageAdapter.class);
 
     // ------------------------- instance fields -------------------------
 
@@ -547,27 +550,27 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
     private void logAuthRequestDescriptor(ProtocolDescriptor desc) {
         StringBuilder sb = new StringBuilder(toString());
         sb.append(" received authentication request ").append(desc);
-        String host = getRemoteHostAddress();
+        String host = LogUtil.hideCredentials(getRemoteHostAddress());
         if (host != null)
             sb.append(" from ").append(host);
-        QDLog.log.info(sb.toString());
+        log.info(sb.toString());
     }
 
     private void logIncomingProtocolDescriptor(ProtocolDescriptor desc) {
         StringBuilder sb = new StringBuilder();
-        sb.append(toString()).append(" received protocol descriptor ").append(desc);
-        String host = getRemoteHostAddress();
+        sb.append(this).append(" received protocol descriptor ").append(desc);
+        String host = LogUtil.hideCredentials(getRemoteHostAddress());
         if (host != null)
             sb.append(" from ").append(host);
-//      For backwards-compatibility purposes a protocol descriptor that does not advertise any "send messages"
-//      is always considered "compatible" (e.g. we don't know what is being sent and assume we are Ok),
-//      so no warning is given in this case. See QD-545 for details and rationale
+        // For backwards-compatibility purposes a protocol descriptor that does not advertise any "send messages"
+        // is always considered "compatible" (e.g. we don't know what is being sent and assume we are Ok),
+        // so no warning is given in this case. See QD-545 for details and rationale
         if (desc.getSendMessages().isEmpty() || isProtocolDescriptorCompatible(desc)) {
-            QDLog.log.debug(sb.toString());
+            log.info(sb.toString());
         } else {
             sb.append("\n!!! IT IS NOT A COMPATIBLE PROTOCOL !!!");
             sb.append(" Maybe connection was established to the wrong host or port?");
-            QDLog.log.warn(sb.toString());
+            log.warn(sb.toString());
         }
     }
 
@@ -716,7 +719,7 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
         if ((reportedIgnoredMessages & (1L << message.ordinal())) != 0)
             return;
         reportedIgnoredMessages |= 1L << message.ordinal();
-        QDLog.log.error("WARNING: " + reason + " -- ignoring " + message + " message");
+        log.warn("WARNING: " + reason + " -- ignoring " + message + " message");
     }
 
     // ========== Mask API ==========

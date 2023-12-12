@@ -11,7 +11,7 @@
  */
 package com.dxfeed.scheme.impl.properties;
 
-import com.devexperts.qd.QDLog;
+import com.devexperts.logging.Logging;
 import com.devexperts.util.GlobListUtil;
 import com.devexperts.util.SystemProperties;
 import com.dxfeed.event.market.MarketEventSymbols;
@@ -33,6 +33,9 @@ import static com.dxfeed.api.DXEndpoint.DXSCHEME_ENABLED_PROPERTY_PREFIX;
 import static com.dxfeed.api.DXEndpoint.DXSCHEME_NANO_TIME_PROPERTY;
 
 public final class DXFeedPropertiesConverter {
+
+    private static final Logging log = Logging.getLogging(DXFeedPropertiesConverter.class);
+
     /**
      * This code must generate type overrides and visibility rules equal to
      * {@link com.dxfeed.api.impl.SchemeProperties} and
@@ -66,7 +69,7 @@ public final class DXFeedPropertiesConverter {
             }
             return file.isEmpty() ? null : file;
         } catch (Throwable t) {
-            QDLog.log.error("Cannot convert properties to scheme configuration: " + t.getMessage());
+            log.error("Cannot convert properties to scheme configuration: " + t.getMessage());
             return null;
         }
     }
@@ -209,7 +212,7 @@ public final class DXFeedPropertiesConverter {
         try {
             file.addGenerator(gen);
         } catch (SchemeException e) {
-            QDLog.log.error("Cannot create set of suffixes from " + prop + ": " + e.getMessage());
+            log.error("Cannot create set of suffixes from " + prop + ": " + e.getMessage());
         }
     }
 

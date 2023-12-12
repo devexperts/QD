@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,7 +11,7 @@
  */
 package com.dxfeed.scheme.impl.xml;
 
-import com.devexperts.qd.QDLog;
+import com.devexperts.logging.Logging;
 import com.dxfeed.scheme.EmbeddedTypes;
 import com.dxfeed.scheme.SchemeException;
 import com.dxfeed.scheme.impl.ImportProcessor;
@@ -40,6 +40,9 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.ParserConfigurationException;
 
 public class XmlSchemeModelReader extends XmlSchemeModelFormat implements SchemeModelReader {
+
+    private static final Logging log = Logging.getLogging(XmlSchemeModelReader.class);
+
     public XmlSchemeModelReader() {
         // Configure scheme
         URL schemeURL = this.getClass().getClassLoader().getResource(SCHEMA_NAME);
@@ -67,7 +70,7 @@ public class XmlSchemeModelReader extends XmlSchemeModelFormat implements Scheme
 
             // Check errors
             for (SAXException ex : errorHandler.getExceptions()) {
-                QDLog.log.error("Cannot parse XML scheme model \"" + name + "\": " + ex.getMessage());
+                log.error("Cannot parse XML scheme model \"" + name + "\": " + ex.getMessage());
             }
             if (!errorHandler.getExceptions().isEmpty()) {
                 throw new SchemeException("Cannot parse XML Scheme: XML Errors in \"" + name + "\"");

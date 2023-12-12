@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.325</version>
+    <version>3.326</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -96,7 +96,7 @@
         <dependency>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
-            <version>3.0.0</version>
+            <version>${jsr305.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -110,27 +110,24 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.build.timestamp.format>yyyyMMdd-HHmm</maven.build.timestamp.format>
-        <!-- remote path prefix for directories where delivery artifacts will be placed during deploy phase -->
-        <deploy.host.mount>//JAZZ/QD</deploy.host.mount>
-
-        <!-- The branch dir is set to deploy snapshot and release file into a separate branch subdirectory -->
-        <deploy.branch.dir.suffix />
 
         <!-- The staging directory where modules install their deliverable artifacts
-             during install phase.
+             during 'install' phase.
+             NOTE: For manual delivery and development purposes only.
         -->
         <install.dir>../target/install</install.dir>
 
-        <!-- Profiles may override "deploy.dir" property to define where artifacts are deployed
-             and "deploy.suffix" property to define the suffix for file names.
-             Modules declare "deploy.file" and "deploy.name" properties if they need
-             their artifact copies to "deploy.dir".
-             Modules may overwrite "deploy.extension" if needed.
+        <!-- Module should set 'deploy.file.skip' property to 'false' to deploy an artifact locally to [install.dir].
+        Also, 'deploy.classifier' & 'deploy.extension' can be adjusted to properly specify an artifact to be deployed.
         -->
-        <deploy.dir>${deploy.host.mount}/Snapshot${deploy.branch.dir.suffix}</deploy.dir>
-        <deploy.suffix>-${maven.build.timestamp}</deploy.suffix>
-        <deploy.name>${project.artifactId}</deploy.name>
-        <deploy.extension>zip</deploy.extension>
+        <deploy.file.skip>true</deploy.file.skip>
+        <deploy.extension>${project.packaging}</deploy.extension>
+        <deploy.classifier />
+        <!-- strip version part from artifact file name in [install.dir] -->
+        <deploy.strip.version>true</deploy.strip.version>
+
+        <!-- Profiles may override "deploy.suffix" property to define the suffix for version-labeling strings -->
+        <deploy.suffix />
         <deploy.version>${project.version}${deploy.suffix}</deploy.version>
 
         <!-- Internal modules set it to true  -->
@@ -138,6 +135,11 @@
         <!-- Most modules don't produce javadoc -->
         <javadoc.skip>true</javadoc.skip>
         <javadoc.error.pattern>\*?\s*@author.*</javadoc.error.pattern>
+
+        <!-- shortcut for cache control (use -DskipBuildCache for "clean" build) -->
+        <skipBuildCache>false</skipBuildCache>
+        <maven.build.cache.skipCache>${skipBuildCache}</maven.build.cache.skipCache>
+
         <!-- SHADED: excludes for shaded artifacts when used inside a war. Keep in sync with qds & dxfeed-api poms -->
         <shaded.war.excludes>
             WEB-INF/lib/qd-core.jar,
@@ -173,8 +175,9 @@
         <jmxtools.version>1.2.8</jmxtools.version>
         <mycila-license-maven-plugin.version>3.0</mycila-license-maven-plugin.version>
 
-        <netty-codec-http.version>4.1.86.Final</netty-codec-http.version>
+        <netty.version>4.1.101.Final</netty.version>
         <reflections.version>0.10.2</reflections.version>
+        <jsr305.version>3.0.0</jsr305.version>
     </properties>
 
     <profiles>
@@ -188,8 +191,15 @@
                 </property>
             </activation>
             <properties>
-                <deploy.dir>${deploy.host.mount}/Release${deploy.branch.dir.suffix}</deploy.dir>
+                <maven.build.cache.enabled>false</maven.build.cache.enabled>
                 <deploy.suffix />
+            </properties>
+        </profile>
+        <profile>
+            <id>snapshot-delivery</id>
+            <properties>
+                <maven.build.cache.enabled>false</maven.build.cache.enabled>
+                <deploy.suffix>-${maven.build.timestamp}</deploy.suffix>
             </properties>
         </profile>
         <profile>
@@ -414,13 +424,13 @@
                     <skip>${deploy.skip}</skip>
                 </configuration>
             </plugin>
+
             <!-- custom stuff with antrun plugin to upload key artifacts   -->
-            <!-- it is used by modules that define "deploy.file" and "deploy.name" properties -->
             <plugin>
                 <artifactId>maven-antrun-plugin</artifactId>
                 <executions>
                     <execution>
-                        <!-- During install phase copy artifact to local install.dir -->
+                        <!-- check that @author is not used in javadocs -->
                         <id>check-author-string</id>
                         <phase>validate</phase>
                         <configuration>
@@ -441,47 +451,27 @@
                             <goal>run</goal>
                         </goals>
                     </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
                     <execution>
-                        <!-- During install phase copy artifact to local install.dir -->
+                        <!-- Place some artifacts to the [install.dir] -->
                         <id>install-artifact-file</id>
                         <phase>install</phase>
-                        <configuration>
-                            <target if="deploy.file">
-                                <mkdir dir="${install.dir}" />
-                                <!-- delete previous files from install dir -->
-                                <delete>
-                                    <fileset dir="${install.dir}" includes="${deploy.name}-*.${deploy.extension}" />
-                                </delete>
-                                <!-- copy new file to install dir -->
-                                <copy file="${project.build.directory}/${deploy.file}" tofile="${install.dir}/${deploy.name}-${deploy.version}.${deploy.extension}" />
-                            </target>
-                        </configuration>
                         <goals>
-                            <goal>run</goal>
+                            <goal>copy</goal>
                         </goals>
-                    </execution>
-                    <execution>
-                        <!-- During deploy phase upload artifact from local install.dir to deploy.dir -->
-                        <id>deploy-artifact-file</id>
-                        <phase>deploy</phase>
                         <configuration>
-                            <target if="deploy.file" unless="deploy.copy.skip">
-                                <mkdir dir="${deploy.dir}/old" />
-                                <!-- delete previous snapshots (keep releases!) from old dir -->
-                                <delete failonerror="false">
-                                    <fileset dir="${deploy.dir}/old" includes="${deploy.name}-*-SNAPSHOT-*.${deploy.extension}" />
-                                </delete>
-                                <!-- move previous file to old dir -->
-                                <move todir="${deploy.dir}/old" failonerror="false">
-                                    <fileset dir="${deploy.dir}" includes="${deploy.name}-*.${deploy.extension}" />
-                                </move>
-                                <!-- copy new file from install dir -->
-                                <copy file="${install.dir}/${deploy.name}-${deploy.version}.${deploy.extension}" tofile="${deploy.dir}/${deploy.name}${deploy.suffix}.${deploy.extension}" failonerror="false" />
-                            </target>
+                            <skip>${deploy.file.skip}</skip>
+                            <overWriteReleases>true</overWriteReleases>
+                            <overWriteSnapshots>true</overWriteSnapshots>
+                            <stripVersion>${deploy.strip.version}</stripVersion>
+                            <outputDirectory>${install.dir}</outputDirectory>
+                            <artifact>${project.groupId}:${project.artifactId}:${project.version}:${deploy.extension}:${deploy.classifier}</artifact>
                         </configuration>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
                     </execution>
                 </executions>
             </plugin>
@@ -624,17 +614,13 @@
                     <artifactId>install4j-maven-plugin</artifactId>
                     <version>1.1.2</version>
                 </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>build-helper-maven-plugin</artifactId>
+                    <version>3.4.0</version>
+                </plugin>
             </plugins>
         </pluginManagement>
-
-        <!-- Define wagon extension for S3 support -->
-        <extensions>
-            <extension>
-                <groupId>org.springframework.build</groupId>
-                <artifactId>aws-maven</artifactId>
-                <version>5.0.0.RELEASE</version>
-            </extension>
-        </extensions>
     </build>
 
     <repositories>

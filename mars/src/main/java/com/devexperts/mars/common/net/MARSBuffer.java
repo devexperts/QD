@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -27,6 +27,8 @@ import java.util.Collections;
  * each thread and/or data stream will use it's own instance of the buffer or provide thread-safety by other means.
  */
 public class MARSBuffer {
+
+    private static final Logging log = Logging.getLogging(MARSBuffer.class);
 
     private char[] buffer;
     private int size;
@@ -160,8 +162,7 @@ public class MARSBuffer {
                     events.add(marsEventFactory.createMARSEvent(name, value, timestamp));
                 }
             } catch (Exception e) {
-                Logging.getLogging(MARSBuffer.class).error(
-                    "readEvents() crlf=" + crlf + " parsed=" + parsed, e);
+                log.error("readEvents() crlf=" + crlf + " parsed=" + parsed, e);
             }
         }
         removeChars(parsed);

@@ -14,7 +14,6 @@ package com.devexperts.qd.dxlink.websocket.application;
 import com.devexperts.connector.proto.ApplicationConnection;
 import com.devexperts.connector.proto.TransportConnection;
 import com.devexperts.io.ChunkList;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.qtp.MessageAdapter;
 import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.qtp.MessageListener;
@@ -72,7 +71,7 @@ public class DxLinkWebSocketApplicationConnection
     @Override
     public long examine(long currentTime) {
         if (currentTime >= heartbeatDisconnectTime) {
-            QDLog.log.info(adapter + " heartbeat timeout exceeded: disconnecting");
+            log.info(adapter + " heartbeat timeout exceeded: disconnecting");
             close();
         }
         long nextRetrieveTime = Math.min(adapter.nextRetrieveTime(currentTime), nextHeartbeatTime);

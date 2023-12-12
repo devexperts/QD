@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,13 +11,13 @@
  */
 package com.devexperts.qd.logger;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDHistory;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.QDStream;
 import com.devexperts.qd.QDTicker;
 import com.devexperts.qd.impl.AbstractCollectorBuilder;
@@ -33,7 +33,7 @@ public class LoggedQDFactory extends QDFactory {
         QDFactory factory = StripedFactory.getInstance();
         try {
             if (SystemProperties.getProperty(LOGGER_PROPERTY, null) != null)
-                factory = new LoggedQDFactory(new Logger(QDLog.getInstance(), ""), factory);
+                factory = new LoggedQDFactory(new Logger(Logging.getLogging(QDFactory.class), ""), factory);
         } catch (SecurityException e) {
             // ignore
         }
@@ -55,20 +55,20 @@ public class LoggedQDFactory extends QDFactory {
 
     @Override
     public QDCollector.Builder<?> collectorBuilder(QDContract contract) {
-        return new AbstractCollectorBuilder(contract) {
+        return new AbstractCollectorBuilder<QDCollector>(contract) {
             @Override
             public QDCollector build() {
                 int n = counter.get(contract).next();
                 log.debug("create" + contract + "(" + getScheme() + ", " + getStats() + ") = #" + n);
                 switch (contract) {
-                case TICKER:
-                    return new LoggedTicker(log.child("ticker" + n), (QDTicker) buildViaDelegate(), this);
-                case STREAM:
-                    return new LoggedStream(log.child("stream" + n), (QDStream) buildViaDelegate(), this);
-                case HISTORY:
-                    return new LoggedHistory(log.child("history" + n), (QDHistory) buildViaDelegate(), this);
-                default:
-                    throw new IllegalArgumentException();
+                    case TICKER:
+                        return new LoggedTicker(log.child("ticker" + n), (QDTicker) buildViaDelegate(), this);
+                    case STREAM:
+                        return new LoggedStream(log.child("stream" + n), (QDStream) buildViaDelegate(), this);
+                    case HISTORY:
+                        return new LoggedHistory(log.child("history" + n), (QDHistory) buildViaDelegate(), this);
+                    default:
+                        throw new IllegalArgumentException();
                 }
             }
 

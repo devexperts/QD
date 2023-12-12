@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,15 +11,14 @@
  */
 package com.devexperts.qd.stats;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.management.Management;
 import com.devexperts.qd.DataScheme;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.impl.matrix.management.impl.CollectorCountersImpl;
 import com.devexperts.util.IndexedSet;
 import com.devexperts.util.QuickSort;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -44,6 +43,8 @@ import javax.management.ObjectName;
 import javax.management.ReflectionException;
 
 public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration {
+    private static final Logging log = Logging.getLogging(JMXStats.class);
+
     private static final String LONG_CLASS_NAME = long.class.getName();
     private static final String LONG_ARRAY_CLASS_NAME = long[].class.getName();
     private static final String STRING_CLASS_NAME = String.class.getName();
@@ -221,9 +222,9 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
                 // it will construct its name in preRegister
                 jmx.server.registerMBean(jmxChild, jmx.name);
             } catch (InstanceAlreadyExistsException e) {
-                QDLog.log.warn("Already registered JMX bean " + e.getMessage());
+                log.warn("Already registered JMX bean " + e.getMessage());
             } catch (Exception e) {
-                QDLog.log.error("Unexpected exception while registering JMX children bean of " + jmx.name, e);
+                log.error("Unexpected exception while registering JMX children bean of " + jmx.name, e);
             }
     }
 
@@ -247,7 +248,7 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
             try {
                 mbe.name = jmx.server.registerMBean(mbe.mbean, new ObjectName(name)).getObjectName();
             } catch (Exception e) {
-                QDLog.log.error("Unexpected exception registering JMX bean " + name, e);
+                log.error("Unexpected exception registering JMX bean " + name, e);
             }
         }
     }
@@ -265,7 +266,7 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
                     jmx.server.unregisterMBean(mbe.name);
                 mbe.name = null;
             } catch (Exception e) {
-                QDLog.log.error("Unexpected exception unregistering JMX bean " + mbe.name, e);
+                log.error("Unexpected exception unregistering JMX bean " + mbe.name, e);
             }
     }
 
@@ -325,7 +326,7 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
             }
             throw new AttributeNotFoundException(attribute);
         } catch (RuntimeException e) {
-            QDLog.log.error("Unexpected JMX exception", e);
+            log.error("Unexpected JMX exception", e);
             throw e;
         }
     }
@@ -413,7 +414,7 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
             try {
                 al.add(new Attribute(attribute, getAttribute(attribute)));
             } catch (Exception e) {
-                QDLog.log.error("Unexpected JMX exception", e);
+                log.error("Unexpected JMX exception", e);
             }
         return al;
     }
@@ -425,7 +426,7 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
                 Attribute a = (Attribute) attribute;
                 al.add(new Attribute(a.getName(), getAttribute(a.getName())));
             } catch (Exception e) {
-                QDLog.log.error("Unexpected JMX exception", e);
+                log.error("Unexpected JMX exception", e);
             }
         return al;
     }
@@ -549,7 +550,7 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
         try {
             jmx.server.unregisterMBean(jmx.name);
         } catch (Exception e) {
-            QDLog.log.error("Unexpected exception while unregistering JMX bean " + jmx.name, e);
+            log.error("Unexpected exception while unregistering JMX bean " + jmx.name, e);
         }
     }
 

@@ -11,8 +11,8 @@
  */
 package com.devexperts.qd.dxlink.websocket.application;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.QDContract;
-import com.devexperts.qd.QDLog;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimePeriod;
 import com.fasterxml.jackson.core.JsonFactory;
@@ -29,9 +29,12 @@ import java.util.Map;
 class DxLinkJsonMessageParser {
     public static final String COMPACT = "COMPACT";
     public static final String FULL = "FULL";
+
     private static final long WARN_TIMEOUT_NANOS = TimePeriod.valueOf(
         SystemProperties.getProperty("com.devexperts.qd.qtp.socket.readerWarnTimeout", "15s")
     ).getNanos();
+    private static final Logging log = Logging.getLogging(DxLinkJsonMessageParser.class);
+
     private final JsonFactory factory = JsonFactory.builder().build();
     private final Map<String, MessageParsingStrategy> strategies = new HashMap<>();
     private final Map<Integer, ChannelEventsParser> channelParsers = new HashMap<>();
@@ -107,14 +110,14 @@ class DxLinkJsonMessageParser {
             }
             MessageParsingStrategy parsingStrategy = this.strategies.get(type);
             if (parsingStrategy == null) {
-                QDLog.log.warn("Unknown message type: '" + type + "'");
+                log.warn("Unknown message type: '" + type + "'");
             } else {
                 parsingStrategy.process(channel, jsonParser);
             }
         }
         long deltaTimeNanos = System.nanoTime() - timeNanos;
         if (deltaTimeNanos > WARN_TIMEOUT_NANOS)
-            QDLog.log.warn("processChunks took " + deltaTimeNanos + " ns");
+            log.warn("processChunks took " + deltaTimeNanos + " ns");
     }
 
     void createChannelParser(int channel, String contract) {

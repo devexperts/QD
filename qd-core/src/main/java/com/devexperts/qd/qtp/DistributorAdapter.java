@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,6 +12,7 @@
 package com.devexperts.qd.qtp;
 
 import com.devexperts.connector.proto.Configurable;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataConsumer;
 import com.devexperts.qd.DataIterator;
 import com.devexperts.qd.DataScheme;
@@ -20,7 +21,6 @@ import com.devexperts.qd.QDContract;
 import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.QDHistory;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.QDStream;
 import com.devexperts.qd.QDTicker;
 import com.devexperts.qd.SubscriptionFilter;
@@ -120,6 +120,8 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
         }
     }
 
+    private static final Logging log = Logging.getLogging(DistributorAdapter.class);
+
     // ------------------------- instance fields -------------------------
 
     private final DataScheme scheme;
@@ -135,7 +137,6 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
 
     private int phaseAdd;
     private int phaseRemove;
-
 
     // ------------------------- constructors -------------------------
 
@@ -238,7 +239,7 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
     @Override
     protected void startImpl(MasterMessageAdapter master) {
         if (filter.isDynamic())
-            QDLog.log.warn("Using dynamic filter '" + LogUtil.hideCredentials(filter) + "'" +
+            log.warn("Using dynamic filter '" + LogUtil.hideCredentials(filter) + "'" +
                 " in distributor address will cause connection reset when filter changes");
         filter.addUpdateListener(this); // listen for filter updates
         // Legacy behavior: immediately send subscription if we are not using DESCRIBE_PROTOCOL messages,
@@ -325,7 +326,7 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
                     try {
                         filters.put(filter, filterFactory.createFilter(filter, QDFilterContext.REMOTE_FILTER));
                     } catch (IllegalArgumentException e) {
-                        QDLog.log.warn("Cannot parse filter '" + LogUtil.hideCredentials(filter) + "'" +
+                        log.warn("Cannot parse filter '" + LogUtil.hideCredentials(filter) + "'" +
                             " from " + LogUtil.hideCredentials(getRemoteHostAddress()) + ": " + e);
                         filters.put(filter, QDFilter.ANYTHING);
                     }

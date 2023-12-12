@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,7 +11,6 @@
  */
 package com.dxfeed.ipf.services;
 
-import com.devexperts.logging.Logging;
 import com.dxfeed.ipf.InstrumentProfile;
 import com.dxfeed.ipf.live.InstrumentProfileCollector;
 import com.dxfeed.ipf.transform.InstrumentProfileTransform;
@@ -26,8 +25,6 @@ import java.util.List;
  * @deprecated Use {@link InstrumentProfileServer}.
  */
 public class InstrumentProfileService {
-    private static final Logging log = Logging.getLogging(InstrumentProfileService.class);
-
     /**
      * Starts new instance of the service for specified provider and server socket port number.
      * @deprecated Use {@link InstrumentProfileServer}.

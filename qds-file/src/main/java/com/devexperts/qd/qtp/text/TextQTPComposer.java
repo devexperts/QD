@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,12 +12,12 @@
 package com.devexperts.qd.qtp.text;
 
 import com.devexperts.io.BufferedOutput;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataField;
 import com.devexperts.qd.DataIntField;
 import com.devexperts.qd.DataObjField;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.kit.VoidIntField;
 import com.devexperts.qd.ng.EventFlag;
 import com.devexperts.qd.ng.RecordCursor;
@@ -48,6 +48,8 @@ public class TextQTPComposer extends AbstractQTPComposer {
 
     private static final boolean USE_LOCAL_NAMES = // note -- legacy property names (see ReleaseNotes.txt)
         SystemProperties.getBooleanProperty("com.devexperts.qd.qtp.text.TextByteArrayComposer.useLocalNames", false);
+
+    private static final Logging log = Logging.getLogging(TextQTPComposer.class);
 
     private static final byte[] lineSeparator;
 
@@ -156,7 +158,7 @@ public class TextQTPComposer extends AbstractQTPComposer {
                 writeln();
             }
         } else {
-            QDLog.log.error("Unknown message in composer: " + messageType);
+            log.error("Unknown message in composer: " + messageType);
         }
     }
 

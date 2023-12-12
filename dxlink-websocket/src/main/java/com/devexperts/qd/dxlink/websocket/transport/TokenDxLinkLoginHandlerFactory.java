@@ -23,6 +23,7 @@ import com.dxfeed.promise.Promise;
 public class TokenDxLinkLoginHandlerFactory implements DxLinkLoginHandlerFactory {
     public static final TokenDxLinkLoginHandlerFactory INSTANCE = new TokenDxLinkLoginHandlerFactory();
     public static final String DXLINK_AUTHORIZATION_SCHEME = "dxlink";
+
     private static final Logging log = Logging.getLogging(TokenDxLinkLoginHandlerFactory.class);
 
     @Override

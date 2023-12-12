@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,9 +12,9 @@
 package com.devexperts.qd.sample;
 
 import com.devexperts.connector.proto.Configurable;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDContract;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.qtp.AgentAdapter;
 import com.devexperts.qd.qtp.MessageAdapter;
 import com.devexperts.qd.qtp.MessageConnectors;
@@ -29,6 +29,8 @@ import java.util.EnumSet;
 public class SampleServer {
     static final String AUTH_TOKEN_STRING = "SAMPLE";
     static final byte[] AUTH_TOKEN_BYTES = AUTH_TOKEN_STRING.getBytes();
+
+    private static final Logging log = Logging.getLogging(SampleServer.class);
 
     public static void main(String[] args) {
         initServer(args.length <= 0 ? ":5555" : args[0], 1235);
@@ -88,7 +90,7 @@ public class SampleServer {
                     n += result;
                 }
                 String s = new String(bytes);
-                QDLog.log.debug("Auth token received: " + s);
+                log.debug("Auth token received: " + s);
                 if (!AUTH_TOKEN_STRING.equals(s))
                     throw new SecurityException("Invalid auth token -- access denied.");
             }

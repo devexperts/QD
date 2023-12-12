@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,13 +13,13 @@ package com.devexperts.qd.qtp;
 
 import com.devexperts.auth.AuthSession;
 import com.devexperts.connector.proto.Configurable;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
 import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.QDHistory;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.QDStream;
 import com.devexperts.qd.QDTicker;
 import com.devexperts.qd.SubscriptionConsumer;
@@ -62,6 +62,8 @@ public class AgentAdapter extends MessageAdapter {
     private static final QDContract[] QD_CONTRACTS = QDContract.values();
     private static final int N_CONTRACTS = QD_CONTRACTS.length;
     private static final Iterable<ChannelShapersFactory> CHANNEL_SHAPERS_FACTORIES = Services.createServices(ChannelShapersFactory.class, null);
+
+    private static final Logging log = Logging.getLogging(AgentAdapter.class);
 
     /**
      * The factory for agent side of an QD.
@@ -197,7 +199,7 @@ public class AgentAdapter extends MessageAdapter {
             if (subscriptionExecutor != null)
                 return subscriptionExecutor;
             if (subscriptionThreads > 0)
-                subscriptionExecutor = new LoggedThreadPoolExecutor(subscriptionThreads, this + "-Subscription", QDLog.log);
+                subscriptionExecutor = new LoggedThreadPoolExecutor(subscriptionThreads, this + "-Subscription", log);
             return subscriptionExecutor;
         }
 
@@ -370,7 +372,7 @@ public class AgentAdapter extends MessageAdapter {
 
     /**
      * @deprecated No need to use this method. It does nothing. Channels are automatically update on change
-     * of their parameters.
+     *     of their parameters.
      */
     public void updateChannel(ChannelShaper shaper) {}
 
@@ -525,7 +527,7 @@ public class AgentAdapter extends MessageAdapter {
                 try {
                     filters.put(filter, filterFactory.createFilter(filter, QDFilterContext.REMOTE_FILTER));
                 } catch (IllegalArgumentException e) {
-                    QDLog.log.warn("Cannot parse filter '" + LogUtil.hideCredentials(filter) + "'" +
+                    log.warn("Cannot parse filter '" + LogUtil.hideCredentials(filter) + "'" +
                         " from " + LogUtil.hideCredentials(getRemoteHostAddress()), e);
                     filters.put(filter, QDFilter.ANYTHING);
                 }

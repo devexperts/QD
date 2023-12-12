@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,7 +14,6 @@ package com.devexperts.rmi.impl;
 import com.devexperts.connector.proto.EndpointId;
 import com.devexperts.io.SerialClassContext;
 import com.devexperts.logging.Logging;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.qtp.MessageAdapter;
 import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.qtp.QDEndpoint;
@@ -84,7 +83,7 @@ public final class RMIEndpointImpl extends RMIEndpoint {
 
     /**
      * Creates RMIEndpointImpl with a specified side and {@link QDEndpoint}.
-     * @param side the side (non null).
+     * @param side the side (non-null).
      * @param qdEndpoint QD endpoint (non null).
      * @param attachedMessageAdapterFactory attached factory (may be null)
      * @param dxEndpoint attached DX endpoint (may be null)
@@ -108,7 +107,8 @@ public final class RMIEndpointImpl extends RMIEndpoint {
 
         serialContext = SerialClassContext.getDefaultSerialContext(null);
         defaultExecutorProvider = new ExecutorProvider(
-            SystemProperties.getIntProperty(THREAD_COUNT_SYSTEM_PROPERTY, Runtime.getRuntime().availableProcessors()), name + "-RMIExecutorThread", QDLog.log);
+            SystemProperties.getIntProperty(THREAD_COUNT_SYSTEM_PROPERTY, Runtime.getRuntime().availableProcessors()),
+            name + "-RMIExecutorThread", log);
 
         if (!qdEndpoint.hasConnectorInitializer())
             qdEndpoint.setConnectorInitializer(new RMIConnectorInitializer(this));

@@ -90,8 +90,6 @@ class WebSocketWriter extends QTPWorkerThread {
             state = STATE_IDLE; // clean up the state before retrieving chunks
 
             for (ByteBuf message : session.application.retrieveMessages()) {
-                if (transportConnection.verbose && log.debugEnabled())
-                    log.debug("SNT: " + message.toString(StandardCharsets.UTF_8));
                 session.writeAndFlush(message);
             }
         }

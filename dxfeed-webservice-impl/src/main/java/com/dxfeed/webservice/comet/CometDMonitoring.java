@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,7 +15,6 @@ import com.devexperts.annotation.Description;
 import com.devexperts.logging.Logging;
 import com.devexperts.management.Management;
 import com.devexperts.mars.common.MARSNode;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.monitoring.MonitoringEndpoint;
 import org.cometd.bayeux.server.BayeuxServer;
 import org.cometd.bayeux.server.ServerSession;
@@ -29,7 +28,7 @@ public class CometDMonitoring implements CometDMonitoringMXBean {
     public static final String STATS_ATTR = "sessionStats";
     public static final String TMP_STATS_ATTR = "tmpSessionStats";
 
-    private final Logging log = Logging.getLogging(getClass());
+    private static final Logging log = Logging.getLogging(CometDMonitoring.class);
 
     private String name;
     private BayeuxServer server;
@@ -87,7 +86,7 @@ public class CometDMonitoring implements CometDMonitoringMXBean {
             totals.accumulate(currentTotals, true);
 
             String message = totals.getTotalRated(numSessions, period) + buff.toString();
-            QDLog.log.debug("\b{" + name + "} (total) " + message);
+            log.info("\b{" + name + "} (total) " + message);
 
             totals.clear();
             totals.accumulate(currentTotals, false);
@@ -137,7 +136,7 @@ public class CometDMonitoring implements CometDMonitoringMXBean {
 
         String message = "sort: " + sortColumn + "; limit: " + ((limit != Integer.MAX_VALUE) ? limit : "max") + "; ";
         message += currentTotals.getTotalRated(currentTotals.numSessions, period) + buff.toString();
-        QDLog.log.debug("\bDump Sessions Average {" + name + "} " + message);
+        log.info("\bDump Sessions Average {" + name + "} " + message);
         return message;
     }
 
@@ -167,7 +166,7 @@ public class CometDMonitoring implements CometDMonitoringMXBean {
         // Total sum is calculated - replace units
         message = message.replaceAll("mps", "msg").replaceAll("pps", "pkt");
 
-        QDLog.log.debug("\bDump Sessions Total {" + name + "} " + message);
+        log.info("\bDump Sessions Total {" + name + "} " + message);
         return message;
     }
 

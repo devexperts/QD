@@ -14,7 +14,6 @@ package com.devexperts.qd.tools;
 import com.devexperts.io.ByteArrayInput;
 import com.devexperts.io.URLInputStream;
 import com.devexperts.mars.common.MARSEndpoint;
-import com.devexperts.qd.QDLog;
 import com.devexperts.services.ServiceProvider;
 import com.devexperts.util.LogUtil;
 import com.devexperts.util.TimeUtil;
@@ -183,7 +182,7 @@ public class Instruments extends AbstractTool {
                 if (command.isEmpty() || command.startsWith("#"))
                     continue;
 
-                QDLog.log.info("Executing " + command);
+                log.info("Executing " + command);
                 String cmd = command.split(" ")[0];
                 String arg = command.substring(cmd.length()).trim();
                 switch (cmd) {
@@ -221,13 +220,13 @@ public class Instruments extends AbstractTool {
                         profiles.clear();
                         break;
                     default:
-                        QDLog.log.error("Unknown command " + command);
+                        log.error("Unknown command " + command);
                         throw new IllegalArgumentException("Unknown command " + command);
                 }
             }
-            QDLog.log.info("Executed script " + source + " in " + secondsSince(time) + "s");
+            log.info("Executed script " + source + " in " + secondsSince(time) + "s");
         } catch (IOException e) {
-            QDLog.log.error("Error reading script " + source, e);
+            log.error("Error reading script " + source, e);
             throw new IllegalArgumentException(e);
         }
         return profiles;
@@ -259,17 +258,17 @@ public class Instruments extends AbstractTool {
                     long nanos = System.nanoTime();
                     int result = new InstrumentProfileReader().read(new ByteArrayInput(bytes), source).size();
                     nanos = System.nanoTime() - nanos;
-                    QDLog.log.info("Read " + result + " in " + ((nanos + 500) / 1000 / 1000.0) + " ms");
+                    log.info("Read " + result + " in " + ((nanos + 500) / 1000 / 1000.0) + " ms");
                 }
             }
             long time = System.currentTimeMillis();
             List<InstrumentProfile> readProfiles = reader.readFromFile(source);
             profiles.addAll(readProfiles);
-            QDLog.log.info("Read " + readProfiles.size() + " profiles from " + LogUtil.hideCredentials(source) +
+            log.info("Read " + readProfiles.size() + " profiles from " + LogUtil.hideCredentials(source) +
                 " in " + secondsSince(time) + "s");
             return profiles;
         } catch (IOException e) {
-            QDLog.log.error("Error reading source " + LogUtil.hideCredentials(source), e);
+            log.error("Error reading source " + LogUtil.hideCredentials(source), e);
             throw new IllegalArgumentException(e);
         }
     }
@@ -278,7 +277,7 @@ public class Instruments extends AbstractTool {
         long time = System.currentTimeMillis();
         List<InstrumentProfile> products = InstrumentProfileUtil.createProducts(profiles);
         profiles.addAll(products);
-        QDLog.log.info("Created " + products.size() + " profiles in " + secondsSince(time) + "s");
+        log.info("Created " + products.size() + " profiles in " + secondsSince(time) + "s");
         return profiles;
     }
 
@@ -291,15 +290,15 @@ public class Instruments extends AbstractTool {
                 long nanos = System.nanoTime();
                 int result = transform.transform(profiles).size();
                 nanos = System.nanoTime() - nanos;
-                QDLog.log.info("Transformed " + profiles.size() + " -> " + result +
+                log.info("Transformed " + profiles.size() + " -> " + result +
                     " in " + ((nanos + 500) / 1000 / 1000.0) + " ms");
             }
         long time = System.currentTimeMillis();
         TransformContext ctx = new TransformContext();
         profiles = transform.transform(ctx, profiles);
-        QDLog.log.info("Transformed " + profiles.size() + " profiles in " + secondsSince(time) + "s");
+        log.info("Transformed " + profiles.size() + " profiles in " + secondsSince(time) + "s");
         for (String s : transform.getStatistics(ctx)) {
-            QDLog.log.info(s);
+            log.info(s);
         }
         return profiles;
     }
@@ -309,7 +308,7 @@ public class Instruments extends AbstractTool {
         InstrumentProfileTransform transform;
         try {
             if (source.isEmpty()) {
-                QDLog.log.error("Empty transform");
+                log.error("Empty transform");
                 throw new IllegalArgumentException("Empty transform");
             } else if (source.equals("{")) {
                 transform = InstrumentProfileTransform.compileSingleStatement(new MergeReader("{\r\n", header, reader));
@@ -321,13 +320,13 @@ public class Instruments extends AbstractTool {
                 }
             }
         } catch (IOException e) {
-            QDLog.log.error("Error reading transform " + source, e);
+            log.error("Error reading transform " + source, e);
             throw new IllegalArgumentException(e);
         } catch (TransformCompilationException e) {
-            QDLog.log.error(e.getMessage());
+            log.error(e.getMessage());
             throw new IllegalArgumentException(e);
         }
-        QDLog.log.info("Compiled transform in " + secondsSince(time) + "s");
+        log.info("Compiled transform in " + secondsSince(time) + "s");
         return transform;
     }
 
@@ -434,11 +433,11 @@ public class Instruments extends AbstractTool {
             if (cc == null) {
                 cc = Collections.emptySet();
             }
-            QDLog.log.info("MERGED  " + merged.get(i).getSymbol() +
+            log.info("MERGED  " + merged.get(i).getSymbol() +
                 (c.isEmpty() && cc.isEmpty() ? "" : "  conflicts:") +
                 (c.isEmpty() ? "" : " " + c) + (cc.isEmpty() ? "" : " " + cc));
         }
-        QDLog.log.info("Merged " + merged.size() + " profiles in " + secondsSince(time) + "s");
+        log.info("Merged " + merged.size() + " profiles in " + secondsSince(time) + "s");
         return merged;
     }
 
@@ -453,7 +452,7 @@ public class Instruments extends AbstractTool {
             if (!symbols.contains(ip.getSymbol()))
                 filtered.add(ip);
         }
-        QDLog.log.info("Excluded " + (profiles.size() - filtered.size()) + " profiles in " + secondsSince(time) + "s");
+        log.info("Excluded " + (profiles.size() - filtered.size()) + " profiles in " + secondsSince(time) + "s");
         return filtered;
     }
 
@@ -466,7 +465,7 @@ public class Instruments extends AbstractTool {
         HashMap<String, InstrumentProfile> uniqueness = new HashMap<>();
         for (InstrumentProfile ip : profiles) {
             if (!symbols.add(ip.getSymbol()) && reportedSymbols.add(ip.getSymbol())) {
-                QDLog.log.info("DUPLICATE SYMBOL: " + ip.getSymbol());
+                log.info("DUPLICATE SYMBOL: " + ip.getSymbol());
             }
             if (!ip.getType().equals("OPTION") || "FLEX".equals(ip.getOptionType())) {
                 continue;
@@ -475,7 +474,7 @@ public class Instruments extends AbstractTool {
             char exercise = ip.getCFI().charAt(2);
             Character oldExercise = exercises.put(ip.getUnderlying(), exercise);
             if (oldExercise != null && oldExercise != exercise && reportedExercises.add(ip.getUnderlying())) {
-                QDLog.log.info("WARNING: underlying " + ip.getUnderlying() +
+                log.warn("WARNING: underlying " + ip.getUnderlying() +
                     " has options with different exercise styles.");
             }
 
@@ -484,18 +483,18 @@ public class Instruments extends AbstractTool {
                 ip.getStrike() + " " + ip.getCFI().charAt(1);
             InstrumentProfile oldProfile = uniqueness.put(key, ip);
             if (oldProfile != null) {
-                QDLog.log.info("CONFLICT: options " + oldProfile.getSymbol() + " and " + ip.getSymbol() +
+                log.info("CONFLICT: options " + oldProfile.getSymbol() + " and " + ip.getSymbol() +
                     " have same parameters: " + key);
             }
         }
-        QDLog.log.info("Checked " + profiles.size() + " profiles in " + secondsSince(time) + "s");
+        log.info("Checked " + profiles.size() + " profiles in " + secondsSince(time) + "s");
         return profiles;
     }
 
     private List<InstrumentProfile> sort(List<InstrumentProfile> profiles) {
         long time = System.currentTimeMillis();
         Collections.sort(profiles);
-        QDLog.log.info("Sorted " + profiles.size() + " profiles in " + secondsSince(time) + "s");
+        log.info("Sorted " + profiles.size() + " profiles in " + secondsSince(time) + "s");
         return profiles;
     }
 
@@ -505,11 +504,11 @@ public class Instruments extends AbstractTool {
             if (!profiles.isEmpty()) {
                 new InstrumentProfileWriter().writeToFile(file, profiles);
             }
-            QDLog.log.info("Wrote " + profiles.size() + " profiles to " + LogUtil.hideCredentials(file) +
+            log.info("Wrote " + profiles.size() + " profiles to " + LogUtil.hideCredentials(file) +
                 " in " + secondsSince(time) + "s");
             return profiles;
         } catch (IOException e) {
-            QDLog.log.error("Error writing file " + LogUtil.hideCredentials(file), e);
+            log.error("Error writing file " + LogUtil.hideCredentials(file), e);
             throw new IllegalArgumentException(e);
         }
     }

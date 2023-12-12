@@ -16,9 +16,9 @@ import com.devexperts.io.BufferedInputPart;
 import com.devexperts.io.Chunk;
 import com.devexperts.io.ChunkPool;
 import com.devexperts.io.ChunkedInput;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
-import com.devexperts.qd.QDLog;
 import com.devexperts.qd.SerialFieldType;
 import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.ng.EventFlag;
@@ -52,6 +52,8 @@ import static com.devexperts.qd.qtp.QTPConstants.MAX_MESSAGE_SIZE;
  * @see BinaryQTPComposer
  */
 public class BinaryQTPParser extends AbstractQTPParser {
+
+    private static final Logging log = Logging.getLogging(BinaryQTPParser.class);
 
     // ======================== protected instance fields ========================
 
@@ -379,7 +381,7 @@ public class BinaryQTPParser extends AbstractQTPParser {
                         unknownRecordNames = new HashSet<>();
                     if (unknownRecordNames.add(recordName))
                         // complain only once about unknown record, see QD-436
-                        QDLog.log.info("Record #" + id + " '" + recordName + "' " +
+                        log.info("Record #" + id + " '" + recordName + "' " +
                             "is not found in data scheme. Incoming data and subscription will be skipped.");
                 }
                 // Create reader descriptor
@@ -387,8 +389,7 @@ public class BinaryQTPParser extends AbstractQTPParser {
                     remapRecord(id, wrapRecordDesc(
                         new BinaryRecordDesc(record, nFld, names, types, readEventTimeSequence, BinaryRecordDesc.DIR_READ)));
                 } catch (BinaryRecordDesc.InvalidDescException e) {
-                    QDLog.log.info("Record #" + id + " '" + recordName + "' " +
-                        "cannot be parsed: " + e.getMessage());
+                    log.info("Record #" + id + " '" + recordName + "' " + "cannot be parsed: " + e.getMessage());
                 }
                 lastRecPosition = msg.totalPosition();
             }
@@ -529,8 +530,7 @@ public class BinaryQTPParser extends AbstractQTPParser {
                 remapRecord(id, rr);
                 return rr;
             } catch (BinaryRecordDesc.InvalidDescException e) {
-                QDLog.log.info("Record #" + id + " '" + record.getName() + "' " +
-                    "cannot be parsed: " + e.getMessage());
+                log.info("Record #" + id + " '" + record.getName() + "' " + "cannot be parsed: " + e.getMessage());
             }
         }
         return null;
@@ -639,14 +639,14 @@ public class BinaryQTPParser extends AbstractQTPParser {
         in.mark(); // reset and mark again to resync if needed
         int cnt = (int) (lastPosition - in.totalPosition());
         appendBytes(sb, in, cnt, -1);
-        QDLog.log.error(sb.toString());
+        log.error(sb.toString());
     }
 
     private void dumpParseMessageErrorReport(BufferedInput msg, String message, Exception e, long lastRecPosition) {
         StringBuilder sb = new StringBuilder();
         appendMessageErrorHead(sb, message);
         appendMessageErrorTail(msg, sb, lastRecPosition);
-        QDLog.log.error(sb.toString(), e);
+        log.error(sb.toString(), e);
     }
 
     private void dumpParseDataErrorReport(BufferedInput msg, Exception e, RecordBuffer buf,
@@ -678,7 +678,7 @@ public class BinaryQTPParser extends AbstractQTPParser {
         }
         appendLastSymbol(sb);
         appendMessageErrorTail(msg, sb, lastRecPosition);
-        QDLog.log.error(sb.toString(), e);
+        log.error(sb.toString(), e);
         recoverBuffer(buf, startBufLimit);
     }
 
@@ -701,7 +701,7 @@ public class BinaryQTPParser extends AbstractQTPParser {
         }
         appendLastSymbol(sb);
         appendMessageErrorTail(msg, sb, lastRecPosition);
-        QDLog.log.error(sb.toString(), e);
+        log.error(sb.toString(), e);
         recoverBuffer(buf, startBufLimit);
     }
 
