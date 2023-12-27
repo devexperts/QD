@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -54,8 +54,19 @@ public interface ClientSocketConnectorMBean extends MessageConnectorMBean {
 
     public int getCurrentPort();
 
+    /**
+     * List of addresses (host:port) for all active connections
+     */
+    public String[] getCurrentAddresses();
 
     public ConnectOrder getConnectOrder();
 
     public void setConnectOrder(ConnectOrder connectOrder);
+
+    /**
+     * Symbol striper for connector, auto (for system default), or null (default)
+     */
+    public String getStripe();
+
+    public void setStripe(String stripeConfig);
 }

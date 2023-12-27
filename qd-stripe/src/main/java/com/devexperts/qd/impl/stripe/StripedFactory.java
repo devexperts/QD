@@ -30,7 +30,8 @@ public class StripedFactory extends QDFactory {
     private final int n;
 
     public static QDFactory getInstance() {
-        return new StripedFactory(SystemProperties.getIntProperty(STRIPE_PROP, 0));
+        // Resolve striping value each time during Collector's creation
+        return new StripedFactory(-1);
     }
 
     // TODO Experimental API to access stripes.
@@ -77,7 +78,11 @@ public class StripedFactory extends QDFactory {
             }
 
             private int getStripeProp(String contract) {
-                return SystemProperties.getIntProperty(STRIPE_PROP + "." + contract, StripedFactory.this.n);
+                int defaultValue = StripedFactory.this.n;
+                if (defaultValue < 0) {
+                    defaultValue = SystemProperties.getIntProperty(STRIPE_PROP, 0);
+                }
+                return SystemProperties.getIntProperty(STRIPE_PROP + "." + contract, defaultValue);
             }
         };
     }

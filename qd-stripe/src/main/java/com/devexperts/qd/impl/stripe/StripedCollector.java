@@ -20,17 +20,18 @@ import com.devexperts.qd.QDErrorHandler;
 import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.SymbolCodec;
+import com.devexperts.qd.SymbolStriper;
 import com.devexperts.qd.impl.AbstractCollector;
+import com.devexperts.qd.kit.HashStriper;
 import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.stats.QDStats;
 
 abstract class StripedCollector<C extends QDCollector> extends AbstractCollector {
-    private static final int MAGIC = 0xB46394CD;
 
     final SymbolCodec codec;
+    final HashStriper striper;
     final int n; // always power of 2
-    final int shift;
     final QDStats stats;
     final int wildcard;
 
@@ -42,19 +43,20 @@ abstract class StripedCollector<C extends QDCollector> extends AbstractCollector
             throw new IllegalArgumentException("Striping factor N should a power of 2 and at least 2");
         this.codec = scheme.getCodec();
         this.n = n;
-        this.shift = 32 - Integer.numberOfTrailingZeros(n);
         this.stats = builder.getStats();
         this.wildcard = scheme.getCodec().getWildcardCipher();
+        this.striper = (HashStriper) HashStriper.valueOf(scheme, n);
+    }
+
+    @Override
+    public SymbolStriper getStriper() {
+        return striper;
     }
 
     abstract C[] collectors();
 
-    private int index(int hash) {
-        return hash * MAGIC >>> shift;
-    }
-
     final int index(int cipher, String symbol) {
-        return index(cipher != 0 ? codec.hashCode(cipher) : symbol.hashCode());
+        return striper.getStripeIndex(cipher, symbol);
     }
 
     final C collector(int cipher, String symbol) {
@@ -94,10 +96,8 @@ abstract class StripedCollector<C extends QDCollector> extends AbstractCollector
 
     @Override
     public String getSymbol(char[] chars, int offset, int length) {
-        int hash = 0;
-        for (int i = 0; i < length; i++)
-            hash = 31 * hash + chars[offset + i];
-        return collectors()[index(hash)].getSymbol(chars, offset, length);
+        int i = striper.getStripeIndex(chars, offset, length);
+        return collectors()[i].getSymbol(chars, offset, length);
     }
 
     @Override

@@ -27,6 +27,7 @@ import com.devexperts.qd.qtp.QTPConstants;
 import com.devexperts.qd.qtp.RuntimeQTPException;
 import com.devexperts.qd.util.TimeSequenceUtil;
 import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimePeriod;
 import com.dxfeed.event.market.MarketEventSymbols;
 import io.netty.buffer.ByteBuf;
 
@@ -38,18 +39,16 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import static com.devexperts.qd.dxlink.websocket.transport.TokenDxLinkLoginHandlerFactory.DXLINK_AUTHORIZATION_SCHEME;
 
 class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
     private static final String PROTOCOL_VERSION =
-        SystemProperties.getProperty("com.devexperts.qd.dxlink.protocol.version", "0.1");
-    private static final int AGGREGATION_PERIOD_IN_SECS =
-        Integer.parseInt(SystemProperties.getProperty("com.devexperts.qd.dxlink.feedService.aggregationPeriodInSecs",
-            "0"));
+        SystemProperties.getProperty("com.devexperts.qd.dxlink.protocolVersion", "0.1");
     private static final String SERVICE_NAME =
         SystemProperties.getProperty("com.devexperts.qd.dxlink.feedService.name", "FEED");
+    private static final TimePeriod ACCEPT_AGGREGATION_PERIOD = TimePeriod.valueOf(
+        SystemProperties.getProperty("com.devexperts.qd.dxlink.feedService.acceptAggregationPeriod", "0s"));
     private static final String ACCEPT_DATA_FORMAT =
         SystemProperties.getProperty("com.devexperts.qd.dxlink.feedService.acceptDataFormat", "COMPACT");
     private static final int MAIN_CHANNEL = 0;
@@ -60,17 +59,20 @@ class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
     private final DxLinkJsonMessageFactory messageFactory;
     private final Map<QDContract, ChannelSubscriptionProcessor> processors = new EnumMap<>(QDContract.class);
     private final HeartbeatProcessor heartbeatProcessor;
+    private final DxLinkWebSocketApplicationConnectionFactory factory;
     private final Delegates delegates;
     private ChannelSubscriptionProcessor currentSubscriptionProcessor;
     private List<ByteBuf> messages = new ArrayList<>();
     private int payloadSize = 0;
 
     public DxLinkWebSocketQTPComposer(DataScheme scheme, Delegates delegates,
-        DxLinkJsonMessageFactory messageFactory, HeartbeatProcessor heartbeatProcessor)
+        DxLinkJsonMessageFactory messageFactory, HeartbeatProcessor heartbeatProcessor,
+        DxLinkWebSocketApplicationConnectionFactory factory)
     {
         super(scheme, true);
         this.messageFactory = messageFactory;
         this.heartbeatProcessor = heartbeatProcessor;
+        this.factory = factory;
         this.delegates = delegates;
         for (QDContract contract : QDContract.values()) {
             processors.put(contract, new ChannelSubscriptionProcessor(contract));
@@ -165,8 +167,8 @@ class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
             messages.add(auth);
         } else {
             ByteBuf setup = messageFactory.createSetup(MAIN_CHANNEL, PROTOCOL_VERSION,
-                TimeUnit.MILLISECONDS.toSeconds(this.heartbeatProcessor.getHeartbeatPeriodInMs()),
-                TimeUnit.MILLISECONDS.toSeconds(this.heartbeatProcessor.getHeartbeatTimeoutInMs()));
+                heartbeatProcessor.getHeartbeatTimeout(), heartbeatProcessor.getDisconnectTimeout(),
+                factory.getAgentInfo());
             payloadSize += setup.readableBytes();
             messages.add(setup);
         }
@@ -266,7 +268,7 @@ class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
                         if (DxLinkJsonMessageParser.FULL.equals(ACCEPT_DATA_FORMAT))
                             fields.add(0, "eventType");
                         fieldsByTypeToSend.put(subscription.type, fields);
-                        feedSetup = messageFactory.createFeedSetup(channel, AGGREGATION_PERIOD_IN_SECS,
+                        feedSetup = messageFactory.createFeedSetup(channel, ACCEPT_AGGREGATION_PERIOD.getTime(),
                             ACCEPT_DATA_FORMAT, fieldsByTypeToSend);
                     }
                 }

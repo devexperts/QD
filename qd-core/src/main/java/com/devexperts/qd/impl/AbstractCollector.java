@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,6 +20,8 @@ import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.SubscriptionVisitor;
+import com.devexperts.qd.SymbolStriper;
+import com.devexperts.qd.kit.MonoStriper;
 import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.util.LegacyAdapter;
@@ -35,7 +37,6 @@ public abstract class AbstractCollector implements QDCollector {
     private final QDAgent.Builder agentBuilder;
     private final DistributorBuilder distributorBuilder = new DistributorBuilder();
     private final boolean withEventTimeSequence;
-
 
     protected AbstractCollector(Builder<?> builder) {
         this.contract = builder.getContract();
@@ -54,6 +55,11 @@ public abstract class AbstractCollector implements QDCollector {
     @Override
     public final DataScheme getScheme() {
         return scheme;
+    }
+
+    @Override
+    public SymbolStriper getStriper() {
+        return MonoStriper.INSTANCE;
     }
 
     @Override

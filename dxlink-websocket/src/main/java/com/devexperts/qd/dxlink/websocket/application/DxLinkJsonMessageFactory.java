@@ -39,17 +39,24 @@ class DxLinkJsonMessageFactory {
         }
     }
 
-    ByteBuf createSetup(int channel, String version, Long heartbeatTimeoutInSecs, Long heartbeatPeriodInSecs)
-        throws IOException
+    ByteBuf createSetup(int channel, String version, Long keepaliveTimeout, Long acceptKeepaliveTimeout,
+        Map<String, String> agent) throws IOException
     {
         generator.writeStartObject();
         generator.writeStringField(FIELD_NAME_TYPE, "SETUP");
         generator.writeNumberField(FIELD_NAME_CHANNEL, channel);
         generator.writeStringField("version", version);
-        if (heartbeatTimeoutInSecs != null)
-            generator.writeNumberField("keepaliveTimeout", heartbeatTimeoutInSecs);
-        if (heartbeatPeriodInSecs != null)
-            generator.writeNumberField("acceptKeepaliveTimeout", heartbeatPeriodInSecs);
+        if (keepaliveTimeout != null)
+            generator.writeNumberField("keepaliveTimeout", keepaliveTimeout / 1000.0);
+        if (acceptKeepaliveTimeout != null)
+            generator.writeNumberField("acceptKeepaliveTimeout", acceptKeepaliveTimeout / 1000.0);
+        if (agent != null && !agent.isEmpty()) {
+            generator.writeObjectFieldStart("agent");
+            for (Entry<String, String> entry : agent.entrySet()) {
+                generator.writeStringField(entry.getKey(), entry.getValue());
+            }
+            generator.writeEndObject();
+        }
         generator.writeEndObject();
         return getStringFromBufferAndClear();
     }
@@ -83,14 +90,14 @@ class DxLinkJsonMessageFactory {
         return getStringFromBufferAndClear();
     }
 
-    ByteBuf createFeedSetup(int channel, Integer acceptAggregationPeriodInSecs, String acceptDataFormat,
+    ByteBuf createFeedSetup(int channel, Long acceptAggregationPeriod, String acceptDataFormat,
         Map<String, Collection<String>> acceptEventFields) throws IOException
     {
         generator.writeStartObject();
         generator.writeStringField(FIELD_NAME_TYPE, "FEED_SETUP");
         generator.writeNumberField(FIELD_NAME_CHANNEL, channel);
-        if (acceptAggregationPeriodInSecs != null)
-            generator.writeNumberField("acceptAggregationPeriod", acceptAggregationPeriodInSecs);
+        if (acceptAggregationPeriod != null)
+            generator.writeNumberField("acceptAggregationPeriod", acceptAggregationPeriod / 1000.0);
         if (acceptDataFormat != null)
             generator.writeStringField("acceptDataFormat", acceptDataFormat);
         generator.writeFieldName("acceptEventFields");

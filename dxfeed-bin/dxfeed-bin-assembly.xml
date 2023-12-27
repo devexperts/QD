@@ -96,6 +96,7 @@
                 <include>io.netty:netty-transport-native-unix-common</include>
                 <include>com.fasterxml.jackson.core:jackson-core</include>
                 <include>org.reflections:reflections</include>
+                <include>javax.xml.bind:jaxb-api</include>
             </includes>
             <unpack>false</unpack>
         </dependencySet>

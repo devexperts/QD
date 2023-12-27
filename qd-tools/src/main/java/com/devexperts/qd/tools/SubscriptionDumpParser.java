@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -72,19 +73,9 @@ public class SubscriptionDumpParser extends AbstractTool {
         return new Option[] {columns, sort, group, output};
     }
 
-    // ---------------- instance fields ----------------
-
-    private DataScheme scheme;
-    private SymbolCodec codec;
-    private SymbolCodec.Reader symbolReader;
-
-    private int collectorCount;
-    private int agentCount;
-    private ArrayList<SubRecord> subs = new ArrayList<>();
-
     // ---------------- methods ----------------
 
-    private static class CollectorRecord {
+    static class CollectorRecord {
         final int num;
         final int id;
         final String keyProperties;
@@ -114,7 +105,7 @@ public class SubscriptionDumpParser extends AbstractTool {
         }
     }
 
-    private static class RecRecord {
+    static class RecRecord {
         final int rid;
         final String name;
         final DataRecord record;
@@ -126,7 +117,7 @@ public class SubscriptionDumpParser extends AbstractTool {
         }
     }
 
-    private static class AgentRecord {
+    static class AgentRecord {
         final int num;
         final CollectorRecord collector;
         final int aid;
@@ -140,7 +131,7 @@ public class SubscriptionDumpParser extends AbstractTool {
         }
     }
 
-    private static class SubRecord {
+    static class SubRecord {
         final RecRecord rec;
         final AgentRecord agent;
         final String symbol;
@@ -160,7 +151,7 @@ public class SubscriptionDumpParser extends AbstractTool {
         }
     }
 
-    private static class SubRecordTime extends SubRecord {
+    static class SubRecordTime extends SubRecord {
         final int t0;
         final int t1;
 
@@ -181,7 +172,7 @@ public class SubscriptionDumpParser extends AbstractTool {
         }
     }
 
-    private static class SubRecordComparator implements Comparator<SubRecord> {
+    static class SubRecordComparator implements Comparator<SubRecord> {
         final char[] sortOrder;
 
         SubRecordComparator(char[] sortOrder) {
@@ -221,12 +212,11 @@ public class SubscriptionDumpParser extends AbstractTool {
             noArguments();
         if (group.isSet() && (sort.isSet() || columns.isSet()))
             throw new BadToolParametersException(group + " implies --" + sort.getFullName() + " and --" + columns.getFullName() + ", don't specify them together");
-        scheme = QDFactory.getDefaultScheme();
-        codec = scheme.getCodec();
-        symbolReader = codec.createReader();
+
+        List<SubRecord> subs = new ArrayList<>();
         for (String fileName : args) {
             try {
-                readFile(fileName);
+                subs.addAll(readFile(fileName, QDFactory.getDefaultScheme()));
             } catch (IOException e) {
                 log.error("Failed to read file " + LogUtil.hideCredentials(fileName), e);
             }
@@ -245,14 +235,17 @@ public class SubscriptionDumpParser extends AbstractTool {
         if (!subs.isEmpty()) {
             String outputFile = output.isSet() ? output.getValue() : "subscription.txt";
             try {
-                dumpToFile(outputFile, group.isSet() ? comparator : null);
+                dumpToFile(subs, outputFile, group.isSet() ? comparator : null);
             } catch (IOException e) {
                 log.error("Failed to dump to " + LogUtil.hideCredentials(outputFile), e);
             }
         }
     }
 
-    private void readFile(String fileName) throws IOException {
+    static List<SubRecord> readFile(String fileName, DataScheme scheme) throws IOException {
+        SymbolCodec codec = scheme.getCodec();
+        SymbolCodec.Reader symbolReader = codec.createReader();
+
         File file = new File(fileName);
         try (BufferedInput in = new StreamInput(new FileInputStream(file), 100000)) {
             // read and check header
@@ -277,6 +270,9 @@ public class SubscriptionDumpParser extends AbstractTool {
             // record map is common for all collectors
             Map<Integer, RecRecord> recordMap = new HashMap<>();
 
+            int collectorCount = 0;
+            int agentCount = 0;
+            List<SubRecord> subs = new ArrayList<>();
             // read until end of file
             while (true) {
                 // read collector
@@ -349,16 +345,17 @@ public class SubscriptionDumpParser extends AbstractTool {
             }
             if (in.read() != -1)
                 throw new IOException("End of file expected");
+            return subs;
         }
     }
 
-    private String readString(BufferedInput in, int version) throws IOException {
+    private static String readString(BufferedInput in, int version) throws IOException {
         return version == SubscriptionDumpVisitor.VERSION_1 ? in.readUTF() : in.readUTFString();
     }
 
     // ========== Parser internal state ==========
 
-    private void dumpToFile(String file, SubRecordComparator groupComparator) throws IOException {
+    private void dumpToFile(List<SubRecord> subs, String file, SubRecordComparator groupComparator) throws IOException {
         char[] printFormat = (group.isSet() ? group.getValue() :
             columns.isSet() ? columns.getValue() : DEFAULT_COLUMNS).toCharArray();
         try (PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(file), 100000))) {

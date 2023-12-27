@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.rmi.test;
 
+import com.devexperts.connector.proto.AbstractTransportConnection;
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.MessageConnectorState;
@@ -27,7 +28,6 @@ import com.dxfeed.api.impl.DXEndpointImpl;
 import com.dxfeed.promise.Promise;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.net.Socket;
 import java.util.List;
 import java.util.UUID;
@@ -138,16 +138,19 @@ public class NTU {
         for (MessageConnector messageConnector : endpoint.getConnectors()) {
             if (!(messageConnector instanceof ClientSocketConnector))
                 continue;
-            Object handler = getPrivateField(messageConnector, ClientSocketConnector.class, "handler");
+            Object[] handlers = (Object[]) getPrivateField(messageConnector, ClientSocketConnector.class, "handlers");
             // disable SocketSource delays
-            Method markForImmediateRestartMethod = handler.getClass().getMethod("markForImmediateRestart");
-            markForImmediateRestartMethod.setAccessible(true);
-            markForImmediateRestartMethod.invoke(handler);
+            for (Object handler : handlers) {
+                AbstractTransportConnection connection = (AbstractTransportConnection) handler;
+                connection.markForImmediateRestart();
+            }
             if (hard) {
-                // imitate connection failure by closing socket
-                Object threadData = getPrivateField(handler, handler.getClass(), "threadData");
-                Socket socket = (Socket) getPrivateField(threadData, threadData.getClass(), "socket");
-                socket.close();
+                for (Object handler : handlers) {
+                    // imitate connection failure by closing socket
+                    Object threadData = getPrivateField(handler, handler.getClass(), "threadData");
+                    Socket socket = (Socket) getPrivateField(threadData, threadData.getClass(), "socket");
+                    socket.close();
+                }
             } else {
                 messageConnector.reconnect();
             }

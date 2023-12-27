@@ -11,44 +11,28 @@
  */
 package com.devexperts.qd.dxlink.websocket.application;
 
-import com.devexperts.util.TimePeriod;
-
 class HeartbeatProcessor {
-    private final DxLinkWebSocketApplicationConnectionFactory factory;
-    private long heartbeatTimeoutInMs;
-    private long heartbeatPeriodInMs;
-    private long newHeartbeatPeriodInMs;
+    private volatile long heartbeatTimeout;
+    private volatile long disconnectTimeout;
 
-    HeartbeatProcessor(DxLinkWebSocketApplicationConnectionFactory factory, long heartbeatTimeoutInMs,
-                       long heartbeatPeriodInMs, long initialHeartbeatPeriod)
-    {
-        this.factory = factory;
-        this.heartbeatTimeoutInMs = heartbeatTimeoutInMs;
-        this.heartbeatPeriodInMs = heartbeatPeriodInMs;
-        this.newHeartbeatPeriodInMs = initialHeartbeatPeriod;
+    HeartbeatProcessor(long heartbeatTimeout) {
+        this.heartbeatTimeout = heartbeatTimeout;
+        this.disconnectTimeout = heartbeatTimeout; // suggest the server use our timeout
     }
 
-    void receiveUpdateHeartbeatTimeout(long heartbeatTimeoutInMs) {
-        if (heartbeatTimeoutInMs != this.heartbeatTimeoutInMs)
-            this.heartbeatTimeoutInMs = heartbeatTimeoutInMs;
-        if (heartbeatTimeoutInMs != this.factory.getHeartbeatTimeout().getTime())
-            this.factory.setHeartbeatTimeout(TimePeriod.valueOf(heartbeatTimeoutInMs));
+    long getDisconnectTimeout() { return disconnectTimeout; }
+
+    void setDisconnectTimeout(long disconnectTimeout) {
+        this.disconnectTimeout = disconnectTimeout;
     }
 
-    void receiveUpdateHeartbeatPeriod(long heartbeatPeriodInMs) {
-        newHeartbeatPeriodInMs = heartbeatPeriodInMs;
-        if (heartbeatPeriodInMs != factory.getHeartbeatPeriod().getTime())
-            factory.setHeartbeatPeriod(TimePeriod.valueOf(heartbeatPeriodInMs));
+    long getHeartbeatTimeout() { return heartbeatTimeout; }
+
+    void setHeartbeatTimeout(long heartbeatTimeout) {
+        this.heartbeatTimeout = heartbeatTimeout;
     }
 
-    long calculateNextDisconnectTime() { return System.currentTimeMillis() + heartbeatTimeoutInMs; }
+    long calculateNextDisconnectTime() { return System.currentTimeMillis() + disconnectTimeout; }
 
-    long calculateNextHeartbeatTime() {
-        heartbeatPeriodInMs = Math.min(heartbeatPeriodInMs * 2, newHeartbeatPeriodInMs);
-        return System.currentTimeMillis() + (heartbeatPeriodInMs >> 1);
-    }
-
-    long getHeartbeatTimeoutInMs() { return heartbeatTimeoutInMs; }
-
-    long getHeartbeatPeriodInMs() { return heartbeatPeriodInMs; }
+    long calculateNextHeartbeatTime() { return System.currentTimeMillis() + (heartbeatTimeout >> 1); }
 }

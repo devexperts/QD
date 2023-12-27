@@ -1,3 +1,24 @@
+QDS 3.327:
+
+* [QD-1508] [dxLink] Provide the ability to run under java version older than 8
+* [QD-1482] [dxLink] Enhanced WebSocket connection information reporting
+* [QD-1507] [dxLink] Provide client information in the SETUP message
+* [QD-1494] [dxLink] Provide User-Agent in WebSocket connection
+* [QD-1506] [dxLink] Fix the heartbeat timeout configuration
+* [QD-85] Support easy configuration for striping of connections
+  - added client connector property "stripe" (empty by default - no striping), that configures
+    symbols striper for the connection, e.g. "auto", "byhash4", "byrange-E-L-S-", "by1".
+  - value "stripe=auto" uses default system striping defined in "com.devexperts.qd.impl.stripe" property.
+  - value "stripe=by1" disables striping (i.e. mono striping).
+* [QD-1480] Tools: Create SubscriptionDumpRepeater tool
+  - added SubscriptionDumpRepeater tool that can be used as a load generator client based on a subscription profile dump
+    and reproduce subscriptions (all symbols, subscription types and contracts) for each agent on a separate connection.
+* [QD-617] Tools: Add option for keeping temporary tape files (write in progress) separately from completed
+    - New parameter for the tape recording process "tmpDir=.". Set the directory for temporary incomplete tape recording
+* [QD-1502] [Schedule] Misprint in trading venue for XBER
+* [QD-1503] New Order source for BlueOcean ATS: OCEA
+* [QD-1505] [Schedule] Add holidays for 2024
+
 QDS 3.326:
 
 * [QD-1432] [build] Update build scripts to allow incremental builds

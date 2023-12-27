@@ -277,6 +277,7 @@
                 <value>iex</value>
                 <value>MEMX</value>
                 <value>memx</value>
+                <value>OCEA</value>
                 <value>pink</value>
             </iterator>
             <!-- Simple copy from "OrderBase" -->

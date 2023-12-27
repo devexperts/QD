@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -40,7 +40,6 @@ import java.util.stream.Collectors;
  * Note: this class is not thread-safe.
  */
 class ClientSocketSource extends SocketSource {
-    private static final Logging log = Logging.getLogging(ClientSocketConnector.class);
 
     private static final ConnectOrder DEFAULT_CONNECT_ORDER = ConnectOrder.SHUFFLE;
 
@@ -48,6 +47,8 @@ class ClientSocketSource extends SocketSource {
     // Extracted from getLocalAddresses() for improving performance.
     // This is especially important for tests (get local addresses once)
     private static class LocalAddressesCache {
+        private static final Logging log = Logging.getLogging(LocalAddressesCache.class);
+
         static final Set<String> LOCAL_ADDRESSES = new HashSet<>();
 
         static {
@@ -66,6 +67,7 @@ class ClientSocketSource extends SocketSource {
     }
 
     private final ClientSocketConnector connector;
+    private final Logging log;
     private final ReconnectHelper resolveHelper;
     private final String hostNames;
     private final int port;
@@ -79,6 +81,7 @@ class ClientSocketSource extends SocketSource {
 
     ClientSocketSource(ClientSocketConnector connector) {
         this.connector = connector;
+        this.log = connector.getLogging();
         this.resolveHelper = new ReconnectHelper(connector.getReconnectDelay());
         this.hostNames = connector.getHost();
         this.port = connector.getPort();

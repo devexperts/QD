@@ -122,6 +122,14 @@ public class HashStriper implements SymbolStriper {
         return index(symbol.hashCode(), shift);
     }
 
+    public int getStripeIndex(char[] chars, int offset, int length) {
+        int hash = 0;
+        for (int i = 0; i < length; i++) {
+            hash = 31 * hash + chars[offset + i];
+        }
+        return index(hash, shift);
+    }
+
     @Override
     public QDFilter getStripeFilter(int stripeIndex) {
         if (filters[stripeIndex] == null) {
@@ -139,7 +147,6 @@ public class HashStriper implements SymbolStriper {
         return shift;
     }
 
-    // The same hashing function as in com.devexperts.qd.impl.stripe.StripedCollector#index(int)
     protected static int index(int hash, int shift) {
         return hash * MAGIC >>> shift;
     }

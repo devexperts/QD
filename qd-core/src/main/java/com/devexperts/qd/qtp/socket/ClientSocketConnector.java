@@ -14,22 +14,28 @@ package com.devexperts.qd.qtp.socket;
 import com.devexperts.connector.codec.CodecConnectionFactory;
 import com.devexperts.connector.codec.CodecFactory;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDFactory;
+import com.devexperts.qd.QDFilter;
+import com.devexperts.qd.SymbolStriper;
+import com.devexperts.qd.kit.MonoStriper;
 import com.devexperts.qd.qtp.AbstractMessageConnector;
 import com.devexperts.qd.qtp.MessageAdapter;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.MessageConnectorState;
 import com.devexperts.qd.qtp.MessageConnectors;
+import com.devexperts.qd.qtp.QDEndpoint;
 import com.devexperts.qd.qtp.help.MessageConnectorProperty;
 import com.devexperts.qd.qtp.help.MessageConnectorSummary;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.QDConfig;
 import com.devexperts.services.Services;
-import com.devexperts.transport.stats.ConnectionStats;
 import com.devexperts.transport.stats.EndpointStats;
 import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
 
+import java.util.Arrays;
 import java.util.Objects;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
@@ -44,28 +50,30 @@ import javax.net.ssl.TrustManager;
 public class ClientSocketConnector extends AbstractMessageConnector
     implements SocketHandler.CloseListener, ClientSocketConnectorMBean
 {
+    private static final String AUTO_STRIPE_CONFIG = "auto";
 
     protected String host;
     protected int port;
     protected String proxyHost = SystemProperties.getProperty("https.proxyHost", "");
     protected int proxyPort = SystemProperties.getIntProperty("https.proxyPort", 80);
+    protected ConnectOrder connectOrder;
+    protected SymbolStriper striper = MonoStriper.INSTANCE; // never null
+    protected String stripeConfig;
     protected boolean useTls;
     protected TrustManager trustManager;
 
-    protected volatile SocketHandler handler;
-    protected ClientSocketSource socketSource;
-    protected ConnectOrder connectOrder;
+    protected volatile boolean active;
+    protected volatile SocketHandler[] handlers;
 
     /**
      * Creates new client socket connector.
      *
-     * @deprecated use {@link #ClientSocketConnector(ApplicationConnectionFactory, String, int)}
      * @param factory message adapter factory to use
      * @param host host to connect to
      * @param port TCP port to connect to
      * @throws NullPointerException if {@code factory} or {@code host} is {@code null}
+     * @deprecated use {@link #ClientSocketConnector(ApplicationConnectionFactory, String, int)}
      */
-    @SuppressWarnings({"deprecation", "UnusedDeclaration"})
     @Deprecated
     public ClientSocketConnector(MessageAdapter.Factory factory, String host, int port) {
         this(MessageConnectors.applicationConnectionFactory(factory), host, port);
@@ -74,7 +82,7 @@ public class ClientSocketConnector extends AbstractMessageConnector
     /**
      * Creates new client socket connector.
      *
-     * @param factory application connection factory factory to use
+     * @param factory application connection factory to use
      * @param host host to connect to
      * @param port TCP port to connect to
      * @throws NullPointerException if {@code factory} or {@code host} is {@code null}
@@ -177,6 +185,36 @@ public class ClientSocketConnector extends AbstractMessageConnector
         }
     }
 
+    @Override
+    public String getStripe() {
+        return stripeConfig;
+    }
+
+    @Override
+    @MessageConnectorProperty(
+        "Symbol striper (e.g. \"byhash4\"), or \"auto\" for using system default striping. " +
+        "Empty (by default) means no striping (e.g. \"by1\" striper).")
+    public synchronized void setStripe(String stripeConfig) {
+        if (!Objects.equals(stripeConfig, this.stripeConfig)) {
+            log.info("Setting stripe=" + stripeConfig);
+
+            final SymbolStriper striper;
+            if (stripeConfig != null && !stripeConfig.isEmpty() && !stripeConfig.equals(AUTO_STRIPE_CONFIG)) {
+                striper = SymbolStriper.valueOf(findDataScheme(), stripeConfig);
+                if (striper == null)
+                    throw new IllegalArgumentException("Unknown striper: " + stripeConfig);
+            } else {
+                // Reset striper to empty, including "auto" config.
+                // If striper is "auto" it will be resolved on connector's start.
+                striper = MonoStriper.INSTANCE;
+            }
+
+            this.stripeConfig = stripeConfig;
+            this.striper = striper;
+            reconfigure();
+        }
+    }
+
     @Deprecated
     public boolean getTls() {
         return useTls;
@@ -190,7 +228,8 @@ public class ClientSocketConnector extends AbstractMessageConnector
     public synchronized void setTls(boolean useTls) {
         if (this.useTls != useTls) {
             if (useTls) {
-                CodecFactory sslCodecFactory = Services.createService(CodecFactory.class, null, "com.devexperts.connector.codec.ssl.SSLCodecFactory");
+                CodecFactory sslCodecFactory = Services.createService(CodecFactory.class, null,
+                    "com.devexperts.connector.codec.ssl.SSLCodecFactory");
                 if (sslCodecFactory == null) {
                     log.error("SSLCodecFactory is not found. Using the SSL protocol is not supported");
                     return;
@@ -249,48 +288,84 @@ public class ClientSocketConnector extends AbstractMessageConnector
 
     @Override
     public boolean isActive() {
-        return handler != null;
+        return active; // Atomic read
     }
 
     @Override
     public MessageConnectorState getState() {
-        SocketHandler handler = this.handler;
-        return handler != null ? handler.getHandlerState() : MessageConnectorState.DISCONNECTED;
+        SocketHandler[] handlers = this.handlers; // Atomic read.
+        if (handlers == null)
+            return MessageConnectorState.DISCONNECTED;
+        for (SocketHandler handler : handlers) {
+            if (handler.isConnected())
+                return MessageConnectorState.CONNECTED;
+        }
+        return MessageConnectorState.CONNECTING;
     }
 
     @Override
     public int getConnectionCount() {
-        SocketHandler handler = this.handler;
-        return handler != null && handler.isConnected() ? 1 : 0;
+        SocketHandler[] handlers = this.handlers; // Atomic read.
+        if (handlers == null)
+            return 0;
+        return (int) Arrays.stream(handlers).filter(SocketHandler::isConnected).count();
     }
 
     @Override
     public EndpointStats retrieveCompleteEndpointStats() {
         EndpointStats stats = super.retrieveCompleteEndpointStats();
-        SocketHandler handler = this.handler; // Atomic read.
-        if (handler != null) {
-            ConnectionStats connectionStats = handler.getActiveConnectionStats(); // Atomic read.
-            if (connectionStats != null) {
-                stats.addActiveConnectionCount(1);
-                stats.addConnectionStats(connectionStats);
-            }
+        SocketHandler[] handlers = this.handlers; // Atomic read.
+        if (handlers != null) {
+            Arrays.stream(handlers)
+                .map(SocketHandler::getActiveConnectionStats)
+                .filter(Objects::nonNull)
+                .forEach(connectionStats -> {
+                    stats.addActiveConnectionCount(1);
+                    stats.addConnectionStats(connectionStats);
+                });
         }
         return stats;
     }
 
     @Override
     public synchronized void start() {
-        if (handler != null)
+        if (isActive())
             return;
+
         log.info("Starting ClientSocketConnector to " + LogUtil.hideCredentials(getAddress()));
         // create default stats instance if specific one was not provided.
         if (getStats() == null)
-            setStats(QDFactory.getDefaultFactory().createStats(QDStats.SType.CLIENT_SOCKET_CONNECTOR, null));
-        if (socketSource == null)
-            socketSource = new ClientSocketSource(this);
-        handler = new SocketHandler(this, socketSource);
-        handler.setCloseListener(this);
-        handler.start();
+            setStats(QDFactory.createStats(QDStats.SType.CLIENT_SOCKET_CONNECTOR, null));
+
+        boolean isSameStriper = true;
+        if (Objects.equals(stripeConfig, AUTO_STRIPE_CONFIG)) {
+            SymbolStriper newStriper = findCollectorSymbolStriper();
+            isSameStriper = (this.striper == newStriper);
+            this.striper = newStriper;
+        }
+        int stripeCount = striper.getStripeCount();
+
+        SocketHandler[] oldHandlers = handlers; // Atomic read
+        SocketHandler[] newHandlers = new SocketHandler[stripeCount];
+
+        // Reuse old handler only on reconnect if striper has not changed
+        boolean reuseSource = (oldHandlers != null && oldHandlers.length == stripeCount && isSameStriper);
+        // Initialize handlers (publish the array with non-null elements)
+        for (int i = 0; i < stripeCount; i++) {
+            QDFilter stripeFilter = (stripeCount > 1) ? striper.getStripeFilter(i) : null;
+            newHandlers[i] = reuseSource ?
+                SocketHandler.createFromClosed(oldHandlers[i]) :
+                new SocketHandler(this, new ClientSocketSource(this), stripeFilter);
+            newHandlers[i].setCloseListener(this);
+        }
+
+        handlers = newHandlers; // Atomic write
+        active = true; // Atomic write.
+
+        // Start handlers (may fail)
+        for (int i = 0; i < stripeCount; i++) {
+            newHandlers[i].start();
+        }
     }
 
     @Override
@@ -299,15 +374,24 @@ public class ClientSocketConnector extends AbstractMessageConnector
     }
 
     private Joinable stopImpl(boolean fullStop) {
+        if (!isActive())
+            return null;
+        active = false; // Atomic write
+
+        log.info("Stopping ClientSocketConnector");
+
+        SocketHandler[] oldHandlers = handlers; // Atomic read
+        if (oldHandlers == null)
+            return null;
         if (fullStop)
-            socketSource = null; // forget all reconnection times. Next start immediately connects
-        SocketHandler handler = this.handler;
-        this.handler = null; // Clear before actual close to avoid recursion.
-        if (handler != null) {
-            log.info("Stopping ClientSocketConnector");
-            handler.close();
-        }
-        return handler;
+            handlers = null;
+
+        Arrays.stream(oldHandlers).forEach(SocketHandler::close);
+        return () -> {
+            for (SocketHandler handler : oldHandlers) {
+                handler.join();
+            }
+        };
     }
 
     @Override
@@ -318,21 +402,79 @@ public class ClientSocketConnector extends AbstractMessageConnector
 
     @Override
     public synchronized void handlerClosed(SocketHandler handler) {
-        if (handler != this.handler)
+        if (!isActive())
             return;
-        this.handler = null;
-        start();
+
+        SocketHandler[] handlers = this.handlers; // Atomic read
+        if (handlers == null)
+            return;
+
+        for (int i = 0; i < handlers.length; i++) {
+            if (handlers[i] == handler) {
+                handlers[i] = SocketHandler.createFromClosed(handler);
+                handlers[i].setCloseListener(this);
+                handlers[i].start();
+                break;
+            }
+        }
     }
 
     @Override
     public String getCurrentHost() {
-        SocketHandler handler = this.handler;
-        return handler != null ? handler.getHost() : "";
+        // Do not show host for stopped or striped connector
+        SocketHandler handler = findSingleHandler(handlers); // Atomic read
+        return (handler != null) ? handler.getHost() : "";
     }
 
     @Override
     public int getCurrentPort() {
-        SocketHandler handler = this.handler;
-        return handler != null ? handler.getPort() : 0;
+        // Do not show port for stopped or striped connector
+        SocketHandler handler = findSingleHandler(handlers); // Atomic read
+        return (handler != null) ? handler.getPort() : 0;
+    }
+
+    @Override
+    public String[] getCurrentAddresses() {
+        SocketHandler[] handlers = this.handlers; // Atomic read
+        if (handlers == null)
+            return new String[0];
+        return Arrays.stream(handlers)
+            .map(SocketHandler::getCurrentAddress)
+            .toArray(String[]::new);
+    }
+
+    // Utility methods
+
+    private SocketHandler findSingleHandler(SocketHandler[] handlers) {
+        return (handlers != null && handlers.length == 1) ? handlers[0] : null;
+    }
+
+    private DataScheme findDataScheme() {
+        //noinspection resource
+        return lookupQDEndpoint().getScheme();
+    }
+
+    private SymbolStriper findCollectorSymbolStriper() {
+        //noinspection resource
+        for (QDCollector collector : lookupQDEndpoint().getCollectors()) {
+            //TODO When QD-86 is implemented with "[stripe=auto,stripeContract=true]"
+            // use individual stripes per contract
+            if (collector != null) {
+                return collector.getStriper();
+            }
+        }
+        return MonoStriper.INSTANCE;
+    }
+
+    private QDEndpoint lookupQDEndpoint() {
+        MessageAdapter.Factory factory = MessageConnectors.retrieveMessageAdapterFactory(getFactory());
+        if (!(factory instanceof MessageAdapter.ConfigurableFactory))
+            throw new IllegalArgumentException("Unsupported application connection class: " + factory);
+
+        QDEndpoint endpoint = ((MessageAdapter.ConfigurableFactory) factory).getEndpoint(QDEndpoint.class);
+        if (endpoint == null)
+            throw new IllegalArgumentException("Application connection created without QDEndpoint: " + factory);
+
+        return endpoint;
     }
 }

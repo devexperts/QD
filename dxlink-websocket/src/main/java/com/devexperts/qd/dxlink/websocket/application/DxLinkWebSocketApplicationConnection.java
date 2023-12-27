@@ -35,7 +35,7 @@ public class DxLinkWebSocketApplicationConnection
     private final DxLinkWebSocketQTPComposer composer;
     private final HeartbeatProcessor heartbeatProcessor;
     private volatile long nextHeartbeatTime;
-    private volatile long heartbeatDisconnectTime;
+    private volatile long nextDisconnectTime;
 
     DxLinkWebSocketApplicationConnection(MessageAdapter adapter,
         DxLinkWebSocketApplicationConnectionFactory factory, TransportConnection transportConnection,
@@ -49,7 +49,7 @@ public class DxLinkWebSocketApplicationConnection
         this.parser = parser;
         this.composer = composer;
         this.nextHeartbeatTime = this.heartbeatProcessor.calculateNextHeartbeatTime();
-        this.heartbeatDisconnectTime = this.heartbeatProcessor.calculateNextDisconnectTime();
+        this.nextDisconnectTime = this.heartbeatProcessor.calculateNextDisconnectTime();
     }
 
     @Override
@@ -70,16 +70,14 @@ public class DxLinkWebSocketApplicationConnection
 
     @Override
     public long examine(long currentTime) {
-        if (currentTime >= heartbeatDisconnectTime) {
-            log.info(adapter + " heartbeat timeout exceeded: disconnecting");
-            close();
-        }
+        if (currentTime >= nextDisconnectTime)
+            throw new RuntimeException(adapter + " heartbeat timeout exceeded: disconnecting");
         long nextRetrieveTime = Math.min(adapter.nextRetrieveTime(currentTime), nextHeartbeatTime);
         if (currentTime >= nextRetrieveTime) {
             notifyChunksAvailable();
             nextRetrieveTime = currentTime + 10;
         }
-        return Math.min(nextRetrieveTime, heartbeatDisconnectTime);
+        return Math.min(nextRetrieveTime, nextDisconnectTime);
     }
 
     @Override
@@ -91,7 +89,7 @@ public class DxLinkWebSocketApplicationConnection
         if (composer.composeMessage(adapter))
             notifyChunksAvailable();
         if (System.currentTimeMillis() >= nextHeartbeatTime) {
-            nextHeartbeatTime = this.heartbeatProcessor.calculateNextHeartbeatTime();
+            nextHeartbeatTime = heartbeatProcessor.calculateNextHeartbeatTime();
             composer.composeKeepalive();
         }
         return composer.retrieveMessages();
@@ -103,8 +101,10 @@ public class DxLinkWebSocketApplicationConnection
     }
 
     public void processMessage(String message) {
-        this.heartbeatDisconnectTime = this.heartbeatProcessor.calculateNextDisconnectTime();
+        // We first parse the message and then calculate the disconnect time from the server,
+        // because we use the new keepalive timeout after receiving the setup from the server
         parser.parse(message, adapter);
+        nextDisconnectTime = heartbeatProcessor.calculateNextDisconnectTime();
     }
 
     @Override

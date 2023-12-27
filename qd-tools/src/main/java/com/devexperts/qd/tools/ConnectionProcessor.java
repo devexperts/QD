@@ -13,6 +13,7 @@ package com.devexperts.qd.tools;
 
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataProvider;
+import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDContract;
 import com.devexperts.qd.SubscriptionProvider;
 import com.devexperts.qd.SubscriptionVisitor;
@@ -32,6 +33,7 @@ import com.devexperts.qd.qtp.text.TextQTPComposer;
 import com.devexperts.util.InvalidFormatException;
 
 import java.io.Closeable;
+import java.util.Set;
 
 final class ConnectionProcessor extends Thread implements Closeable, ConnectorRecordsSymbols.Listener, MessageListener {
 
@@ -53,16 +55,25 @@ final class ConnectionProcessor extends Thread implements Closeable, ConnectorRe
         RecordFields[] rfs, TopSymbolsCounter topSymbolsCounter)
         throws InvalidFormatException
     {
-        super(endpoint.getName());
-        tape = tapeName != null ? FileWriterImpl.open(tapeName, endpoint.getScheme()) : null;
-        TextQTPComposer composer = stamp || rfs != null ? new StampComposer(endpoint.getScheme(), rfs) : new TextQTPComposer(endpoint.getScheme());
+        this(endpoint.getName(), endpoint.getScheme(), endpoint.getContracts(), tapeName, quiet, stamp, rfs,
+            topSymbolsCounter);
+    }
+
+    ConnectionProcessor(String name, DataScheme scheme, Set<QDContract> contracts, String tapeName, boolean quiet,
+        boolean stamp, RecordFields[] rfs, TopSymbolsCounter topSymbolsCounter) throws InvalidFormatException
+    {
+        super(name);
+        tape = tapeName != null ? FileWriterImpl.open(tapeName, scheme) : null;
+        TextQTPComposer composer = stamp || rfs != null ? new StampComposer(scheme, rfs) : new TextQTPComposer(scheme);
         composer.setOptSet(ProtocolOption.SUPPORTED_SET); // use available protocol options
         this.consoleWriter = quiet ? null : new OutputStreamMessageVisitor(System.out, composer, true);
         this.topSymbolsCounter = topSymbolsCounter;
 
-        if (tape != null)
-            for (QDContract contract : endpoint.getContracts())
+        if (tape != null) {
+            for (QDContract contract : contracts) {
                 tape.addSendMessageType(MessageType.forData(contract));
+            }
+        }
     }
 
     // waits until processing is finished on close

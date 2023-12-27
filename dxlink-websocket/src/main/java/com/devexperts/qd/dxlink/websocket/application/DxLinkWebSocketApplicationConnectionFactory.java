@@ -16,6 +16,7 @@ import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.connector.proto.Configurable;
 import com.devexperts.connector.proto.ConfigurationKey;
 import com.devexperts.connector.proto.TransportConnection;
+import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.dxlink.websocket.transport.DxLinkLoginHandlerFactory;
 import com.devexperts.qd.dxlink.websocket.transport.TokenDxLinkLoginHandlerFactory;
 import com.devexperts.qd.qtp.MessageAdapter;
@@ -27,26 +28,23 @@ import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimePeriod;
 
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * DxLink Connection protocol implementation.
  */
 public class DxLinkWebSocketApplicationConnectionFactory extends ApplicationConnectionFactory {
-    private static final TimePeriod DEFAULT_HEARTBEAT_PERIOD = TimePeriod.valueOf(
-        SystemProperties.getProperty("com.devexperts.connector.proto.heartbeatPeriod", "10s"));
+    private static final String APPLICATION_VERSION =
+        SystemProperties.getProperty("com.devexperts.qd.dxlink.applicationVersion", null);
     private static final TimePeriod DEFAULT_HEARTBEAT_TIMEOUT = TimePeriod.valueOf(
-        SystemProperties.getProperty("com.devexperts.connector.proto.heartbeatTimeout", "2m"));
-    private static final TimePeriod INITIAL_HEARTBEAT_PERIOD = TimePeriod.valueOf(
-        SystemProperties.getProperty(DxLinkWebSocketApplicationConnection.class, "initialHeartbeatPeriod", "5s"));
+        SystemProperties.getProperty("com.devexperts.qd.dxlink.websocket.heartbeatTimeout", "60s"));
 
-    private HeartbeatProcessor heartbeatProcessor;
+    private TimePeriod heartbeatTimeout = DEFAULT_HEARTBEAT_TIMEOUT;
+    private String applicationVersion = APPLICATION_VERSION;
     private MessageAdapter.ConfigurableFactory factory;
     private QDLoginHandler loginHandler;
-
-    private TimePeriod heartbeatPeriod = DEFAULT_HEARTBEAT_PERIOD;
-    private TimePeriod heartbeatTimeout = DEFAULT_HEARTBEAT_TIMEOUT;
-    private TimePeriod initialHeartbeatPeriod = INITIAL_HEARTBEAT_PERIOD;
 
     public DxLinkWebSocketApplicationConnectionFactory(MessageAdapter.ConfigurableFactory factory) {
         if (factory == null)
@@ -65,12 +63,7 @@ public class DxLinkWebSocketApplicationConnectionFactory extends ApplicationConn
         adapter.setLoginHandler(loginHandler);
         adapter.useDescribeProtocol();
 
-        this.heartbeatProcessor = new HeartbeatProcessor(
-            this,
-            getHeartbeatTimeout().getTime(),
-            getHeartbeatPeriod().getTime(),
-            getInitialHeartbeatPeriod().getTime()
-        );
+        HeartbeatProcessor heartbeatProcessor = new HeartbeatProcessor(getHeartbeatTimeout().getTime());
 
         Delegates delegates = new Delegates(adapter.getScheme());
 
@@ -82,14 +75,15 @@ public class DxLinkWebSocketApplicationConnectionFactory extends ApplicationConn
                 adapter.getScheme(),
                 adapter.supportsMixedSubscription(),
                 adapter.getFieldReplacer(),
-                this.heartbeatProcessor,
+                heartbeatProcessor,
                 receiver -> new DxLinkJsonMessageParser(receiver, delegates)
             ),
             new DxLinkWebSocketQTPComposer(
                 adapter.getScheme(),
                 delegates,
                 new DxLinkJsonMessageFactory(),
-                this.heartbeatProcessor
+                heartbeatProcessor,
+                this
             ),
             heartbeatProcessor
         );
@@ -138,34 +132,6 @@ public class DxLinkWebSocketApplicationConnectionFactory extends ApplicationConn
     public QDLoginHandler getLogin() { return loginHandler; }
 
     /**
-     * Returns heartbeat period for this application protocol.
-     * @return heartbeat period for this application protocol
-     */
-    public TimePeriod getHeartbeatPeriod() {
-        return heartbeatPeriod;
-    }
-
-    @Configurable(description = "Long-term heartbeat period for this connection")
-    public void setHeartbeatPeriod(TimePeriod heartbeatPeriod) {
-        if (heartbeatPeriod.getTime() <= 0)
-            throw new IllegalArgumentException("cannot be negative or zero");
-        this.heartbeatPeriod = heartbeatPeriod;
-        if (this.heartbeatProcessor != null)
-            this.heartbeatProcessor.receiveUpdateHeartbeatPeriod(this.heartbeatPeriod.getTime());
-    }
-
-    public TimePeriod getInitialHeartbeatPeriod() {
-        return initialHeartbeatPeriod;
-    }
-
-    @Configurable(description = "Initial heartbeat period for this connection")
-    public void setInitialHeartbeatPeriod(TimePeriod initialHeartbeatPeriod) {
-        if (initialHeartbeatPeriod.getTime() <= 0)
-            throw new IllegalArgumentException("cannot be negative or zero");
-        this.initialHeartbeatPeriod = initialHeartbeatPeriod;
-    }
-
-    /**
      * Returns heartbeat timeout for this application protocol.
      * @return heartbeat timeout for this application protocol
      */
@@ -178,8 +144,28 @@ public class DxLinkWebSocketApplicationConnectionFactory extends ApplicationConn
         if (heartbeatTimeout.getTime() <= 0)
             throw new IllegalArgumentException("cannot be negative or zero");
         this.heartbeatTimeout = heartbeatTimeout;
-        if (this.heartbeatProcessor != null)
-            this.heartbeatProcessor.receiveUpdateHeartbeatTimeout(this.heartbeatPeriod.getTime());
+    }
+
+    public String getApplicationVersion() {
+        return applicationVersion;
+    }
+
+    @Configurable(description = "client application version")
+    public void setApplicationVersion(String applicationVersion) {
+        this.applicationVersion = applicationVersion;
+    }
+
+    public Map<String, String> getAgentInfo() {
+        Map<String, String> agent = new TreeMap<>();
+        agent.put("version", QDFactory.getVersion());
+        if (getApplicationVersion() != null)
+            agent.put("application", getApplicationVersion());
+        agent.put("platform", SystemProperties.getProperty("os.name", null) + " " +
+            SystemProperties.getProperty("os.version", null));
+        String javaVersion = SystemProperties.getProperty("java.version", null);
+        if (javaVersion != null)
+            agent.put("java", javaVersion);
+        return agent;
     }
 
     public String toString() {

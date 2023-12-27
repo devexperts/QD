@@ -18,11 +18,16 @@ import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.qtp.file.FileFormat;
 import com.devexperts.qd.qtp.file.FileWriterImpl;
 import com.devexperts.qd.qtp.file.FileWriterParams;
+import com.devexperts.qd.qtp.file.TimestampsType;
 import com.devexperts.qd.test.TestDataProvider;
 import com.devexperts.qd.test.TestDataScheme;
 import com.devexperts.util.TimePeriod;
 import org.junit.After;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -30,9 +35,12 @@ import java.lang.reflect.Field;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+@RunWith(Parameterized.class)
 public class FileWriterTest {
     private static final String NAME_PREFIX = "FileWriterTest-tape-";
-    private static final String NAME_SUFFIX = ".qds.tmp";
+    private static final String NAME_SUFFIX = ".qds.data";
+    private static final String TIME_SUFFIX = ".qds.time";
+    private static final String TEMP_DIR_NAME = "tmp";
 
     private static final long SEED = 20131112;
     private static final int RECORD_CNT = 10;
@@ -42,29 +50,63 @@ public class FileWriterTest {
 
     private FileWriterImpl fileWriter;
 
+    private final boolean useTmpDir;
+
+    @Rule
+    public TemporaryFolder tempFolder = new TemporaryFolder();
+
+    @Parameterized.Parameters(name = "Use tmpDir = {0}")
+    public static Boolean[] params() {
+        return new Boolean[] { false, true };
+    }
+
+    public FileWriterTest(boolean useTmpDir) {
+        this.useTmpDir = useTmpDir;
+    }
+
     @After
     public void tearDown() throws Exception {
         if (fileWriter != null) {
             fileWriter.close();
         }
-
-        File[] files = getDataFiles();
-        if (files != null)
-            for (File file : files)
-                //noinspection ResultOfMethodCallIgnored
-                file.delete();
     }
 
-    private File[] getDataFiles() {
-        return new File(".").listFiles((dir, name) -> name.startsWith(NAME_PREFIX) && name.endsWith(NAME_SUFFIX));
+    private File[] getDataFiles(File folder, String suffix) {
+        return folder.listFiles((dir, name) -> name.startsWith(NAME_PREFIX) && name.endsWith(suffix));
+    }
+
+    @Test
+    public void testSingleFile() {
+        File dir = tempFolder.getRoot();
+        FileWriterParams.Default params = new FileWriterParams.Default();
+        params.setFormat(FileFormat.TEXT);
+        params.setTime(TimestampsType.TEXT);
+        if (useTmpDir) {
+            params.setTmpDir(dir + "/" + TEMP_DIR_NAME);
+        }
+        String nameSuffix = "_qds";
+        String timeSuffix = ".time";
+        fileWriter = new FileWriterImpl(dir + "/" + NAME_PREFIX + nameSuffix, scheme, params).open();
+        fileWriter.addSendMessageType(MessageType.STREAM_DATA);
+        TestDataProvider provider = new TestDataProvider(scheme, SEED, RECORD_CNT, false);
+        fileWriter.visitData(provider, MessageType.STREAM_DATA);
+        fileWriter.close();
+
+        assertEquals(1, getDataFiles(dir, nameSuffix).length);
+        assertEquals(1, getDataFiles(dir, timeSuffix).length);
     }
 
     @Test
     public void testWriteALotOfFiles() {
+        File dir = tempFolder.getRoot();
         FileWriterParams.Default params = new FileWriterParams.Default();
         params.setFormat(FileFormat.TEXT);
         params.setSplit(TimePeriod.valueOf("1s"));
-        fileWriter = new FileWriterImpl(NAME_PREFIX + "~" + NAME_SUFFIX, scheme, params).open();
+        params.setTime(TimestampsType.TEXT);
+        if (useTmpDir) {
+            params.setTmpDir(dir + "/" + TEMP_DIR_NAME);
+        }
+        fileWriter = new FileWriterImpl(dir + "/" + NAME_PREFIX + "~" + NAME_SUFFIX, scheme, params).open();
         fileWriter.addSendMessageType(MessageType.STREAM_DATA);
 
         TestDataProvider provider = new TestDataProvider(scheme, SEED, RECORD_CNT, false);
@@ -79,7 +121,8 @@ public class FileWriterTest {
         fileWriter.close();
 
         // Test that we have created A_LOT_OF_FILES files.
-        assertEquals(A_LOT_OF_FILES, getDataFiles().length);
+        assertEquals(A_LOT_OF_FILES, getDataFiles(dir, NAME_SUFFIX).length);
+        assertEquals(A_LOT_OF_FILES, getDataFiles(dir, TIME_SUFFIX).length);
     }
 
     // [QD-771] Tools: FileWriter shall release completed files as time passes.
@@ -93,7 +136,11 @@ public class FileWriterTest {
         FileWriterParams.Default params = new FileWriterParams.Default();
         params.setFormat(FileFormat.TEXT);
         params.setSplit(split);
-        fileWriter = new FileWriterImpl(NAME_PREFIX + "~" + NAME_SUFFIX, scheme, params).open();
+        if (useTmpDir) {
+            params.setTmpDir(tempFolder.getRoot() + "/" + TEMP_DIR_NAME);
+        }
+        fileWriter = new FileWriterImpl(
+            tempFolder.getRoot() + "/" + NAME_PREFIX + "~" + NAME_SUFFIX, scheme, params).open();
         fileWriter.addSendMessageType(MessageType.STREAM_DATA);
 
         // Visit some data and write records to ".data" file.
@@ -115,5 +162,30 @@ public class FileWriterTest {
         }
         if (dataOut.get(fileWriter) != null)
             fail("File with split period " + split + " wasn't closed in " + waitTime / 1000 + "s");
+    }
+
+    @Test
+    public void testStorageLimit() throws InterruptedException {
+        File dir = tempFolder.getRoot();
+        FileWriterParams.Default params = new FileWriterParams.Default();
+        params.setFormat(FileFormat.TEXT);
+        params.setSplit(TimePeriod.valueOf("1s"));
+        params.setTime(TimestampsType.TEXT);
+        if (useTmpDir) {
+            params.setTmpDir(dir + "/" + TEMP_DIR_NAME);
+        }
+        params.setStorageTime(TimePeriod.valueOf("1s"));
+        fileWriter = new FileWriterImpl(dir + "/" + NAME_PREFIX + "~" + NAME_SUFFIX, scheme, params).open();
+        fileWriter.addSendMessageType(MessageType.STREAM_DATA);
+        TestDataProvider provider = new TestDataProvider(scheme, SEED, RECORD_CNT, false);
+        for (int i = 0; i < 4; i++) {
+            Thread.sleep(1000);
+            fileWriter.visitData(provider, MessageType.STREAM_DATA);
+        }
+        fileWriter.close();
+
+        // Test that we have 2 files only last
+        assertEquals(2, getDataFiles(dir, NAME_SUFFIX).length);
+        assertEquals(2, getDataFiles(dir, TIME_SUFFIX).length);
     }
 }

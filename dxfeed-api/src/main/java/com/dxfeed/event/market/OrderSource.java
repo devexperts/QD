@@ -362,6 +362,13 @@ public final class OrderSource extends IndexedEventSource {
     public static final OrderSource memx = new OrderSource("memx", PUB_ORDER);
 
     /**
+     * Blue Ocean Technologies Alternative Trading System.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource OCEA = new OrderSource("OCEA", PUB_ORDER);
+
+    /**
      * Pink Sheets. Record for price level book.
      * Pink sheets are listings for stocks that trade over-the-counter (OTC).
      * {@link Order} and {@link OtcMarketsOrder} events are {@link #isPublishable(Class) publishable} on this

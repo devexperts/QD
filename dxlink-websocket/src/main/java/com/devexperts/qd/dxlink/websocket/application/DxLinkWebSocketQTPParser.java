@@ -23,6 +23,7 @@ import com.devexperts.qd.qtp.fieldreplacer.FieldReplacersCache;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import static com.devexperts.qd.qtp.MessageType.HISTORY_ADD_SUBSCRIPTION;
@@ -40,7 +41,6 @@ import static com.devexperts.qd.qtp.MessageType.forData;
  * @see AbstractQTPParser
  */
 class DxLinkWebSocketQTPParser extends AbstractQTPParser {
-    private static final long MILLISECOND_IN_SECOND = 1000L;
     private static final Logging log = Logging.getLogging(DxLinkWebSocketQTPParser.class);
 
     private final DxLinkJsonMessageParser messageParser;
@@ -81,20 +81,22 @@ class DxLinkWebSocketQTPParser extends AbstractQTPParser {
         public void receiveKeepalive(int channel) { currentConsumer.processHeartbeat(null); }
 
         @Override
-        public void receiveSetup(String version, Long keepaliveTimeoutInSec, Long acceptKeepaliveTimeoutInSec) {
+        public void receiveSetup(String version, Long keepaliveTimeout, Long acceptKeepaliveTimeout) {
             ProtocolDescriptor newDescriptor = ProtocolDescriptor.newPeerProtocolDescriptor(descriptor);
             newDescriptor.setProperty(ProtocolDescriptor.TYPE_PROPERTY, "dxlink");
             newDescriptor.setProperty(ProtocolDescriptor.VERSION_PROPERTY, version);
-            if (keepaliveTimeoutInSec != null) {
-                // terminate the connection if there are no messages from the server for more than the keepaliveTimeout
-                newDescriptor.setProperty("keepaliveTimeout", Long.toString(keepaliveTimeoutInSec));
-                heartbeatProcessor.receiveUpdateHeartbeatTimeout(keepaliveTimeoutInSec * MILLISECOND_IN_SECOND);
+            if (keepaliveTimeout != null) {
+                // time after which, in the absence of any messages from the server, the client shall disconnect
+                newDescriptor.setProperty("keepaliveTimeout", Double.toString(keepaliveTimeout / 1000.0));
+                heartbeatProcessor.setDisconnectTimeout(keepaliveTimeout);
             }
-            if (acceptKeepaliveTimeoutInSec != null) {
-                // the server will terminate the connection if we do not send any message
-                // within the acceptKeepaliveTimeout
-                newDescriptor.setProperty("acceptKeepaliveTimeout", Long.toString(acceptKeepaliveTimeoutInSec));
-                heartbeatProcessor.receiveUpdateHeartbeatPeriod(acceptKeepaliveTimeoutInSec * MILLISECOND_IN_SECOND);
+            if (acceptKeepaliveTimeout != null) {
+                // desired time for the keepalive timeout for client-to-server communication
+                newDescriptor.setProperty("acceptKeepaliveTimeout", Double.toString(acceptKeepaliveTimeout / 1000.0));
+                // just ignore it since we use own timeout and don't adjust to the server
+                // if we need to accept server value - uncomment code below
+                // heartbeatProcessor.setHeartbeatTimeout(TimeUnit.SECONDS.toMillis(acceptKeepaliveTimeoutInSec));
+                // sendSetupWithUpdatedProtocolDescriptor();
             }
             descriptor = newDescriptor;
             currentConsumer.processDescribeProtocol(newDescriptor, true);
@@ -127,7 +129,7 @@ class DxLinkWebSocketQTPParser extends AbstractQTPParser {
         }
 
         @Override
-        public void receiveFeedConfig(int channel, long aggregationPeriod, String dataFormat,
+        public void receiveFeedConfig(int channel, Long aggregationPeriod, String dataFormat,
             Map<String, List<String>> eventFields)
         {
             messageParser.updateConfigChannelParser(channel, dataFormat, eventFields);

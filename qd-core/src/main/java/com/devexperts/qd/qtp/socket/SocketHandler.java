@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,7 +16,9 @@ import com.devexperts.connector.proto.ApplicationConnection;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.io.ChunkPool;
 import com.devexperts.logging.Logging;
+import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.qtp.AbstractMessageConnector;
+import com.devexperts.qd.qtp.MessageAdapter;
 import com.devexperts.qd.qtp.MessageConnectorState;
 import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.stats.QDStats;
@@ -27,6 +29,7 @@ import com.devexperts.util.SystemProperties;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Objects;
 
 /**
  * The <code>SocketHandler</code> handles standard socket using blocking API.
@@ -43,8 +46,9 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
 
     private final Logging log;
 
-    final AbstractMessageConnector connector;
+    private final AbstractMessageConnector connector;
     private final SocketSource socketSource;
+    private final QDFilter stripeFilter;
 
     final ChunkPool chunkPool;
     final boolean verbose;
@@ -58,11 +62,29 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
     private volatile SocketState state = SocketState.NEW;
 
     SocketHandler(AbstractMessageConnector connector, SocketSource socketSource) {
+        this(connector, socketSource, null);
+    }
+
+    SocketHandler(AbstractMessageConnector connector, SocketSource socketSource, QDFilter stripeFilter) {
         this.connector = connector;
         this.log = connector.getLogging();
         this.socketSource = socketSource;
+        this.stripeFilter = stripeFilter;
         this.chunkPool = connector.getFactory().getChunkPool();
         this.verbose = VERBOSE != null && connector.getName().contains(VERBOSE);
+    }
+
+    /**
+     * Recreate new handler after closing the previous one.
+     * Handlers are not restartable since they are tightly coupled with blocking I/O threads.
+     */
+    static SocketHandler createFromClosed(SocketHandler closedHandler) {
+        Objects.requireNonNull(closedHandler, "closedHandler");
+        if (closedHandler.getHandlerState() != MessageConnectorState.DISCONNECTED)
+            throw new IllegalStateException("Cannot reopen non-closed socket handler!");
+
+        //FIXME socketSource is not safe!
+        return new SocketHandler(closedHandler.connector, closedHandler.socketSource, closedHandler.stripeFilter);
     }
 
     public String getHost() {
@@ -73,6 +95,11 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
     public int getPort() {
         ThreadData threadData = this.threadData; // atomic read
         return threadData != null ? threadData.address.port : 0;
+    }
+
+    public String getCurrentAddress() {
+        ThreadData threadData = this.threadData; // atomic read
+        return threadData != null ? (threadData.address.host + ":" + threadData.address.port) : null;
     }
 
     public MessageConnectorState getHandlerState() {
@@ -141,7 +168,7 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
 
     @Override
     public String toString() {
-        return socketSource.toString();
+        return (stripeFilter != null ? stripeFilter + "@" : "") + socketSource.toString();
     }
 
     // ========== Internal API for SocketReader & SocketWriter ==========
@@ -189,12 +216,13 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
     private void cleanupSocket(Socket socket, SocketAddress address, Throwable reason) {
         try {
             socket.close();
-            if (reason == null || reason instanceof IOException && socketSource instanceof ServerSocketSource)
+            if (reason == null || reason instanceof IOException && socketSource instanceof ServerSocketSource) {
                 log.info("Disconnected from " + LogUtil.hideCredentials(address) +
-                    (reason == null ? "" :
-                        " because of " + (reason.getMessage() == null ? reason.toString() : reason.getMessage())));
-            else
+                    (reason == null ? "" : " because of " +
+                    (reason.getMessage() == null ? reason.toString() : reason.getMessage())));
+            } else {
                 log.error("Disconnected from " + LogUtil.hideCredentials(address), reason);
+            }
         } catch (Throwable t) {
             log.error("Error occurred while disconnecting from " + LogUtil.hideCredentials(address), t);
         }
@@ -222,7 +250,8 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
             stats = connector.getStats().getOrCreate(QDStats.SType.CONNECTIONS).create(QDStats.SType.CONNECTION,
                 "host=" + JMXNameBuilder.quoteKeyPropertyValue(socketInfo.socketAddress.host) + "," +
                 "port=" + socketInfo.socketAddress.port + "," +
-                "localPort=" + socket.getLocalPort());
+                "localPort=" + socket.getLocalPort() +
+                (stripeFilter != null ? ",stripe=" + stripeFilter : ""));
             if (stats == null)
                 throw new NullPointerException("Stats were not created");
         } catch (Throwable t) {
@@ -238,17 +267,29 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
         Throwable failureReason = null;
         try {
             ApplicationConnectionFactory acf = connector.getFactory();
+            if (stripeFilter != null) {
+                acf = acf.clone();
+                MessageAdapter.Factory factory = MessageConnectors.retrieveMessageAdapterFactory(acf);
+                if (factory instanceof MessageAdapter.ConfigurableFactory) {
+                    ((MessageAdapter.ConfigurableFactory) factory).setConfiguration(
+                        MessageConnectors.FILTER_CONFIGURATION_KEY, stripeFilter.toString());
+                } else {
+                    throw new NullPointerException("Cannot create striped connection from " + factory.getClass());
+                }
+            }
             connection = acf.createConnection(this);
         } catch (Throwable t) {
             failureReason = t;
         }
         if (connection == null) {
-            log.error("Failed to create connection on socket " + LogUtil.hideCredentials(socketInfo.socketAddress), failureReason);
+            log.error("Failed to create connection on socket " +
+                LogUtil.hideCredentials(socketInfo.socketAddress), failureReason);
             cleanupStats(stats);
             connector.addClosedConnectionStats(connectionStats);
             cleanupSocket(socket, socketInfo.socketAddress, null);
             return null;
         }
+        variables().set(MessageConnectors.LOCAL_STRIPE_KEY, stripeFilter);
 
         connection.start();
 
@@ -327,7 +368,6 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
     }
 
     // ========== TransportConnection implementation ==========
-
 
     @Override
     public void markForImmediateRestart() {

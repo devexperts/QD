@@ -15,13 +15,13 @@ import com.devexperts.connector.proto.AbstractTransportConnection;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.connector.proto.TransportConnection;
 import com.devexperts.logging.Logging;
+import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.dxlink.websocket.application.DxLinkWebSocketApplicationConnection;
 import com.devexperts.qd.qtp.AbstractMessageConnector;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.MessageConnectorState;
 import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.qtp.MessageProvider;
-import com.devexperts.qd.qtp.ReconnectHelper;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.transport.stats.ConnectionStats;
 import com.devexperts.util.JMXNameBuilder;
@@ -47,6 +47,7 @@ import io.netty.channel.socket.oio.OioSocketChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
@@ -302,7 +303,6 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
             wait(handshakeFuture[0], HANDSHAKE_TIMEOUT);
 
             session.channel = connect.channel();
-            log.info("Connected to " + LogUtil.hideCredentials(address));
         } catch (Throwable e) {
             session.close(e);
             throw new RuntimeException("Failed to connect to " + LogUtil.hideCredentials(address), e);
@@ -476,8 +476,12 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
         private WebSocketChannelInboundHandler(ChannelPromise[] handshakeFuture, Session session, URI webSocketURL) {
             this.handshakeFuture = handshakeFuture;
             this.session = session;
+            DefaultHttpHeaders headers = new DefaultHttpHeaders();
+            // TODO Map<String, String> agent = ((DxLinkWebSocketApplicationConnectionFactory)
+            //  connector.getFactory()).getAgentInfo();
+            headers.set(HttpHeaderNames.USER_AGENT, QDFactory.getVersion().replace('-', '/').replace('+', ' '));
             handshaker = WebSocketClientHandshakerFactory.newHandshaker(webSocketURL, WebSocketVersion.V13, null,
-                true, new DefaultHttpHeaders(), MAX_FRAME_PAYLOAD_LENGTH);
+                true, headers, MAX_FRAME_PAYLOAD_LENGTH);
         }
 
         @Override
@@ -502,11 +506,15 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
             if (!handshaker.isHandshakeComplete()) {
                 try {
                     // WebSocket Client connected
-                    handshaker.finishHandshake(ch, (FullHttpResponse) msg);
+                    FullHttpResponse response = (FullHttpResponse) msg;
+                    String secWebSocketExtensions = response.headers().get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
+                    handshaker.finishHandshake(ch, response);
                     session.stats = createStats();
                     variables().set(MessageConnectors.STATS_KEY, session.stats);
                     session.application = createApplicationConnection(session.stats);
                     handshakeFuture[0].setSuccess();
+                    log.info("Connected to " + LogUtil.hideCredentials(address) +
+                        ", host=" + ch.remoteAddress().toString() + ", sec extensions=" + secWebSocketExtensions);
                 } catch (Throwable e) {
                     // WebSocket Client failed to connect
                     handshakeFuture[0].setFailure(e);

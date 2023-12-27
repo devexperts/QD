@@ -20,7 +20,7 @@ import java.util.Map;
 
 interface DxLinkClientReceiver {
 
-    public void receiveSetup(String version, Long keepaliveTimeoutInSec, Long acceptKeepaliveTimeoutInSec);
+    public void receiveSetup(String version, Long keepaliveTimeout, Long acceptKeepaliveTimeout);
 
     public void receiveError(int channel, String error, String message);
 
@@ -30,7 +30,7 @@ interface DxLinkClientReceiver {
 
     public void receiveChannelOpened(int channel, String service, String contract);
 
-    public void receiveFeedConfig(int channel, long aggregationPeriod, String dataFormat,
+    public void receiveFeedConfig(int channel, Long aggregationPeriod, String dataFormat,
         Map<String, List<String>> eventFields);
 
     public void receiveFeedData(EventsParser parser);

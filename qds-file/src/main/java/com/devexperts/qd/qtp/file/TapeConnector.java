@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -40,6 +40,7 @@ public class TapeConnector extends AbstractMessageConnector implements TapeConne
     private TimePeriod storageTime = TimePeriod.UNLIMITED;
     private long storageSize = UNLIMITED_SIZE;
     private String opt;
+    private String tmpDir;
 
     private volatile FileWriterHandler handler;
 
@@ -245,6 +246,21 @@ public class TapeConnector extends AbstractMessageConnector implements TapeConne
         if (!opt.equals(this.opt)) {
             log.info("Setting opt=" + opt);
             this.opt = opt;
+            reconfigure();
+        }
+    }
+
+    @Override
+    public synchronized String getTmpDir() {
+        return tmpDir;
+    }
+
+    @Override
+    @MessageConnectorProperty("Temporary directory for tape files processing")
+    public synchronized void setTmpDir(String tmpDir) {
+        if (!tmpDir.equals(this.tmpDir)) {
+            log.info("Setting tmpDir=" + tmpDir);
+            this.tmpDir = tmpDir;
             reconfigure();
         }
     }

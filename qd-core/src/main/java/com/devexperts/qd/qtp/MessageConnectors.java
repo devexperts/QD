@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,6 +16,7 @@ import com.devexperts.connector.codec.CodecFactory;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.connector.proto.ConfigurationException;
 import com.devexperts.connector.proto.ConfigurationKey;
+import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.qtp.socket.ClientSocketConnector;
 import com.devexperts.qd.qtp.socket.ServerSocketConnector;
 import com.devexperts.qd.stats.QDStats;
@@ -63,6 +64,7 @@ public class MessageConnectors {
 
     public static final TypedKey<Socket> SOCKET_KEY = new TypedKey<>();
     public static final TypedKey<QDStats> STATS_KEY = new TypedKey<>();
+    public static final TypedKey<QDFilter> LOCAL_STRIPE_KEY = new TypedKey<>();
 
     private static final String HTTP_PREFIX = "http:";
     private static final String HTTPS_PREFIX = "https:";

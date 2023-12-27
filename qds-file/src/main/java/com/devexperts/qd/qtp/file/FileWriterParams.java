@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2023 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -27,6 +27,7 @@ public interface FileWriterParams {
     TimePeriod getStorageTime();
     long getStorageSize();
     String getOpt();
+    String getTmpDir();
 
     // setXXX methods are called via QDConfig#setProperties(...)
     public class Default implements FileWriterParams {
@@ -39,6 +40,7 @@ public interface FileWriterParams {
         private TimePeriod storageTime = TimePeriod.UNLIMITED;
         private long storageSize = UNLIMITED_SIZE;
         private String opt;
+        private String tmpDir;
 
         @Override
         public TimePeriod getSplit() {
@@ -110,6 +112,15 @@ public interface FileWriterParams {
 
         public void setOpt(String opt) {
             this.opt = opt;
+        }
+
+        @Override
+        public String getTmpDir() {
+            return tmpDir;
+        }
+
+        public void setTmpDir(String tmpDir) {
+            this.tmpDir = tmpDir;
         }
     }
 }

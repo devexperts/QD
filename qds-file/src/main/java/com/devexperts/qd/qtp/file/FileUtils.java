@@ -17,8 +17,16 @@ import com.devexperts.util.LogUtil;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.CopyOption;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
 
 class FileUtils {
     private static final Logging log = Logging.getLogging(FileUtils.class);
@@ -74,6 +82,38 @@ class FileUtils {
             } catch (Throwable t) {
                 log.error("Failed to close " + LogUtil.hideCredentials(address), t);
             }
+        }
+    }
+
+    public static void checkOrCreateDirectory(Path dir) throws IOException {
+        if (!Files.isDirectory(dir)) {
+            try {
+                Files.createDirectories(dir);
+            } catch (FileAlreadyExistsException e) {
+                // checking that it is not a directory
+                if (!Files.isDirectory(dir)) {
+                    throw e;
+                }
+                log.warn("Concurrent directory creation, just ignore " + dir, e);
+            }
+        }
+    }
+
+    public static void tryAtomicFileMove(Path source, Path destination, CopyOption... options) throws IOException {
+        try {
+            CopyOption[] merged;
+            int length = options.length;
+            if (length > 0) {
+                merged = Arrays.copyOf(options, length + 1);
+                merged[length] = StandardCopyOption.ATOMIC_MOVE;
+            } else {
+                merged = new CopyOption[] { StandardCopyOption.ATOMIC_MOVE };
+            }
+            Files.move(source, destination, merged);
+        } catch (AtomicMoveNotSupportedException e) {
+            log.warn("Failed to atomic move file: " + source + " to destination: " + destination +
+                ". Fail-over to using general move with file copy", e);
+            Files.move(source, destination, options);
         }
     }
 }

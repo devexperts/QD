@@ -140,10 +140,10 @@ class DxLinkJsonMessageParser {
                     version = parser.getValueAsString();
                 } else if ("keepaliveTimeout".equals(fieldName)) {
                     if (parser.nextToken() != JsonToken.VALUE_NULL)
-                        keepaliveTimeout = parser.getValueAsLong();
+                        keepaliveTimeout = (long) (parser.getValueAsDouble() * 1000.0);
                 } else if ("acceptKeepaliveTimeout".equals(fieldName)) {
                     if (parser.nextToken() != JsonToken.VALUE_NULL)
-                        acceptKeepaliveTimeout = parser.getValueAsLong();
+                        acceptKeepaliveTimeout = (long) (parser.getValueAsDouble() * 1000.0);
                 }
             }
         }
@@ -212,15 +212,15 @@ class DxLinkJsonMessageParser {
     }
 
     private void parseFeedConfig(int channel, JsonParser parser) throws IOException {
-        long aggregationPeriod = -1L;
+        Long aggregationPeriod = null;
         String dataFormat = null;
         Map<String, List<String>> eventFields = Collections.emptyMap();
         while (!parser.isClosed()) {
             if (parser.nextToken() == JsonToken.FIELD_NAME) {
                 String fieldName = parser.getCurrentName();
                 if ("aggregationPeriod".equals(fieldName)) {
-                    parser.nextToken();
-                    aggregationPeriod = parser.getValueAsLong();
+                    if (parser.nextToken() != JsonToken.VALUE_NULL)
+                        aggregationPeriod = (long) (parser.getValueAsDouble() * 1000.0);
                 } else if ("dataFormat".equals(fieldName)) {
                     parser.nextToken();
                     dataFormat = parser.getValueAsString();

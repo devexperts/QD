@@ -9,6 +9,14 @@
         <local>
             <maxBuildsCached>10</maxBuildsCached>
         </local>
+        <attachedOutputs>
+            <dirNames>
+                <dirName>classes</dirName>
+                <dirName>generated-sources</dirName>
+                <dirName>test-classes</dirName>
+                <dirName>generated-test-sources</dirName>
+            </dirNames>
+        </attachedOutputs>
     </configuration>
 
     <input>
