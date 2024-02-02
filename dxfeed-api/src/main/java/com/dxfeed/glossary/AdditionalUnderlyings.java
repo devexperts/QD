@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,13 +11,14 @@
  */
 package com.dxfeed.glossary;
 
+import com.devexperts.util.MathUtil;
+
 import java.io.Serializable;
-import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 /**
  * Represents a set of additional underlyings for a given option. Each additional underlying
@@ -29,7 +30,6 @@ import java.util.Map;
  */
 public class AdditionalUnderlyings implements Serializable {
     private static final long serialVersionUID = 0;
-
 
     // ========== Static API ==========
 
@@ -89,7 +89,6 @@ public class AdditionalUnderlyings implements Serializable {
         return 0;
     }
 
-
     // ========== Instance API ==========
 
     private final String text;
@@ -130,7 +129,7 @@ public class AdditionalUnderlyings implements Serializable {
      */
     public double getSPC(String symbol) {
         Double spc = getMap().get(symbol);
-        return spc == null ? 0 : spc.doubleValue();
+        return spc == null ? 0 : spc;
     }
 
     public int hashCode() {
@@ -145,13 +144,12 @@ public class AdditionalUnderlyings implements Serializable {
         return text;
     }
 
-
     // ========== Internal Implementation ==========
 
     private static String format(Map<String, Double> map) {
         if (map == null || map.isEmpty())
             return "";
-        String[] symbols = map.keySet().toArray(new String[map.size()]);
+        String[] symbols = map.keySet().toArray(new String[0]);
         Arrays.sort(symbols);
         StringBuilder sb = new StringBuilder();
         for (String symbol : symbols) {
@@ -164,7 +162,8 @@ public class AdditionalUnderlyings implements Serializable {
                 throw new IllegalArgumentException("SPC is missing or infinite");
             if (sb.length() > 0)
                 sb.append("; ");
-            sb.append(symbol).append(" ").append(formatDouble(spc));
+            sb.append(symbol).append(" ");
+            formatDouble(sb, spc);
         }
         return sb.toString();
     }
@@ -172,7 +171,7 @@ public class AdditionalUnderlyings implements Serializable {
     private static Map<String, Double> parse(String text) {
         if (text == null || text.isEmpty())
             return Collections.emptyMap();
-        Map<String, Double> map = new HashMap<String, Double>();
+        Map<String, Double> map = new HashMap<>();
         for (int n = text.length(); n > 0; n = text.lastIndexOf(';', n - 1)) {
             if (n == text.length() - 1 || n < text.length() - 1 && text.charAt(n + 1) != ' ')
                 throw new IllegalArgumentException("inappropriate use of separators");
@@ -187,51 +186,114 @@ public class AdditionalUnderlyings implements Serializable {
             double spc = parseDouble(text, k + 1, n);
             if (Double.isNaN(spc))
                 throw new IllegalArgumentException("SPC is missing or infinite");
-            map.put(text.substring(j + 1, k), Double.valueOf(spc));
+            map.put(text.substring(j + 1, k), spc);
         }
         return Collections.unmodifiableMap(map);
     }
 
-    static double parseDouble(String text, int k, int n) {
-        if (k >= n)
-            return Double.NaN;
-        boolean negative = false;
-        double amount = 0; // Accumulates mantissa omitting decimal dot.
-        double divisor = 0; // Power of 10 for each digit after decimal dot.
-        while (k < n) {
-            char c = text.charAt(k++);
-            if (c == '-') {
-                if (negative || amount > 0) // Minus sign is not first character.
-                    return Double.NaN;
-                negative = true;
-                continue;
-            }
-            if (c == '.') {
-                if (divisor > 0) // Second dot detected.
-                    return Double.NaN;
-                divisor = 1; // Start to compute power of 10.
-                continue;
-            }
-            if (c < '0' || c > '9')
-                return Double.NaN;
-            amount = amount * 10 + (c - '0');
-            divisor = divisor * 10;
-        }
-        if (divisor > 1)
-            amount = amount / divisor;
-        if (negative)
-            amount = -amount;
-        return amount;
+    static String formatDouble(double value) {
+        return MathUtil.formatDoublePrecision(value, MAX_FORMAT_PRECISION);
     }
 
-    static String formatDouble(double d) {
-        if (d == (double) (long) d)
-            return Long.toString((long) d);
-        if (d >= 0.01 && d < 1000000)
-            return Double.toString(d);
-        NumberFormat nf = NumberFormat.getInstance(Locale.US);
-        nf.setMaximumFractionDigits(20);
-        nf.setGroupingUsed(false);
-        return nf.format(d);
+    static void formatDouble(StringBuilder sb, double value) {
+        MathUtil.formatDoublePrecision(sb, value, MAX_FORMAT_PRECISION);
+    }
+
+    // ========== Implementation Details of double parsing ==========
+    private static final int MAX_POWER = 308;
+    private static final int MAX_FORMAT_PRECISION = 15;
+    private static final double[] POSITIVE_POWERS_OF_TEN = IntStream.rangeClosed(0, MAX_POWER)
+        .mapToDouble(exp -> Double.parseDouble("1E" + exp))
+        .toArray();
+
+    /**
+     * This is a special implementation that is compatible with the previously used format. Special features:
+     * - doesn't throw exceptions
+     * - returns Double.NaN for any invalid inputs
+     * - acceptable range of exponent [1E-308,1E+308]. All values more or less will be interpreted as 0 or ± infinity
+     */
+    static double parseDouble(String text, int start, int end) {
+        if (start >= end) {
+            return Double.NaN;
+        }
+
+        double mantissa = 0; // Accumulates mantissa omitting decimal dot.
+        boolean floatingPoint = false;
+        boolean hasDigit = false;
+        int divider = 0;
+
+        char ch = text.charAt(start);
+        boolean negative = ch == '-';
+        int i = negative || ch == '+' ? start + 1 : start;
+
+        for (; i < end; i++) {
+            ch = text.charAt(i);
+            if (ch >= '0' && ch <= '9') {
+                if (floatingPoint) {
+                    divider++;
+                }
+                mantissa = mantissa * 10 + (ch - '0');
+                hasDigit = true;
+            } else if (ch == '.') {
+                if (floatingPoint) {
+                    return Double.NaN; // Second dot detected.
+                }
+                floatingPoint = true;
+            } else {
+                break;
+            }
+        }
+
+        if (!hasDigit) {
+            return Double.NaN;
+        }
+
+        int exponent = 0;
+        if (i < end) {
+            exponent = parseExponent(ch, text, i, end);
+            if (exponent == Integer.MAX_VALUE) {
+                return Double.NaN;
+            }
+        }
+
+        return evaluate(negative, mantissa, divider, exponent);
+    }
+
+    private static int parseExponent(char ch, CharSequence text, int start, int end) {
+        int i = start + 1;
+        if ((ch != 'E' && ch != 'e') || i >= end) {
+            return Integer.MAX_VALUE; // use for all invalid strings
+        }
+
+        int exp = 0;
+        ch = text.charAt(i);
+        boolean negativeExp = ch == '-';
+        if (negativeExp || ch ==  '+') {
+            i++;
+        }
+
+        for (; i < end; i++) {
+            ch = text.charAt(i);
+            if (ch < '0' || ch > '9') {
+                return Integer.MAX_VALUE;
+            }
+            exp = exp * 10 + (ch - '0');
+        }
+        return negativeExp ? -exp : exp;
+    }
+
+    private static double evaluate(boolean negative, double mantissa, int divider, int exponent) {
+        int adjustedExponent = exponent - divider;
+        if (adjustedExponent > MAX_POWER || adjustedExponent < -MAX_POWER) {
+            if (mantissa == 0 || adjustedExponent < -MAX_POWER) {
+                return negative ? -0.0 : +0.0;
+            } else {
+                return negative ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY;
+            }
+        }
+        double value = adjustedExponent >= 0 ?
+            mantissa * POSITIVE_POWERS_OF_TEN[adjustedExponent] :
+            mantissa / POSITIVE_POWERS_OF_TEN[-adjustedExponent];
+        return negative ? -value : value;
     }
 }

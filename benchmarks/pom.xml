@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.327</version>
+        <version>3.328</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -50,6 +50,16 @@
             <groupId>com.devexperts.qd</groupId>
             <artifactId>dxfeed-ondemand</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.devexperts.qd</groupId>
+            <artifactId>dxfeed-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.randelshofer</groupId>
+            <artifactId>fastdoubleparser</artifactId>
+            <version>0.9.0</version>
         </dependency>
     </dependencies>
 

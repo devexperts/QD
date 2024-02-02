@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -129,8 +129,8 @@ public class MathUtilTest {
             // if a == Integer.MIN_VALUE and b == -1 then d == Integer.MIN_VALUE due to overflow and r == 0
             // although mathematically incorrect (must be d == -Integer.MIN_VALUE) it is still true that a == b * d + r due to overflow
             if (a != Integer.MIN_VALUE || b != -1)
-                assertTrue((double) a == (double) b * (double) d + (double) r); // check for overflows
-            assertTrue(a == b * d + r);
+                assertEquals(a, (double) b * (double) d + (double) r, 0.0); // check for overflows
+            assertEquals(a, b * d + r);
             assertTrue(r >= 0);
             assertTrue(b == Integer.MIN_VALUE || r < Math.abs(b));
         }
@@ -147,7 +147,7 @@ public class MathUtilTest {
             // although mathematically incorrect (must be d == -Long.MIN_VALUE) it is still true that a == b * d + r due to overflow
             if (a != Long.MIN_VALUE || b != -1)
                 assertTrue(Math.abs((double) b * (double) d + (double) r - (double) a) <= 5); // check for overflows
-            assertTrue(a == b * d + r);
+            assertEquals(a, b * d + r);
             assertTrue(r >= 0);
             assertTrue(b == Long.MIN_VALUE || r < Math.abs(b));
         }

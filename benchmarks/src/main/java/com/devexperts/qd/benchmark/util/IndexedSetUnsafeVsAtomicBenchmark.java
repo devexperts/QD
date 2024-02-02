@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -24,7 +24,6 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
-import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import sun.misc.Unsafe;
 
@@ -44,7 +43,7 @@ import java.util.stream.Stream;
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @Fork(1)
 @State(Scope.Thread)
-public class IndexedSetUnsafeVsAtomic {
+public class IndexedSetUnsafeVsAtomicBenchmark {
 
     private static final int SEED = 42;
 
@@ -65,6 +64,7 @@ public class IndexedSetUnsafeVsAtomic {
     // imitates IndexedSet.Core implementation
     public interface Core<T> {
         public void set(int index, T v);
+
         public T get(int index);
     }
 
@@ -242,9 +242,10 @@ public class IndexedSetUnsafeVsAtomic {
     }
 
     public static void main(String[] args) throws RunnerException {
-        Options opt = new OptionsBuilder()
-            .include(IndexedSetUnsafeVsAtomic.class.getSimpleName())
-            .build();
-        new Runner(opt).run();
+        new Runner(
+            new OptionsBuilder()
+                .include(IndexedSetUnsafeVsAtomicBenchmark.class.getSimpleName())
+                .build()
+        ).run();
     }
 }

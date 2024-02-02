@@ -1,3 +1,12 @@
+QDS 3.328:
+
+* [QD-1405] IPF: PRICE_INCREMENTS: Increase the supported decimal precision up to 1.0E-18
+* [QD-1523] Tools: FileWriter with option "tmpdir" uses different file permissions
+* [QD-1501] Fix ClientSocketSource races
+* [QD-1516] [dxLink] Provide the ability to run on Android
+* [QD-1512] BUG FIX: QDS tape-writing facilities works incorrect with tmpDir param
+* [QD-1514] [Webservice] Align dxfeed.properties for JMX parameters
+
 QDS 3.327:
 
 * [QD-1508] [dxLink] Provide the ability to run under java version older than 8

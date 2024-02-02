@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -24,17 +24,20 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @BenchmarkMode(value = Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
-@Warmup(iterations = 5, time = 5, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 5, time = 5, timeUnit = TimeUnit.SECONDS)
+@Warmup(iterations = 5, time = 5)
+@Measurement(iterations = 5, time = 5)
 @Fork(1)
 @State(Scope.Thread)
-public class WideDecimalVsDoubleToString {
+public class WideDecimalVsDoubleFormatBenchmark {
 
     public static final int BLOCK_SIZE = 10_000;
     public double[] values;
@@ -82,5 +85,13 @@ public class WideDecimalVsDoubleToString {
             sb.setLength(0);
         }
         return r;
+    }
+
+    public static void main(String[] args) throws RunnerException {
+        new Runner(
+            new OptionsBuilder()
+                .include(WideDecimalVsDoubleFormatBenchmark.class.getSimpleName())
+                .build()
+        ).run();
     }
 }

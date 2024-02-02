@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -30,9 +30,12 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 @RunWith(Parameterized.class)
@@ -76,7 +79,7 @@ public class FileWriterTest {
     }
 
     @Test
-    public void testSingleFile() {
+    public void testSingleFile() throws IOException {
         File dir = tempFolder.getRoot();
         FileWriterParams.Default params = new FileWriterParams.Default();
         params.setFormat(FileFormat.TEXT);
@@ -92,12 +95,12 @@ public class FileWriterTest {
         fileWriter.visitData(provider, MessageType.STREAM_DATA);
         fileWriter.close();
 
-        assertEquals(1, getDataFiles(dir, nameSuffix).length);
-        assertEquals(1, getDataFiles(dir, timeSuffix).length);
+        checkTestResult(dir, nameSuffix, 1);
+        checkTestResult(dir, timeSuffix, 1);
     }
 
     @Test
-    public void testWriteALotOfFiles() {
+    public void testWriteALotOfFiles() throws IOException {
         File dir = tempFolder.getRoot();
         FileWriterParams.Default params = new FileWriterParams.Default();
         params.setFormat(FileFormat.TEXT);
@@ -121,8 +124,8 @@ public class FileWriterTest {
         fileWriter.close();
 
         // Test that we have created A_LOT_OF_FILES files.
-        assertEquals(A_LOT_OF_FILES, getDataFiles(dir, NAME_SUFFIX).length);
-        assertEquals(A_LOT_OF_FILES, getDataFiles(dir, TIME_SUFFIX).length);
+        checkTestResult(dir, NAME_SUFFIX, A_LOT_OF_FILES);
+        checkTestResult(dir, TIME_SUFFIX, A_LOT_OF_FILES);
     }
 
     // [QD-771] Tools: FileWriter shall release completed files as time passes.
@@ -165,7 +168,7 @@ public class FileWriterTest {
     }
 
     @Test
-    public void testStorageLimit() throws InterruptedException {
+    public void testStorageLimit() throws InterruptedException, IOException {
         File dir = tempFolder.getRoot();
         FileWriterParams.Default params = new FileWriterParams.Default();
         params.setFormat(FileFormat.TEXT);
@@ -178,14 +181,23 @@ public class FileWriterTest {
         fileWriter = new FileWriterImpl(dir + "/" + NAME_PREFIX + "~" + NAME_SUFFIX, scheme, params).open();
         fileWriter.addSendMessageType(MessageType.STREAM_DATA);
         TestDataProvider provider = new TestDataProvider(scheme, SEED, RECORD_CNT, false);
-        for (int i = 0; i < 4; i++) {
-            Thread.sleep(1000);
+        for (int i = 0; i < 5; i++) {
+            if (i > 0) {
+                Thread.sleep(1000);
+            }
             fileWriter.visitData(provider, MessageType.STREAM_DATA);
         }
         fileWriter.close();
 
-        // Test that we have 2 files only last
-        assertEquals(2, getDataFiles(dir, NAME_SUFFIX).length);
-        assertEquals(2, getDataFiles(dir, TIME_SUFFIX).length);
+        checkTestResult(dir, NAME_SUFFIX, 2);
+        checkTestResult(dir, TIME_SUFFIX, 2);
+    }
+
+    private void checkTestResult(File dir, String suffix, int expectedFiles) throws IOException {
+        File[] files = getDataFiles(dir, suffix);
+        assertEquals(expectedFiles, files.length);
+        for (File file: files) {
+            assertTrue("Empty file: " + file.getAbsolutePath(), Files.size(file.toPath()) > 0);
+        }
     }
 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,6 +15,7 @@ import com.devexperts.util.MathUtil;
 
 import java.io.Serializable;
 import java.math.RoundingMode;
+import java.util.Arrays;
 
 /**
  * Represents rules for valid price quantization for a given instrument on a certain exchange.
@@ -38,7 +39,6 @@ import java.math.RoundingMode;
 public class PriceIncrements implements Serializable {
     private static final long serialVersionUID = 0;
 
-
     // ========== Static API ==========
 
     /**
@@ -46,7 +46,9 @@ public class PriceIncrements implements Serializable {
      */
     public static final PriceIncrements EMPTY = new PriceIncrements("");
 
-    private static final PriceIncrements[] cache = new PriceIncrements[239]; // perfect hash for widespread values
+    private static final int MAX_ATTEMPTS = 5;
+    private static final int CACHE_SIZE = 256;
+    private static final PriceIncrements[] cache = new PriceIncrements[CACHE_SIZE];
 
     /**
      * Returns an instance of price increments for specified textual representation.
@@ -55,12 +57,29 @@ public class PriceIncrements implements Serializable {
      * @throws IllegalArgumentException if text uses wrong format or contains invalid values
      */
     public static PriceIncrements valueOf(String text) {
-        if (text == null || text.isEmpty() || AdditionalUnderlyings.parseDouble(text, 0, text.length()) == 0)
+        if (isEmptyPriceIncrements(text)) {
             return EMPTY;
-        int h = Math.abs(text.hashCode() % cache.length);
-        PriceIncrements pi = cache[h]; // Atomic read.
-        if (pi == null || !text.equals(pi.text))
-            cache[h] = pi = new PriceIncrements(text);
+        }
+
+        int hashCode = text.hashCode();
+        int position = Math.abs(hashCode % CACHE_SIZE);
+        int index = position;
+        int limit = MAX_ATTEMPTS;
+        PriceIncrements pi;
+        do {
+            pi = cache[index];
+            if (pi == null) {
+                // use separate var to strong guaranty of returned value for all env
+                cache[index] = pi = new PriceIncrements(text);
+                return pi;
+            }
+            if (pi.text.hashCode() == hashCode && pi.text.equals(text)) {
+                return pi;
+            }
+        } while (limit-- > 0 && (index = ((index + 1) % CACHE_SIZE)) != position);
+
+        // use separate var to strong guaranty of returned value for all env
+        cache[index] = pi = new PriceIncrements(text);
         return pi;
     }
 
@@ -70,7 +89,7 @@ public class PriceIncrements implements Serializable {
      * @throws IllegalArgumentException if increment uses invalid value
      */
     public static PriceIncrements valueOf(double increment) {
-        if (Double.isNaN(increment) || Double.isInfinite(increment) || increment < 0)
+        if (!Double.isFinite(increment) || increment < 0)
             throw new IllegalArgumentException("increment is not a finite positive number");
         if (increment == 0)
             return EMPTY;
@@ -86,7 +105,6 @@ public class PriceIncrements implements Serializable {
     public static PriceIncrements valueOf(double[] increments) {
         return valueOf(format(increments));
     }
-
 
     // ========== Instance API ==========
 
@@ -164,8 +182,10 @@ public class PriceIncrements implements Serializable {
      * If price is a breakpoint between two ranges and direction is 0 then minimum of upward and downward increments is returned.
      */
     public double getPriceIncrement(double price, int direction) {
-        if (price < 0)
-            return getPriceIncrement(-price, -direction);
+        if (price < 0) {
+            price = -price;
+            direction = -direction;
+        }
         if (Double.isNaN(price))
             return getPriceIncrement();
         double[] increments = cacheIncrements();
@@ -191,13 +211,13 @@ public class PriceIncrements implements Serializable {
      * Returns price precision for the price range which contains specified price.
      * Price precision is a number of decimal digits after decimal point that are needed
      * to represent all valid prices in the given price range.
-     * This method returns price precision in the interval [0, 10] inclusive.
+     * This method returns price precision in the interval [0, 18] inclusive.
      * If price is Not-a-Number (NaN) then first price precision is returned.
      * If price is a breakpoint between two ranges then precision of lower range is returned.
      */
     public int getPricePrecision(double price) {
         if (price < 0)
-            return getPricePrecision(-price);
+            price = -price;
         if (Double.isNaN(price))
             return getPricePrecision();
         double[] precisions = cachePrecisions();
@@ -299,7 +319,7 @@ public class PriceIncrements implements Serializable {
     public double incrementPrice(double price, int direction, double step) {
         if (direction == 0)
             throw new IllegalArgumentException("direction is 0");
-        if (Double.isNaN(step) || Double.isInfinite(step) || step < 0)
+        if (!Double.isFinite(step) || step < 0)
             throw new IllegalArgumentException("step is not a finite positive number");
         double delta = Math.max(getPriceIncrement(price, direction), step);
         return roundPrice(direction > 0 ? price + delta : price - delta);
@@ -317,51 +337,85 @@ public class PriceIncrements implements Serializable {
         return text;
     }
 
-
     // ========== Internal Implementation ==========
-
-    private static final int MAXIMUM_PRECISION = 10;
-    private static final double MINIMUM_INCREMENT = 1e-10;
+    private static final int MAXIMUM_PRECISION = 18;
+    private static final double MINIMUM_INCREMENT = 1e-18;
     private static final double RELATIVE_EPS = 1e-6;
+
+    private static boolean isEmptyPriceIncrements(String text) {
+        if (text == null || text.isEmpty()) {
+            return true;
+        }
+
+        boolean point = false; // exist point in number
+        boolean nil = false; // exist 0 in number
+        int length = text.length();
+        char ch = text.charAt(0);
+
+        for (int i = ch == '-' || ch == '+' ? 1 : 0; i < length; i++) {
+            ch = text.charAt(i);
+            if (ch == '0') {
+                nil = true;
+            } else if (ch == '.' && !point) {
+                point = true;
+            } else {
+                return false;
+            }
+        }
+        return nil;
+    }
 
     private static String format(double[] increments) {
         if (increments == null || increments.length == 0 || increments.length == 1 && increments[0] == 0)
             return "";
         if ((increments.length & 1) == 0)
-            throw new IllegalArgumentException("increments length is even");
+            throw new IllegalArgumentException("Increments length is even, increments: " + Arrays.toString(increments));
         StringBuilder sb = new StringBuilder();
         for (int n = 0; n < increments.length; n += 2) {
             double inc = increments[n];
-            if (Double.isNaN(inc) || Double.isInfinite(inc) || inc < MINIMUM_INCREMENT)
-                throw new IllegalArgumentException("increment is not a finite positive number");
-            sb.append(AdditionalUnderlyings.formatDouble(inc));
+            if (!Double.isFinite(inc) || inc < MINIMUM_INCREMENT) {
+                throw new IllegalArgumentException("Increment is not a finite positive number, inc: " + inc + ", " +
+                    "increments: " + Arrays.toString(increments));
+            }
+            AdditionalUnderlyings.formatDouble(sb, inc);
             if (n + 1 < increments.length) {
                 double limit = increments[n + 1];
-                if (Double.isNaN(limit) || Double.isInfinite(limit) || limit < MINIMUM_INCREMENT)
-                    throw new IllegalArgumentException("limit is not a finite positive number");
-                if (n > 0 && limit <= increments[n - 1] + 2 * MINIMUM_INCREMENT)
-                    throw new IllegalArgumentException("increments are not ordered properly");
-                sb.append(" ").append(AdditionalUnderlyings.formatDouble(limit)).append("; ");
+                if (!Double.isFinite(limit) || limit < MINIMUM_INCREMENT) {
+                    throw new IllegalArgumentException("Limit is not a finite positive number, limit: " + limit +
+                        ", " + "increments: " + Arrays.toString(increments));
+                }
+                if (n > 0 && limit <= increments[n - 1] + 2 * MINIMUM_INCREMENT) {
+                    throw new IllegalArgumentException("Increments are not ordered properly, increments: " +
+                        Arrays.toString(increments));
+                }
+                sb.append(" ");
+                AdditionalUnderlyings.formatDouble(sb, limit);
+                sb.append("; ");
             }
         }
         return sb.toString();
     }
 
     private static double[] parse(String text) {
-        if (text == null || text.isEmpty())
-            return new double[]{0};
+        if (text == null || text.isEmpty()) {
+            return new double[] {0};
+        }
+        int count = 0;
+        int length = text.length();
+        for (int i = 0; i < length; i++) {
+            if (text.charAt(i) == ';') {
+                count++;
+            }
+        }
+        double[] increments = new double[2 * count + 1];
         int n = 0;
-        for (int i = text.lastIndexOf(';'); i >= 0; i = text.lastIndexOf(';', i - 1))
-            n++;
-        double[] increments = new double[2 * n + 1];
-        n = 0;
         for (int i = 0;;) {
             int k = text.indexOf(';', i);
             if (k < 0) {
                 if (text.charAt(i) == ' ' || text.charAt(text.length() - 1) == ' ')
                     throw new IllegalArgumentException("inappropriate use of separators");
                 double inc = AdditionalUnderlyings.parseDouble(text, i, text.length());
-                if (Double.isNaN(inc) || Double.isInfinite(inc) || inc < 0 || n > 0 && inc < MINIMUM_INCREMENT)
+                if (!Double.isFinite(inc) || inc < 0 || n > 0 && inc < MINIMUM_INCREMENT)
                     throw new IllegalArgumentException("increment is not a finite positive number");
                 increments[n++] = inc;
                 break;
@@ -372,10 +426,10 @@ public class PriceIncrements implements Serializable {
             if (j <= i || j >= k - 1 || j < text.lastIndexOf(' ', k - 1))
                 throw new IllegalArgumentException("inappropriate use of separators");
             double inc = AdditionalUnderlyings.parseDouble(text, i, j);
-            if (Double.isNaN(inc) || Double.isInfinite(inc) || inc < MINIMUM_INCREMENT)
+            if (!Double.isFinite(inc) || inc < MINIMUM_INCREMENT)
                 throw new IllegalArgumentException("increment is not a finite positive number");
             double limit = AdditionalUnderlyings.parseDouble(text, j + 1, k);
-            if (Double.isNaN(limit) || Double.isInfinite(limit) || limit < MINIMUM_INCREMENT)
+            if (!Double.isFinite(limit) || limit < MINIMUM_INCREMENT)
                 throw new IllegalArgumentException("limit is not a finite positive number");
             if (n > 1 && limit <= increments[n - 1] + 2 * MINIMUM_INCREMENT)
                 throw new IllegalArgumentException("increments are not ordered properly");
@@ -393,7 +447,7 @@ public class PriceIncrements implements Serializable {
         for (int i = 0; i < increments.length; i += 2)
             precisions[i] = computePrecision(increments[i]);
         for (int i = 1; i < increments.length; i += 2)
-            precisions[i] = increments[i] + Math.min(increments[i - 1], increments[i + 1]) * RELATIVE_EPS;
+            precisions[i] = roundDecimal(increments[i] + Math.min(increments[i - 1], increments[i + 1]) * RELATIVE_EPS);
         return precisions;
     }
 
@@ -409,27 +463,32 @@ public class PriceIncrements implements Serializable {
     }
 
     private double ceil(double price, double increment) {
-        return MathUtil.roundDecimal(Math.ceil(price / increment - RELATIVE_EPS) * increment);
+        return roundDecimal(Math.ceil(price / increment - RELATIVE_EPS) * increment);
     }
 
     private double floor(double price, double increment) {
-        return MathUtil.roundDecimal(Math.floor(price / increment + RELATIVE_EPS) * increment);
+        return roundDecimal(Math.floor(price / increment + RELATIVE_EPS) * increment);
     }
 
     private double halfCeil(double price, double increment) {
-        return MathUtil.roundDecimal(Math.floor(price / increment + 0.5 + RELATIVE_EPS) * increment);
+        return roundDecimal(Math.floor(price / increment + 0.5 + RELATIVE_EPS) * increment);
     }
 
     private double halfFloor(double price, double increment) {
-        return MathUtil.roundDecimal(Math.ceil(price / increment - 0.5 - RELATIVE_EPS) * increment);
+        return roundDecimal(Math.ceil(price / increment - 0.5 - RELATIVE_EPS) * increment);
     }
 
     private double halfEven(double price, double increment) {
         double scaled = price / increment;
         double res = Math.floor(scaled);
         double rem = scaled - res;
-        if (rem >= 0.5 + RELATIVE_EPS || rem > 0.5 - RELATIVE_EPS && Math.floor(res / 2) * 2 != res)
+        if (rem >= 0.5 + RELATIVE_EPS || rem > 0.5 - RELATIVE_EPS && Math.floor(res / 2) * 2 != res) {
             res++;
-        return MathUtil.roundDecimal(res * increment);
+        }
+        return roundDecimal(res * increment);
+    }
+
+    private static double roundDecimal(double value) {
+        return MathUtil.roundPrecision(value, 15, RoundingMode.HALF_UP);
     }
 }

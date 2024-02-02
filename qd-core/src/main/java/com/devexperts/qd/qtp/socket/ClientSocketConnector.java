@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -354,7 +354,7 @@ public class ClientSocketConnector extends AbstractMessageConnector
         for (int i = 0; i < stripeCount; i++) {
             QDFilter stripeFilter = (stripeCount > 1) ? striper.getStripeFilter(i) : null;
             newHandlers[i] = reuseSource ?
-                SocketHandler.createFromClosed(oldHandlers[i]) :
+                createSocketHandlerFromClosed(oldHandlers[i]) :
                 new SocketHandler(this, new ClientSocketSource(this), stripeFilter);
             newHandlers[i].setCloseListener(this);
         }
@@ -411,7 +411,7 @@ public class ClientSocketConnector extends AbstractMessageConnector
 
         for (int i = 0; i < handlers.length; i++) {
             if (handlers[i] == handler) {
-                handlers[i] = SocketHandler.createFromClosed(handler);
+                handlers[i] = createSocketHandlerFromClosed(handler);
                 handlers[i].setCloseListener(this);
                 handlers[i].start();
                 break;
@@ -476,5 +476,18 @@ public class ClientSocketConnector extends AbstractMessageConnector
             throw new IllegalArgumentException("Application connection created without QDEndpoint: " + factory);
 
         return endpoint;
+    }
+
+    /**
+     * Recreate a new handler after closing the previous one.
+     * Handlers are not restartable since they are tightly coupled with blocking I/O threads.
+     */
+    SocketHandler createSocketHandlerFromClosed(SocketHandler closedHandler) {
+        Objects.requireNonNull(closedHandler, "closedHandler");
+        if (closedHandler.getHandlerState() != MessageConnectorState.DISCONNECTED)
+            throw new IllegalStateException("Cannot reopen non-closed socket handler!");
+
+        // Preserve socket source state to keep connection order contract on reconnect
+        return new SocketHandler(this, closedHandler.getSocketSource(), closedHandler.getStripeFilter());
     }
 }

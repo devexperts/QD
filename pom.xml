@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.327</version>
+    <version>3.328</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -178,6 +178,7 @@
         <netty.version>4.1.101.Final</netty.version>
         <reflections.version>0.10.2</reflections.version>
         <jsr305.version>3.0.0</jsr305.version>
+        <openbeans.version>1.0.2</openbeans.version>
     </properties>
 
     <profiles>

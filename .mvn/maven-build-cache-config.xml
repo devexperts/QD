@@ -15,6 +15,7 @@
                 <dirName>generated-sources</dirName>
                 <dirName>test-classes</dirName>
                 <dirName>generated-test-sources</dirName>
+                <dirName>for-classloader-test</dirName> <!-- qd-sample tests specific -->
             </dirNames>
         </attachedOutputs>
     </configuration>
@@ -107,6 +108,11 @@
             </plugins>
 
             <executions>
+                <execution artifactId="license-maven-plugin">
+                    <execIds>
+                        <execId>license-check</execId>
+                    </execIds>
+                </execution>
                 <execution artifactId="maven-antrun-plugin">
                     <execIds>
                         <execId>install-artifact-file</execId>

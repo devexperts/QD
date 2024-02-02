@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -66,11 +66,12 @@ class ParallelWriter implements Closeable {
         checkThrowable();
     }
 
-    public BufferedOutput open(Opener opener) {
+    public BufferedOutput open(Opener opener, Runnable closeHandler) {
         if (output.isOpen || closed.get())
             throw new IllegalStateException();
         output.isOpen = true;
         output.opener = opener;
+        output.closeHandler = closeHandler;
         return output;
     }
 
@@ -93,6 +94,7 @@ class ParallelWriter implements Closeable {
 
     private static class Task {
         Opener opener;
+        Runnable closeHandler;
         ChunkList chunks;
         boolean close;
     }
@@ -102,6 +104,7 @@ class ParallelWriter implements Closeable {
         private boolean isOpen;
         private boolean closeOnFlush;
         private Opener opener;
+        private Runnable closeHandler;
         private int taskQueueSize;
 
         Output(int taskQueueSize) {
@@ -155,9 +158,13 @@ class ParallelWriter implements Closeable {
                 }
             }
             writeTask.opener = opener;
+            writeTask.closeHandler = closeHandler;
             writeTask.chunks = chunks;
             writeTask.close = closeOnFlush;
             opener = null;
+            if (closeOnFlush) {
+                closeHandler = null;
+            }
             closeOnFlush = false;
             todoQueue.put(writeTask);
             checkThrowable();
@@ -219,6 +226,9 @@ class ParallelWriter implements Closeable {
                     OutputStream toBeClosed = out;
                     out = null;
                     toBeClosed.close();
+                    if (task.closeHandler != null) {
+                        task.closeHandler.run();
+                    }
                 }
             }
         }

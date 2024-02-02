@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -29,7 +29,6 @@ import com.devexperts.util.SystemProperties;
 
 import java.io.IOException;
 import java.net.Socket;
-import java.util.Objects;
 
 /**
  * The <code>SocketHandler</code> handles standard socket using blocking API.
@@ -74,17 +73,12 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
         this.verbose = VERBOSE != null && connector.getName().contains(VERBOSE);
     }
 
-    /**
-     * Recreate new handler after closing the previous one.
-     * Handlers are not restartable since they are tightly coupled with blocking I/O threads.
-     */
-    static SocketHandler createFromClosed(SocketHandler closedHandler) {
-        Objects.requireNonNull(closedHandler, "closedHandler");
-        if (closedHandler.getHandlerState() != MessageConnectorState.DISCONNECTED)
-            throw new IllegalStateException("Cannot reopen non-closed socket handler!");
+    public SocketSource getSocketSource() {
+        return socketSource;
+    }
 
-        //FIXME socketSource is not safe!
-        return new SocketHandler(closedHandler.connector, closedHandler.socketSource, closedHandler.stripeFilter);
+    public QDFilter getStripeFilter() {
+        return stripeFilter;
     }
 
     public String getHost() {

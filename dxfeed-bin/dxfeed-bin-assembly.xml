@@ -97,6 +97,7 @@
                 <include>com.fasterxml.jackson.core:jackson-core</include>
                 <include>org.reflections:reflections</include>
                 <include>javax.xml.bind:jaxb-api</include>
+                <include>me.champeau.openbeans:openbeans</include>
             </includes>
             <unpack>false</unpack>
         </dependencySet>

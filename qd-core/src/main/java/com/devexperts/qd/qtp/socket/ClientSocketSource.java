@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 
 /**
  * Implements load-balancing algorithm for {@link ClientSocketConnector} by resolving host
@@ -56,8 +57,9 @@ class ClientSocketSource extends SocketSource {
                 Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
                 if (networkInterfaces != null) {
                     for (NetworkInterface ni : Collections.list(networkInterfaces)) {
-                        for (InetAddress ia : Collections.list(ni.getInetAddresses()))
+                        for (InetAddress ia : Collections.list(ni.getInetAddresses())) {
                             LOCAL_ADDRESSES.add(ia.getHostAddress());
+                        }
                     }
                 }
             } catch (SocketException e) {
@@ -68,32 +70,32 @@ class ClientSocketSource extends SocketSource {
 
     private final ClientSocketConnector connector;
     private final Logging log;
-    private final ReconnectHelper resolveHelper;
     private final String hostNames;
     private final int port;
     private final ConnectOrder connectOrder;
 
     private final List<SocketAddress> parsedAddresses;
 
+    private final ReconnectHelper resolveHelper;
     private final Map<SocketAddress, ReconnectHelper> reconnectHelpers = new HashMap<>();
-    private final List<SocketAddress> resolvedAddresses = new ArrayList<>();
+    private List<SocketAddress> resolvedAddresses = new ArrayList<>();
     private int currentAddress;
 
     ClientSocketSource(ClientSocketConnector connector) {
         this.connector = connector;
-        this.log = connector.getLogging();
-        this.resolveHelper = new ReconnectHelper(connector.getReconnectDelay());
-        this.hostNames = connector.getHost();
-        this.port = connector.getPort();
+        log = connector.getLogging();
+        resolveHelper = new ReconnectHelper(connector.getReconnectDelay());
+        hostNames = connector.getHost();
+        port = connector.getPort();
         ConnectOrder connectOrder = connector.getConnectOrder();
         if (connectOrder == null)
             connectOrder = DEFAULT_CONNECT_ORDER;
         this.connectOrder = connectOrder;
-        this.parsedAddresses = SocketUtil.parseAddressList(hostNames, port);
+        parsedAddresses = SocketUtil.parseAddressList(hostNames, port);
     }
 
     @Override
-    public void markForImmediateRestart() {
+    public synchronized void markForImmediateRestart() {
         resolveHelper.reset();
         reconnectHelpers.clear();
     }
@@ -103,9 +105,8 @@ class ClientSocketSource extends SocketSource {
         SocketAddress address = nextAddress();
         if (address == null)
             return null;
-        ReconnectHelper reconnectHelper = reconnectHelpers.get(address);
-        if (reconnectHelper == null)
-            reconnectHelpers.put(address, reconnectHelper = new ReconnectHelper(connector.getReconnectDelay()));
+
+        ReconnectHelper reconnectHelper = getReconnectHelper(address);
 
         reconnectHelper.sleepBeforeConnection();
         log.info("Connecting to " + LogUtil.hideCredentials(address));
@@ -144,13 +145,20 @@ class ClientSocketSource extends SocketSource {
                 }
             return null;
         }
-        if (connectOrder.isResetOnConnect()) {
-            resolveHelper.reset();
-            resolvedAddresses.clear();
-            currentAddress = 0;
-        }
+        if (connectOrder.isResetOnConnect())
+            reset();
         log.info("Connected to " + LogUtil.hideCredentials(address));
         return new SocketInfo(socket, address);
+    }
+
+    private synchronized ReconnectHelper getReconnectHelper(SocketAddress address) {
+        return reconnectHelpers.computeIfAbsent(address, k -> new ReconnectHelper(connector.getReconnectDelay()));
+    }
+
+    private synchronized void reset() {
+        resolveHelper.reset();
+        resolvedAddresses.clear();
+        currentAddress = 0;
     }
 
     private static String readLine(InputStream in) throws IOException {
@@ -158,32 +166,42 @@ class ClientSocketSource extends SocketSource {
         if (c < 0)
             return null;
         StringBuilder sb = new StringBuilder();
-        for (; c >= 0 && c != '\n'; c = in.read())
+        for (; c >= 0 && c != '\n'; c = in.read()) {
             if (c != '\r')
                 sb.append((char) c);
+        }
         return sb.toString();
     }
 
     private SocketAddress nextAddress() throws InterruptedException {
-        currentAddress++;
-        if (currentAddress >= resolvedAddresses.size()) {
-            resolveHelper.sleepBeforeConnection();
-            resolveAddresses();
-            currentAddress = 0;
+        synchronized (this) {
+            currentAddress++;
+            if (currentAddress < resolvedAddresses.size())
+                return resolvedAddresses.get(currentAddress);
         }
-        if (resolvedAddresses.isEmpty())
-            return null;
 
-        return resolvedAddresses.get(currentAddress);
+        // Resolve a fresh list of addresses. Long operation, so out of sync block
+        resolveHelper.sleepBeforeConnection();
+        List<SocketAddress> addresses = resolveAddresses();
+
+        synchronized (this) {
+            resolvedAddresses = addresses;
+            currentAddress = 0;
+            if (addresses.isEmpty())
+                return null;
+            reconnectHelpers.keySet().retainAll(addresses); // drop stale reconnect helpers
+            return resolvedAddresses.get(currentAddress);
+        }
     }
 
     public String toString() {
         return LogUtil.hideCredentials(hostNames) + (port == 0 ? "" : ":" + port);
     }
 
-    private void resolveAddresses() {
+    @Nonnull
+    private List<SocketAddress> resolveAddresses() {
         // resolve addresses
-        Set<SocketAddress> addresses = new LinkedHashSet<>();
+        Set<SocketAddress> addressSet = new LinkedHashSet<>();
         for (SocketAddress parsedAddress : parsedAddresses) {
             // Resolve all host addresses
             log.info("Resolving IPs for " + LogUtil.hideCredentials(parsedAddress.host));
@@ -193,25 +211,19 @@ class ClientSocketSource extends SocketSource {
                         .map(address -> new SocketAddress(address.getHostAddress(), parsedAddress.port))
                         .collect(Collectors.toList());
                 shuffleAddresses(hostAddresses);
-                addresses.addAll(hostAddresses);
+                addressSet.addAll(hostAddresses);
             } catch (UnknownHostException e) {
                 // We may reside under HTTPS proxy without having access to DNS server.
                 // In this case let the proxy try to resolve the required address later.
                 // Otherwise we will just get another UnknownHostException later anyway.
                 log.warn("Failed to resolve IPs for " + LogUtil.hideCredentials(parsedAddress.host));
-                addresses.add(new SocketAddress(parsedAddress.host, parsedAddress.port));
+                addressSet.add(new SocketAddress(parsedAddress.host, parsedAddress.port));
             }
         }
-
-        // Prepare a final list of resolved addresses
-        resolvedAddresses.clear();
-        resolvedAddresses.addAll(addresses);
-        if (!addresses.isEmpty())
-            reconnectHelpers.keySet().retainAll(addresses);
-
-        // Special shuffle for multi-address case
+        List<SocketAddress> addresses = new ArrayList<>(addressSet);
         if (connectOrder.isRandomized())
-            shuffleAddresses(resolvedAddresses);
+            shuffleAddresses(addresses);
+        return addresses;
     }
 
     private void shuffleAddresses(List<SocketAddress> addresses) {

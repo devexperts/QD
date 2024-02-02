@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -44,9 +44,12 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -60,11 +63,15 @@ import javax.annotation.concurrent.GuardedBy;
 public class FileWriterImpl extends AbstractMessageVisitor implements Closeable {
     private static final Logging log = Logging.getLogging(FileWriterImpl.class);
 
-    private static final int MOVE_FILE_CHECK_ATTEMPTS = 5;
-    private static final long MOVE_FILE_ATTEMPT_TIMEOUT = 10;
+    private static final boolean NO_HEADER_AND_FOOTER =
+        SystemProperties.getBooleanProperty(FileWriterImpl.class, "noHeaderAndFooter", false);
+    private static final int TASK_QUEUE_SIZE =
+        SystemProperties.getIntProperty(FileWriterImpl.class, "taskQueueSize", 4);
 
-    private static final boolean NO_HEADER_AND_FOOTER = SystemProperties.getBooleanProperty(FileWriterImpl.class, "noHeaderAndFooter", false);
-    private static final int TASK_QUEUE_SIZE = SystemProperties.getIntProperty(FileWriterImpl.class, "taskQueueSize", 4);
+    private static final boolean IS_POSIX = FileSystems.getDefault().supportedFileAttributeViews().contains("posix");
+    private static final FileAttribute<?>[] POSIX_FS_FILE_ATTRIBUTES =
+        new FileAttribute[] {PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-rw-rw-"))};
+    private static final FileAttribute<?>[] OTHER_FS_FILE_ATTRIBUTES = new FileAttribute[0];
 
     // Parameters
     private final DataScheme scheme;
@@ -105,7 +112,6 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
     private volatile long nextSplitTime; // == Long.MAX_VALUE if not in split mode
 
     private String dataFilePath;        // destination data file path
-    private String timeFilePath;        // destination time file path
     private String currentDataFilePath; // current data file path
     private String currentTimeFilePath; // current time file path
     private Path tmpDirPath;            // tmp dir path
@@ -289,41 +295,70 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
      */
     private synchronized void reopenFiles(String dataFilePath) throws IOException {
         closeCurrentFiles(nextSplitTime); // close all previously open files
-        if (storageLimited)
+        if (storageLimited && tmpDirPath == null) {
             deleteOldFiles();
+        }
         position = 0;
         lastTime = 0; // have not written timestamp to the new file yet
 
+        Runnable dataCloseHandler;
         this.dataFilePath = dataFilePath;
         if (tmpDirPath != null) {
             FileUtils.checkOrCreateDirectory(tmpDirPath);
             currentDataFilePath = createTmpFile(tmpDirPath, dataFilePath);
+            dataCloseHandler = getCloseHandler(currentDataFilePath, dataFilePath);
         } else {
             currentDataFilePath = dataFilePath;
+            dataCloseHandler = null;
         }
 
         log.info("Writing tape data to " + LogUtil.hideCredentials(currentDataFilePath) +
             (compression == StreamCompression.NONE ? "" : " with " + compression));
-        dataOut = reuseOutputStream(dataFilePath, dataWriter);
+
+        dataOut = reuseOutputStream(
+            currentDataFilePath, dataWriter, Paths.get(dataFilePath).getFileName().toString(), dataCloseHandler);
         if (time.isUsingTimeFile()) {
-            timeFilePath = getTimeFilePath(dataFilePath);
-            currentTimeFilePath = tmpDirPath != null ? createTmpFile(tmpDirPath, timeFilePath) : timeFilePath;
+            Runnable timeCloseHandler;
+            String timeFilePath = getTimeFilePath(dataFilePath);
+            if (tmpDirPath != null) {
+                currentTimeFilePath = createTmpFile(tmpDirPath, timeFilePath);
+                timeCloseHandler = getCloseHandler(currentTimeFilePath, timeFilePath);
+            } else {
+                currentTimeFilePath = timeFilePath;
+                timeCloseHandler = null;
+            }
+
             log.info("Writing tape time to " + LogUtil.hideCredentials(currentTimeFilePath) +
                 (compression == StreamCompression.NONE ? "" : " with " + compression));
-            timeOut = new PrintWriter(reuseOutputStream(currentTimeFilePath, timeWriter));
+
+            timeOut = new PrintWriter(reuseOutputStream(
+                currentTimeFilePath, timeWriter, Paths.get(timeFilePath).getFileName().toString(), timeCloseHandler));
         } else {
             timeOut = null;
         }
         writeHeader();
     }
 
+    private Runnable getCloseHandler(String sourcePath, String destinationPath) {
+        return () -> {
+            moveFile(sourcePath, destinationPath);
+            if (storageLimited) {
+                deleteOldFiles();
+            }
+        };
+    }
+
     private String createTmpFile(Path dir, String originFile) throws IOException {
         String filName = Paths.get(originFile).getFileName().toString();
-        Path path = Files.createTempFile(dir, filName, null);
+        FileAttribute<?>[] fileAttributes = IS_POSIX && (dir.getFileSystem() == FileSystems.getDefault()) ?
+            POSIX_FS_FILE_ATTRIBUTES : OTHER_FS_FILE_ATTRIBUTES;
+        Path path = Files.createTempFile(dir, filName, null, fileAttributes);
         return path.toString();
     }
 
-    private BufferedOutput reuseOutputStream(final String path, ParallelWriter writeThread) {
+    private BufferedOutput reuseOutputStream(
+        final String path, ParallelWriter writeThread, String compressedName, Runnable closeHandler)
+    {
         return writeThread.open(() -> {
             Path currentFilePath = Paths.get(path);
             Path parentDirectory = currentFilePath.getParent();
@@ -331,9 +366,8 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
                 FileUtils.checkOrCreateDirectory(parentDirectory);
             }
             return compression.compress(
-                Files.newOutputStream(currentFilePath),
-                compression.stripExtension(currentFilePath.getFileName().toString()));
-        });
+                Files.newOutputStream(currentFilePath), compression.stripExtension(compressedName));
+        }, closeHandler);
     }
 
     private void deleteOldFiles() {
@@ -401,10 +435,8 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
             log.error("Failed to write tape file", e);
         } finally {
             FileUtils.tryClose(dataOut, currentDataFilePath);
-            moveFile(currentDataFilePath, dataFilePath);
             dataOut = null;
             FileUtils.tryClose(timeOut, currentTimeFilePath);
-            moveFile(currentTimeFilePath, timeFilePath);
             timeOut = null;
         }
     }
@@ -418,23 +450,15 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
         if (sourcePath.equals(destinationPath)) {
             return; // no tmp dir
         }
+        log.info("Move source file: " + sourcePath + " to destination file: " + destinationPath);
         try {
             Path parentFolder = destinationPath.getParent();
             if (parentFolder != null) {
                 FileUtils.checkOrCreateDirectory(parentFolder);
             }
-            for (int i = 0; !Files.exists(sourcePath) && i < MOVE_FILE_CHECK_ATTEMPTS; i++) {
-                log.warn("Tape file is not yet available: " + sourcePath + ", attempt: " + (i + 1));
-                // exponential backoff
-                Thread.sleep(Math.round(Math.exp(i) * MOVE_FILE_ATTEMPT_TIMEOUT));
-            }
             FileUtils.tryAtomicFileMove(sourcePath, destinationPath);
         } catch (IOException e) {
-            log.error("Failed to create tmp directory or to move tape file: " +
-                sourceFile + " to destination dir: " + destinationPath, e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.error("Waiting for the tape file was interrupted : " + sourcePath, e);
+            log.error("Failed to create directory or to move file", e);
         }
     }
 
