@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -156,7 +156,7 @@ public class DxLinkClientWebSocketConnector extends AbstractMessageConnector
 
     @Override
     public synchronized void start() {
-        if (transportConnection != null)
+        if (transportConnection != null || isClosed())
             return;
         log.info("Starting DxLinkClientWebSocketConnector to " + LogUtil.hideCredentials(getAddress()));
         // create default stats instance if specific one was not provided.

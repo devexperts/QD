@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,6 +15,7 @@ import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.monitoring.Monitored;
 import com.devexperts.qd.qtp.AbstractMessageConnector;
 import com.devexperts.qd.qtp.MessageConnector;
+import com.devexperts.qd.qtp.MessageConnector.Bindable;
 import com.devexperts.qd.qtp.MessageConnectorState;
 import com.devexperts.qd.qtp.help.MessageConnectorProperty;
 import com.devexperts.qd.qtp.help.MessageConnectorSummary;
@@ -35,15 +36,13 @@ import java.util.concurrent.atomic.AtomicReference;
     info = "TCP/IP server socket connector with scalable non-blocking API.",
     addressFormat = "nio:<port>"
 )
-public class NioServerConnector extends AbstractMessageConnector implements NioServerConnectorMBean {
+public class NioServerConnector extends AbstractMessageConnector implements Bindable, NioServerConnectorMBean {
     // We need at least two threads, because one of the threads is used to wait on selector if needed.
     private static final int MIN_THREAD_COUNT = 2;
 
     private static final int DEFAULT_THREAD_COUNT = // defaults to #processors + 1
         SystemProperties.getIntProperty("com.devexperts.qd.qtp.nio.ThreadCount", // legacy property name
             Runtime.getRuntime().availableProcessors() + 1, MIN_THREAD_COUNT, Integer.MAX_VALUE);
-
-    private static final String ANY_BIND_ADDRESS = "*";
 
     private int port;
     // 0 stands for unlimited number of connections
@@ -73,7 +72,9 @@ public class NioServerConnector extends AbstractMessageConnector implements NioS
     }
 
     @Override
-    public void start() {
+    public synchronized void start() {
+        if (isClosed())
+            return;
         NioCore oldCore = core.getAndSet(null);
         if (oldCore != null && !oldCore.isClosed())
             return;
@@ -87,8 +88,9 @@ public class NioServerConnector extends AbstractMessageConnector implements NioS
         if (core.compareAndSet(null, newCore)) {
             log.info("Starting NioServerConnector to " + LogUtil.hideCredentials(getAddress()));
             newCore.start();
-        } else
+        } else {
             newCore.close();
+        }
     }
 
     @Override
@@ -124,11 +126,12 @@ public class NioServerConnector extends AbstractMessageConnector implements NioS
     public EndpointStats retrieveCompleteEndpointStats() {
         EndpointStats stats = super.retrieveCompleteEndpointStats();
         NioCore core = this.core.get(); // Atomic read.
-        if (core != null)
+        if (core != null) {
             for (NioConnection connection : core.connections.keySet()) {
                 stats.addActiveConnectionCount(1);
                 stats.addConnectionStats(connection.connectionStats);
             }
+        }
         return stats;
     }
 
@@ -159,8 +162,7 @@ public class NioServerConnector extends AbstractMessageConnector implements NioS
     @Override
     @MessageConnectorProperty("Network interface address to bind socket to")
     public synchronized void setBindAddr(String newBindAddress) throws UnknownHostException {
-        if (newBindAddress == null || newBindAddress.isEmpty())
-            newBindAddress = ANY_BIND_ADDRESS;
+        newBindAddress = Bindable.normalizeBindAddr(newBindAddress);
         if (!newBindAddress.equals(this.bindAddressString)) {
             log.info("Setting bindAddr=" + LogUtil.hideCredentials(newBindAddress));
             this.bindAddress = newBindAddress.equals(ANY_BIND_ADDRESS) ? null : InetAddress.getByName(newBindAddress);

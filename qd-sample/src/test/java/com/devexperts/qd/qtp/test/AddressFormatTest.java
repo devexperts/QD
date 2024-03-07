@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -95,6 +95,7 @@ public class AddressFormatTest {
         assertEquals(1, connectors.size());
         MessageConnector clientConnector = connectors.get(0);
         assertEquals(ClientSocketConnector.class, clientConnector.getClass());
+        assertEquals(clientConnector.getAddress(), "nio:7777");
         assertEquals(((ClientSocketConnector) clientConnector).getHost(), "nio");
     }
 

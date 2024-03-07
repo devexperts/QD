@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,14 @@
  */
 package com.devexperts.util;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.zone.ZoneRules;
+import java.util.List;
 import java.util.TimeZone;
 
 /**
@@ -93,5 +101,56 @@ public class TimeUtil {
         if (!SKIP_TIME_ZONE_VALIDATION && !timeZone.getID().equals(tz))
             throw new IllegalArgumentException("Unknown time-zone: " + tz);
         return timeZone;
+    }
+
+    /**
+     * Calculating the daily time relative to the current timestamp, taking into account the time zone.
+     * If the current time is less than {@code localTime} result will be {@code localTime} in current day.
+     * If the current time is more or equal than {@code localTime} result will be {@code localTime} in the next day in that time.
+     * All results are calculated for the {@code zoneId} time zone.
+     * <p>We have two special cases of season time shifting:
+     * <ul>
+     *   <li>Transition day from summer to winter contains additional hour but result is predictable
+     *   and will correspond with time in that timezone.</li>
+     *   <li>Transition day from winter to summer has less than 24 hours per day and
+     *   if {@code localTime} points to nonexistent time the nearest exist time in future will be chosen</li>
+     * </ul>
+     *
+     * @param currentTime current epoch millis
+     * @param localTime desired daily time in LocalTime format
+     * @param zoneId time zone for calculating daily time
+     * @return the next daily time for the specified timezone in unix format in ms
+     */
+    public static long computeDailyTime(long currentTime, LocalTime localTime, ZoneId zoneId) {
+        LocalDate localDate = LocalDateTime.ofInstant(Instant.ofEpochMilli(currentTime), zoneId).toLocalDate();
+        ZoneRules zoneRules = zoneId.getRules();
+        long computed = computeDayTime(localDate, localTime, zoneRules);
+        if (computed > currentTime) {
+            return computed;
+        }
+        return computeDayTime(localDate.plusDays(1), localTime, zoneRules);
+    }
+
+    private static long computeDayTime(LocalDate localDate, LocalTime localTime, ZoneRules zoneRules) {
+        LocalDateTime localDateTime = LocalDateTime.of(localDate, localTime);
+        List<ZoneOffset> validOffsets = zoneRules.getValidOffsets(localDateTime);
+        if (validOffsets.isEmpty()) {
+            // forward jump of time (aka from 02:00 to 03:00) - take the moment of jump as proper time
+            return zoneRules.getTransition(localDateTime).getInstant().toEpochMilli();
+        }
+        // either normal day with 1 offset or backward jump of time (aka from 03:00 to 02:00) with 2 offsets
+        // take first offset so that proper time occurs during first passage of local time
+        return localDateTime.toInstant(validOffsets.get(0)).toEpochMilli();
+    }
+
+    /**
+     * Parse the string representing the local time in string format
+     * {@link java.time.format.DateTimeFormatter#ISO_LOCAL_TIME}. A null or empty string interpreted as null.
+     * @param localTime in string format.
+     * @return LocalTime or null
+     * @throws java.time.format.DateTimeParseException if the text cannot be parsed
+     */
+    public static LocalTime parseLocalTime(String localTime) {
+        return localTime == null || localTime.isEmpty() ? null : LocalTime.parse(localTime);
     }
 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,6 +14,9 @@ package com.devexperts.qd.qtp;
 import com.devexperts.io.ChunkPool;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimePeriod;
+import com.devexperts.util.TimeUtil;
+
+import java.time.LocalTime;
 
 /**
  * This class contains key buffer and connection constants that affect performance of QTP.
@@ -62,4 +65,17 @@ public class QTPConstants {
      */
     public static final int MAX_MESSAGE_SIZE =
         SystemProperties.getIntProperty("com.devexperts.qd.qtp.maxMessageSize", 100_000);
+
+    /**
+     * Defines the connection recovery time for all client socket connections.
+     * This can be overridden in the connection string by means of 'restoreTime' property
+     */
+    public static final LocalTime CONNECTION_RESTORE_TIME =
+        TimeUtil.parseLocalTime(System.getProperty("com.devexperts.qd.qtp.connectionRestoreTime"));
+
+    /**
+     * Defines the graceful delay for different socket activities
+     */
+    public static final long GRACEFUL_DELAY =
+        TimePeriod.valueOf(SystemProperties.getProperty("com.devexperts.qd.qtp.gracefulDelay", "5m")).getTime();
 }

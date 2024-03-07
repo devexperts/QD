@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -118,8 +118,8 @@ public class QDEndpoint implements Closeable {
      * <p> For routine case, always use {@link Builder#build()}.
      */
     protected QDEndpoint(String name, DataScheme scheme, QDStats rootStats,
-        List<QDCollector.Factory> collectors, boolean withEventTimeSequence, boolean storeEverything
-    ) {
+        List<QDCollector.Factory> collectors, boolean withEventTimeSequence, boolean storeEverything)
+    {
         this.name = name;
         this.scheme = scheme;
         this.rootStats = rootStats;
@@ -381,6 +381,32 @@ public class QDEndpoint implements Closeable {
         }
     }
 
+    public final QDEndpoint removeConnectors(Collection<MessageConnector> connectors) {
+        synchronized (lock) {
+            if (closed)
+                return this;
+            removeConnectorsImpl(connectors);
+            onConnectorsChanged();
+        }
+        return this;
+    }
+
+    // extension point, SYNC(lock)
+    protected void removeConnectorsImpl(Collection<MessageConnector> connectors) {
+        for (MessageConnector connector : connectors) {
+            if (!connector.getUser().isEmpty())
+                connector.setUser("");
+            if (!connector.getPassword().isEmpty())
+                connector.setPassword("");
+        }
+        this.connectors.removeAll(connectors);
+        for (MessageConnectorListener listener : connectorListeners) {
+            for (MessageConnector connector : connectors) {
+                connector.removeMessageConnectorListener(listener);
+            }
+        }
+    }
+
     // SYNC(lock)
     private void onConnectorsChanged() {
         for (Plugin plugin : plugins)
@@ -457,17 +483,9 @@ public class QDEndpoint implements Closeable {
 
     // extension point, SYNC(lock)
     protected void cleanupConnectorsImpl(Collection<MessageConnector> connectors) {
-        // stop all connectors
-        stopConnectors();
-        // close any QDStats associated with connector
         for (MessageConnector connector : connectors) {
-            QDStats connectorStats = connector.getStats();
-            if (connectorStats != null)
-                connectorStats.close();
+            connector.close();
         }
-        // remove installed listeners
-        for (MessageConnectorListener listener : connectorListeners)
-            MessageConnectors.removeMessageConnectorListener(connectors, listener);
     }
 
     public QDEndpoint addMessageConnectionListener(MessageConnectorListener listener) {

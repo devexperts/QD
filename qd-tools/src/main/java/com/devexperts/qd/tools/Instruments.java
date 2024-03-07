@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,6 +16,7 @@ import com.devexperts.io.URLInputStream;
 import com.devexperts.mars.common.MARSEndpoint;
 import com.devexperts.services.ServiceProvider;
 import com.devexperts.util.LogUtil;
+import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimeUtil;
 import com.dxfeed.ipf.InstrumentProfile;
 import com.dxfeed.ipf.InstrumentProfileField;
@@ -62,6 +63,10 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 )
 @ServiceProvider
 public class Instruments extends AbstractTool {
+
+    private static final boolean WRITE_EMPTY_RESULT_FILE =
+        SystemProperties.getBooleanProperty("com.devexperts.qd.tools.instruments.writeEmptyResults", false);
+
     private final OptionString bizdate = new OptionString('b', "bizdate", "<date>",
         "Business date for filtering of active options, format YYYY-MM-DD, applicable only to OCC.xml file.");
     private final Option osi = new Option('o', "osi",
@@ -501,7 +506,7 @@ public class Instruments extends AbstractTool {
     private List<InstrumentProfile> write(List<InstrumentProfile> profiles, String file) {
         try {
             long time = System.currentTimeMillis();
-            if (!profiles.isEmpty()) {
+            if (!profiles.isEmpty() || WRITE_EMPTY_RESULT_FILE) {
                 new InstrumentProfileWriter().writeToFile(file, profiles);
             }
             log.info("Wrote " + profiles.size() + " profiles to " + LogUtil.hideCredentials(file) +

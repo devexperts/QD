@@ -1,3 +1,21 @@
+QDS 3.329:
+
+* [QD-1528] MessageConnector removal support
+* [QD-1531] New order source ARCA
+* [QD-1527] [EXPERIMENTAL] Common bind address handling for server connectors
+* [QD-1517] Add ability to set connector address via JMX
+  - setHost and setPort in JMX Bean have been removed - use setAddress
+  - setHost and setPort on the connector no longer work - use the setAddress
+* [QD-1415] Connector restore: return to normal state after failover to backup
+  - added parameter to client socket connector "restoreTime=HH:mm", available for connectOrder "priority" or "ordered"
+  - added JMX operations: restoreNow() and restoreGracefully("30s") to restore the connection manually
+  - added JVM parameter "com.devexperts.qd.qtp.connectionRestoreTime=HH:mm" - restoreTime applied for all connections
+    if not override in connection params, disabled by default
+  - added JVM parameter "com.devexperts.qd.qtp.gracefulDelay=5m" - default graceful delay 5m
+* [QD-1522] [Tools] qds instruments additional option to write zero result file on disk
+  - added boolean JVM option "-Dcom.devexperts.qd.tools.instruments.writeEmptyResults" (default=false)
+* [QD-1526] [Build] Speedup slow unit tests: FastDoubleUtilTest & AdditionalUnderlyingsTest
+
 QDS 3.328:
 
 * [QD-1405] IPF: PRICE_INCREMENTS: Increase the supported decimal precision up to 1.0E-18

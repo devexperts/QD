@@ -35,6 +35,7 @@ public abstract class AbstractMessageConnector implements MessageConnector {
     private int threadPriority = Thread.NORM_PRIORITY;
     private volatile boolean restarting;
     private volatile EndpointStats endpointStatsSnapshot = new EndpointStats();
+    private volatile boolean closed;
 
     /**
      * Constructs new abstract message connector.
@@ -230,6 +231,8 @@ public abstract class AbstractMessageConnector implements MessageConnector {
 
     @Override
     public synchronized void restart() {
+        if (isClosed())
+            return;
         restarting = true;
         try {
             restartImpl(true);
@@ -309,9 +312,30 @@ public abstract class AbstractMessageConnector implements MessageConnector {
     }
 
     @Override
-    public void addMessageConnectorListener(MessageConnectorListener listener) {
-        if (listener == null)
-            throw new NullPointerException();
+    public final synchronized void close() {
+        if (isClosed())
+            return;
+        closed = true;
+        closeImpl();
+    }
+
+    protected void closeImpl() {
+        QDStats stats = getStats();
+        if (stats != null)
+            stats.close();
+        stop();
+        messageConnectorListeners.clear();
+    }
+
+    protected boolean isClosed() {
+        return closed;
+    }
+
+    @Override
+    public synchronized void addMessageConnectorListener(MessageConnectorListener listener) {
+        Objects.requireNonNull(listener);
+        if (isClosed())
+            return;
         messageConnectorListeners.add(listener);
     }
 
@@ -323,12 +347,13 @@ public abstract class AbstractMessageConnector implements MessageConnector {
     public void notifyMessageConnectorListeners() {
         if (restarting)
             return; // do not notify while restarting is in process.
-        for (MessageConnectorListener listener : messageConnectorListeners)
+        for (MessageConnectorListener listener : messageConnectorListeners) {
             try {
                 listener.stateChanged(this);
             } catch (Throwable t) {
                 log.error("Error in MessageConnectorListener", t);
             }
+        }
     }
 
     /**

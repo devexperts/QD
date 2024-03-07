@@ -26,17 +26,29 @@ import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.MessageConnectorState;
 import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.qtp.QDEndpoint;
+import com.devexperts.qd.qtp.QTPConstants;
 import com.devexperts.qd.qtp.help.MessageConnectorProperty;
 import com.devexperts.qd.qtp.help.MessageConnectorSummary;
 import com.devexperts.qd.stats.QDStats;
+import com.devexperts.qd.util.DxTimer;
 import com.devexperts.qd.util.QDConfig;
 import com.devexperts.services.Services;
 import com.devexperts.transport.stats.EndpointStats;
 import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimeFormat;
+import com.devexperts.util.TimePeriod;
+import com.devexperts.util.TimeUtil;
 
+import java.io.IOException;
+import java.net.Socket;
+import java.time.LocalTime;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
+import java.util.Random;
+import java.util.stream.Collectors;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 
@@ -52,18 +64,20 @@ public class ClientSocketConnector extends AbstractMessageConnector
 {
     private static final String AUTO_STRIPE_CONFIG = "auto";
 
-    protected String host;
-    protected int port;
+    protected String address;
+    protected List<SocketAddress> socketAddresses;
     protected String proxyHost = SystemProperties.getProperty("https.proxyHost", "");
     protected int proxyPort = SystemProperties.getIntProperty("https.proxyPort", 80);
     protected ConnectOrder connectOrder;
+    protected LocalTime connectionRestoreTime = QTPConstants.CONNECTION_RESTORE_TIME;
     protected SymbolStriper striper = MonoStriper.INSTANCE; // never null
     protected String stripeConfig;
     protected boolean useTls;
     protected TrustManager trustManager;
 
-    protected volatile boolean active;
-    protected volatile SocketHandler[] handlers;
+    private volatile boolean active;
+    private volatile SocketHandler[] handlers;
+    private DxTimer.Cancellable connectionRestoreTask;
 
     /**
      * Creates new client socket connector.
@@ -87,55 +101,64 @@ public class ClientSocketConnector extends AbstractMessageConnector
      * @param port TCP port to connect to
      * @throws NullPointerException if {@code factory} or {@code host} is {@code null}
      */
+    @Deprecated
     public ClientSocketConnector(ApplicationConnectionFactory factory, String host, int port) {
+        this(factory, host + ":" + port);
+    }
+
+    /**
+     * Creates new client socket connector.
+     *
+     * @param factory application connection factory to use
+     * @param address list of addresses
+     * @throws NullPointerException if {@code factory} or {@code address} is {@code null}
+     */
+    public ClientSocketConnector(ApplicationConnectionFactory factory, String address) {
         super(factory);
-        if (host == null)
-            throw new NullPointerException();
+        Objects.requireNonNull(address, "address");
+        this.address = address;
+        this.socketAddresses = Collections.unmodifiableList(SocketUtil.parseAddressList(address));
         QDConfig.setDefaultProperties(this, ClientSocketConnectorMBean.class, MessageConnector.class.getName());
         QDConfig.setDefaultProperties(this, ClientSocketConnectorMBean.class, ClientSocketConnector.class.getName());
-        this.host = host;
-        this.port = port;
     }
 
     @Override
     public String getAddress() {
-        return host + ":" + port;
+        return address;
     }
 
     @Override
+    public synchronized void setAddress(String address) {
+        if (!address.equals(this.address)) {
+            log.info("Setting address=" + LogUtil.hideCredentials(address));
+            this.socketAddresses = Collections.unmodifiableList(SocketUtil.parseAddressList(address));
+            this.address = address;
+            reconfigure();
+        }
+    }
+
+    @Override
+    @Deprecated
     public String getHost() {
-        return host;
+        int index = address.lastIndexOf(':');
+        return index > 0 ? address.substring(0, index) : address;
     }
 
-    /**
-     * Changes connection host string and restarts connector
-     * if new host string is different from the old one and the connector was running.
-     */
-    @Override
-    public synchronized void setHost(String host) {
-        if (!host.equals(this.host)) { // also checks for null
-            log.info("Setting host=" + LogUtil.hideCredentials(host));
-            this.host = host;
-            reconfigure();
-        }
+    @Deprecated
+    public void setHost(String host) {
+        log.warn("setHost method does nothing. Will be removed soon. Please use the setAddress instead.");
     }
 
     @Override
+    @Deprecated
     public int getPort() {
-        return port;
+        int index = address.lastIndexOf(':');
+        return Integer.parseInt(address.substring(index + 1));
     }
 
-    /**
-     * Changes connection port and restarts connector
-     * if new port is different from the old one and the connector was running.
-     */
-    @Override
-    public synchronized void setPort(int port) {
-        if (port != this.port) {
-            log.info("Setting port=" + port);
-            this.port = port;
-            reconfigure();
-        }
+    @Deprecated
+    public void setPort(int port) {
+        log.warn("setPort method does nothing. Will be removed soon. Please use the setAddress instead.");
     }
 
     @Override
@@ -183,6 +206,111 @@ public class ClientSocketConnector extends AbstractMessageConnector
             this.connectOrder = connectOrder;
             reconfigure();
         }
+    }
+
+    @Override
+    public String getRestoreTime() {
+        LocalTime current = this.connectionRestoreTime;
+        return current != null ? current.toString() : null;
+    }
+
+    @Override
+    @MessageConnectorProperty("Set restore time in ISO-8601 extended local time format")
+    public synchronized void setRestoreTime(String restoreTime) {
+        LocalTime restoreLocalTime = TimeUtil.parseLocalTime(restoreTime);
+        if (Objects.equals(this.connectionRestoreTime, restoreLocalTime)) {
+            return;
+        }
+
+        log.info("Setting restoreTime=" + restoreTime);
+        this.connectionRestoreTime = restoreLocalTime;
+        // need to ignore first call, don't create restore thread until the connection becomes active
+        if (isActive()) {
+            startRestoreConnectorTask();
+        }
+    }
+
+    @Override
+    public synchronized String restoreNow() {
+        log.info("Starting restoreNow");
+        SocketHandler[] handlers = this.handlers; // Atomic read.
+
+        if (handlers == null || !isActive() || !isValidOrderRestoreConnector()) {
+            String message = "restoreNow was skipped due to inactive status or inappropriate connect order";
+            log.info(message);
+            return message;
+        }
+
+        return "restoreNow executed with result:\n" +
+            Arrays.stream(handlers).map(this::restoreConnection).collect(Collectors.joining("\n"));
+    }
+
+    @Override
+    public String restoreGracefully(String gracefulDelay) {
+        return restoreGracefully(TimePeriod.valueOf(gracefulDelay).getTime());
+    }
+
+    private String restoreGracefully(long gracefulDelay) {
+        log.info("Starting restoreGraceful(" + gracefulDelay + ")");
+        SocketHandler[] handlers = this.handlers; // Atomic read.
+
+        if (handlers == null || !isActive() || !isValidOrderRestoreConnector()) {
+            String message = "restoreGraceful was skipped due to inactive status or inappropriate connect order";
+            log.info(message);
+            return message;
+        }
+
+        StringBuilder message = new StringBuilder("restoreGraceful executed with result:");
+        Random random = new Random();
+        for (SocketHandler socketHandler : handlers) {
+            long delayTime = random.nextInt(Math.toIntExact(gracefulDelay));
+            String msg = "Scheduling restore for " + socketHandler + " at " +
+                TimeFormat.DEFAULT.withMillis().format(System.currentTimeMillis() + delayTime);
+            log.info(msg);
+            message.append("\n").append(msg);
+            DxTimer.getInstance().runOnce(() -> restoreConnection(socketHandler), delayTime);
+        }
+        return message.toString();
+    }
+
+    private String restoreConnection(SocketHandler handler) {
+        String status;
+        ClientSocketSource clientSocketSource = (ClientSocketSource) handler.getSocketSource();
+        if (clientSocketSource.checkAndResetConnection()) {
+            try {
+                log.info("Restoring connection: " + handler);
+                handler.close();
+                status = "restored";
+            } catch (Exception e) {
+                log.error("Failed to restore connection: " + handler, e);
+                status = "failed";
+            }
+        } else {
+            log.info("Skipped restore connection: " + handler);
+            status = "skipped";
+        }
+        return handler + ": " + status;
+    }
+
+    private void startRestoreConnectorTask() {
+        log.info("Start startRestoreConnectorTask");
+
+        stopRestoreConnectorTask();
+        if (connectionRestoreTime != null && isValidOrderRestoreConnector()) {
+            connectionRestoreTask = DxTimer.getInstance().runDaily(() -> restoreGracefully(QTPConstants.GRACEFUL_DELAY),
+                connectionRestoreTime);
+        }
+    }
+
+    private void stopRestoreConnectorTask() {
+        if (connectionRestoreTask != null) {
+            connectionRestoreTask.cancel();
+            connectionRestoreTask = null;
+        }
+    }
+
+    private boolean isValidOrderRestoreConnector() {
+        return connectOrder == ConnectOrder.PRIORITY || connectOrder == ConnectOrder.ORDERED;
     }
 
     @Override
@@ -329,7 +457,7 @@ public class ClientSocketConnector extends AbstractMessageConnector
 
     @Override
     public synchronized void start() {
-        if (isActive())
+        if (isActive() || isClosed())
             return;
 
         log.info("Starting ClientSocketConnector to " + LogUtil.hideCredentials(getAddress()));
@@ -366,6 +494,12 @@ public class ClientSocketConnector extends AbstractMessageConnector
         for (int i = 0; i < stripeCount; i++) {
             newHandlers[i].start();
         }
+
+        startRestoreConnectorTask();
+    }
+
+    protected Socket createSocket(String host, int port) throws IOException {
+        return new Socket(host, port);
     }
 
     @Override
@@ -383,8 +517,11 @@ public class ClientSocketConnector extends AbstractMessageConnector
         SocketHandler[] oldHandlers = handlers; // Atomic read
         if (oldHandlers == null)
             return null;
-        if (fullStop)
+        if (fullStop) {
+            // disabling the reconnection scheduler if it was started
+            stopRestoreConnectorTask();
             handlers = null;
+        }
 
         Arrays.stream(oldHandlers).forEach(SocketHandler::close);
         return () -> {

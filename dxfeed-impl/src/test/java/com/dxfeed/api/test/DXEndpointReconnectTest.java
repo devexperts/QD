@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,6 +17,7 @@ import com.devexperts.qd.qtp.socket.ClientSocketConnector;
 import com.devexperts.qd.qtp.socket.ServerSocketTestHelper;
 import com.devexperts.test.ThreadCleanCheck;
 import com.devexperts.test.TraceRunner;
+import com.devexperts.util.SynchronizedIndexedSet;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.DXFeedEventListener;
@@ -25,6 +26,7 @@ import com.dxfeed.api.DXPublisher;
 import com.dxfeed.api.impl.DXEndpointImpl;
 import com.dxfeed.event.market.Quote;
 import com.dxfeed.promise.Promise;
+import com.dxfeed.promise.Promises;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -80,17 +82,18 @@ public class DXEndpointReconnectTest {
     @After
     public void tearDown() throws Exception {
         log.debug("======== tearDown ========");
-        if (publishers != null)
-            publishers.forEach(DXEndpoint::close);
         if (feedEndpoint != null)
             feedEndpoint.close();
+        if (publishers != null)
+            publishers.forEach(DXEndpoint::close);
         ThreadCleanCheck.after();
     }
 
     @Test
     public void testReconnect() throws InterruptedException {
         ArrayList<String> symbols = startPublishers();
-        String address = ports.stream().map((port) -> "127.0.0.1:" + port).collect(Collectors.joining(","));
+        String address = ports.stream().map((port) -> "127.0.0.1:" + port).collect(Collectors.joining(",")) +
+            "[name=uplink,reconnectDelay=1]";
 
         feedEndpoint = createFeedEndpoint(symbols, quotes::addAll);
         log.info("Connecting...");
@@ -123,7 +126,7 @@ public class DXEndpointReconnectTest {
     private void doTestOrderedStrategy(boolean useReconnect) throws InterruptedException {
         ArrayList<String> symbols = startPublishers();
         String address = ports.stream().map((port) -> "127.0.0.1:" + port).collect(Collectors.joining(","));
-        address += "[connectOrder=ordered]";
+        address += "[name=uplink,reconnectDelay=1,connectOrder=ordered]";
 
         feedEndpoint = createFeedEndpoint(symbols, quotes::addAll);
         log.info("Connecting...");
@@ -152,49 +155,51 @@ public class DXEndpointReconnectTest {
 
         ArrayList<String> symbols = startPublishers();
         String address = ports.stream().map((port) -> "127.0.0.1:" + port).collect(Collectors.joining(","));
-        address += "[connectOrder=priority]";
+        address += "[name=uplink,reconnectDelay=1,connectOrder=priority]";
 
-        // disconnect first half of publishers
+        Set<Integer> blockedPorts = SynchronizedIndexedSet.create();
+        TestConnectorFactory.addClientSocketConnectorForBlockedPorts(testId + ":", blockedPorts);
+
+        // block first half of publishers
         int deadPubCount = PUB_COUNT / 2;
         for (int i = 0; i < deadPubCount; i++) {
-            publishers.get(i).disconnect();
+            blockedPorts.add(ports.get(i));
         }
 
         feedEndpoint = createFeedEndpoint(symbols, quotes::addAll);
         log.info("Connecting...");
-        feedEndpoint.connect(address);
-        ((DXEndpointImpl) feedEndpoint).getQDEndpoint().getConnectors().get(0).setReconnectDelay(10);
+        feedEndpoint.connect(testId + ":" + address);
 
-        // sequentially disconnect remaining publishers except the last two
+        ClientSocketConnector connector = getFirstConnector(feedEndpoint);
+
+        // sequentially block remaining publishers except the last two and force client to reconnect
         for (int i = deadPubCount + 1; i <= PUB_COUNT - 1; i++) {
             awaitConnection(i - deadPubCount);
             expectQuote(quotes, symbols.get(i - 1));
+            assertEquals(ports.get(i - 1).intValue(), connector.getCurrentPort());
 
             if (i < PUB_COUNT - 1) {
                 connectedSomewhere = new CountDownLatch(1);
                 // force reconnecting to the next publisher
-                log.info("Killing publisher " + symbols.get(i - 1));
-                publishers.get(i - 1).disconnect();
+                log.info("Reconnecting from publisher " + symbols.get(i - 1));
+                blockedPorts.add(ports.get(i - 1));
+                assertEquals(ports.get(i - 1).intValue(), connector.getCurrentPort());
+                connector.reconnect();
             }
         }
 
-        // reactivate second publisher (hoping that its port is still available)
-        publishers.get(1).connect(":" + ports.get(1) + "[bindAddr=127.0.0.1]");
-
-        // check that reactivated publisher is online
-        DXEndpoint secondary = createFeedEndpoint(symbols, quotes::addAll);
-        secondary.connect("127.0.0.1:" + ports.get(1));
-        expectQuote(quotes, symbols.get(1));
-        secondary.closeAndAwaitTermination();
-        quotes.clear();
-
+        // reactivate second publisher
+        blockedPorts.remove(ports.get(1));
         connectsCount.set(0);
         connectedSomewhere = new CountDownLatch(1);
-        publishers.get(PUB_COUNT - 2).disconnect();
+        blockedPorts.add(ports.get(PUB_COUNT - 2));
+        assertEquals(ports.get(PUB_COUNT - 2).intValue(), connector.getCurrentPort());
+        connector.reconnect();
 
         // should connect to the reactivated publisher
         awaitConnection(1);
         expectQuote(quotes, symbols.get(1));
+        assertEquals(ports.get(1).intValue(), connector.getCurrentPort());
     }
 
     // Test for regression introduced in QD-1215: changing connector params shall do a clean restart.
@@ -202,7 +207,7 @@ public class DXEndpointReconnectTest {
     @Test
     public void testConnectorDirectUpdate() throws InterruptedException {
         ArrayList<String> symbols = startPublishers();
-        String address = "127.0.0.1:" + ports.get(0);
+        String address = "127.0.0.1:" + ports.get(0) + "[name=uplink,reconnectDelay=1]";
 
         feedEndpoint = createFeedEndpoint(symbols, quotes::addAll);
         log.info("Connecting: " + address);
@@ -218,7 +223,7 @@ public class DXEndpointReconnectTest {
                 connectedSomewhere = new CountDownLatch(1);
                 address = "127.0.0.1:" + ports.get(i);
                 log.info("Resetting address: " + address);
-                connector.setHost(address);
+                connector.setAddress(address);
             }
         }
     }
@@ -230,11 +235,11 @@ public class DXEndpointReconnectTest {
         return (ClientSocketConnector) connectors.get(0);
     }
 
-    private void addPublisher(String symbol) {
+    private Promise<Integer> addPublisher(String symbol) {
         String name = testId + "-pub-" + symbol;
         Promise<Integer> port = ServerSocketTestHelper.createPortPromise(name);
         DXEndpoint endpoint = DXEndpoint.newBuilder()
-            .withRole(DXEndpoint.Role.PUBLISHER)
+            .withRole(DXEndpoint.Role.STREAM_PUBLISHER)
             .build()
             .connect(":0[name=" + name + ",bindAddr=127.0.0.1]");
         DXPublisher publisher = endpoint.getPublisher();
@@ -246,21 +251,24 @@ public class DXEndpointReconnectTest {
                 connectedSomewhere.countDown();
             });
         publishers.add(endpoint);
-        ports.add(port.await(WAIT_TIMEOUT, TimeUnit.SECONDS));
+        return port;
     }
 
     private ArrayList<String> startPublishers() {
+        List<Promise<Integer>> promises = new ArrayList<>();
         ArrayList<String> symbols = new ArrayList<>();
         for (int i = 0; i < PUB_COUNT; i++) {
             String symbol = String.valueOf((char) ('A' + i));
-            addPublisher(symbol);
+            promises.add(addPublisher(symbol));
             symbols.add(symbol);
         }
+        Promises.allOf(promises).await(WAIT_TIMEOUT, TimeUnit.SECONDS);
+        promises.stream().map(Promise::getResult).forEach(ports::add);
         return symbols;
     }
 
     private DXEndpoint createFeedEndpoint(ArrayList<String> symbols, DXFeedEventListener<Quote> listener) {
-        DXEndpoint endpoint = DXEndpoint.create(DXEndpoint.Role.FEED);
+        DXEndpoint endpoint = DXEndpoint.create(DXEndpoint.Role.STREAM_FEED);
         DXFeed feed = endpoint.getFeed();
 
         DXFeedSubscription<Quote> subscription = feed.createSubscription(Quote.class);

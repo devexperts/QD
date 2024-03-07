@@ -22,6 +22,8 @@ import static org.junit.Assert.assertTrue;
 
 public class AdditionalUnderlyingsTest {
 
+    private static final int RANDOM_GENERATED_NUMBERS = 10_000;
+
     private static final String[] FULL_PRECISION_FORMATS = {"%.0f", "%.2f", "%.5f", "%.10f", "%.14f", "%.17f"};
     private static final String[] SHORT_PRECISION_FORMATS = {"%.0f", "%.2f", "%.5f", "%.10f"};
     private static final String[] TINY_PRECISION_FORMATS = {"%.0f", "%.2f", "%.5f", "%.7f"};
@@ -132,7 +134,7 @@ public class AdditionalUnderlyingsTest {
         // use different random numbers every launch
         Random rnd = new Random();
         return Arrays.stream(precisionFormat)
-            .flatMap(precision -> rnd.doubles(1_000_000, -10, 10)
+            .flatMap(precision -> rnd.doubles(RANDOM_GENERATED_NUMBERS, -10, 10)
                 .mapToObj(value -> String.format(Locale.US, precision, value))
                 .map(value -> value + "E" +
                     (rnd.nextBoolean() ? "-" : "") + (randomExponent ? rnd.nextInt(exponent + 1) : exponent)));
@@ -142,7 +144,7 @@ public class AdditionalUnderlyingsTest {
         // use different random numbers every launch
         Random rnd = new Random();
         return Arrays.stream(precisionFormat)
-            .flatMap(precision -> rnd.doubles(1_000_000, start, end)
+            .flatMap(precision -> rnd.doubles(RANDOM_GENERATED_NUMBERS, start, end)
                 .mapToObj(value -> (rnd.nextBoolean() ? "-" : "") + String.format(Locale.US, precision, value)));
     }
 

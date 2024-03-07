@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -19,19 +19,22 @@ import com.devexperts.qd.qtp.MessageConnectorMBean;
  * @dgen.annotate method {}
  */
 public interface ClientSocketConnectorMBean extends MessageConnectorMBean {
+
+    public void setAddress(String addresses);
+
     /**
-     * Host name of IP address
+     * Host name of IP address.
+     * @deprecated To be removed, use {@link #getAddress()} instead.
      */
+    @Deprecated
     public String getHost();
 
-    public void setHost(String host);
-
     /**
-     * TCP/IP port
+     * Port number of IP address.
+     * @deprecated To be removed, use {@link #getAddress()} instead.
      */
+    @Deprecated
     public int getPort();
-
-    public void setPort(int port);
 
     /**
      * HTTP proxy host name
@@ -69,4 +72,15 @@ public interface ClientSocketConnectorMBean extends MessageConnectorMBean {
     public String getStripe();
 
     public void setStripe(String stripeConfig);
+
+    public String getRestoreTime();
+
+    public void setRestoreTime(String restoreTime);
+
+    public String restoreNow();
+
+    /**
+     * Restore connection graceful with delay in TimePeriod format
+     */
+    public String restoreGracefully(String gracefulDelay);
 }

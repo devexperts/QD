@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,10 +14,31 @@ package com.devexperts.qd.qtp;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.qd.stats.QDStats;
 
+import java.net.UnknownHostException;
+
 /**
  * Implemented by every QTP message connector.
  */
 public interface MessageConnector extends MessageConnectorMBean {
+
+    /**
+     * Common interface for connectors supporting server socket binding
+     *
+     * @deprecated Experimental API. May be subject to backward-incompatible changes in the future.
+     */
+    public interface Bindable {
+        public static final String ANY_BIND_ADDRESS = "*";
+
+        public static String normalizeBindAddr(String bindAddress) {
+            return (bindAddress == null || bindAddress.isEmpty() || bindAddress.equals(ANY_BIND_ADDRESS)) ?
+                ANY_BIND_ADDRESS : bindAddress;
+        }
+
+        public String getBindAddr();
+
+        public void setBindAddr(String bindAddress) throws UnknownHostException;
+    }
+
     /**
      * Returns {@link QDStats} associated with this message connector.
      *
@@ -59,8 +80,7 @@ public interface MessageConnector extends MessageConnectorMBean {
     /**
      * Waits until this connector stops processing (becomes quescient).
      *
-     * @implSpec
-     * Default implementation does nothing.
+     * @implSpec Default implementation does nothing.
      *
      * @throws InterruptedException if interrupted.
      */
@@ -76,4 +96,14 @@ public interface MessageConnector extends MessageConnectorMBean {
      * Returns total number of closed connector since the creation of connector.
      */
     public long getClosedConnectionCount();
+
+    /**
+     * Permanently closes connector and releases it's resources.
+     */
+    public default void close() {
+        stop();
+        QDStats stats = getStats();
+        if (stats != null)
+            stats.close();
+    }
 }

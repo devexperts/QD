@@ -70,28 +70,27 @@ class ClientSocketSource extends SocketSource {
 
     private final ClientSocketConnector connector;
     private final Logging log;
-    private final String hostNames;
-    private final int port;
     private final ConnectOrder connectOrder;
 
-    private final List<SocketAddress> parsedAddresses;
+    private final List<SocketAddress> socketAddresses;
 
     private final ReconnectHelper resolveHelper;
     private final Map<SocketAddress, ReconnectHelper> reconnectHelpers = new HashMap<>();
     private List<SocketAddress> resolvedAddresses = new ArrayList<>();
     private int currentAddress;
 
+    private volatile boolean priorityConnection;
+    private volatile boolean resetSocketSource;
+
     ClientSocketSource(ClientSocketConnector connector) {
         this.connector = connector;
         log = connector.getLogging();
         resolveHelper = new ReconnectHelper(connector.getReconnectDelay());
-        hostNames = connector.getHost();
-        port = connector.getPort();
         ConnectOrder connectOrder = connector.getConnectOrder();
         if (connectOrder == null)
             connectOrder = DEFAULT_CONNECT_ORDER;
         this.connectOrder = connectOrder;
-        parsedAddresses = SocketUtil.parseAddressList(hostNames, port);
+        this.socketAddresses = connector.socketAddresses;
     }
 
     @Override
@@ -116,13 +115,13 @@ class ClientSocketSource extends SocketSource {
             String proxyHost = connector.getProxyHost();
             if (proxyHost.length() <= 0) {
                 // connect directly
-                socket = new Socket(address.host, address.port);
+                socket = connector.createSocket(address.host, address.port);
                 configureSocket(socket);
             } else {
                 // connect via HTTPS proxy
                 int proxyPort = connector.getProxyPort();
                 log.info("Using HTTPS proxy: " + LogUtil.hideCredentials(proxyHost) + ":" + proxyPort);
-                socket = new Socket(proxyHost, proxyPort);
+                socket = connector.createSocket(proxyHost, proxyPort);
                 configureSocket(socket);
                 String connectRequest = "CONNECT " + address.host + ":" + address.port + " HTTP/1.0\r\n\r\n";
                 socket.getOutputStream().write(connectRequest.getBytes());
@@ -174,19 +173,25 @@ class ClientSocketSource extends SocketSource {
     }
 
     private SocketAddress nextAddress() throws InterruptedException {
-        synchronized (this) {
-            currentAddress++;
-            if (currentAddress < resolvedAddresses.size())
-                return resolvedAddresses.get(currentAddress);
+        if (!resetSocketSource) {
+            synchronized (this) {
+                currentAddress++;
+                if (currentAddress < resolvedAddresses.size()) {
+                    priorityConnection = false;
+                    return resolvedAddresses.get(currentAddress);
+                }
+            }
+            resolveHelper.sleepBeforeConnection();
         }
 
         // Resolve a fresh list of addresses. Long operation, so out of sync block
-        resolveHelper.sleepBeforeConnection();
         List<SocketAddress> addresses = resolveAddresses();
 
         synchronized (this) {
             resolvedAddresses = addresses;
             currentAddress = 0;
+            priorityConnection = true;
+            resetSocketSource = false;
             if (addresses.isEmpty())
                 return null;
             reconnectHelpers.keySet().retainAll(addresses); // drop stale reconnect helpers
@@ -194,15 +199,25 @@ class ClientSocketSource extends SocketSource {
         }
     }
 
+    boolean checkAndResetConnection() {
+        boolean resetConnection = !priorityConnection;
+        if (resetConnection) {
+            resetSocketSource = true;
+        }
+        return resetConnection;
+    }
+
     public String toString() {
-        return LogUtil.hideCredentials(hostNames) + (port == 0 ? "" : ":" + port);
+        return LogUtil.hideCredentials(
+            socketAddresses.stream().map(SocketAddress::toString).collect(Collectors.joining(","))
+        );
     }
 
     @Nonnull
     private List<SocketAddress> resolveAddresses() {
         // resolve addresses
         Set<SocketAddress> addressSet = new LinkedHashSet<>();
-        for (SocketAddress parsedAddress : parsedAddresses) {
+        for (SocketAddress parsedAddress : socketAddresses) {
             // Resolve all host addresses
             log.info("Resolving IPs for " + LogUtil.hideCredentials(parsedAddress.host));
             try {

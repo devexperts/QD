@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -399,7 +399,7 @@ public class MessageConnectors {
         ApplicationConnectionFactory acFactory, QDStats parentStats, URL base)
         throws AddressSyntaxException
     {
-        String address = pa.address;
+        String address = pa.address.trim();
         // let's check if this address is a configuration URL/file
         try {
             URL addressUrl = new URL(base, address);
@@ -442,15 +442,16 @@ public class MessageConnectors {
         } catch (NumberFormatException e) {
             throw new AddressSyntaxException("Port number format error in \"" + address + "\"");
         }
-        address = address.substring(0, portSep).trim();
 
         // Create message connector
-        if (address.isEmpty()) {
-            ServerSocketConnector connector = new ServerSocketConnector(acFactory, port);
-            return Collections.singletonList(new ConnectorWithConfig(connector, pa.props, QDStats.SType.SERVER_SOCKET_CONNECTOR));
+        if (portSep > 0) {
+            ClientSocketConnector connector = new ClientSocketConnector(acFactory, address);
+            return Collections.singletonList(
+                new ConnectorWithConfig(connector, pa.props, QDStats.SType.CLIENT_SOCKET_CONNECTOR));
         } else {
-            ClientSocketConnector connector = new ClientSocketConnector(acFactory, address, port);
-            return Collections.singletonList(new ConnectorWithConfig(connector, pa.props, QDStats.SType.CLIENT_SOCKET_CONNECTOR));
+            ServerSocketConnector connector = new ServerSocketConnector(acFactory, port);
+            return Collections.singletonList(
+                new ConnectorWithConfig(connector, pa.props, QDStats.SType.SERVER_SOCKET_CONNECTOR));
         }
     }
 

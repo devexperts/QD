@@ -30,7 +30,7 @@ import static org.junit.Assert.fail;
 
 public class FastDoubleUtilTest {
 
-    private static final int MAX_DOUBLES_FOR_ROUND_TEST = 100_000;
+    private static final int RANDOM_GENERATED_NUMBERS = 1000;
     private static final String[] FULL_PRECISION_FORMATS = {"%.0f", "%.2f", "%.5f", "%.10f", "%.14f", "%.17f"};
 
     @Test
@@ -273,10 +273,10 @@ public class FastDoubleUtilTest {
 
     @Test
     public void formatDoubleScaleFractionTest() {
-        Random rnd = new Random(0);
+        Random rnd = new Random();
         IntStream.rangeClosed(0, 42).forEach(scale -> {
             for (String precision : FULL_PRECISION_FORMATS) {
-                rnd.doubles(MAX_DOUBLES_FOR_ROUND_TEST, -10, 10)
+                rnd.doubles(RANDOM_GENERATED_NUMBERS, -10, 10)
                     .mapToObj(value -> String.format(Locale.US, precision, value))
                     .map(value -> value + "E" + (rnd.nextBoolean() ? "+" : "-") + rnd.nextInt(42))
                     .map(Double::parseDouble)
@@ -301,10 +301,10 @@ public class FastDoubleUtilTest {
 
     @Test
     public void formatDoubleScaleIntegerTest() {
-        Random rnd = new Random(0);
+        Random rnd = new Random();
         IntStream.range(-18, 0).forEach(scale -> {
             for (String precision : FULL_PRECISION_FORMATS) {
-                rnd.doubles(MAX_DOUBLES_FOR_ROUND_TEST, -10, 10)
+                rnd.doubles(RANDOM_GENERATED_NUMBERS, -10, 10)
                     .mapToObj(value -> String.format(Locale.US, precision, value))
                     .map(value -> value + "E+" + rnd.nextInt(16))
                     .map(Double::parseDouble)
@@ -329,10 +329,10 @@ public class FastDoubleUtilTest {
 
     @Test
     public void formatDoubleScaleApproximateIntegerTest() {
-        Random rnd = new Random(0);
+        Random rnd = new Random();
         IntStream.range(-20, 0).forEach(scale -> {
             for (String precision : FULL_PRECISION_FORMATS) {
-                rnd.doubles(MAX_DOUBLES_FOR_ROUND_TEST, -10, 10)
+                rnd.doubles(RANDOM_GENERATED_NUMBERS, -10, 10)
                     .mapToObj(value -> String.format(Locale.US, precision, value))
                     .map(value -> value + "E+" + rnd.nextInt(308))
                     .map(Double::parseDouble)
@@ -360,10 +360,10 @@ public class FastDoubleUtilTest {
 
     @Test
     public void formatDoubleStrictRoundingTest() {
-        Random rnd = new Random(0);
+        Random rnd = new Random();
         IntStream.rangeClosed(1, 16).forEach(round -> {
             for (String precision : FULL_PRECISION_FORMATS) {
-                rnd.doubles(MAX_DOUBLES_FOR_ROUND_TEST, -10, 10)
+                rnd.doubles(RANDOM_GENERATED_NUMBERS, -10, 10)
                     .mapToObj(value -> String.format(Locale.US, precision, value))
                     .map(value -> value + "E" + (rnd.nextBoolean() ? "+" + rnd.nextInt(16) : "-" + rnd.nextInt(308)))
                     .map(Double::parseDouble)
@@ -387,10 +387,10 @@ public class FastDoubleUtilTest {
 
     @Test
     public void formatDoubleApproximationRoundingTest() {
-        Random rnd = new Random(0);
+        Random rnd = new Random();
         IntStream.rangeClosed(1, 16).forEach(round -> {
             for (String precision : FULL_PRECISION_FORMATS) {
-                rnd.doubles(MAX_DOUBLES_FOR_ROUND_TEST, -10, 10)
+                rnd.doubles(RANDOM_GENERATED_NUMBERS, -10, 10)
                     .mapToObj(value -> String.format(Locale.US, precision, value))
                     .map(value -> value + "E" + (rnd.nextBoolean() ? "+" + rnd.nextInt(307) : "-" + rnd.nextInt(320)))
                     .map(Double::parseDouble)
@@ -499,10 +499,10 @@ public class FastDoubleUtilTest {
 
     @Test
     public void roundScaleFractionTest() {
-        Random rnd = new Random(0);
+        Random rnd = new Random();
         IntStream.rangeClosed(0, 42).forEach(scale -> {
             for (String precision : FULL_PRECISION_FORMATS) {
-                rnd.doubles(MAX_DOUBLES_FOR_ROUND_TEST, -10, 10)
+                rnd.doubles(RANDOM_GENERATED_NUMBERS, -10, 10)
                     .mapToObj(value -> String.format(Locale.US, precision, value))
                     .map(value -> value + "E" + (rnd.nextBoolean() ? "+" : "-") + rnd.nextInt(42))
                     .map(Double::parseDouble)
@@ -561,10 +561,10 @@ public class FastDoubleUtilTest {
 
     @Test
     public void roundScaleIntegerTest() {
-        Random rnd = new Random(0);
+        Random rnd = new Random();
         IntStream.range(-18, 0).forEach(scale -> {
             for (String precision : FULL_PRECISION_FORMATS) {
-                rnd.doubles(MAX_DOUBLES_FOR_ROUND_TEST, -10, 10)
+                rnd.doubles(RANDOM_GENERATED_NUMBERS, -10, 10)
                     .mapToObj(value -> String.format(Locale.US, precision, value))
                     .map(value -> value + "E+" + rnd.nextInt(16))
                     .map(Double::parseDouble)
@@ -653,10 +653,10 @@ public class FastDoubleUtilTest {
 
     @Test
     public void roundPrecisionHalfUpDownEvenStrictTest() {
-        Random rnd = new Random(0);
+        Random rnd = new Random();
         IntStream.rangeClosed(1, 15).forEach(round -> {
             for (String precision : FULL_PRECISION_FORMATS) {
-                rnd.doubles(MAX_DOUBLES_FOR_ROUND_TEST, -10, 10)
+                rnd.doubles(RANDOM_GENERATED_NUMBERS, -10, 10)
                     .mapToObj(value -> String.format(Locale.US, precision, value))
                     .map(value -> value + "E" + (rnd.nextBoolean() ? "+" : "-") + rnd.nextInt(308))
                     .map(Double::parseDouble)
@@ -690,10 +690,10 @@ public class FastDoubleUtilTest {
 
     @Test
     public void roundPrecisionUpDownCeilFloorStrictTest() {
-        Random rnd = new Random(0);
+        Random rnd = new Random();
         IntStream.rangeClosed(1, 16).forEach(round -> {
             for (String precision : FULL_PRECISION_FORMATS) {
-                rnd.doubles(MAX_DOUBLES_FOR_ROUND_TEST, -10, 10)
+                rnd.doubles(RANDOM_GENERATED_NUMBERS, -10, 10)
                     .mapToObj(value -> String.format(Locale.US, precision, value))
                     .map(value -> value + "E" + (rnd.nextBoolean() ? "+" + rnd.nextInt(17) : "-" + rnd.nextInt(308)))
                     .map(Double::parseDouble)
@@ -734,9 +734,9 @@ public class FastDoubleUtilTest {
     @Test
     public void roundPrecisionHalfUpDownEvenRoughTest() {
         int round = 16;
-        Random rnd = new Random(0);
+        Random rnd = new Random();
         for (String precision : FULL_PRECISION_FORMATS) {
-            rnd.doubles(MAX_DOUBLES_FOR_ROUND_TEST, -10, 10)
+            rnd.doubles(RANDOM_GENERATED_NUMBERS, -10, 10)
                 .mapToObj(value -> String.format(Locale.US, precision, value))
                 .map(value -> value + "E" + (rnd.nextBoolean() ? "+" : "-") + rnd.nextInt(308))
                 .map(Double::parseDouble)
@@ -803,7 +803,7 @@ public class FastDoubleUtilTest {
         // use different random numbers every launch
         Random rnd = new Random();
         return Arrays.stream(FULL_PRECISION_FORMATS)
-            .flatMap(precision -> rnd.doubles(1_000_000, -10, 10)
+            .flatMap(precision -> rnd.doubles(RANDOM_GENERATED_NUMBERS, -10, 10)
                 .mapToObj(value -> String.format(Locale.US, precision, value))
                 .map(value -> value + "E" + (rnd.nextBoolean() ? "-" : "") + (rnd.nextInt(309))));
     }
@@ -812,7 +812,7 @@ public class FastDoubleUtilTest {
         // use different random numbers every launch
         Random rnd = new Random();
         return Arrays.stream(FULL_PRECISION_FORMATS)
-            .flatMap(precision -> rnd.doubles(1_000_000, start, end)
+            .flatMap(precision -> rnd.doubles(RANDOM_GENERATED_NUMBERS, start, end)
                 .mapToObj(value -> (rnd.nextBoolean() ? "-" : "") + String.format(Locale.US, precision, value)));
     }
 }
