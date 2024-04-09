@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -112,7 +112,6 @@ public class CollectorBufferTest {
     }
 
     private void checkBufferCleanup(QDCollector collector, boolean partial) {
-        QDStats bufferStats = getBufferStats(collector);
         QDAgent agent = collector.agentBuilder()
             .withKeyProperties("name=BufferCleanup")
             .build();
@@ -178,7 +177,7 @@ public class CollectorBufferTest {
             // unsubscribe fully
             agent.getRemovingSubscriptionConsumer().processSubscription(sub);
             assertEquals(0, agent.getSubscriptionSize());
-            assertEquals(0, bufferStats.getValue(QDStats.SValue.RID_SIZE));
+            assertEquals(0, getBufferStats(collector).getValue(QDStats.SValue.RID_SIZE));
 
             // make sure there's no data
             buf.clear();
@@ -188,7 +187,7 @@ public class CollectorBufferTest {
     }
 
     private <T> ArrayList<SymbolObjectMap<T>> allocateMap() {
-        ArrayList<SymbolObjectMap<T>> result = new ArrayList<SymbolObjectMap<T>>();
+        ArrayList<SymbolObjectMap<T>> result = new ArrayList<>();
         for (int i = 0; i < SCHEME.getRecordCount(); i++)
             result.add(SymbolObjectMap.<T>createInstance());
         return result;
@@ -284,7 +283,6 @@ public class CollectorBufferTest {
     }
 
     private void checkBufferOverflow(QDCollector collector, boolean dropOldest) {
-        QDStats bufferStats = getBufferStats(collector);
         QDAgent agent = collector.agentBuilder()
             .withKeyProperties("name=BufferOverflow")
             .build();
@@ -338,7 +336,7 @@ public class CollectorBufferTest {
             dstbuf.clear();
             agent.retrieveData(dstbuf); // retrieve all data that was "resent"
             assertEquals(expectedRetrieveSize, dstbuf.size()); // check now much data was resent
-            assertEquals(0, bufferStats.getValue(QDStats.SValue.RID_SIZE));
+            assertEquals(0, getBufferStats(collector).getValue(QDStats.SValue.RID_SIZE));
             updateKnownTimes(dstbuf, knownTimes);
 
             srcbuf.clear();
@@ -371,12 +369,12 @@ public class CollectorBufferTest {
                 expectedBufferSize = Math.min(bufferedCount + nonBufferedCount, MAX_SIZE);
                 expectedRetrieveSize = expectedBufferSize;
             }
-            assertEquals(expectedBufferSize, bufferStats.getValue(QDStats.SValue.RID_SIZE));
+            assertEquals(expectedBufferSize, getBufferStats(collector).getValue(QDStats.SValue.RID_SIZE));
 
             dstbuf.clear();
             agent.retrieveData(dstbuf);
             assertEquals(expectedRetrieveSize, dstbuf.size());
-            assertEquals(0, bufferStats.getValue(QDStats.SValue.RID_SIZE));
+            assertEquals(0, getBufferStats(collector).getValue(QDStats.SValue.RID_SIZE));
             updateKnownTimes(dstbuf, knownTimes);
 
             if (isHistory) {
@@ -391,7 +389,6 @@ public class CollectorBufferTest {
     }
 
     private void checkBufferAddSubResend(QDCollector collector) {
-        QDStats bufferStats = getBufferStats(collector);
         QDAgent agent = collector.agentBuilder().build();
         QDDistributor dist = collector.distributorBuilder().build();
         TestSubscriptionProvider subp = new TestSubscriptionProvider(SCHEME, SEED, symbols);
@@ -434,7 +431,7 @@ public class CollectorBufferTest {
             // unsubscribe fully
             agent.getRemovingSubscriptionConsumer().processSubscription(sub);
             assertEquals(0, agent.getSubscriptionSize());
-            assertEquals(0, bufferStats.getValue(QDStats.SValue.RID_SIZE));
+            assertEquals(0, getBufferStats(collector).getValue(QDStats.SValue.RID_SIZE));
 
             // make sure there's no data
             buf.clear();
@@ -459,6 +456,6 @@ public class CollectorBufferTest {
     }
 
     private QDStats getBufferStats(QDCollector collector) {
-        return collector.getStats().getOrCreate(QDStats.SType.AGENT_DATA);
+        return collector.getStats().getOrVoid(QDStats.SType.AGENT_DATA);
     }
 }

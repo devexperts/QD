@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -34,6 +34,7 @@ import com.devexperts.util.SystemProperties;
 import com.devexperts.util.ThreadLocalPool;
 
 import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * Buffers int and obj values of data records. This class has two {@link RecordCursor cursors} of its own --
@@ -154,11 +155,11 @@ public final class RecordBuffer extends RecordSource implements
      * The new record buffer is not {@link #isCapacityLimited() capacity-limited} by default.
      */
     public RecordBuffer(RecordMode mode) {
-        this.mode = mode;
+        this.mode = Objects.requireNonNull(mode);
         intFlds = new int[32];
         objFlds = new Object[32];
-        readCursor = new RecordCursor(true);
-        writeCursor = new RecordCursor(false);
+        readCursor = new RecordCursor(true, mode);
+        writeCursor = new RecordCursor(false, mode);
         reinitCursorArraysInternal();
     }
 
@@ -960,7 +961,6 @@ public final class RecordBuffer extends RecordSource implements
      * {@link RecordBuffer#writeCursorAt writeCursorAt}
      * @throws IndexOutOfBoundsException if cursor's position is invalid or above current limit.
      * @throws IllegalStateException if the data at the corresponding cursor was already cleared.
-     * @throws IllegalArgumentException if this buffer's {@link #getMode() mode} {@link RecordMode#hasLink() hasLink}.
      */
     public void cleanup(RecordCursor cursor) {
         int ipos = cursor.getIntPositionInternal();
@@ -973,6 +973,7 @@ public final class RecordBuffer extends RecordSource implements
             Throws.throwCleared();
         Arrays.fill(intFlds, ipos, ipos + mode.intBufOffset + cursor.intCount, 0);
         Arrays.fill(objFlds, opos, opos + mode.objBufOffset + cursor.objCount, null);
+        // TODO probably shall call resetCursorsAccess() here
         size--;
     }
 
@@ -1267,14 +1268,14 @@ public final class RecordBuffer extends RecordSource implements
 
     // internal constructor for newSource methods and for RecordSource.VOID constant
     RecordBuffer(RecordMode mode, int[] intFlds, int intLimit, int intPosition, Object[] objFlds, int objLimit, int objPosition) {
-        this.mode = mode;
+        this.mode = Objects.requireNonNull(mode);
         this.intFlds = intFlds;
         this.intLimit = intLimit;
         this.intPosition = intPosition;
         this.objFlds = objFlds;
         this.objLimit = objLimit;
         this.objPosition = objPosition;
-        readCursor = new RecordCursor(true);
+        readCursor = new RecordCursor(true, mode);
         writeCursor = null; // "newSource" object are read-only and they don't need write cursors
         reinitCursorArraysInternal();
     }

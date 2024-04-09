@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,6 +18,7 @@ import com.devexperts.qd.stats.QDStats;
  * A collection of IO counters for a given connector.
  */
 class IOCounter {
+
     static final int READ_BYTES = 0;
     static final int WRITE_BYTES = 1;
     static final int READ_RTTS = 2;
@@ -29,7 +30,7 @@ class IOCounter {
     static final int DATA_READ_LAGS = 8;
     static final int DATA_WRITE_LAGS = 9;
 
-    static final int N_COUNTERS = 10;
+    static final int COUNTER_COUNT = 10;
 
     static final QDStats.SValue[] VALUES = {
         QDStats.SValue.IO_READ_BYTES,
@@ -44,37 +45,48 @@ class IOCounter {
         QDStats.SValue.IO_DATA_WRITE_LAGS,
     };
 
-    private final String name;
     private final MessageConnector connector;
-    private final RecordMonitoringCounter[] counters;
+    private final QDStats stats;
+    private final DeltaCounter[] counters;
+    boolean unused;
 
-    IOCounter(String name, MessageConnector connector, IOCounter prev) {
-        this.name = name;
+    IOCounter(MessageConnector connector, QDStats stats) {
         this.connector = connector;
-        if (prev == null) {
-            counters = new RecordMonitoringCounter[N_COUNTERS];
-            for (int i = 0; i < N_COUNTERS; i++)
-                counters[i] = new RecordMonitoringCounter();
-        } else
-            counters = prev.counters;
-    }
-
-    String getName() {
-        return name;
+        this.stats = stats;
+        this.counters = new DeltaCounter[COUNTER_COUNT];
+        for (int i = 0; i < COUNTER_COUNT; i++) {
+            counters[i] = new DeltaCounter();
+        }
     }
 
     MessageConnector getConnector() {
         return connector;
     }
 
-    void addDeltaToCur(Cur[] cur) {
-        QDStats stats = connector.getStats();
-        if (stats != null)
-            for (int i = 0; i < N_COUNTERS; i++)
-                counters[i].addDeltaToCur(stats, cur[i]);
+    QDStats getStats() {
+        return stats;
     }
 
-    boolean nameChanged() {
-        return !name.equals(connector.getName());
+    void resetUnused() {
+        unused = true;
+    }
+
+    public boolean isUnused() {
+        return unused;
+    }
+
+    void collect() {
+        unused = false;
+        if (stats != null) {
+            for (int i = 0; i < COUNTER_COUNT; i++) {
+                counters[i].collect(stats, VALUES[i]);
+            }
+        }
+    }
+
+    void aggregate(SumDeltaCounter[] sumCounters) {
+        for (int i = 0; i < COUNTER_COUNT; i++) {
+            counters[i].aggregate(sumCounters[i]);
+        }
     }
 }

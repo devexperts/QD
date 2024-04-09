@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,9 +16,12 @@ import com.devexperts.qd.qtp.AbstractMessageConnector;
 import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimePeriod;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -35,18 +38,18 @@ class NioCore implements AbstractMessageConnector.Joinable {
     final InetSocketAddress bindSocketAddress;
     final String address;
 
+    private NioAcceptor acceptor;
     private final NioReader reader;
     private final NioWriter writer;
-    private final NioAcceptor acceptor;
     private final NioValidator validator;
 
-    final Map<NioConnection, NioConnection> connections = new ConcurrentHashMap<>();
+    final Set<NioConnection> connections = ConcurrentHashMap.newKeySet();
 
     private volatile boolean closed;
 
     NioCore(NioServerConnector connector) throws IOException {
         this.connector = connector;
-        bindSocketAddress = new InetSocketAddress(connector.bindAddress, connector.getLocalPort());
+        bindSocketAddress = new InetSocketAddress(connector.getBindInetAddress(), connector.getLocalPort());
         chunkPool = connector.getFactory().getChunkPool();
         address = connector.getAddress();
 
@@ -60,18 +63,18 @@ class NioCore implements AbstractMessageConnector.Joinable {
         return acceptor.isConnected();
     }
 
+    boolean isAccepting() {
+        return acceptor.isConnected() || acceptor.isConnecting();
+    }
+
     void start() {
         reader.start();
         writer.start();
-        acceptor.start();
         validator.start();
     }
 
     void close() {
-        if (closed)
-            return;
         closed = true;
-        connector.core.compareAndSet(this, null);
         reader.close();
         writer.close();
         acceptor.close();
@@ -86,10 +89,36 @@ class NioCore implements AbstractMessageConnector.Joinable {
         validator.join();
     }
 
+    boolean startAcceptor() throws IOException {
+        if (!closed) {
+            if (acceptor.isNew()) {
+                acceptor.start();
+            } else if (!isAccepting()) {
+                acceptor = new NioAcceptor(this);
+                acceptor.start();
+            }
+            return true;
+        }
+        return false;
+    }
+
+    boolean stopAcceptor() {
+        if (isAccepting()) {
+            acceptor.close();
+            return true;
+        }
+        return false;
+    }
+
     void closeConnections() {
-        for (NioConnection connection : connections.keySet())
+        for (NioConnection connection : connections) {
             connection.close();
+        }
         connector.notifyMessageConnectorListeners();
+    }
+
+    List<Closeable> getConnections() {
+        return new ArrayList<>(connections);
     }
 
     boolean isClosed() {
@@ -122,25 +151,32 @@ class NioCore implements AbstractMessageConnector.Joinable {
     }
 
     void registerConnection(NioConnection connection) {
-        connections.put(connection, connection);
+        connections.add(connection);
         reader.register(connection);
-        if (closed)
+        if (closed) {
             connection.close();
+        }
         connector.notifyMessageConnectorListeners();
     }
 
+    void removeConnection(NioConnection connection) {
+        connections.remove(connection);
+    }
+
     void chunksAvailable(NioConnection connection) {
-        if (closed)
+        if (closed) {
             connection.close();
-        else
+        } else {
             writer.chunksAvailable(connection);
+        }
     }
 
     void readyToProcess(NioConnection connection) {
-        if (closed)
+        if (closed) {
             connection.close();
-        else
+        } else {
             reader.readyToProcess(connection);
+        }
     }
 
     @Override

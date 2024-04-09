@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -26,6 +26,7 @@ import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.devexperts.rmi.task.BalanceResult.route;
@@ -33,6 +34,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @RunWith(TraceRunner.class)
 public class RMICustomBalancingTest extends AbstractRMICustomBalancingTest {
@@ -182,6 +184,51 @@ public class RMICustomBalancingTest extends AbstractRMICustomBalancingTest {
         await(() -> pendingPromise.get() != null);
         pendingPromise.get().complete(route(target.getServiceId()));
         assertEquals(3.2, sum.getBlocking(), 0.00001);
+    }
+
+    @Test
+    public void testClosedConnectionRequestsRebalancing() throws InterruptedException, RMIException {
+        configure();
+        // Configure unlimited timeout so that any host computer slowness does not affect this test
+        clients.clients[0].getClient().setRequestSendingTimeout(Long.MAX_VALUE);
+
+        RMIService<?> service = clients.clients[0].getClient().getService(
+            DifferentServices.CALCULATOR_SERVICE.getServiceName());
+        BalanceResult target0 = route(getTargetDescriptor(service, serviceImpl0).getServiceId());
+        BalanceResult target1 = route(getTargetDescriptor(service, serviceImpl1).getServiceId());
+
+        AtomicInteger balanceAttempt = new AtomicInteger(0);
+        TestRMILoadBalancerFactory.clientOrMuxBalancerBehavior = req -> {
+            try {
+                int attempt = balanceAttempt.getAndIncrement();
+                if (attempt == 0) {
+                    // both connections are alive
+                    assertEquals(1, clients.getConnectionsCount(0, 0));
+                    assertEquals(1, clients.getConnectionsCount(0, 1));
+                    // async close of the first connection
+                    new Thread(() -> servers.servers[0].disconnect()).start();
+                    // wait till the first connection is closed on the client side
+                    await(() -> clients.getConnectionsCount(0, 0) == 0);
+                    assertEquals(1, clients.getConnectionsCount(0, 1));
+                    // route the request to the closed connection
+                    return Promise.completed(target0);
+                }
+
+                // the second connection is alive, route to it
+                assertEquals(0, clients.getConnectionsCount(0, 0));
+                assertEquals(1, clients.getConnectionsCount(0, 1));
+                return Promise.completed(target1);
+            } catch (InterruptedException e) {
+                fail(e.getMessage());
+                return null;
+            }
+        };
+
+        RMIRequest<Double> sum = createSumRequest();
+        sum.send();
+        await(() -> sum.getState() != RMIRequestState.WAITING_TO_SEND);
+        assertEquals(3.2, sum.getBlocking(), 0.00001);
+        assertEquals(2, balanceAttempt.get());
     }
 
     // Balancer lifecycle when servers are closed and disconnected

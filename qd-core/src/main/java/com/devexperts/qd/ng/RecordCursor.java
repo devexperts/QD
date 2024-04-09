@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -1111,7 +1111,9 @@ public final class RecordCursor {
      * @deprecated This method will not be public in the future versions.
      * Use one of <code>RecordCursor.allocate(...)</code> or <code>RecordCursor.allocateOwner(...)</code> methods.
      */
-    public RecordCursor() {}
+    public RecordCursor() {
+        this(false);
+    }
 
     /**
      * @deprecated This method will be removed in the future versions.
@@ -1155,7 +1157,7 @@ public final class RecordCursor {
     //----------------------- internal API (package-private) -----------------------
 
     static RecordCursor allocateInternal(DataRecord record, RecordMode mode) {
-        RecordCursor cursor = new RecordCursor(false);
+        RecordCursor cursor = new RecordCursor(false, mode);
         cursor.setRecordInternal(record, mode);
         int intCount = mode.extraIntCount + mode.intFieldCount(record);
         int objCount = mode.extraObjCount + mode.objFieldCount(record);
@@ -1167,7 +1169,12 @@ public final class RecordCursor {
     }
 
     RecordCursor(boolean readOnly) {
+        this(readOnly, RecordMode.DATA);
+    }
+
+    RecordCursor(boolean readOnly, RecordMode mode) {
         this.readOnly = readOnly;
+        this.mode = Objects.requireNonNull(mode);
     }
 
     void setReadOnlyInternal(boolean read_only) {

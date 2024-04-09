@@ -320,10 +320,10 @@ public abstract class AbstractMessageConnector implements MessageConnector {
     }
 
     protected void closeImpl() {
+        stop();
         QDStats stats = getStats();
         if (stats != null)
             stats.close();
-        stop();
         messageConnectorListeners.clear();
     }
 

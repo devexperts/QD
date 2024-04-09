@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -27,22 +27,49 @@ import java.nio.channels.SocketChannel;
  */
 class NioAcceptor extends NioWorkerThread {
 
+    private enum State { NEW, CONNECTING, CONNECTED, CLOSED }
+
     private final ReconnectHelper reconnectHelper;
     private final ServerSocketChannel serverChannel;
+
+    private volatile State state;
 
     NioAcceptor(NioCore core) throws IOException {
         super(core, "Acceptor");
         reconnectHelper = new ReconnectHelper(core.connector.getReconnectDelay());
         serverChannel = ServerSocketChannel.open();
         serverChannel.configureBlocking(true);
+        state = State.NEW;
+    }
+
+    boolean isNew() {
+        return state == State.NEW;
+    }
+
+    boolean isConnecting() {
+        return state == State.CONNECTING;
     }
 
     boolean isConnected() {
-        return serverChannel.socket().isBound();
+        return state == State.CONNECTED;
+    }
+
+    @Override
+    protected boolean isClosed() {
+        return core.isClosed() || state == State.CLOSED;
+    }
+
+    @Override
+    public void start() {
+        if (!isNew()) {
+            throw new IllegalStateException("incorrect current state: " + state);
+        }
+        state = State.CONNECTING;
+        super.start();
     }
 
     protected void makeIteration() {
-        if (!serverChannel.socket().isBound())
+        if (isConnecting()) {
             try {
                 reconnectHelper.sleepBeforeConnection();
                 log.info("Trying to listen at " + LogUtil.hideCredentials(core.address));
@@ -51,7 +78,9 @@ class NioAcceptor extends NioWorkerThread {
                 ServerSocketTestHelper.completePortPromise(core.connector.getName(), serverChannel.socket().getLocalPort());
                 log.info("Listening at " + LogUtil.hideCredentials(core.address) +
                     (core.bindSocketAddress.getPort() == 0 ? " on port " + serverChannel.socket().getLocalPort() : ""));
+                state = State.CONNECTED;
             } catch (InterruptedException e) {
+                log.warn("Acceptor's connection binding process was interrupted");
                 return;
             } catch (IOException e) {
                 if (!core.isClosed()) {
@@ -61,6 +90,7 @@ class NioAcceptor extends NioWorkerThread {
                 }
                 return;
             }
+        }
 
         SocketChannel channel;
         try {
@@ -73,7 +103,8 @@ class NioAcceptor extends NioWorkerThread {
             }
             log.info("Accepted client socket " + LogUtil.hideCredentials(SocketUtil.getAcceptedSocketAddress(channel.socket())));
         } catch (ClosedChannelException e) {
-            core.close();
+            state = State.CLOSED;
+            log.warn("Acceptor's channel was closed");
             return;
         } catch (IOException e) {
             log.error("Failed to accept client socket", e);
@@ -97,6 +128,7 @@ class NioAcceptor extends NioWorkerThread {
     void close() {
         try {
             serverChannel.close();
+            state = State.CLOSED;
             log.info("Stopped listening at " + LogUtil.hideCredentials(core.address));
         } catch (Throwable t) {
             log.error("Failed to close server socket at " + LogUtil.hideCredentials(core.address), t);

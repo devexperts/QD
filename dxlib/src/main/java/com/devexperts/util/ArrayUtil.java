@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -46,10 +46,10 @@ public class ArrayUtil {
 
     /**
      * Finds free (non-occupied) index in an array in such a way, that amortized time to
-     * allocate an index is O(1). This implementations looks for an index {@code i}
+     * allocate an index is O(1). This implementation looks for an index {@code i}
      * such that {@code a[i] == null} starting from the given {@code lastFreeIndex} and
      * then cycles to the beginning of array where it starts from {@code minIndex}.
-     * On cycle it counts the number of free indices in array. If less than a quarter
+     * While iterating it counts the number of free indices in array. If less than a quarter
      * of indices a free then {@code a.length} is returned to indicate that array shall
      * be reallocated to a larger size.
      *

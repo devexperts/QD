@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -31,14 +31,16 @@ class OutgoingRequests {
     private final PriorityQueue<RMIRequestImpl<?>> outgoingRequests =
         new PriorityQueue<>(11, RMIRequestImpl.REQUEST_COMPARATOR_BY_SENDING_TIME);
 
+    private volatile boolean closed;
+
     OutgoingRequests(ServiceFilter filter) {
         this.filter = filter;
     }
 
-    synchronized void add(RMIRequestImpl<?> request) {
-        if (!request.isWaitingToSend())
-            return;
-        outgoingRequests.add(request);
+    synchronized boolean add(RMIRequestImpl<?> request) {
+        if (closed)
+            return false;
+        return outgoingRequests.add(request);
     }
 
     // Use descriptors == null to get everything
@@ -87,6 +89,7 @@ class OutgoingRequests {
     }
 
     void close() {
+        closed = true;
         // Limit synchronized range to honor lock hierarchy with requestLock
         RMIRequestImpl<?>[] requests = getRequests(new RMIRequestImpl[0]);
         for (RMIRequestImpl<?> request : requests) {

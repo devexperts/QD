@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -107,25 +107,28 @@ abstract class StripedCollector<C extends QDCollector> extends AbstractCollector
 
     @Override
     public boolean examineSubscription(RecordSink sink) {
-        for (QDCollector collector : collectors())
+        for (QDCollector collector : collectors()) {
             if (collector.examineSubscription(sink))
                 return true;
+        }
         return false;
     }
 
     @Override
     public int getSubscriptionSize() {
         int sum = 0;
-        for (QDCollector collector : collectors())
+        for (QDCollector collector : collectors()) {
             sum += collector.getSubscriptionSize();
+        }
         return sum;
     }
 
     @Override
     public boolean examineData(RecordSink sink) {
-        for (QDCollector collector : collectors())
+        for (QDCollector collector : collectors()) {
             if (collector.examineData(sink))
                 return true;
+        }
         return false;
     }
 
@@ -151,10 +154,10 @@ abstract class StripedCollector<C extends QDCollector> extends AbstractCollector
 
     @Override
     public void close() {
-        for (QDCollector collector : collectors())
+        for (QDCollector collector : collectors()) {
             collector.close();
+        }
     }
-
 
     private class StoreFilter extends QDFilter {
         private final int i;

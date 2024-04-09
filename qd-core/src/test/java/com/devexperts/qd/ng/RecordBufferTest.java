@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -427,6 +427,26 @@ public class RecordBufferTest {
                 }
             }
         }
+    }
+
+    @Test
+    public void replaceWithUninitializedCursors() {
+        RecordBuffer buf = createRecordBuffer();
+        // create a copy in a way that does not initialize readCursor nor writeCursor
+        RecordBuffer copy = new RecordBuffer(buf.getMode());
+        copy.process(buf);
+
+        // test when both cursors are uninitialized
+        copy.replaceSymbolAt(0, 0, "SYMBOL_REPLACE1");
+        copy.replaceRecordAt(0, RECORD_REPLACE2);
+        // initialize readCursor but not writeCursor
+        copy.current();
+        copy.replaceSymbolAt(0, 0, "SYMBOL_REPLACE2");
+        copy.replaceRecordAt(0, RECORD2);
+        // initialize writeCursor
+        copy.writeCurrent();
+        copy.replaceSymbolAt(0, 0, "SYMBOL_REPLACE3");
+        copy.replaceRecordAt(0, RECORD_REPLACE2);
     }
 
     @Test

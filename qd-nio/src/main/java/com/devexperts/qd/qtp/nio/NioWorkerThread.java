@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -32,25 +32,27 @@ abstract class NioWorkerThread extends Thread {
     @Override
     public void run() {
         try {
-            while (!core.isClosed()) {
+            while (!isClosed()) {
                 try {
                     makeIteration();
                 } catch (Throwable t) {
-                    if (core.isClosed()) {
+                    if (isClosed()) {
                         if (!(t instanceof InterruptedException))
                             log.warn(t.getMessage(), t);
                     } else {
                         log.error(t.getMessage(), t);
-                        try {
-                            Thread.sleep(500);
-                        } catch (InterruptedException ignored) {}
                     }
                 }
             }
         } finally {
-            core.close(); // ...just a paranoic protection
-            core.closeConnections();
+            if (core.isClosed()) {
+                core.closeConnections();
+            }
         }
+    }
+
+    protected boolean isClosed() {
+        return core.isClosed();
     }
 
     protected abstract void makeIteration() throws Throwable;

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -25,6 +25,7 @@ import com.devexperts.transport.stats.ConnectionStats;
 import com.devexperts.util.JMXNameBuilder;
 import com.devexperts.util.LogUtil;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -44,7 +45,7 @@ import static com.devexperts.qd.qtp.nio.NioFlags.WS_PROCESSING;
 /**
  * Class that represents a single two-way client socket connection.
  */
-class NioConnection extends AbstractTransportConnection {
+class NioConnection extends AbstractTransportConnection implements Closeable {
 
     private static final Logging log = Logging.getLogging(NioConnection.class);
 
@@ -101,7 +102,8 @@ class NioConnection extends AbstractTransportConnection {
      * Closes all the connection info's members and
      * removes the connection from connector.
      */
-    void close() {
+    @Override
+    public void close() {
         closeBecauseOf(null);
     }
 

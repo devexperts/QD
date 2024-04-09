@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,31 +17,33 @@ import com.devexperts.mars.jvm.CpuCounter;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.stats.QDStats;
+import com.devexperts.util.SystemProperties;
 
 import java.text.NumberFormat;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
 /**
  * Runnable task that logs statistics and sends them to MARS for a given root {@link QDStats}
  * and a list of {@link MessageConnector} instances every time it is invoked. Connectors can
- * be added on the fly with {@link #addConnector}, roots stats for summaries with
+ * be added on the fly with {@link #addConnectors}, roots stats for summaries with
  * {@link #addStats}.
- * <p/>
- * <p>Use this class with {@link QDMonitoring#registerPeriodicTask(long, Runnable)}.
- * <p/>
  * <p>This class is safe for use from multiple threads.
  */
 public class ConnectorsMonitoringTask implements Runnable {
+
+    // Flag indicating whether to log additional stats for striped connectors
+    private static final boolean DEFAULT_LOG_STRIPED_CONNECTORS =
+        SystemProperties.getBooleanProperty("com.devexperts.qd.logStripedConnectors", false);
+
     /**
-     * The name. It null when was not explicitly specified (legacy code).
+     * The name which is null when was not explicitly specified (by legacy code).
      * It is always set when part of some endpoint and is equal to endpoint's name.
      */
     private final String name;
@@ -54,13 +56,15 @@ public class ConnectorsMonitoringTask implements Runnable {
     private final MARSNode bufferNode;
 
     private final MonitoringCounter time = new MonitoringCounter();
-    private final IOCounters rootCounters;
-    private final Map<MessageConnector, IOCounter> connectorsMap = new HashMap<>();
-    private final Map<String, IOCounters> countersByName = new LinkedHashMap<>();
-    private final List<QDStats> rootStats = new CopyOnWriteArrayList<>();
-    private final CpuCounter cpu = new CpuCounter();
 
-    private final Layout layout = new Layout();
+    private final List<QDStats> rootStats = new CopyOnWriteArrayList<>();
+    private final List<MessageConnector> connectors = new CopyOnWriteArrayList<>();
+
+    private final CpuCounter cpu = new CpuCounter();
+    private final IOCounters rootCounters;
+    private final Map<String, IOCounters> countersByName = new TreeMap<>();
+    private final Map<IOCounterKey, IOCounter> snapshot = new HashMap<>();
+
     private final NumberFormat integerFormat = NumberFormat.getIntegerInstance(Locale.US);
     private final NumberFormat percentFormat = NumberFormat.getPercentInstance(Locale.US);
 
@@ -69,8 +73,10 @@ public class ConnectorsMonitoringTask implements Runnable {
         percentFormat.setMinimumFractionDigits(2);
     }
 
+    private boolean logStripedConnectors = DEFAULT_LOG_STRIPED_CONNECTORS;
+
     /**
-     * Creates connection monitoring task with a default log,
+     * Creates a connection monitoring task with a default log,
      * no root stats, default root {@link MARSNode#getRoot() MARSNode},
      * and an empty list of connectors.
      */
@@ -79,7 +85,7 @@ public class ConnectorsMonitoringTask implements Runnable {
     }
 
     /**
-     * Creates connection monitoring task with a specified root QDStats,
+     * Creates a connection monitoring task with a specified root QDStats,
      * default log, default root {@link MARSNode#getRoot() MARSNode},
      * and an empty list of connectors.
      */
@@ -88,23 +94,23 @@ public class ConnectorsMonitoringTask implements Runnable {
     }
 
     /**
-     * Creates connection monitoring task with a specified root QDStats and a list of connectors,
-     * default log, and default root {@link MARSNode#getRoot() MARSNode},
+     * Creates a connection monitoring task with a specified root QDStats and a list of connectors,
+     * default log, and default root {@link MARSNode#getRoot() MARSNode}.
      */
     public ConnectorsMonitoringTask(QDStats rootStats, List<MessageConnector> connectors) {
         this(null, Logging.getLogging(ConnectorsMonitoringTask.class), rootStats, MARSNode.getRoot(), connectors);
     }
 
     /**
-     * Creates connection monitoring task with a specified root QDStats and root MARSNode,
-     * default log and an empty list of connectors,
+     * Creates a connection monitoring task with a specified root QDStats and root MARSNode,
+     * default log and an empty list of connectors.
      */
     public ConnectorsMonitoringTask(QDStats rootStats, MARSNode rootNode) {
         this(null, Logging.getLogging(ConnectorsMonitoringTask.class), rootStats, rootNode, null);
     }
 
     /**
-     * Creates connection monitoring task with a specified name, log, root QDStat, root MARSNode, and
+     * Creates a connection monitoring task with a specified name, log, root QDStat, root MARSNode, and
      * a list of connectors.
      *
      * @param name the name of the endpoint to which this task relates.
@@ -137,6 +143,10 @@ public class ConnectorsMonitoringTask implements Runnable {
             addConnectors(connectors);
         if (rootStats != null)
             addStats(rootStats);
+
+        if (log != null) {
+            log.info("Log striped connectors: " + this.logStripedConnectors);
+        }
     }
 
     /**
@@ -150,42 +160,25 @@ public class ConnectorsMonitoringTask implements Runnable {
         this.rootStats.add(stats);
     }
 
-    public void addConnector(MessageConnector connector) {
-        addConnectors(Collections.singleton(connector));
-    }
-
     public synchronized void addConnectors(Collection<MessageConnector> connectors) {
-        removeConnectors(connectors);
-        for (MessageConnector connector : connectors) {
-            addNamedConnectorImpl(connector.getName(), connector, null);
-            rootCounters.addConnector(connector, null);
-        }
-    }
-
-    private void addNamedConnectorImpl(String name, MessageConnector connector, IOCounter prev) {
-        IOCounters ios = countersByName.get(name);
-        if (ios == null) {
-            ios = new IOCounters(name, connectorsNode.subNode(name, "Connector statistics for " + name));
-            countersByName.put(name, ios);
-        }
-        connectorsMap.put(connector, ios.addConnector(connector, prev));
+        this.connectors.addAll(connectors);
     }
 
     public synchronized void removeConnectors(Collection<MessageConnector> connectors) {
-        for (MessageConnector connector : connectors) {
-            IOCounter counter = connectorsMap.remove(connector);
-            if (counter != null) {
-                removeNamedConnectorImpl(counter.getName(), connector);
-                rootCounters.removeConnector(connector);
-            }
-        }
+        this.connectors.removeAll(connectors);
     }
 
-    private void removeNamedConnectorImpl(String name, MessageConnector connector) {
-        IOCounters ios = countersByName.get(name);
-        ios.removeConnector(connector);
-        if (ios.isEmpty())
-            countersByName.remove(name);
+    public boolean isLogStripedConnectors() {
+        return logStripedConnectors;
+    }
+
+    public void setLogStripedConnectors(boolean logStripedConnectors) {
+        if (this.logStripedConnectors != logStripedConnectors) {
+            this.logStripedConnectors = logStripedConnectors;
+            if (log != null) {
+                log.info("Log striped connectors: " + this.logStripedConnectors);
+            }
+        }
     }
 
     /**
@@ -193,10 +186,11 @@ public class ConnectorsMonitoringTask implements Runnable {
      */
     @Override
     public void run() {
-        if (log != null)
+        if (log != null) {
             log.info("\b" + report());
-        else
+        } else {
             reportImpl(null); // don't produce string for log
+        }
     }
 
     /**
@@ -208,10 +202,14 @@ public class ConnectorsMonitoringTask implements Runnable {
         return sb.toString();
     }
 
-    private synchronized void reportImpl(StringBuilder sb) {
+    private long elapsedTime() {
         long elapsedTime = time.update(System.currentTimeMillis());
-        if (elapsedTime <= 0)
-            elapsedTime = 1; // just in case to avoid division by zero
+        // just in case to avoid division by zero
+        return (elapsedTime <= 0) ? 1 : elapsedTime;
+    }
+
+    private synchronized void reportImpl(StringBuilder buff) {
+        long elapsedTime = elapsedTime();
 
         long subscription = 0;
         long storage = 0;
@@ -227,56 +225,121 @@ public class ConnectorsMonitoringTask implements Runnable {
         storageNode.setDoubleValue(storage);
         bufferNode.setDoubleValue(buffer);
 
-        updateConnectorNames();
-        rootCounters.update(null);
-        layout.clear();
-        for (IOCounters ios : countersByName.values())
-            ios.update(layout);
+        rootCounters.beforeAggregate();
+        snapshot.values().forEach(IOCounter::resetUnused);
+        countersByName.values().forEach(IOCounters::beforeAggregate);
 
-        if (sb == null) {
-            // do not produce string for log but still report everything to MARS
+        for (MessageConnector connector : connectors) {
+            List<QDStats> stripedQdStats = getStripedConnections(
+                connector.getStats().getOrVoid(QDStats.SType.CONNECTIONS));
+            // Connector key without stripes
+            IOCounterKey key = new IOCounterKey(connector, null);
+            IOCounters counters = countersByName.computeIfAbsent(key.name, this::createSumStats);
+
+            if (stripedQdStats.isEmpty()) {
+                // Connectors are not closed, so it is safe to reuse their QD stats
+                IOCounter stats = snapshot.computeIfAbsent(key, k -> new IOCounter(connector, connector.getStats()));
+                stats.collect();
+
+                rootCounters.aggregate(stats);
+                counters.aggregate(stats);
+            } else {
+                // Striped connectors are always aggregated per stripe
+                for (QDStats qdStats : stripedQdStats) {
+                    // Connector+Stripe key
+                    IOCounterKey stripeKey = new IOCounterKey(connector, getStripeName(qdStats));
+                    IOCounter stats = snapshot.computeIfAbsent(stripeKey, k -> new IOCounter(connector, qdStats));
+
+                    // Striped connections can be reopened (or re-striped)
+                    // and therefore have new QD stats with the same key, so need to update them if changed
+                    if (stats.getStats() != qdStats) {
+                        stats = new IOCounter(connector, qdStats);
+                        snapshot.put(stripeKey, stats);
+                    }
+                    stats.collect();
+
+                    rootCounters.aggregate(stats);
+                    counters.aggregate(stats);
+                    countersByName.computeIfAbsent(stripeKey.name, this::createStripeSumStats).aggregate(stats);
+                }
+            }
+        }
+
+        // Clean unused IOCounters and IOCounter values to avoid memory leak
+        // (this can happen on connector's removal or reconfiguration, e.g. re-striping)
+        rootCounters.afterAggregate();
+        countersByName.values().removeIf(IOCounters::afterAggregate);
+        snapshot.values().removeIf(IOCounter::isUnused);
+
+        // Do not report stripe stats if "per-stripe" logging is disabled.
+        List<IOCounters> reportedCounters = countersByName.values().stream()
+            .filter(c -> logStripedConnectors || !c.isStripeNode())
+            .collect(Collectors.toList());
+
+        if (buff == null) {
+            // Do not produce string for log but still report everything to MARS
             rootCounters.report(integerFormat, elapsedTime, null);
-            for (IOCounters ios : countersByName.values())
+            for (IOCounters ios : reportedCounters) {
                 ios.report(integerFormat, elapsedTime, null);
+            }
             return;
         }
 
         if (name != null)
-            sb.append("{").append(name).append("} ");
+            buff.append("{").append(name).append("} ");
 
-        sb.append("Subscription: ").append(integerFormat.format(subscription)).
-            append("; Storage: ").append(integerFormat.format(storage)).
-            append("; Buffer: ").append(integerFormat.format(buffer)).
-            append("; ");
-            rootCounters.report(integerFormat, elapsedTime, sb);
-            sb.append("; CPU: ").append(percentFormat.format(cpu.getCpuUsage()));
+        buff.append("Subscription: ").append(integerFormat.format(subscription))
+            .append("; Storage: ").append(integerFormat.format(storage))
+            .append("; Buffer: ").append(integerFormat.format(buffer))
+            .append("; ");
+        rootCounters.report(integerFormat, elapsedTime, buff);
+        buff.append("; CPU: ").append(percentFormat.format(cpu.getCpuUsage()));
 
-        for (IOCounters ios : countersByName.values()) {
-            sb.append("\n    ");
-            padR(sb, ios.getDisplayName(), layout.maxNameLen);
-            sb.append(" ");
-            padR(sb, ios.getDisplayAddr(), layout.maxAddrLen);
-            sb.append(" [").append(ios.getConnectionsCount()).append("] ");
-            ios.report(integerFormat, elapsedTime, sb);
+        // Calculate string lengths for formatting
+        int maxNameLen = 0;
+        int maxAddressLen = 0;
+        for (IOCounters ios : reportedCounters) {
+            maxNameLen = Math.max(maxNameLen, ios.displayName.length());
+            maxAddressLen = Math.max(maxAddressLen, ios.displayAddress.length());
+        }
+
+        for (IOCounters ios : reportedCounters) {
+            buff.append("\n    ");
+            padRight(buff, ios.displayName, maxNameLen);
+            buff.append(" ");
+            padRight(buff, ios.displayAddress, maxAddressLen);
+            buff.append(" [").append(ios.connectionsCount).append("] ");
+            ios.report(integerFormat, elapsedTime, buff);
         }
     }
 
-    private void updateConnectorNames() {
-        List<IOCounter> updatedNames = new ArrayList<>();
-        for (IOCounters counters : countersByName.values())
-            counters.updateNames(updatedNames);
-        for (IOCounter counter : updatedNames) {
-            MessageConnector connector = counter.getConnector();
-            // remove by old name
-            removeNamedConnectorImpl(counter.getName(), connector);
-            // add by new name (keeping old counter stats)
-            addNamedConnectorImpl(connector.getName(), connector, counter);
-        }
+    /*
+     * Depends on striped connections having "stripe=..." property at the start.
+     */
+    private List<QDStats> getStripedConnections(QDStats stats) {
+        return stats.getAll(QDStats.SType.CONNECTION).stream()
+            .filter(s -> s.getKeyProperties().startsWith("stripe="))
+            .collect(Collectors.toList());
     }
 
-    static void padR(StringBuilder sb, String s, int len) {
+    private String getStripeName(QDStats stats) {
+        String striperProperty = stats.getKeyProperties().substring("stripe=".length());
+        int to = striperProperty.indexOf(',');
+        return striperProperty.substring(0, (to > 0) ? to : striperProperty.length());
+    }
+
+    private IOCounters createSumStats(String name) {
+        return new IOCounters(name, connectorsNode);
+    }
+
+    private IOCounters createStripeSumStats(String name) {
+        return new IOCounters(name, connectorsNode, true);
+    }
+
+    private static void padRight(StringBuilder sb, String s, int len) {
         sb.append(s);
-        for (int i = s.length(); i < len; i++)
+        for (int i = s.length(); i < len; i++) {
             sb.append(' ');
+        }
     }
 }

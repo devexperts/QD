@@ -33,8 +33,8 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
+import java.util.Arrays;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -189,13 +189,15 @@ public class FileWriterTest {
         }
         fileWriter.close();
 
-        checkTestResult(dir, NAME_SUFFIX, 2);
-        checkTestResult(dir, TIME_SUFFIX, 2);
+        // storageTime limit is "soft" and checked against current time during operation.
+        // In case of unhappy delay some files on the edge may be considered as too old and deleted.
+        checkTestResult(dir, NAME_SUFFIX, 1, 2);
+        checkTestResult(dir, TIME_SUFFIX, 1, 2);
     }
 
-    private void checkTestResult(File dir, String suffix, int expectedFiles) throws IOException {
+    private void checkTestResult(File dir, String suffix, int... expectedFiles) throws IOException {
         File[] files = getDataFiles(dir, suffix);
-        assertEquals(expectedFiles, files.length);
+        assertTrue(Arrays.stream(expectedFiles).anyMatch(value -> value == files.length));
         for (File file: files) {
             assertTrue("Empty file: " + file.getAbsolutePath(), Files.size(file.toPath()) > 0);
         }

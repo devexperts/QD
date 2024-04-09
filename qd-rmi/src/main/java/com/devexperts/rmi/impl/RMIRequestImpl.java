@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -432,8 +432,10 @@ public final class RMIRequestImpl<T> extends RMIRequest<T> implements RMIChannel
                 connection.requestsManager.addSentRequest(this);
                 // must ensure that concurrent connection close does not leave a dangling request.
                 // must check here (after "addSentRequest" !) if connection was closed
-                if (connection.closed)
+                if (connection.closed) {
                     setFailedStateInternal(RMIExceptionType.DISCONNECTION, null, null);
+                    notifier = new Notifier();
+                }
                 // don't need to remove it from a closed connection -- it does not really matter
             }
         }

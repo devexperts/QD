@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -57,64 +57,65 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
     private static final String TOP_ATTR_SUFFIX = "Top*";
     private static final int TOP_COUNT = 5;
 
-    private static final Map<String,MBeanAttributeInfo> attr_map = new HashMap<String, MBeanAttributeInfo>();
+    private static final Map<String, MBeanAttributeInfo> ATTRIBUTE_MAP = new HashMap<>();
     private static final boolean[] SHOULD_REGISTER = new boolean[FLAG_COUNT]; // indexed by flags
     private static final MBeanInfo[] MBEAN_INFO = new MBeanInfo[FLAG_COUNT];
 
-    private static final Comparator<ObjectName> NAMES_COMPARATOR = new Comparator<ObjectName>() {
-        public int compare(ObjectName o1, ObjectName o2) {
-            int i = o1.getDomain().compareTo(o2.getDomain());
-            if (i != 0)
-                return i;
-            return o1.getKeyPropertyListString().compareTo(o2.getKeyPropertyListString());
-        }
-    };
+    private static final Comparator<ObjectName> NAMES_COMPARATOR =
+        Comparator.comparing(ObjectName::getDomain).thenComparing(ObjectName::getKeyPropertyListString);
 
-    private static MBeanAttributeInfo createJXMAttr(String name, String class_name) {
-        return new MBeanAttributeInfo(name, class_name, name, true, false, false);
+    private static MBeanAttributeInfo createJXMAttr(String name, String className) {
+        return new MBeanAttributeInfo(name, className, name, true, false, false);
     }
 
     static {
         // init attributes lists
+        @SuppressWarnings("unchecked")
         ArrayList<MBeanAttributeInfo>[] al = (ArrayList<MBeanAttributeInfo>[]) new ArrayList[FLAG_COUNT];
         for (int f = 0; f < FLAG_COUNT; f++) {
-            al[f] = new ArrayList<MBeanAttributeInfo>();
+            al[f] = new ArrayList<>();
             al[f].add(CHILDREN);
             al[f].add(PARENT);
         }
         for (int i = 0; i < SValue.getValueCount(); i++) {
             SValue value = SValue.getValue(i);
             MBeanAttributeInfo attr = createJXMAttr(value.getName(), LONG_CLASS_NAME);
-            for (int f = 0; f < FLAG_COUNT; f++)
+            for (int f = 0; f < FLAG_COUNT; f++) {
                 if (value.supportsFlag(f)) {
                     al[f].add(attr);
                 }
+            }
         }
         for (int i = 0; i < SValue.getValueCount(); i++) {
             SValue value = SValue.getValue(i);
             if (value.isRid()) {
-                MBeanAttributeInfo array_attr = createJXMAttr(value.getName() + ARRAY_ATTR_SUFFIX, LONG_ARRAY_CLASS_NAME);
-                MBeanAttributeInfo top_attr = createJXMAttr(value.getName() + TOP_ATTR_SUFFIX, STRING_CLASS_NAME);
-                for (int f = 0; f < FLAG_COUNT; f++)
+                MBeanAttributeInfo arrayAttr =
+                    createJXMAttr(value.getName() + ARRAY_ATTR_SUFFIX, LONG_ARRAY_CLASS_NAME);
+                MBeanAttributeInfo topAttr =
+                    createJXMAttr(value.getName() + TOP_ATTR_SUFFIX, STRING_CLASS_NAME);
+                for (int f = 0; f < FLAG_COUNT; f++) {
                     if ((f & FLAG_RID) != 0 && value.supportsFlag(f)) {
-                        al[f].add(array_attr);
-                        al[f].add(top_attr);
+                        al[f].add(arrayAttr);
+                        al[f].add(topAttr);
                     }
+                }
             }
         }
-        ArrayList<MBeanAttributeInfo> all_attributes = al[FLAG_COUNT - 1];
-        for (MBeanAttributeInfo attr : all_attributes)
-            attr_map.put(attr.getName(), attr);
+        ArrayList<MBeanAttributeInfo> allAttributes = al[FLAG_COUNT - 1];
+        for (MBeanAttributeInfo attr : allAttributes) {
+            ATTRIBUTE_MAP.put(attr.getName(), attr);
+        }
         // init MBeanInfo
         for (int f = 0; f < FLAG_COUNT; f++) {
             SHOULD_REGISTER[f] = al[f].size() > BASIC_ATTRIBUTE_COUNT;
             MBEAN_INFO[f] = new MBeanInfo(JMXStats.class.getName(), "JMXStats",
-                al[f].toArray(new MBeanAttributeInfo[al[f].size()]),
+                al[f].toArray(new MBeanAttributeInfo[0]),
                 null,
                 new MBeanOperationInfo[]{
-                    new MBeanOperationInfo("reportCounters", "Reports performance counters", new MBeanParameterInfo[]{
+                    new MBeanOperationInfo("reportCounters", "Reports performance counters", new MBeanParameterInfo[] {
                         new MBeanParameterInfo("format", "java.lang.String", "html (default) or csv"),
-                        new MBeanParameterInfo("topSize", "java.lang.Integer", "max size of TOP tables, " + TOP_COUNT + " by default")
+                        new MBeanParameterInfo("topSize", "java.lang.Integer",
+                            "max size of TOP tables, " + TOP_COUNT + " by default")
                     }, "java.lang.String", MBeanOperationInfo.INFO)
                 },
                 null);
@@ -160,12 +161,12 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
     private JmxInfo jmx;
     private int index;
     private IndexedSet<String, ChildIndex> childIndexerByCollectorType;
-    private volatile Map<String,AddedMBeanEntry> addedMBeans;
+    private volatile Map<String, AddedMBeanEntry> addedMBeans;
 
     public JMXStats() {}
 
-    public JMXStats(String key_properties) {
-        super(key_properties);
+    public JMXStats(String keyProperties) {
+        super(keyProperties);
     }
 
     @Override
@@ -183,10 +184,11 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
 
     @Override
     // SYNC: lock
-    protected void initChild(QDStats child, SType type, String key_properties, int rid_count, DataScheme scheme) {
-        super.initChild(child, type, key_properties, rid_count, scheme);
+    protected void initChild(QDStats child, SType type, String keyProperties, int ridCount, DataScheme scheme) {
+        super.initChild(child, type, keyProperties, ridCount, scheme);
         if (!(child instanceof JMXStats))
             return; // anonymous children are regular QDStats (see QD-445)
+
         JMXStats jmxChild = (JMXStats) child;
         // compute index for this bean
         String childCollectorType = jmxChild.getCollectorType();
@@ -230,19 +232,22 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
 
     @Override
     protected void closeImpl() {
-        if (jmx != null)
+        if (jmx != null) {
             unregisterMBean();
-        else
+        } else {
             unregisterChildrenRec();
+        }
     }
 
     protected void registerAddedMBeans() {
-        if (jmx != null && addedMBeans != null)
-            for (Map.Entry<String, AddedMBeanEntry> entry : addedMBeans.entrySet())
+        if (jmx != null && addedMBeans != null) {
+            for (Map.Entry<String, AddedMBeanEntry> entry : addedMBeans.entrySet()) {
                 registerAddedMBean(entry.getKey(), entry.getValue());
+            }
+        }
     }
 
-    protected void registerAddedMBean(String type, AddedMBeanEntry mbe) {
+    private void registerAddedMBean(String type, AddedMBeanEntry mbe) {
         if (jmx != null && mbe.name == null) {
             String name = constructName(jmx.name.getDomain(), type, jmx.name.getKeyPropertyListString());
             try {
@@ -254,12 +259,14 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
     }
 
     protected void unregisterAddedMBeans() {
-        if (jmx != null && addedMBeans != null)
-            for (Map.Entry<String, AddedMBeanEntry> entry : addedMBeans.entrySet())
+        if (jmx != null && addedMBeans != null) {
+            for (Map.Entry<String, AddedMBeanEntry> entry : addedMBeans.entrySet()) {
                 unregisterAddedMBean(entry.getValue());
+            }
+        }
     }
 
-    protected void unregisterAddedMBean(AddedMBeanEntry mbe) {
+    private void unregisterAddedMBean(AddedMBeanEntry mbe) {
         if (jmx != null && mbe.name != null)
             try {
                 if (jmx.server.isRegistered(mbe.name))
@@ -275,7 +282,7 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
         if (addedMBeans == null)
             synchronized (this) {
                 if (addedMBeans == null)
-                    addedMBeans = new ConcurrentHashMap<String, AddedMBeanEntry>(); // because we want synchronized access just in case...
+                    addedMBeans = new ConcurrentHashMap<>(); // because we want synchronized access just in case...
             }
         AddedMBeanEntry mbe = addedMBeans.get(type);
         if (mbe != null)
@@ -298,30 +305,31 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
 
     public Object getAttribute(String attribute) throws AttributeNotFoundException {
         try {
-            MBeanAttributeInfo attr = attr_map.get(attribute);
+            MBeanAttributeInfo attr = ATTRIBUTE_MAP.get(attribute);
             if (attr == null) {
                 throw new AttributeNotFoundException(attribute);
             }
             if (attr == CHILDREN) {
-                List<ObjectName> names = new ArrayList<ObjectName>(getChildren().length);
+                List<ObjectName> names = new ArrayList<>(getChildren().length);
                 addChildrenNamesRec(names);
                 QuickSort.sort(names, NAMES_COMPARATOR);
-                return names.toArray(new ObjectName[names.size()]);
+                return names.toArray(new ObjectName[0]);
             }
             if (attr == PARENT) {
                 return getParentNameRec();
             }
+            String name = attr.getName();
             if (attr.getType().equals(LONG_CLASS_NAME)) {
-                return getValue(SValue.valueOf(attr.getName()), false);
+                return getValue(SValue.valueOf(name), false);
             }
-            if (attr.getType().equals(LONG_ARRAY_CLASS_NAME) && attr.getName().endsWith(ARRAY_ATTR_SUFFIX)) {
+            if (attr.getType().equals(LONG_ARRAY_CLASS_NAME) && name.endsWith(ARRAY_ATTR_SUFFIX)) {
                 long[] v = new long[getRidCount()];
-                addValues(SValue.valueOf(attr.getName().substring(0, attr.getName().length() - ARRAY_ATTR_SUFFIX.length())), false, v);
+                addValues(SValue.valueOf(name.substring(0, name.length() - ARRAY_ATTR_SUFFIX.length())), false, v);
                 return v;
             }
-            if (attr.getType().equals(STRING_CLASS_NAME) && attr.getName().endsWith(TOP_ATTR_SUFFIX)) {
+            if (attr.getType().equals(STRING_CLASS_NAME) && name.endsWith(TOP_ATTR_SUFFIX)) {
                 long[] v = new long[getRidCount()];
-                addValues(SValue.valueOf(attr.getName().substring(0, attr.getName().length() - TOP_ATTR_SUFFIX.length())), false, v);
+                addValues(SValue.valueOf(name.substring(0, name.length() - TOP_ATTR_SUFFIX.length())), false, v);
                 return findTop(v);
             }
             throw new AttributeNotFoundException(attribute);
@@ -336,12 +344,12 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
         for (QDStats child : children) {
             if (!(child instanceof JMXStats))
                 continue; // anonymous children are regular QDStats (see QD-445)
+
             JMXStats jmxChild = (JMXStats) child;
-            if (jmxChild != null) {
-                if (jmxChild.jmx != null)
-                    names.add(jmxChild.jmx.name);
-                else
-                    jmxChild.addChildrenNamesRec(names);
+            if (jmxChild.jmx != null) {
+                names.add(jmxChild.jmx.name);
+            } else {
+                jmxChild.addChildrenNamesRec(names);
             }
         }
     }
@@ -359,10 +367,11 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
     private String reportCounters(String format, int topSize) {
         Map<String, AtomicLongArray> counters = new LinkedHashMap<>();
         for (MBeanAttributeInfo attr : getMBeanInfo().getAttributes()) {
-            if (attr.getType().equals(STRING_CLASS_NAME) && attr.getName().endsWith(TOP_ATTR_SUFFIX)) {
+            String name = attr.getName();
+            if (attr.getType().equals(STRING_CLASS_NAME) && name.endsWith(TOP_ATTR_SUFFIX)) {
                 long[] v = new long[getRidCount()];
-                addValues(SValue.valueOf(attr.getName().substring(0, attr.getName().length() - TOP_ATTR_SUFFIX.length())), false, v);
-                counters.put(attr.getName(), new AtomicLongArray(v));
+                addValues(SValue.valueOf(name.substring(0, name.length() - TOP_ATTR_SUFFIX.length())), false, v);
+                counters.put(name, new AtomicLongArray(v));
             }
         }
         return CollectorCountersImpl.reportCounters(getScheme(), counters, format, topSize);
@@ -371,9 +380,10 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
     private String findTop(long[] v) {
         if (v.length == 0)
             return "";
-        PriorityQueue<IndexedValue> pq = new PriorityQueue<IndexedValue>(v.length);
-        for (int i = 0; i < v.length; i++)
+        PriorityQueue<IndexedValue> pq = new PriorityQueue<>(v.length);
+        for (int i = 0; i < v.length; i++) {
             pq.add(new IndexedValue(i, v[i]));
+        }
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < TOP_COUNT; i++) {
             if (pq.isEmpty())
@@ -383,8 +393,8 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
                 break;
             if (sb.length() > 0)
                 sb.append(", ");
-            sb.append(getScheme() != null && iv.index < getScheme().getRecordCount() ? getScheme().getRecord(iv.index).getName() :
-                "[" + iv.index + "]");
+            sb.append(getScheme() != null && iv.index < getScheme().getRecordCount() ?
+                getScheme().getRecord(iv.index).getName() : "[" + iv.index + "]");
             sb.append('=').append(iv.value);
         }
         return sb.toString();
@@ -400,7 +410,7 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
         }
 
         public int compareTo(IndexedValue o) {
-            return o.value > value ? 1 : o.value < value ? -1 : 0;
+            return Long.compare(o.value, value);
         }
     }
 
@@ -410,24 +420,26 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
 
     public AttributeList getAttributes(String[] attributes) {
         AttributeList al = new AttributeList();
-        for (String attribute : attributes)
+        for (String attribute : attributes) {
             try {
                 al.add(new Attribute(attribute, getAttribute(attribute)));
             } catch (Exception e) {
                 log.error("Unexpected JMX exception", e);
             }
+        }
         return al;
     }
 
     public AttributeList setAttributes(AttributeList attributes) {
         AttributeList al = new AttributeList();
-        for (Object attribute : attributes)
+        for (Object attribute : attributes) {
             try {
                 Attribute a = (Attribute) attribute;
                 al.add(new Attribute(a.getName(), getAttribute(a.getName())));
             } catch (Exception e) {
                 log.error("Unexpected JMX exception", e);
             }
+        }
         return al;
     }
 
@@ -448,24 +460,25 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
     // ========== MBeanRegistration Implementation ==========
 
     // props may be empty or null
-    protected ObjectName constructName(String domain, String key_properties) throws MalformedObjectNameException {
-        return new ObjectName(constructName(domain, getType().getName() + "Stats", key_properties));
+    protected ObjectName constructName(String domain, String keyProperties) throws MalformedObjectNameException {
+        return new ObjectName(constructName(domain, getType().getName() + "Stats", keyProperties));
     }
 
-    protected String constructName(String domain, String type, String key_properties) {
+    protected String constructName(String domain, String type, String keyProperties) {
         JMXStatsNameBuilder nb = new JMXStatsNameBuilder(domain);
         // append full key properties first (always)
         nb.appendKeyProperties(getFullKeyProperties());
         for (QDStats child = this, parent; (parent = child.getParent()) != null; child = parent) {
-            if (child.isSumMode())
+            if (child.isSum()) {
                 nb.insertSumModeFlag();
-            else
+            } else {
                 nb.insertId(((JMXStats) child).index);
+            }
         }
         nb.append("c", getCollectorFromAncestors());
         nb.appendType(type);
         nb.doneId();
-        nb.appendKeyProperties(key_properties); // inherited key properties (at the end)
+        nb.appendKeyProperties(keyProperties); // inherited key properties (at the end)
         return nb.toString();
     }
 
@@ -481,8 +494,9 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
 
     private String getCollectorFromAncestors() {
         String collector = getCollector();
-        for (QDStats stats = getParent(); collector == null && stats != null; stats = stats.getParent())
+        for (QDStats stats = getParent(); collector == null && stats != null; stats = stats.getParent()) {
             collector = ((JMXStats) stats).getCollector();
+        }
         return collector == null ? "Any" : collector;
     }
 
@@ -506,23 +520,25 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
         for (QDStats child : children) {
             if (!(child instanceof JMXStats))
                 continue; // anonymous children are regular QDStats (see QD-445)
+
             JMXStats jmxChild = (JMXStats) child;
-            if (jmxChild != null && jmxChild.getParent() == this) {
+            if (jmxChild.getParent() == this) {
                 // register only proper children
-                if (jmxChild.shouldRegister())
+                if (jmxChild.shouldRegister()) {
                     registerChildBean(jmxChild);
-                else
+                } else {
                     jmxChild.registerChildrenRec();
+                }
             }
         }
     }
 
-    public void postRegister(Boolean registration_done) {
-        if (registration_done == null || !registration_done)
+    public void postRegister(Boolean registrationDone) {
+        if (registrationDone == null || !registrationDone)
             jmx = null;
     }
 
-    public void preDeregister() throws Exception {
+    public void preDeregister() {
         unregisterAddedMBeans();
         unregisterChildrenRec();
     }
@@ -532,12 +548,14 @@ public class JMXStats extends QDStats implements DynamicMBean, MBeanRegistration
         for (QDStats child : children) {
             if (!(child instanceof JMXStats))
                 continue; // anonymous children are regular QDStats (see QD-445)
+
             JMXStats jmxChild = (JMXStats) child;
-            if (jmxChild != null && jmxChild.getParent() == this) {
-                if (jmxChild.jmx != null)
+            if (jmxChild.getParent() == this) {
+                if (jmxChild.jmx != null) {
                     jmxChild.unregisterMBean();
-                else
+                } else {
                     jmxChild.unregisterChildrenRec();
+                }
             }
         }
     }

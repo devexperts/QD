@@ -98,7 +98,7 @@ public interface MessageConnector extends MessageConnectorMBean {
     public long getClosedConnectionCount();
 
     /**
-     * Permanently closes connector and releases it's resources.
+     * Permanently closes connector and releases its resources.
      */
     public default void close() {
         stop();

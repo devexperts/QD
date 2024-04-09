@@ -1,3 +1,25 @@
+QDS 3.330:
+
+* [QD-1492] Graceful connections close
+  - added the JMX 'isAccepting' flag, which describes whether the server can accept new connections
+  - added JMX operation: 'stopAcceptor' to immediately disable accepting new connections
+  - added JMX operation: 'stopGracefully' to smothly disconnect all connections and shutdown the socket connector for
+    a specified period of time
+  - added JMX operation: 'closeConnections' to smoothly disconnect specified percent of connections during the specified
+    time period with the additional option to disable socket accepting during operation
+* [QD-1540] RecordBuffer throws NullPointerException when using replaceAt methods
+* [QD-1539] [Build] Fix flaky test FileWriterTest.testStorageLimit
+* [QD-1479] RMI requests waiting to send hanging forever after pending requests rebalanced
+* [QD-1536] IPF: Add the new type CERTIFICATE to enum InstrumentProfileType
+* [QD-1518] QDStats graph is broken for StripedCollector
+* [QD-1499] Implement the statistics per stripe
+  - JVM parameter "-Dcom.devexperts.qd.logStripedConnectors=false|true" (false by default) can be used
+    to turn on showing extended stats for striped connectors
+  - JMX bean for endpoint "com.devexperts.qd.monitoring:type=MonitoringEndpoint,..." can be used to
+    change the logging/MARS reporting in real time
+  - BACKWARD-INCOMPATIBLE CHANGES:
+    - Deprecated class com.devexperts.qd.monitoring.QDMonitoring is removed
+
 QDS 3.329:
 
 * [QD-1528] MessageConnector removal support

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -10,8 +10,6 @@
  * !__
  */
 package com.devexperts.qd.qtp.nio;
-
-import java.util.Iterator;
 
 /**
  * Thread that periodically validates existing client connections.
@@ -26,10 +24,9 @@ class NioValidator extends NioWorkerThread {
         sleep(100);
         boolean closed = false;
         long time = System.currentTimeMillis();
-        for (Iterator<NioConnection> it = core.connections.keySet().iterator(); it.hasNext();) {
-            NioConnection connection = it.next();
+        for (NioConnection connection : core.connections) {
             if (connection.isClosed()) {
-                it.remove();
+                core.removeConnection(connection);
                 closed = true;
                 continue;
             }

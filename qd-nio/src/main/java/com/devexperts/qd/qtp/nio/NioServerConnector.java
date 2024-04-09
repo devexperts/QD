@@ -13,9 +13,8 @@ package com.devexperts.qd.qtp.nio;
 
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.monitoring.Monitored;
-import com.devexperts.qd.qtp.AbstractMessageConnector;
+import com.devexperts.qd.qtp.AbstractServerConnector;
 import com.devexperts.qd.qtp.MessageConnector;
-import com.devexperts.qd.qtp.MessageConnector.Bindable;
 import com.devexperts.qd.qtp.MessageConnectorState;
 import com.devexperts.qd.qtp.help.MessageConnectorProperty;
 import com.devexperts.qd.qtp.help.MessageConnectorSummary;
@@ -25,9 +24,11 @@ import com.devexperts.transport.stats.EndpointStats;
 import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.concurrent.atomic.AtomicReference;
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Server socket connector that uses scalable non-blocking socket API (java.nio).
@@ -36,7 +37,7 @@ import java.util.concurrent.atomic.AtomicReference;
     info = "TCP/IP server socket connector with scalable non-blocking API.",
     addressFormat = "nio:<port>"
 )
-public class NioServerConnector extends AbstractMessageConnector implements Bindable, NioServerConnectorMBean {
+public class NioServerConnector extends AbstractServerConnector implements NioServerConnectorMBean {
     // We need at least two threads, because one of the threads is used to wait on selector if needed.
     private static final int MIN_THREAD_COUNT = 2;
 
@@ -44,18 +45,13 @@ public class NioServerConnector extends AbstractMessageConnector implements Bind
         SystemProperties.getIntProperty("com.devexperts.qd.qtp.nio.ThreadCount", // legacy property name
             Runtime.getRuntime().availableProcessors() + 1, MIN_THREAD_COUNT, Integer.MAX_VALUE);
 
-    private int port;
-    // 0 stands for unlimited number of connections
-    int maxConnections;
-    private String bindAddressString = ANY_BIND_ADDRESS;
-    InetAddress bindAddress;
-
-    private int socketTimeout = 5 * 60 * 1000;
+    // TODO: Refactoring task is replace to SocketSource.SO_TIMEOUT
+    private volatile int socketTimeout = Math.toIntExact(TimeUnit.MINUTES.toMillis(5));
 
     private volatile int readerThreads = DEFAULT_THREAD_COUNT;
     private volatile int writerThreads = DEFAULT_THREAD_COUNT;
 
-    final AtomicReference<NioCore> core = new AtomicReference<>();
+    private volatile NioCore core;
 
     /**
      * Creates new NIO server socket connector.
@@ -72,62 +68,79 @@ public class NioServerConnector extends AbstractMessageConnector implements Bind
     }
 
     @Override
-    public synchronized void start() {
-        if (isClosed())
-            return;
-        NioCore oldCore = core.getAndSet(null);
-        if (oldCore != null && !oldCore.isClosed())
-            return;
-        NioCore newCore;
-        try {
-            newCore = new NioCore(this);
-        } catch (Throwable t) {
-            log.error("Failed to start connector", t);
+    protected synchronized void reconfigure() {
+        getFactory().reinitConfiguration();
+        if (isActive()) {
+            boolean accepting = core.stopAcceptor();
+            stopImpl();
+            startImpl(accepting);
+            notifyMessageConnectorListeners();
+        }
+    }
+
+    protected void startImpl(boolean startAcceptor) {
+        if (isClosed()) {
             return;
         }
-        if (core.compareAndSet(null, newCore)) {
+        if (!isActive()) {
             log.info("Starting NioServerConnector to " + LogUtil.hideCredentials(getAddress()));
-            newCore.start();
-        } else {
-            newCore.close();
+            try {
+                if (!isCoreActive(core)) {
+                    NioCore newCore = new NioCore(this);
+                    newCore.start();
+                    core = newCore;
+                }
+                active = true;
+            } catch (Throwable t) {
+                log.error("Failed to start connector", t);
+            }
+        }
+        if (startAcceptor) {
+            cancelScheduledTask();
+            startAcceptorInternal();
         }
     }
 
     @Override
-    protected Joinable stopImpl() {
-        NioCore oldCore = core.getAndSet(null);
-        if (oldCore != null) {
-            log.info("Stopping NioServerConnector");
-            oldCore.close();
+    protected synchronized Joinable stopImpl() {
+        if (!isActive()) {
+            return null;
         }
-        return oldCore;
+        log.info("Stopping NioServerConnector");
+        cancelScheduledTask();
+        NioCore core = this.core;
+        core.close();
+        active = false;
+        return core;
     }
 
     @Override
-    public boolean isActive() {
-        return core.get() != null;
+    public boolean isAccepting() {
+        NioCore core = this.core;
+        return core != null && core.isAccepting();
     }
 
     @Override
     public MessageConnectorState getState() {
-        NioCore core = this.core.get();
-        if (core == null || core.isClosed())
+        NioCore core = this.core;
+        if (!isActive()) {
             return MessageConnectorState.DISCONNECTED;
+        }
         return core.isConnected() ? MessageConnectorState.CONNECTED : MessageConnectorState.CONNECTING;
     }
 
     @Override
     public int getConnectionCount() {
-        NioCore core = this.core.get();
-        return core == null ? 0 : core.getConnectionsCount();
+        NioCore core = this.core;
+        return isCoreActive(core) ? core.getConnectionsCount() : 0;
     }
 
     @Override
     public EndpointStats retrieveCompleteEndpointStats() {
         EndpointStats stats = super.retrieveCompleteEndpointStats();
-        NioCore core = this.core.get(); // Atomic read.
-        if (core != null) {
-            for (NioConnection connection : core.connections.keySet()) {
+        NioCore core = this.core;
+        if (isCoreActive(core)) {
+            for (NioConnection connection : core.connections) {
                 stats.addActiveConnectionCount(1);
                 stats.addConnectionStats(connection.connectionStats);
             }
@@ -136,58 +149,7 @@ public class NioServerConnector extends AbstractMessageConnector implements Bind
     }
 
     @Override
-    public synchronized String getAddress() {
-        return bindAddressString + ":" + port;
-    }
-
-    @Override
-    public synchronized int getLocalPort() {
-        return port;
-    }
-
-    @Override
-    public synchronized void setLocalPort(int port) {
-        if (this.port != port) {
-            log.info("Setting localPort=" + port);
-            this.port = port;
-            reconfigure();
-        }
-    }
-
-    @Override
-    public synchronized String getBindAddr() {
-        return bindAddressString;
-    }
-
-    @Override
-    @MessageConnectorProperty("Network interface address to bind socket to")
-    public synchronized void setBindAddr(String newBindAddress) throws UnknownHostException {
-        newBindAddress = Bindable.normalizeBindAddr(newBindAddress);
-        if (!newBindAddress.equals(this.bindAddressString)) {
-            log.info("Setting bindAddr=" + LogUtil.hideCredentials(newBindAddress));
-            this.bindAddress = newBindAddress.equals(ANY_BIND_ADDRESS) ? null : InetAddress.getByName(newBindAddress);
-            this.bindAddressString = newBindAddress;
-            reconfigure();
-        }
-    }
-
-    @Override
-    public int getMaxConnections() {
-        return maxConnections;
-    }
-
-    @Override
-    @MessageConnectorProperty("Max number of connections allowed for connector")
-    public synchronized void setMaxConnections(int maxConnections) {
-        if (maxConnections != this.maxConnections) {
-            log.info("Setting maxConnections=" + maxConnections);
-            this.maxConnections = maxConnections;
-            reconfigure();
-        }
-    }
-
-    @Override
-    public synchronized int getSocketTimeout() {
+    public int getSocketTimeout() {
         return socketTimeout;
     }
 
@@ -220,14 +182,14 @@ public class NioServerConnector extends AbstractMessageConnector implements Bind
 
     @Override
     public NioPoolCounters getReaderPoolCounters() {
-        NioCore nioCore = core.get();
-        return nioCore == null ? NioPoolCounters.EMPTY : nioCore.getReaderPoolCounters();
+        NioCore core = this.core;
+        return isCoreActive(core) ? core.getReaderPoolCounters() : NioPoolCounters.EMPTY;
     }
 
     @Monitored(name = "readerPool", description = "Reader threads pool counters", expand = true)
     public NioPoolCounters getReaderPoolCountersDelta() {
-        NioCore nioCore = core.get();
-        return nioCore == null ? NioPoolCounters.EMPTY : nioCore.getReaderPoolCountersDelta();
+        NioCore core = this.core;
+        return isCoreActive(core) ? core.getReaderPoolCountersDelta() : NioPoolCounters.EMPTY;
     }
 
     @Override
@@ -248,31 +210,61 @@ public class NioServerConnector extends AbstractMessageConnector implements Bind
     }
 
     @Override
+    protected boolean stopAcceptorInternal() {
+        return core.stopAcceptor();
+    }
+
+    @Override
+    protected void startAcceptorInternal() {
+        if (isActive() && !isAccepting()) {
+            try {
+                if (core.startAcceptor()) {
+                    log.info("Acceptor started for address: " + LogUtil.hideCredentials(getAddress()));
+                }
+            } catch (IOException e) {
+                log.error("Failed to start acceptor", e);
+            }
+        }
+    }
+
+    @Override
     public NioPoolCounters getWriterPoolCounters() {
-        NioCore nioCore = core.get();
-        return nioCore == null ? NioPoolCounters.EMPTY : nioCore.getWriterPoolCounters();
+        NioCore core = this.core;
+        return isCoreActive(core) ? core.getWriterPoolCounters() : NioPoolCounters.EMPTY;
     }
 
     @Monitored(name = "writerPool", description = "Writer thread pool counters", expand = true)
     public NioPoolCounters getWriterPoolCountersDelta() {
-        NioCore nioCore = core.get();
-        return nioCore == null ? NioPoolCounters.EMPTY : nioCore.getWriterPoolCountersDelta();
+        NioCore core = this.core;
+        return isCoreActive(core) ? core.getWriterPoolCountersDelta() : NioPoolCounters.EMPTY;
     }
 
     @Override
     public void resetCounters() {
-        NioCore nioCore = core.get();
-        if (nioCore != null)
-            nioCore.resetCounters();
+        NioCore core = this.core;
+        if (isCoreActive(core)) {
+            core.resetCounters();
+        }
     }
 
     @Override
-    public synchronized void setStats(QDStats stats) {
+    public void setStats(QDStats stats) {
         super.setStats(stats);
         stats.addMBean("NIOServerConnector", this);
     }
 
-    protected synchronized boolean isNewConnectionAllowed() {
+    protected boolean isNewConnectionAllowed() {
+        int maxConnections = this.maxConnections;
         return maxConnections == 0 || getConnectionCount() < maxConnections;
+    }
+
+    @Override
+    protected List<Closeable> getConnections() {
+        NioCore core = this.core;
+        return isCoreActive(core) ? core.getConnections() : Collections.emptyList();
+    }
+
+    boolean isCoreActive(NioCore core) {
+        return core != null && !core.isClosed();
     }
 }

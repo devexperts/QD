@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,37 +11,14 @@
  */
 package com.devexperts.qd.qtp.nio;
 
-import com.devexperts.qd.qtp.MessageConnectorMBean;
-
-import java.net.UnknownHostException;
+import com.devexperts.qd.qtp.ServerConnectorMBean;
 
 /**
  * Management interface for {@link NioServerConnector}.
  *
  * @dgen.annotate method {}
  */
-public interface NioServerConnectorMBean extends MessageConnectorMBean {
-    /**
-     * Local TCP/IP port
-     */
-    public int getLocalPort();
-
-    public void setLocalPort(int port);
-
-    /**
-     * Network interface address to bind socket to
-     */
-    public String getBindAddr();
-
-    public void setBindAddr(String bindAddress) throws UnknownHostException;
-
-    /**
-     * Max number of connections
-     */
-    public int getMaxConnections();
-
-    public void setMaxConnections(int maxConnections);
-
+public interface NioServerConnectorMBean extends ServerConnectorMBean {
     /**
      * SO_TIMEOUT option value
      */

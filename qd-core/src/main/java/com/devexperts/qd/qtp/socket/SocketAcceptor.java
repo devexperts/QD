@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -37,12 +37,12 @@ class SocketAcceptor extends QTPWorkerThread {
 
     SocketAcceptor(ServerSocketConnector connector) {
         super(connector.getName() + "-" + (connector.getTls() ? "tls+" : "") + ":" + connector.getLocalPort() +
-            (connector.bindAddr == null || connector.bindAddr.isAnyLocalAddress() ? "" :
-                "[bindaddr=" + connector.bindAddr.getHostAddress() + "]") +
+            (connector.getBindInetAddress() == null || connector.getBindInetAddress().isAnyLocalAddress() ? "" :
+                "[bindaddr=" + connector.getBindInetAddress().getHostAddress() + "]") +
             "-Acceptor");
         this.connector = connector;
         port = connector.getLocalPort();
-        bindAddress = connector.bindAddr;
+        bindAddress = connector.getBindInetAddress();
         address = connector.getAddress();
         reconnectHelper = new ReconnectHelper(connector.getReconnectDelay());
     }

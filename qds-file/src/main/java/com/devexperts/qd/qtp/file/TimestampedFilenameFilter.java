@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -80,7 +80,7 @@ class TimestampedFilenameFilter implements FilenameFilter {
      * Returns path for tape file with specified time. If time is less or equals than previous,
      * then (previous + 1s) is used instead of specified. It makes reading data in recording order.
      */
-    public  String getPathForTime(long time) {
+    public String getPathForTime(long time) {
         lastTimeForPath = Math.max(lastTimeForPath + TimeUtil.SECOND, time);
         return new File(directory, fileNamePrefix + TimeFormat.DEFAULT.withTimeZone().format(lastTimeForPath) + fullSuffix).getPath();
     }
@@ -108,7 +108,7 @@ class TimestampedFilenameFilter implements FilenameFilter {
             first--;
         // return everything beginning with first.
         List<TimestampedFile> timestampedFileList = timestampedFiles.subList(first, timestampedFiles.size());
-        return timestampedFileList.toArray(new TimestampedFile[timestampedFileList.size()]);
+        return timestampedFileList.toArray(new TimestampedFile[0]);
     }
 
     @Override
@@ -133,8 +133,7 @@ class TimestampedFilenameFilter implements FilenameFilter {
         if (requireTimeFile) {
             File timeFile = new File(directory, FileUtils.getTimeFilePath(name,
                 FileUtils.retrieveExtension(name.substring(0, name.length() - containerExtension.length())), containerExtension));
-            if (!timeFile.exists())
-                return false;
+            return timeFile.exists();
         }
         return true;
     }

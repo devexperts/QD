@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -81,7 +81,7 @@ public enum OrderAction {
      * <p>Full Order Book fields:
      * <ul>
      * <li>{@link Order#getOrderId() orderId} - always present</li>
-     * <li>{@link Order#getAuxOrderId()} auxOrderId} - aggressor order ID, if available</li>
+     * <li>{@link Order#getAuxOrderId() auxOrderId} - aggressor order ID, if available</li>
      * <li>{@link Order#getTradeId() tradeId} - if available</li>
      * <li>{@link Order#getTradeSize() tradeSize} and {@link Order#getTradePrice() tradePrice} -
      * contain size and price of this execution</li>
@@ -96,7 +96,7 @@ public enum OrderAction {
      * <p>Full Order Book fields:
      * <ul>
      * <li>{@link Order#getOrderId() orderId} - always present</li>
-     * <li>{@link Order#getAuxOrderId()} auxOrderId} - aggressor order ID, if available</li>
+     * <li>{@link Order#getAuxOrderId() auxOrderId} - aggressor order ID, if available</li>
      * <li>{@link Order#getTradeId() tradeId} - if available</li>
      * <li>{@link Order#getTradeSize() tradeSize} and {@link Order#getTradePrice() tradePrice} -
      * contain size and price of this execution - always present</li>
@@ -111,7 +111,7 @@ public enum OrderAction {
      * <p>Full Order Book fields:
      * <ul>
      * <li>{@link Order#getOrderId() orderId} - always empty</li>
-     * <li>{@link Order#getTradeId()} tradeId} - if available</li>
+     * <li>{@link Order#getTradeId() tradeId} - if available</li>
      * <li>{@link Order#getTradeSize() tradeSize} and {@link Order#getTradePrice() tradePrice} -
      * contain size and price of this trade - always present</li>
      * </ul>

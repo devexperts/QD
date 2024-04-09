@@ -15,11 +15,9 @@ import com.devexperts.connector.codec.CodecConnectionFactory;
 import com.devexperts.connector.codec.CodecFactory;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.connector.proto.ConfigurationKey;
-import com.devexperts.qd.QDFactory;
-import com.devexperts.qd.qtp.AbstractMessageConnector;
+import com.devexperts.qd.qtp.AbstractServerConnector;
 import com.devexperts.qd.qtp.MessageAdapter;
 import com.devexperts.qd.qtp.MessageConnector;
-import com.devexperts.qd.qtp.MessageConnector.Bindable;
 import com.devexperts.qd.qtp.MessageConnectorState;
 import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.qtp.help.MessageConnectorProperty;
@@ -31,9 +29,10 @@ import com.devexperts.transport.stats.ConnectionStats;
 import com.devexperts.transport.stats.EndpointStats;
 import com.devexperts.util.LogUtil;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.io.Closeable;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -43,13 +42,9 @@ import java.util.Set;
     info = "Creates server TCP/IP socket connection.",
     addressFormat = ":<port>"
 )
-public class ServerSocketConnector extends AbstractMessageConnector implements Bindable, ServerSocketConnectorMBean {
-    protected int port;
-    protected String bindAddrString = ANY_BIND_ADDRESS;
-    protected InetAddress bindAddr;
-    protected boolean useTls;
-    // 0 stands for unlimited number of connections
-    protected int maxConnections;
+public class ServerSocketConnector extends AbstractServerConnector implements ServerSocketConnectorMBean {
+
+    protected volatile boolean useTls;
 
     protected final Set<SocketHandler> handlers = new HashSet<>();
     protected final SocketHandler.CloseListener closeListener = this::handlerClosed;
@@ -59,10 +54,10 @@ public class ServerSocketConnector extends AbstractMessageConnector implements B
     /**
      * Creates new server socket connector.
      *
-     * @deprecated use {@link #ServerSocketConnector(ApplicationConnectionFactory, int)}
      * @param factory message adapter factory to use
      * @param port TCP port to use
      * @throws NullPointerException if {@code factory} is {@code null}
+     * @deprecated use {@link #ServerSocketConnector(ApplicationConnectionFactory, int)}
      */
     @SuppressWarnings({"deprecation", "UnusedDeclaration"})
     @Deprecated
@@ -84,61 +79,6 @@ public class ServerSocketConnector extends AbstractMessageConnector implements B
         this.port = port;
     }
 
-    @Override
-    public String getAddress() {
-        return bindAddrString + ":" + port;
-    }
-
-    /**
-     * Changes local port and restarts connector
-     * if new port is different from the old one and the connector was running.
-     */
-    @Override
-    public synchronized void setLocalPort(int port) {
-        if (this.port != port) {
-            log.info("Setting localPort=" + port);
-            this.port = port;
-            reconfigure();
-        }
-    }
-
-    @Override
-    public int getLocalPort() {
-        return port;
-    }
-
-    @Override
-    public String getBindAddr() {
-        return bindAddrString;
-    }
-
-    @Override
-    @MessageConnectorProperty("Network interface address to bind socket to")
-    public synchronized void setBindAddr(String bindAddrString) throws UnknownHostException {
-        bindAddrString = Bindable.normalizeBindAddr(bindAddrString);
-        if (!bindAddrString.equals(this.bindAddrString)) {
-            log.info("Setting bindAddr=" + LogUtil.hideCredentials(bindAddrString));
-            this.bindAddr = bindAddrString.equals(ANY_BIND_ADDRESS) ? null : InetAddress.getByName(bindAddrString);
-            this.bindAddrString = bindAddrString;
-            reconfigure();
-        }
-    }
-
-    @Override
-    public int getMaxConnections() {
-        return maxConnections;
-    }
-
-    @Override
-    @MessageConnectorProperty("Max number of connections allowed for connector")
-    public synchronized void setMaxConnections(int maxConnections) {
-        if (maxConnections != this.maxConnections) {
-            log.info("Setting maxConnections=" + maxConnections);
-            this.maxConnections = maxConnections;
-            reconfigure();
-        }
-    }
-
     public boolean getTls() {
         return useTls;
     }
@@ -150,7 +90,8 @@ public class ServerSocketConnector extends AbstractMessageConnector implements B
     public synchronized void setTls(boolean useTls) {
         if (this.useTls != useTls) {
             if (useTls) {
-                CodecFactory sslCodecFactory = Services.createService(CodecFactory.class, null, "com.devexperts.connector.codec.ssl.SSLCodecFactory");
+                CodecFactory sslCodecFactory = Services.createService(
+                    CodecFactory.class, null, "com.devexperts.connector.codec.ssl.SSLCodecFactory");
                 if (sslCodecFactory == null) {
                     log.error("SSLCodecFactory is not found. Using the SSL protocol is not supported");
                     return;
@@ -187,7 +128,7 @@ public class ServerSocketConnector extends AbstractMessageConnector implements B
     }
 
     @Override
-    public boolean isActive() {
+    public boolean isAccepting() {
         return acceptor != null;
     }
 
@@ -208,7 +149,7 @@ public class ServerSocketConnector extends AbstractMessageConnector implements B
     public synchronized EndpointStats retrieveCompleteEndpointStats() {
         EndpointStats stats = super.retrieveCompleteEndpointStats();
         for (SocketHandler handler : handlers) {
-            ConnectionStats connectionStats = handler.getActiveConnectionStats(); // Atomic read.
+            ConnectionStats connectionStats = handler.getActiveConnectionStats();
             if (connectionStats != null) {
                 stats.addActiveConnectionCount(1);
                 stats.addConnectionStats(connectionStats);
@@ -218,22 +159,48 @@ public class ServerSocketConnector extends AbstractMessageConnector implements B
     }
 
     @Override
-    public synchronized void start() {
-        if (acceptor != null || isClosed())
+    protected synchronized void reconfigure() {
+        getFactory().reinitConfiguration();
+        if (isActive()) {
+            boolean needStartAcceptor = stopAcceptorInternal();
+            closeSocketHandlers();
+            startImpl(needStartAcceptor);
+            notifyMessageConnectorListeners();
+        }
+    }
+
+    protected void startImpl(boolean startAcceptor) {
+        if (isClosed()) {
             return;
-        log.info("Starting ServerSocketConnector to " + LogUtil.hideCredentials(getAddress()));
-        // create default stats instance if specific one was not provided.
-        if (getStats() == null)
-            setStats(QDFactory.getDefaultFactory().createStats(QDStats.SType.SERVER_SOCKET_CONNECTOR, null));
-        acceptor = new SocketAcceptor(this);
-        acceptor.start();
+        }
+        if (!isActive()) {
+            log.info("Starting ServerSocketConnector to " + LogUtil.hideCredentials(getAddress()));
+            active = true;
+        }
+        if (startAcceptor) {
+            cancelScheduledTask();
+            startAcceptorInternal();
+        }
     }
 
     @Override
     protected synchronized Joinable stopImpl() {
-        SocketAcceptor acceptor = this.acceptor;
-        if (acceptor == null)
+        if (!isActive()) {
             return null;
+        }
+        log.info("Stopping ServerSocketConnector");
+        cancelScheduledTask();
+        SocketAcceptor acceptor = stopServerAcceptor();
+        SocketHandler[] socketHandlers = closeSocketHandlers();
+        active = false;
+        return new Stopped(acceptor, socketHandlers);
+    }
+
+    private SocketAcceptor stopServerAcceptor() {
+        SocketAcceptor acceptor = this.acceptor;
+        if (acceptor == null) {
+            return null;
+        }
         log.info("Stopping ServerSocketConnector");
         // Note, that the order of below two invocations is important to handle concurrent stop during the
         // creation of ServerSocket that listens on the specified port.
@@ -243,31 +210,53 @@ public class ServerSocketConnector extends AbstractMessageConnector implements B
         acceptor.close();
         acceptor.closeSocketImpl(null);
         this.acceptor = null;
-        SocketHandler[] a = handlers.toArray(new SocketHandler[handlers.size()]);
-        for (int i = a.length; --i >= 0;)
-            a[i].close();
-        return new Stopped(acceptor, a);
+        return acceptor;
+    }
+
+    @Override
+    protected boolean stopAcceptorInternal() {
+        return stopServerAcceptor() != null;
+    }
+
+    @Override
+    protected void startAcceptorInternal() {
+        if (isActive() && !isAccepting()) {
+            acceptor = new SocketAcceptor(this);
+            acceptor.start();
+            log.info("Acceptor started for address: " + LogUtil.hideCredentials(getAddress()));
+        }
+    }
+
+    private SocketHandler[] closeSocketHandlers() {
+        SocketHandler[] socketHandlers = handlers.toArray(new SocketHandler[0]);
+        for (SocketHandler handler : socketHandlers) {
+            handler.close();
+        }
+        return socketHandlers;
     }
 
     private static class Stopped implements Joinable {
         private final SocketAcceptor acceptor;
-        private final SocketHandler[] a;
+        private final SocketHandler[] socketHandlers;
 
-        Stopped(SocketAcceptor acceptor, SocketHandler[] a) {
+        Stopped(SocketAcceptor acceptor, SocketHandler[] socketHandlers) {
             this.acceptor = acceptor;
-            this.a = a;
+            this.socketHandlers = socketHandlers;
         }
 
         @Override
         public void join() throws InterruptedException {
-            acceptor.join();
-            for (SocketHandler handler : a)
+            if (acceptor != null) {
+                acceptor.join();
+            }
+            for (SocketHandler handler : socketHandlers) {
                 handler.join();
+            }
         }
     }
 
     protected synchronized void addHandler(SocketHandler handler) {
-        if (acceptor == null) {
+        if (!isAccepting()) {
             handler.close(); // in case of close/connect race.
         } else {
             handlers.add(handler);
@@ -278,7 +267,13 @@ public class ServerSocketConnector extends AbstractMessageConnector implements B
         handlers.remove(handler);
     }
 
-    protected synchronized boolean isNewConnectionAllowed() {
+    protected boolean isNewConnectionAllowed() {
+        int maxConnections = this.maxConnections;
         return maxConnections == 0 || getConnectionCount() < maxConnections;
+    }
+
+    @Override
+    protected synchronized List<Closeable> getConnections() {
+        return new ArrayList<>(handlers);
     }
 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -37,7 +37,7 @@ public class CpuCounter {
 
         static synchronized void start() {
             if (currentThread != null && currentThread.isAlive())
-                    return;
+                return;
             currentAccessor = new Accessor();
             currentAccessor.readout();
             currentThread = new Thread(new Accessor(), "CpuMonitor");
@@ -63,7 +63,8 @@ public class CpuCounter {
 
         private void readout() {
             for (int attempts = 0; attempts < 10; attempts++) {
-                long real = Math.min(Math.max(0, System.currentTimeMillis()), (Long.MAX_VALUE - 10 * INACCURACY) / MS) * MS;
+                long time = System.currentTimeMillis();
+                long real = Math.min(Math.max(0, time), (Long.MAX_VALUE - 10 * INACCURACY) / MS) * MS;
                 long process = System.nanoTime();
                 if (attempts > 0 && real == realTime && process >= processTime && process < processTime + MS / 10)
                     break;
@@ -78,8 +79,9 @@ public class CpuCounter {
         public void run() {
             try {
                 Accessor[] accessors = new Accessor[100];
-                for (int i = 0; i < accessors.length; i++)
+                for (int i = 0; i < accessors.length; i++) {
                     accessors[i] = new Accessor();
+                }
                 int currentIndex = 0;
                 Accessor prev = new Accessor();
                 Accessor next = new Accessor();
@@ -92,7 +94,7 @@ public class CpuCounter {
                 tmp.userTime = prev.userTime;
                 currentAccessor = tmp; // Atomic volatile write.
                 long period = 99;
-                while (true)
+                while (true) {
                     try {
                         Thread.sleep(period);
                         next.readout();
@@ -107,9 +109,9 @@ public class CpuCounter {
                             process = Math.max(process, real);
                             long cpu = next.cpuTime - prev.cpuTime;
                             long user = cpu / next.availableProcessors;
-                            if (user < 0 || user > process + INACCURACY)
+                            if (user < 0 || user > process + INACCURACY) {
                                 log().warn("CPU time changed by " + user / MS + " ms in " + process / MS + " ms");
-                            else {
+                            } else {
                                 cpu = Math.min(cpu, process * next.availableProcessors);
                                 user = Math.min(user, process);
                                 currentIndex = (currentIndex + 1) % accessors.length;
@@ -131,13 +133,14 @@ public class CpuCounter {
                     } catch (Throwable t) {
                         log().error("Failed to monitor CPU time:", t);
                     }
+                }
             } catch (Throwable t) {
                 log().error("Failed to monitor CPU time:", t);
             }
         }
     }
 
-    private static AtomicInteger CPU_COUNTER_INSTANCES = new AtomicInteger();
+    private static final AtomicInteger CPU_COUNTER_INSTANCES = new AtomicInteger();
 
     private boolean initialized;
     private long processTime;
@@ -186,7 +189,8 @@ public class CpuCounter {
         long prevProcessTime = processTime;
         long prevUserTime = userTime;
         readout();
-        return Math.floor(10000.0 * Math.max(0, userTime - prevUserTime) / Math.max(1, processTime - prevProcessTime) + 0.5) / 10000.0;
+        return Math.floor(10000.0 * Math.max(0, userTime - prevUserTime) /
+            Math.max(1, processTime - prevProcessTime) + 0.5) / 10000.0;
     }
 
     /**

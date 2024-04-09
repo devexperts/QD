@@ -293,17 +293,17 @@ public class ClientSocketConnector extends AbstractMessageConnector
     }
 
     private void startRestoreConnectorTask() {
-        log.info("Start startRestoreConnectorTask");
-
         stopRestoreConnectorTask();
         if (connectionRestoreTime != null && isValidOrderRestoreConnector()) {
-            connectionRestoreTask = DxTimer.getInstance().runDaily(() -> restoreGracefully(QTPConstants.GRACEFUL_DELAY),
-                connectionRestoreTime);
+            log.info("Scheduled restore connector task at " + connectionRestoreTime);
+            connectionRestoreTask = DxTimer.getInstance()
+                .runDaily(() -> restoreGracefully(QTPConstants.GRACEFUL_DELAY), connectionRestoreTime);
         }
     }
 
     private void stopRestoreConnectorTask() {
         if (connectionRestoreTask != null) {
+            log.info("Stop restore connector task");
             connectionRestoreTask.cancel();
             connectionRestoreTask = null;
         }
@@ -465,11 +465,8 @@ public class ClientSocketConnector extends AbstractMessageConnector
         if (getStats() == null)
             setStats(QDFactory.createStats(QDStats.SType.CLIENT_SOCKET_CONNECTOR, null));
 
-        boolean isSameStriper = true;
         if (Objects.equals(stripeConfig, AUTO_STRIPE_CONFIG)) {
-            SymbolStriper newStriper = findCollectorSymbolStriper();
-            isSameStriper = (this.striper == newStriper);
-            this.striper = newStriper;
+            this.striper = findCollectorSymbolStriper();
         }
         int stripeCount = striper.getStripeCount();
 
@@ -477,11 +474,18 @@ public class ClientSocketConnector extends AbstractMessageConnector
         SocketHandler[] newHandlers = new SocketHandler[stripeCount];
 
         // Reuse old handler only on reconnect if striper has not changed
-        boolean reuseSource = (oldHandlers != null && oldHandlers.length == stripeCount && isSameStriper);
+        boolean reuseHandlers = canReuseHandlers(oldHandlers, striper);
+
+        if (!reuseHandlers) {
+            // Close striped stats for previous striper config (end stats are closed by socket handlers)
+            QDStats cons = getStats().getOrVoid(QDStats.SType.CONNECTIONS);
+            cons.getAll(QDStats.SType.CONNECTION).forEach(QDStats::close);
+        }
+
         // Initialize handlers (publish the array with non-null elements)
-        for (int i = 0; i < stripeCount; i++) {
+        for (int i = 0; i < newHandlers.length; i++) {
             QDFilter stripeFilter = (stripeCount > 1) ? striper.getStripeFilter(i) : null;
-            newHandlers[i] = reuseSource ?
+            newHandlers[i] = reuseHandlers ?
                 createSocketHandlerFromClosed(oldHandlers[i]) :
                 new SocketHandler(this, new ClientSocketSource(this), stripeFilter);
             newHandlers[i].setCloseListener(this);
@@ -491,7 +495,7 @@ public class ClientSocketConnector extends AbstractMessageConnector
         active = true; // Atomic write.
 
         // Start handlers (may fail)
-        for (int i = 0; i < stripeCount; i++) {
+        for (int i = 0; i < newHandlers.length; i++) {
             newHandlers[i].start();
         }
 
@@ -500,6 +504,22 @@ public class ClientSocketConnector extends AbstractMessageConnector
 
     protected Socket createSocket(String host, int port) throws IOException {
         return new Socket(host, port);
+    }
+
+    private boolean canReuseHandlers(SocketHandler[] oldHandlers, SymbolStriper striper) {
+        if (oldHandlers == null || oldHandlers.length != striper.getStripeCount())
+            return false;
+
+        for (int i = 0; i < oldHandlers.length; i++) {
+            QDFilter oldFilter = oldHandlers[i].getStripeFilter();
+            QDFilter newFilter = (striper.getStripeCount() > 1) ? striper.getStripeFilter(i) : null;
+
+            // Use reference comparison, since filters do not support equals() contract.
+            // Alternatively, filter's toString() representations can be compared.
+            if (oldFilter != newFilter)
+                return false;
+        }
+        return true;
     }
 
     @Override
@@ -523,6 +543,9 @@ public class ClientSocketConnector extends AbstractMessageConnector
             handlers = null;
         }
 
+        // Connector stats are never closed, since connector can be started again
+        // Connection stats are closed on socket handlers' close
+        
         Arrays.stream(oldHandlers).forEach(SocketHandler::close);
         return () -> {
             for (SocketHandler handler : oldHandlers) {
@@ -594,8 +617,6 @@ public class ClientSocketConnector extends AbstractMessageConnector
     private SymbolStriper findCollectorSymbolStriper() {
         //noinspection resource
         for (QDCollector collector : lookupQDEndpoint().getCollectors()) {
-            //TODO When QD-86 is implemented with "[stripe=auto,stripeContract=true]"
-            // use individual stripes per contract
             if (collector != null) {
                 return collector.getStriper();
             }

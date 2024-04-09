@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -24,11 +24,12 @@ class StripedHistory extends StripedCollector<QDHistory> implements QDHistory {
     StripedHistory(QDFactory base, Builder<?> builder, int n) {
         super(builder, n);
         collectors = new QDHistory[n];
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < n; i++) {
             collectors[i] = base.historyBuilder()
                 .copyFrom(builder)
-                .withStats(stats.create(QDStats.SType.HISTORY, "stripe=" + i))
+                .withStats(stats.create(QDStats.SType.HISTORY, "stripe=" + striper.getStripeFilter(i)))
                 .build();
+        }
     }
 
     @Override

@@ -202,6 +202,9 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
                 throw new InvalidFormatException("There must be timestamp marker " +
                     "'" + FileUtils.TIMESTAMP_MARKER + "' in file name when using \"split\" option");
             }
+            if (time.isUsingTimeFile()) {
+                fileFilter.requireTimeFile();
+            }
             log.info("Create FileWriter which writes tape to " + LogUtil.hideCredentials(dataFilePath) +
                 (time.isUsingTimeFile() ? "/" + FileUtils.TIME_FILE_EXTENSION : "") +
                 ", where \"" + FileUtils.TIMESTAMP_MARKER + "\" is replaced by current date and time. " +
@@ -295,9 +298,6 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
      */
     private synchronized void reopenFiles(String dataFilePath) throws IOException {
         closeCurrentFiles(nextSplitTime); // close all previously open files
-        if (storageLimited && tmpDirPath == null) {
-            deleteOldFiles();
-        }
         position = 0;
         lastTime = 0; // have not written timestamp to the new file yet
 
@@ -306,10 +306,10 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
         if (tmpDirPath != null) {
             FileUtils.checkOrCreateDirectory(tmpDirPath);
             currentDataFilePath = createTmpFile(tmpDirPath, dataFilePath);
-            dataCloseHandler = getCloseHandler(currentDataFilePath, dataFilePath);
+            dataCloseHandler = getCloseHandler(currentDataFilePath, dataFilePath, storageLimited);
         } else {
             currentDataFilePath = dataFilePath;
-            dataCloseHandler = null;
+            dataCloseHandler = storageLimited ? this::deleteOldFiles : null;
         }
 
         log.info("Writing tape data to " + LogUtil.hideCredentials(currentDataFilePath) +
@@ -318,11 +318,13 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
         dataOut = reuseOutputStream(
             currentDataFilePath, dataWriter, Paths.get(dataFilePath).getFileName().toString(), dataCloseHandler);
         if (time.isUsingTimeFile()) {
+            // timeCloseHandler doesn't have to delete files because of dataCloseHandler will do it at the same time
+            // It is acceptable that in the worst case, not all suitable files will be deleted at this iteration
             Runnable timeCloseHandler;
             String timeFilePath = getTimeFilePath(dataFilePath);
             if (tmpDirPath != null) {
                 currentTimeFilePath = createTmpFile(tmpDirPath, timeFilePath);
-                timeCloseHandler = getCloseHandler(currentTimeFilePath, timeFilePath);
+                timeCloseHandler = getCloseHandler(currentTimeFilePath, timeFilePath, false);
             } else {
                 currentTimeFilePath = timeFilePath;
                 timeCloseHandler = null;
@@ -339,10 +341,10 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
         writeHeader();
     }
 
-    private Runnable getCloseHandler(String sourcePath, String destinationPath) {
+    private Runnable getCloseHandler(String sourcePath, String destinationPath, boolean deleteOldFiles) {
         return () -> {
             moveFile(sourcePath, destinationPath);
-            if (storageLimited) {
+            if (deleteOldFiles) {
                 deleteOldFiles();
             }
         };
@@ -407,6 +409,8 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
 
     @Override
     public synchronized void close() {
+        // need to ignore close operation from open
+        boolean initialized = flushThread != null;
         try {
             closeCurrentFiles(nextSplitTime);
         } finally {
@@ -416,6 +420,10 @@ public class FileWriterImpl extends AbstractMessageVisitor implements Closeable 
             dataWriter = null;
             FileUtils.tryClose(timeWriter, currentTimeFilePath);
             timeWriter = null;
+
+            if (initialized && storageLimited) {
+                deleteOldFiles();
+            }
         }
     }
 

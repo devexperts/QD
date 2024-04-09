@@ -11,35 +11,11 @@
  */
 package com.devexperts.qd.qtp.socket;
 
-import com.devexperts.qd.qtp.MessageConnectorMBean;
-
-import java.net.UnknownHostException;
+import com.devexperts.qd.qtp.ServerConnectorMBean;
 
 /**
  * Management interface for {@link ServerSocketConnector}.
  *
  * @dgen.annotate method {}
  */
-public interface ServerSocketConnectorMBean extends MessageConnectorMBean {
-
-    /**
-     * Local TCP/IP port
-     */
-    public int getLocalPort();
-
-    public void setLocalPort(int port);
-
-    /**
-     * Network interface address to bind socket to
-     */
-    public String getBindAddr();
-
-    public void setBindAddr(String bindAddress) throws UnknownHostException;
-
-    /**
-     * Max number of connections
-     */
-    public int getMaxConnections();
-
-    public void setMaxConnections(int maxConnections);
-}
+public interface ServerSocketConnectorMBean extends ServerConnectorMBean { }

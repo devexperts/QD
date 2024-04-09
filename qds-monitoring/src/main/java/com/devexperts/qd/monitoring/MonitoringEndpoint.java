@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,6 +12,7 @@
 package com.devexperts.qd.monitoring;
 
 import com.devexperts.logging.Logging;
+import com.devexperts.management.Management;
 import com.devexperts.mars.common.MARSEndpoint;
 import com.devexperts.mars.common.MARSNode;
 import com.devexperts.mars.common.MARSScheduler;
@@ -20,12 +21,14 @@ import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.QDEndpoint;
 import com.devexperts.qd.stats.JMXStats;
 import com.devexperts.qd.stats.QDStats;
+import com.devexperts.util.JMXNameBuilder;
 import com.devexperts.util.TimePeriod;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -35,7 +38,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class MonitoringEndpoint {
+public class MonitoringEndpoint implements MonitoringEndpointMXBean {
     /**
      * Defines property for endpoint name that is used to distinguish multiple endpoints
      * in the same JVM in logs and in other diagnostic means.
@@ -65,12 +68,14 @@ public class MonitoringEndpoint {
     private final String name;
     private final DataScheme scheme; // may be null !!!!
     private final List<Runnable> monitoringTasks = new ArrayList<>();
-    private final JMXStats.RootRegistration registration;
+    private final JMXStats.RootRegistration statsRegistration;
     private final JMXEndpoint jmxEndpoint;
     private final MARSEndpoint marsEndpoint;
     private final long statPeriodMillis;
     private final ConnectorsMonitoringTask cmt;
+    private final Management.Registration selfRegistration;
     private int refCounter;
+    private final Map<MessageConnector, Management.Registration> jmxConnectors = new IdentityHashMap<>();
 
     MonitoringEndpoint(Builder builder, String name, DataScheme scheme,
         JMXStats.RootRegistration registration,
@@ -79,7 +84,7 @@ public class MonitoringEndpoint {
         this.builder = builder;
         this.name = name;
         this.scheme = scheme;
-        this.registration = registration;
+        this.statsRegistration = registration;
         this.jmxEndpoint = jmxEndpoint;
         this.marsEndpoint = marsEndpoint;
         // use "mars.delay" as a default for stat period if one was not explicitly configured
@@ -90,14 +95,28 @@ public class MonitoringEndpoint {
             configuredStartPeriodMillis != 0 ? log : null, // use log only when start period was explicitly configured
             registration.getRootStats(), marsEndpoint.getRoot(), null);
         registerMonitoringTask(cmt);
+
+        selfRegistration = Management.registerMBean(this, MonitoringEndpointMXBean.class,
+            "com.devexperts.qd.monitoring:type=MonitoringEndpoint,name=" + JMXNameBuilder.quoteKeyPropertyValue(name));
+    }
+
+    @Override
+    public boolean isLogStripedConnectors() {
+        return cmt.isLogStripedConnectors();
+    }
+
+    @Override
+    public void setLogStripedConnectors(boolean flag) {
+        cmt.setLogStripedConnectors(flag);
     }
 
     // SYNC(INSTANCES)
     void acquire() {
         if (refCounter++ > 0)
             return;
-        for (Runnable task : monitoringTasks)
+        for (Runnable task : monitoringTasks) {
             scheduleTask(task);
+        }
     }
 
     // SYNC(INSTANCES)
@@ -110,9 +129,13 @@ public class MonitoringEndpoint {
             if (--refCounter > 0)
                 return;
             INSTANCES.remove(builder);
-            registration.unregister();
-            for (Runnable task : monitoringTasks)
+            statsRegistration.unregister();
+            selfRegistration.unregister();
+            for (Runnable task : monitoringTasks) {
                 MARSScheduler.cancel(task);
+            }
+            jmxConnectors.values().forEach(Management.Registration::unregister);
+            jmxConnectors.clear();
             cmt.close();
             marsEndpoint.release();
             jmxEndpoint.release();
@@ -123,10 +146,10 @@ public class MonitoringEndpoint {
         return name;
     }
 
-    public Map<String,String> getDescriptorProperties() {
+    public Map<String, String> getDescriptorProperties() {
         Map<String, String> result = new LinkedHashMap<>();
         String marsRootName = marsEndpoint.getMarsRootName();
-        if (marsRootName.length() > 0)
+        if (!marsRootName.isEmpty())
             result.put(MARSNode.MARS_ROOT_PROPERTY, marsRootName);
         return result;
     }
@@ -136,7 +159,7 @@ public class MonitoringEndpoint {
     }
 
     public QDStats getRootStats() {
-        return registration.getRootStats();
+        return statsRegistration.getRootStats();
     }
 
     public synchronized void registerMonitoringTask(Runnable task) {
@@ -156,11 +179,32 @@ public class MonitoringEndpoint {
     }
 
     public void addConnectors(Collection<MessageConnector> connectors) {
+        for (MessageConnector connector : connectors) {
+            jmxConnectors.put(connector, registerConnector(connector));
+        }
         cmt.addConnectors(connectors);
     }
 
     public void removeConnectors(Collection<MessageConnector> connectors) {
+        for (MessageConnector connector : connectors) {
+            Management.Registration registration = jmxConnectors.remove(connector);
+            if (registration != null)
+                registration.unregister();
+        }
         cmt.removeConnectors(connectors);
+    }
+
+    private Management.Registration registerConnector(MessageConnector connector) {
+        String jmxName = "com.devexperts.qd.qtp:type=Connector,name=" +
+            JMXNameBuilder.quoteKeyPropertyValue(connector.getName());
+
+        int index = 0;
+        Management.Registration registration = Management.registerMBean(connector, null, jmxName);
+        while (registration.hasExisted()) {
+            // Add index to the connector's name if there is already a connector with the same name
+            registration = Management.registerMBean(connector, null, jmxName + "-" + (++index));
+        }
+        return registration;
     }
 
     public static class Builder {
@@ -170,8 +214,8 @@ public class MonitoringEndpoint {
             MONITORING_STAT_PROPERTY
         ));
 
-        private JMXEndpoint.Builder jmxEndpointBuilder = JMXEndpoint.newBuilder();
-        private MARSEndpoint.Builder marsEndpointBuilder = MARSEndpoint.newBuilder();
+        private final JMXEndpoint.Builder jmxEndpointBuilder = JMXEndpoint.newBuilder();
+        private final MARSEndpoint.Builder marsEndpointBuilder = MARSEndpoint.newBuilder();
         private DataScheme scheme;
         private final Properties props = new Properties();
 
@@ -200,8 +244,9 @@ public class MonitoringEndpoint {
          * Sets all supported properties from the provided properties object.
          */
         public final Builder withProperties(Properties props) {
-            for (Map.Entry<Object, Object> entry : props.entrySet())
+            for (Map.Entry<Object, Object> entry : props.entrySet()) {
                 withProperty((String) entry.getKey(), (String) entry.getValue());
+            }
             return this;
         }
 

@@ -27,13 +27,14 @@ import com.devexperts.util.JMXNameBuilder;
 import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.Socket;
 
 /**
  * The <code>SocketHandler</code> handles standard socket using blocking API.
  */
-class SocketHandler extends AbstractTransportConnection implements AbstractMessageConnector.Joinable {
+class SocketHandler extends AbstractTransportConnection implements AbstractMessageConnector.Joinable, Closeable {
     private static final String VERBOSE = SystemProperties.getProperty("com.devexperts.qd.qtp.socket.verbose", null);
 
     /**
@@ -127,6 +128,7 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
         notifyAll();
     }
 
+    @Override
     public void close() {
         closeSocketImpl(null);
     }
@@ -240,14 +242,15 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
         // Create stats
         QDStats stats;
         try {
-            // Create stats in try/catch block, so that we clean up socket if anything happens)
-            stats = connector.getStats().getOrCreate(QDStats.SType.CONNECTIONS).create(QDStats.SType.CONNECTION,
+            // Create stats in try/catch block, so that we clean up socket if anything happens
+            QDStats parentStats = connector.getStats().getOrCreate(QDStats.SType.CONNECTIONS);
+            if (stripeFilter != null) {
+                parentStats = parentStats.getOrCreate(QDStats.SType.CONNECTION, "stripe=" + stripeFilter);
+            }
+            stats = parentStats.create(QDStats.SType.CONNECTION,
                 "host=" + JMXNameBuilder.quoteKeyPropertyValue(socketInfo.socketAddress.host) + "," +
                 "port=" + socketInfo.socketAddress.port + "," +
-                "localPort=" + socket.getLocalPort() +
-                (stripeFilter != null ? ",stripe=" + stripeFilter : ""));
-            if (stats == null)
-                throw new NullPointerException("Stats were not created");
+                "localPort=" + socket.getLocalPort());
         } catch (Throwable t) {
             log.error("Failed to configure socket " + LogUtil.hideCredentials(socketInfo.socketAddress), t);
             connector.addClosedConnectionStats(connectionStats);

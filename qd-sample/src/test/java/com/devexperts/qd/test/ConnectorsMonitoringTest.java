@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,9 +17,9 @@ import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDStream;
 import com.devexperts.qd.monitoring.ConnectorsMonitoringTask;
-import com.devexperts.qd.monitoring.QDMonitoring;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordMode;
+import com.devexperts.qd.stats.JMXStats;
 import com.devexperts.qd.stats.QDStats;
 import org.junit.Test;
 
@@ -33,7 +33,7 @@ public class ConnectorsMonitoringTest {
     @Test
     public void testStreamStats() {
         ConnectorsMonitoringTask cmt = new ConnectorsMonitoringTask();
-        QDStats stats = QDMonitoring.createRootStats("test", SCHEME);
+        QDStats stats = JMXStats.createRoot("test", SCHEME).getRootStats();
         cmt.addStats(stats);
         QDStream stream = QDFactory.getDefaultFactory().createStream(SCHEME, stats.create(QDStats.SType.STREAM));
 

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,25 +11,21 @@
  */
 package com.devexperts.qd.monitoring;
 
-import com.devexperts.management.Management;
 import com.devexperts.mars.common.MARSMonitoredBean;
 import com.devexperts.mars.common.MARSNode;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.stats.QDStats;
-import com.devexperts.util.JMXNameBuilder;
 import com.devexperts.util.LogUtil;
 
 import java.text.NumberFormat;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.Arrays;
 
+import static com.devexperts.qd.monitoring.IOCounter.COUNTER_COUNT;
 import static com.devexperts.qd.monitoring.IOCounter.DATA_READ_LAGS;
 import static com.devexperts.qd.monitoring.IOCounter.DATA_READ_RECORDS;
 import static com.devexperts.qd.monitoring.IOCounter.DATA_WRITE_LAGS;
 import static com.devexperts.qd.monitoring.IOCounter.DATA_WRITE_RECORDS;
-import static com.devexperts.qd.monitoring.IOCounter.N_COUNTERS;
 import static com.devexperts.qd.monitoring.IOCounter.READ_BYTES;
 import static com.devexperts.qd.monitoring.IOCounter.READ_RTTS;
 import static com.devexperts.qd.monitoring.IOCounter.SUB_READ_RECORDS;
@@ -40,12 +36,14 @@ import static com.devexperts.qd.monitoring.IOCounter.WRITE_RTTS;
 
 /**
  * A collection of {@link IOCounter} instances of the same name that report the summary
- * statistics to mars nodes and provides a text report.
+ * statistics to MARS nodes and provides a text report.
  */
 class IOCounters {
-    private final String name;
-    private final Map<MessageConnector, IOCounter> counters = new LinkedHashMap<>();
 
+    private final String name;
+    private final boolean stripeNode;
+
+    // Publication to MARS
     private final MARSNode node;
     private final MARSNode address;
     private final MARSNode connections;
@@ -61,26 +59,41 @@ class IOCounters {
     private final VNode dataLagWrite;
     private final VNode rtt;
 
-    private Management.Registration registration;
+    // Publication to MARS
     private MessageConnector registeredConnector;
     private MARSMonitoredBean<?> monitoredConnectorBean;
 
+    // Statistics
+    private final SumDeltaCounter[] totals;
+    String displayName;
+    String displayAddress;
+
+    int connectionsCount;
+    long oldConnectionsClosedTotal;
+    long connectionsClosedTotal;
+    long connectionsClosedDelta;
+
+    // Temp variables for aggregation calculation
     private DataScheme scheme;
-    private int nRecords;
-
-    private String displayName;
-    private String displayAddr;
-    private int connectionsCount;
-    private long connectionsClosedTotal;
-    private long connectionsClosedDelta;
-
-    private final Cur[] cur = new Cur[N_COUNTERS];
+    private boolean isSchemeDiverge;
+    private int recordCount;
+    private boolean unused;
+    private MessageConnector prevConnector;
+    // Variables to calculate name and address, see calculateNameAndAddress() method
+    private int sameAddressCount;
+    private int otherAddressCount;
 
     // name == null for "root" IOCounters collection
     IOCounters(String name, MARSNode node) {
+        this(name, node, false);
+    }
+
+    IOCounters(String name, MARSNode rootNode, boolean stripeNode) {
         this.name = name;
-        this.node = node;
-        address = name == null ? null : node.subNode("address", "Address");
+        this.node = (name == null) ? rootNode : rootNode.subNode(name, "Connector statistics for " + name);
+        this.stripeNode = stripeNode;
+
+        address = (name == null) ? null : node.subNode("address", "Address");
         connections = node.subNode("connections", "Number of connections");
         connectionsClosed = node.subNode("connections_closed", "Number of closed connections per reporting interval");
         bytesRead = new VNode(node, "bytes_read", "Number of bytes read per second");
@@ -92,142 +105,176 @@ class IOCounters {
         dataLagRead = new VNode(node, "data_lag_read", "Average record-weighted lag of read data records in us");
         dataLagWrite = new VNode(node, "data_lag_write", "Average record-weighted lag of written data records in us");
         rtt = new VNode(node, "rtt", "Average record-weighted connection round-trip time in us");
-        for (int i = 0; i < N_COUNTERS; i++)
-            cur[i] = new Cur(VALUES[i]);
+
+        this.totals = new SumDeltaCounter[COUNTER_COUNT];
+        for (int i = 0; i < COUNTER_COUNT; i++) {
+            totals[i] = new SumDeltaCounter(VALUES[i]);
+        }
+        beforeAggregate();
     }
 
-    boolean isEmpty() {
-        return counters.isEmpty();
+    boolean isStripeNode() {
+        return stripeNode;
     }
 
-    IOCounter addConnector(MessageConnector connector, IOCounter prev) {
-        // root collection does not register connector MBeans
-        if (name != null && counters.isEmpty())
-            registerConnector(connector);
-        IOCounter counter = new IOCounter(name, connector, prev);
-        counter.addDeltaToCur(cur); // clear initial
-        counters.put(connector, counter);
-        return counter;
+    void beforeAggregate() {
+        unused = true;
+        prevConnector = null;
+
+        scheme = null;
+        isSchemeDiverge = false;
+        recordCount = 0;
+
+        clearAddress();
+        oldConnectionsClosedTotal = connectionsClosedTotal;
+        connectionsCount = 0;
+        connectionsClosedTotal = 0;
+
+        // Clear totals
+        Arrays.stream(totals).forEach(SumDeltaCounter::clear);
     }
 
-    public void removeConnector(MessageConnector connector) {
-        counters.remove(connector);
-        if (connector == registeredConnector) {
+    /*
+     * This method relies on external sequential ordering of stats for striped connector.
+     */
+    void aggregate(IOCounter stats) {
+        unused = false;
+        MessageConnector connector = stats.getConnector();
+
+        if (name != null && prevConnector == null && !stripeNode) {
+            // Allow to remove previously registered connector by the same name if it was removed
+            if (registeredConnector != null && registeredConnector != connector) {
+                unregisterConnector();
+            }
+            if (registeredConnector == null) {
+                registeredConnector = connector;
+                monitoredConnectorBean = MARSMonitoredBean.forInstance(node, connector);
+            }
+        }
+
+        DataScheme statsScheme = (connector.getStats() != null) ? connector.getStats().getScheme() : null;
+        if (!isSchemeDiverge && statsScheme != null && statsScheme != scheme) {
+            if (scheme == null) {
+                scheme = statsScheme;
+                recordCount = scheme.getRecordCount();
+            } else {
+                isSchemeDiverge = true;
+                recordCount = 0;
+            }
+            // Clear record totals
+            Arrays.stream(totals).forEach(d -> d.clearRid(recordCount));
+        }
+
+        if (stripeNode) {
+            // Connection count for stripe node
+            connectionsCount += stats.getStats().getAll(QDStats.SType.CONNECTION).size();
+        } else if (connector != prevConnector) {
+            // Use connection count for sum node, but only once!
+            connectionsCount += connector.getConnectionCount();
+            connectionsClosedTotal += connector.getClosedConnectionCount();
+            aggregateAddress(connector);
+        }
+
+        // Aggregate deltas
+        stats.aggregate(totals);
+
+        prevConnector = connector;
+    }
+
+    boolean afterAggregate() {
+        calculateNameAndAddress();
+        connectionsClosedDelta = (connectionsClosedTotal - oldConnectionsClosedTotal);
+
+        if (unused) {
             unregisterConnector();
-            if (!counters.isEmpty())
-                registerConnector(counters.keySet().iterator().next());
+        }
+        return unused;
+    }
+
+    private void clearAddress() {
+        displayAddress = "";
+        sameAddressCount = 0;
+        otherAddressCount = 0;
+    }
+
+    private void aggregateAddress(MessageConnector connector) {
+        String address = LogUtil.hideCredentials(connector.getAddress());
+        if (displayAddress.isEmpty()) {
+            displayAddress = address;
+            sameAddressCount = 1;
+        } else if (address.equals(displayAddress)) {
+            sameAddressCount++;
+        } else {
+            otherAddressCount++;
         }
     }
 
-    private void registerConnector(MessageConnector connector) {
-        registration = Management.registerMBean(connector, null,
-            "com.devexperts.qd.qtp:type=Connector,name=" + JMXNameBuilder.quoteKeyPropertyValue(name));
-        registeredConnector = connector;
-        monitoredConnectorBean = MARSMonitoredBean.forInstance(node, connector);
+    /**
+     * Calculates the connector name (e.g. "opra*6") and address (e.g. "localhost:6048*4,&lt;other&gt;*2").
+     */
+    private void calculateNameAndAddress() {
+        int totalAddressCount = sameAddressCount + otherAddressCount;
+        displayName = (totalAddressCount > 1) ? name + "*" + totalAddressCount : name;
+
+        if (sameAddressCount > 1 && otherAddressCount > 0) {
+            displayAddress += "*" + sameAddressCount;
+        }
+        if (otherAddressCount > 0) {
+            displayAddress += ",<other>";
+            if (otherAddressCount > 1)
+                displayAddress += "*" + otherAddressCount;
+        }
     }
 
     private void unregisterConnector() {
-        if (registration != null) {
-            registration.unregister();
-            registration = null;
+        if (registeredConnector != null) {
             registeredConnector = null;
             monitoredConnectorBean.close();
             monitoredConnectorBean = null;
         }
     }
 
-    String getDisplayName() {
-        return displayName;
-    }
-
-    String getDisplayAddr() {
-        return displayAddr;
-    }
-
-    int getConnectionsCount() {
-        return connectionsCount;
-    }
-
-    void update(Layout layout) {
-        updateScheme();
-        int n = counters.size();
-        displayName = n > 1 ? name + "*" + n : name;
-        displayAddr = "";
-        int sameAddrCount = 0;
-        int otherAddrCount = 0;
-        long prevConnectionsClosedTotal = connectionsClosedTotal;
-        connectionsCount = 0;
-        connectionsClosedTotal = 0;
-        for (Cur c : cur)
-            c.clear(nRecords);
-        for (IOCounter io : counters.values()){
-            MessageConnector connector = io.getConnector();
-            // update addr
-            String addr = LogUtil.hideCredentials(connector.getAddress());
-            if (displayAddr.isEmpty()) {
-                displayAddr = addr;
-                sameAddrCount = 1;
-            } else if (addr.equals(displayAddr))
-                sameAddrCount++;
-            else
-                otherAddrCount++;
-            // update connection count
-            connectionsCount += connector.getConnectionCount();
-            connectionsClosedTotal += connector.getClosedConnectionCount();
-            // collect all counters in cur
-            io.addDeltaToCur(cur);
-        }
-        if (sameAddrCount > 1 && otherAddrCount > 0)
-            displayAddr += "*" + sameAddrCount;
-        if (otherAddrCount > 0) {
-            displayAddr += ",<other>";
-            if (otherAddrCount > 1)
-                displayAddr += "*" + otherAddrCount;
-        }
-        connectionsClosedDelta = connectionsClosedTotal - prevConnectionsClosedTotal;
-        if (layout != null) {
-            layout.maxNameLen = Math.max(layout.maxNameLen, displayName.length());
-            layout.maxAddrLen = Math.max(layout.maxAddrLen, displayAddr.length());
-        }
-    }
-
-    void report(NumberFormat integerFormat, long elapsedTime, StringBuilder sb) {
-        // report address and connection count (root collection does not report address)
+    void report(NumberFormat format, long elapsedTime, StringBuilder buff) {
+        // Report address and connection count (the root collection does not report address)
         if (name != null)
-            address.setValue(displayAddr);
+            address.setValue(displayAddress);
         connections.setIntValue(connectionsCount);
         connectionsClosed.setValue(String.valueOf(connectionsClosedDelta));
-        // report monitored props for a registered connector
+
+        // Report monitored props for a registered connector
         if (monitoredConnectorBean != null)
             monitoredConnectorBean.run();
-        // compute values and post them to mars
-        bytesRead.set(rate(cur[READ_BYTES].totalDelta, elapsedTime));
-        bytesWrite.set(rate(cur[WRITE_BYTES].totalDelta, elapsedTime));
-        subRecordsRead.set(rate(cur[SUB_READ_RECORDS].totalDelta, elapsedTime));
-        subRecordsWrite.set(rate(cur[SUB_WRITE_RECORDS].totalDelta, elapsedTime));
-        dataRecordsRead.set(rate(cur[DATA_READ_RECORDS].totalDelta, elapsedTime));
-        dataRecordsWrite.set(rate(cur[DATA_WRITE_RECORDS].totalDelta, elapsedTime));
-        dataLagRead.set(frac(cur[DATA_READ_LAGS].totalDelta, cur[DATA_READ_RECORDS].totalDelta));
-        dataLagWrite.set(frac(cur[DATA_WRITE_LAGS].totalDelta, cur[DATA_WRITE_RECORDS].totalDelta));
-        rtt.set(frac(cur[READ_RTTS].totalDelta + cur[WRITE_RTTS].totalDelta,
-            cur[DATA_READ_RECORDS].totalDelta + cur[DATA_WRITE_RECORDS].totalDelta +
-            cur[SUB_READ_RECORDS].totalDelta + cur[SUB_WRITE_RECORDS].totalDelta));
-        // prepare text report if needed
-        if (sb == null)
-            return; // not needed
-        sb.append("Read: ").append(integerFormat.format(bytesRead.v)).append(" Bps");
-        optRps(sb, integerFormat, subRecordsRead.v, dataRecordsRead.v, dataLagRead.v);
-        sb.append("; Write: ").append(integerFormat.format(bytesWrite.v)).append(" Bps");
-        optRps(sb, integerFormat, subRecordsWrite.v, dataRecordsWrite.v, dataLagWrite.v);
+
+        // Compute values and post them to MARS
+        bytesRead.set(rate(totals[READ_BYTES].totalDelta, elapsedTime));
+        bytesWrite.set(rate(totals[WRITE_BYTES].totalDelta, elapsedTime));
+        subRecordsRead.set(rate(totals[SUB_READ_RECORDS].totalDelta, elapsedTime));
+        subRecordsWrite.set(rate(totals[SUB_WRITE_RECORDS].totalDelta, elapsedTime));
+        dataRecordsRead.set(rate(totals[DATA_READ_RECORDS].totalDelta, elapsedTime));
+        dataRecordsWrite.set(rate(totals[DATA_WRITE_RECORDS].totalDelta, elapsedTime));
+        dataLagRead.set(frac(totals[DATA_READ_LAGS].totalDelta, totals[DATA_READ_RECORDS].totalDelta));
+        dataLagWrite.set(frac(totals[DATA_WRITE_LAGS].totalDelta, totals[DATA_WRITE_RECORDS].totalDelta));
+        rtt.set(frac(totals[READ_RTTS].totalDelta + totals[WRITE_RTTS].totalDelta,
+            totals[DATA_READ_RECORDS].totalDelta + totals[DATA_WRITE_RECORDS].totalDelta +
+                totals[SUB_READ_RECORDS].totalDelta + totals[SUB_WRITE_RECORDS].totalDelta));
+
+        // Prepare a text report if needed
+        if (buff == null)
+            return;
+
+        buff.append("Read: ").append(format.format(bytesRead.v)).append(" Bps");
+        optRps(buff, format, subRecordsRead.v, dataRecordsRead.v, dataLagRead.v);
+        buff.append("; Write: ").append(format.format(bytesWrite.v)).append(" Bps");
+        optRps(buff, format, subRecordsWrite.v, dataRecordsWrite.v, dataLagWrite.v);
         if (rtt.v != 0)
-            sb.append("; rtt ").append(integerFormat.format(rtt.v)).append(" us");
+            buff.append("; rtt ").append(format.format(rtt.v)).append(" us");
         if (scheme != null) {
-            int topR = cur[READ_BYTES].findMax();
-            int topW = cur[WRITE_BYTES].findMax();
+            int topR = totals[READ_BYTES].findMaxRecord();
+            int topW = totals[WRITE_BYTES].findMaxRecord();
             if (topR >= 0 || topW >= 0) {
-                sb.append("; TOP bytes");
-                String sep = cur[READ_BYTES].fmtMax(scheme, sb, "read", topR, " ");
-                cur[WRITE_BYTES].fmtMax(scheme, sb, "write", topW, sep);
+                buff.append("; TOP bytes");
+                String sep = totals[READ_BYTES].formatMax(scheme, buff, "read", topR, " ");
+                totals[WRITE_BYTES].formatMax(scheme, buff, "write", topW, sep);
             }
         }
     }
@@ -244,8 +291,9 @@ class IOCounters {
         if (subRps == 0 && dataRps == 0 && dataLag == 0)
             return;
         sb.append(" (");
-        if (subRps != 0)
+        if (subRps != 0) {
             sb.append("sub ").append(integerFormat.format(subRps)).append(" rps");
+        }
         if (dataRps != 0 || dataLag != 0) {
             if (subRps != 0)
                 sb.append(' ');
@@ -254,34 +302,5 @@ class IOCounters {
                 sb.append(" lag ").append(integerFormat.format(dataLag)).append(" us");
         }
         sb.append(")");
-    }
-
-    private void updateScheme() {
-        scheme = null;
-        for (IOCounter io : counters.values()){
-            MessageConnector connector = io.getConnector();
-            QDStats stats = connector.getStats();
-            if (stats != null) {
-                DataScheme otherScheme = stats.getScheme();
-                if (otherScheme != null) {
-                    if (scheme != null) {
-                        if (scheme != otherScheme) {
-                            // schemes diverge -- don't use scheme
-                            scheme = null;
-                            break;
-                        }
-                    } else
-                        scheme = otherScheme;
-                }
-            }
-        }
-        nRecords = scheme == null ? 0 : scheme.getRecordCount();
-    }
-
-    void updateNames(List<IOCounter> updatedNames) {
-        for (IOCounter counter : counters.values()) {
-            if (counter.nameChanged())
-                updatedNames.add(counter);
-        }
     }
 }

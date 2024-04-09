@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -50,13 +50,18 @@ public class ClientSocketConnectorStripingTest extends AbstractConnectorTest<Mes
         }
     }
 
+    @Override
+    public Message createEvent(String symbol) {
+        return new Message(symbol);
+    }
+
     @Test
     public void testStriping() throws Exception {
         String striperConfig = "byhash4";
-        startPublisher(SYMBOL);
-
         BlockingQueue<Message> messages = new ArrayBlockingQueue<>(4);
-        feedEndpoint = createFeedEndpoint(SYMBOL, messages::addAll, Message.class);
+
+        startPublisher(Message.class, SYMBOL);
+        startFeed(SYMBOL, messages::addAll, Message.class);
         feedEndpoint.connect("127.0.0.1:" + port + "[stripe=" + striperConfig + "]");
 
         ClientSocketConnector connector = getClientSocketConnector(feedEndpoint);
@@ -80,10 +85,10 @@ public class ClientSocketConnectorStripingTest extends AbstractConnectorTest<Mes
 
     @Test
     public void testNoAutoStriping() throws Exception {
-        startPublisher(SYMBOL);
-
         BlockingQueue<Message> messages = new ArrayBlockingQueue<>(4);
-        feedEndpoint = createFeedEndpoint(SYMBOL, messages::addAll, Message.class);
+
+        startPublisher(Message.class, SYMBOL);
+        startFeed(SYMBOL, messages::addAll, Message.class);
         feedEndpoint.connect("127.0.0.1:" + port + "[stripe=auto]");
 
         ClientSocketConnector connector = getClientSocketConnector(feedEndpoint);
@@ -105,10 +110,11 @@ public class ClientSocketConnectorStripingTest extends AbstractConnectorTest<Mes
     @Test
     public void testAutoStriping() throws Exception {
         System.setProperty("com.devexperts.qd.impl.stripe", "2");
-        startPublisher(SYMBOL);
 
         BlockingQueue<Message> messages = new ArrayBlockingQueue<>(4);
-        feedEndpoint = createFeedEndpoint(SYMBOL, messages::addAll, Message.class);
+
+        startPublisher(Message.class, SYMBOL);
+        startFeed(SYMBOL, messages::addAll, Message.class);
         feedEndpoint.connect("127.0.0.1:" + port + "[stripe=auto]");
 
         ClientSocketConnector connector = getClientSocketConnector(feedEndpoint);
