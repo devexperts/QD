@@ -68,6 +68,10 @@ public final class RecordBuffer extends RecordSource implements
     private static int maxObjFields =
         SystemProperties.getIntProperty(RecordBuffer.class, "maxObjFields", 32);
 
+    // These constants are linked with same ones in DXFeedSubscription - OPTIMAL_BATCH_LIMIT and MAX_BATCH_LIMIT.
+    private static final int POOLED_CAPACITY = 0;
+    private static final int UNLIMITED_CAPACITY = Integer.MAX_VALUE;
+
     static final int INT_CIPHER = 0;
     static final int INT_FIELDS = 1;
 
@@ -125,7 +129,7 @@ public final class RecordBuffer extends RecordSource implements
     private final RecordCursor writeCursor;
 
     private RecordMode mode;
-    private boolean capacityLimited;
+    private int capacityLimit = UNLIMITED_CAPACITY;
     private boolean released;
 
     private int[] intFlds;
@@ -234,7 +238,7 @@ public final class RecordBuffer extends RecordSource implements
      * may make it ineligible to be {@link #release() released} into pool.
      */
     public boolean isCapacityLimited() {
-        return capacityLimited;
+        return capacityLimit != UNLIMITED_CAPACITY;
     }
 
     /**
@@ -242,7 +246,20 @@ public final class RecordBuffer extends RecordSource implements
      * @see #isCapacityLimited()
      */
     public void setCapacityLimited(boolean capacityLimited) {
-        this.capacityLimited = capacityLimited;
+        this.capacityLimit = capacityLimited ? POOLED_CAPACITY : UNLIMITED_CAPACITY;
+    }
+
+    /**
+     * Sets the capacity limit in the number of records for this record buffer.
+     *
+     * @param capacityLimit the capacity limit
+     * @throws IllegalArgumentException if capacityLimit < 0 (see {@link #POOLED_CAPACITY} or
+     *     {@link #UNLIMITED_CAPACITY})
+     */
+    public void setCapacityLimit(int capacityLimit) {
+        if (capacityLimit < 0)
+            throw new IllegalArgumentException();
+        this.capacityLimit = capacityLimit;
     }
 
     /**
@@ -251,9 +268,10 @@ public final class RecordBuffer extends RecordSource implements
      */
     @Override
     public boolean hasCapacity() {
-        return !capacityLimited ||
-            (intLimit < MAX_POOLED_INTS - maxIntFields &&
-             objLimit < MAX_POOLED_OBJS - maxObjFields);
+        return size < capacityLimit ||
+            (capacityLimit == POOLED_CAPACITY &&
+                intLimit < MAX_POOLED_INTS - maxIntFields &&
+                objLimit < MAX_POOLED_OBJS - maxObjFields);
     }
 
     /**
@@ -1259,8 +1277,11 @@ public final class RecordBuffer extends RecordSource implements
         RecordCursor.formatPosition(sb, intPosition, objPosition);
         sb.append(", limit=");
         RecordCursor.formatPosition(sb, intLimit, objLimit);
-        if (capacityLimited)
+        if (capacityLimit == POOLED_CAPACITY) {
             sb.append(", capacityLimited");
+        } else if (isCapacityLimited()) {
+            sb.append(", capacityLimit=").append(capacityLimit);
+        }
         return sb.toString();
     }
 
@@ -1406,9 +1427,10 @@ public final class RecordBuffer extends RecordSource implements
         if (intLimit + iInc < 0)
             throw new ArrayIndexOutOfBoundsException(intLimit + iInc);
         intFlds = ArrayUtil.grow(intFlds, intLimit + iInc);
-        if (capacityLimited && intFlds.length > MAX_POOLED_INTS)
+        if (capacityLimit == POOLED_CAPACITY && intFlds.length > MAX_POOLED_INTS) {
             // oops.. capacity limited buffer grew over its pooled size... maybe record has too many fields?
             maxIntFields = Math.max(maxIntFields, iInc);
+        }
         reinitCursorArraysInternal();
     }
 
@@ -1417,9 +1439,10 @@ public final class RecordBuffer extends RecordSource implements
         if (objLimit + oInc < 0)
             throw new ArrayIndexOutOfBoundsException(objLimit + oInc);
         objFlds = ArrayUtil.grow(objFlds, objLimit + oInc);
-        if (capacityLimited && objFlds.length > MAX_POOLED_OBJS)
+        if (capacityLimit == POOLED_CAPACITY && objFlds.length > MAX_POOLED_OBJS) {
             // oops.. capacity limited buffer grew over its pooled size... maybe record has too many fields?
             maxObjFields = Math.max(maxObjFields, oInc);
+        }
         reinitCursorArraysInternal();
     }
 

@@ -1,3 +1,11 @@
+QDS 3.331:
+
+* [QD-1543] Exclude OptionSale record from History conflateFilter by default
+* [QD-1491] dxFeed API: Allow set notification batch size for subscription
+* [QD-1466] dxFeed API: Allow set aggregation period per DXFeed subscription
+* [QD-1519] dxFeed API: Re-design logic of EventProcessor
+  - Feed API uses the same logic of the aggregation period as the network connector.
+
 QDS 3.330:
 
 * [QD-1492] Graceful connections close
@@ -49,7 +57,7 @@ QDS 3.328:
 
 QDS 3.327:
 
-* [QD-1508] [dxLink] Provide the ability to run under java version older than 8
+* [QD-1508] [dxLink] Provide the ability to run on Java versions later than 8
 * [QD-1482] [dxLink] Enhanced WebSocket connection information reporting
 * [QD-1507] [dxLink] Provide client information in the SETUP message
 * [QD-1494] [dxLink] Provide User-Agent in WebSocket connection

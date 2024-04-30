@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -333,7 +333,7 @@ public class DXFeedFilterTest {
 
         @Override
         public boolean accept(QDContract contract, DataRecord record, int cipher, String symbol) {
-            return symbols.contains(symbol);
+            return symbols.contains(record.getScheme().getCodec().decode(cipher, symbol));
         }
 
         @Override

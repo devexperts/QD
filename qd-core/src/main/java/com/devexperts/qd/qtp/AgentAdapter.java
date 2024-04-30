@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,10 +14,12 @@ package com.devexperts.qd.qtp;
 import com.devexperts.auth.AuthSession;
 import com.devexperts.connector.proto.Configurable;
 import com.devexperts.logging.Logging;
+import com.devexperts.qd.DataProvider;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
+import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.QDHistory;
 import com.devexperts.qd.QDStream;
@@ -29,7 +31,6 @@ import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.qd.ng.EventFlag;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
-import com.devexperts.qd.ng.RecordProvider;
 import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.qtp.auth.BasicChannelShaperFactory;
 import com.devexperts.qd.qtp.auth.ChannelShapersFactory;
@@ -43,6 +44,7 @@ import com.devexperts.util.LoggedThreadPoolExecutor;
 import com.devexperts.util.TimePeriod;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -236,8 +238,9 @@ public class AgentAdapter extends MessageAdapter {
 
     final QDFilter[] peerFilter = new QDFilter[N_CONTRACTS]; // filters received from remote peer in DESCRIBE PROTOCOL message
 
-    private ChannelShaper[] shapers; // effectively final, filled by initialize method
-    private AgentChannel[] channels; // effective final, initially all null values, allocated by initialize method, filled (assigned) lazily
+    private AgentChannels channels; // effectively final, filled by initialize method
+
+    private MessageVisitor retrieveVisitor;
 
     // ------------------------- constructors -------------------------
 
@@ -259,7 +262,7 @@ public class AgentAdapter extends MessageAdapter {
             shapers.add(newDynamicShaper(stream));
         if (history != null)
             shapers.add(newDynamicShaper(history));
-        initialize(shapers.toArray(new ChannelShaper[shapers.size()]));
+        channels = new AgentChannels(new OwnerImpl(), shapers);
     }
 
     /**
@@ -313,10 +316,9 @@ public class AgentAdapter extends MessageAdapter {
      * @return this agent adapter (in order to allow chained notation)
      */
     public synchronized AgentAdapter initialize(ChannelShaper... shapers) {
-        if (this.shapers != null)
+        if (channels != null)
             throw new IllegalArgumentException("Already initialized");
-        this.shapers = shapers.clone();
-        channels = new AgentChannel[shapers.length];
+        channels = new AgentChannels(new OwnerImpl(), Arrays.asList(shapers));
         return this;
     }
 
@@ -353,21 +355,36 @@ public class AgentAdapter extends MessageAdapter {
         return scheme;
     }
 
+    private class OwnerImpl implements AgentChannels.Owner {
+        @Override
+        public QDAgent createAgent(QDCollector collector, QDFilter filter) {
+            return AgentAdapter.this.createAgent(collector, filter, getStats().getFullKeyProperties());
+        }
+
+        @Override
+        public QDAgent createVoidAgent(QDContract contract) {
+            return QDFactory.getDefaultFactory().createVoidAgentBuilder(contract, scheme).build();
+        }
+
+        @Override
+        public QDFilter getPeerFilter(QDContract contract) {
+            return peerFilter[contract.ordinal()];
+        }
+
+        @Override
+        public void recordsAvailable() {
+            notifyListener();
+        }
+
+        @Override
+        public boolean retrieveData(DataProvider dataProvider, QDContract contract) {
+            return retrieveVisitor.visitData(dataProvider, MessageType.forData(contract));
+        }
+    }
+
     @Override
     public String getSymbol(char[] chars, int offset, int length) {
-        QDCollector prevCollector = null;
-        for (AgentChannel channel : channels) {
-            if (channel == null)
-                continue; // not initialized yet (no subscription)
-            QDCollector collector = channel.shaper.getCollector();
-            if (collector == prevCollector || collector == null)
-                continue;
-            String result = collector.getSymbol(chars, offset, length);
-            if (result != null)
-                return result;
-            prevCollector = collector;
-        }
-        return null;
+        return channels.getSymbol(chars, offset, length);
     }
 
     /**
@@ -413,19 +430,7 @@ public class AgentAdapter extends MessageAdapter {
     }
 
     private void processSubscription(RecordSource sub, MessageType message) {
-        QDContract contract = message.getContract();
-        boolean hasContract = false;
-        long initialPosition = sub.getPosition();
-        for (int i = 0; i < shapers.length; i++) {
-            ChannelShaper shaper = shapers[i];
-            if (shaper.getContract() != contract)
-                continue;
-            hasContract = true;
-            AgentChannel channel = getOrCreateChannelAt(i);
-            sub.setPosition(initialPosition);
-            channel.processSubscription(message, sub);
-        }
-        if (!hasContract)
+        if (!channels.processSubscription(sub, message.getContract(), message.isSubscriptionAdd()))
             reportIgnoredMessage("Contract is not supported", message);
     }
 
@@ -438,26 +443,11 @@ public class AgentAdapter extends MessageAdapter {
         return buf;
     }
 
-    private AgentChannel getOrCreateChannelAt(int i) {
-        AgentChannel channel = channels[i];
-        if (channel == null) {
-            ChannelShaper shaper = shapers[i];
-            channel = new AgentChannel(this, shaper);
-            shaper.bind(channel);
-            channels[i] = channel;
-        }
-        return channel;
-    }
-
     @Override
     protected void closeImpl() {
         assert Thread.holdsLock(this);
-        if (channels != null) {
-            for (AgentChannel channel : channels) {
-                if (channel != null)
-                    channel.close();
-            }
-        }
+        if (channels != null)
+            channels.close();
     }
 
     @Override
@@ -478,13 +468,7 @@ public class AgentAdapter extends MessageAdapter {
         super.prepareProtocolDescriptor(desc);
         Map<MessageDescriptor, String> messageTypeFilters = new HashMap<>();
         for (QDContract contract : QD_CONTRACTS) {
-            QDFilter combinedFilter = QDFilter.NOTHING;
-            for (ChannelShaper shaper : shapers) {
-                if (shaper.getContract() == contract) {
-                    // compute combined filter for all channels for this contract
-                    combinedFilter = CompositeFilters.makeOr(combinedFilter, shaper.getSubscriptionFilter().toStableFilter());
-                }
-            }
+            QDFilter combinedFilter = channels.combinedFilter(contract);
             if (combinedFilter != QDFilter.NOTHING) {
                 // prepare message for this contract
                 MessageDescriptor addSubscriptionMessage = desc.newMessageDescriptor(MessageType.forAddSubscription(contract));
@@ -537,62 +521,23 @@ public class AgentAdapter extends MessageAdapter {
 
     @Override
     public boolean isProtocolDescriptorCompatible(ProtocolDescriptor desc) {
-        if (shapers == null)
+        if (channels == null)
             return true;
-        for (QDContract contract : QD_CONTRACTS) {
-            boolean hasContract = false;
-            for (ChannelShaper shaper : shapers) {
-                if (shaper.getContract() != contract)
-                    continue;
-                hasContract = true;
-            }
-            if (hasContract && desc.canSend(MessageType.forAddSubscription(contract)) && desc.canReceive(MessageType.forData(contract)))
-                return true;
-        }
-        return false;
+        return Arrays.stream(channels.shapers)
+            .map(ChannelShaper::getContract)
+            .distinct()
+            .anyMatch(contract -> desc.canSend(MessageType.forAddSubscription(contract)) &&
+                desc.canReceive(MessageType.forData(contract)));
     }
 
     // returns true if more data remains in collectors, false otherwise
     protected boolean retrieveDataMessages(MessageVisitor visitor) {
         if (channels == null)
             return false;
-        for (int iterations = channels.length; --iterations >= 0;) {
-            long currentTime = System.currentTimeMillis();
-            double minDistance = Double.POSITIVE_INFINITY; // how much weight should be distributed to allow channel with data to achieve quota of 1
-            AgentChannel dueChannel = null; // first channel to achieve quota of 1
-            for (AgentChannel channel : channels) {
-                if (channel == null)
-                    continue; // not initialized yet (no subscription)
-                if (channel.hasSnapshotOrDataForNow(currentTime)) {
-                    if (channel.quota >= 1) {
-                        minDistance = 0;
-                        dueChannel = channel;
-                        break;
-                    }
-                    double distance = (1 - channel.quota) / channel.shaper.getWeight();
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        dueChannel = channel;
-                    }
-                }
-            }
-            if (dueChannel == null)
-                return false; // no one has any data
-
-            if (minDistance > 0)
-                for (AgentChannel channel : channels) { // distribute more quota
-                    if (channel == null)
-                        continue; // not initialized yet (no subscription)
-                    channel.quota += minDistance * channel.shaper.getWeight();
-                    if (channel.quota >= 1) // can happen for channels which has no data for now
-                        channel.quota = 1;
-                }
-
-            dueChannel.quota = 0;
-            if (dueChannel.retrieveSnapshotOrData(visitor, currentTime))
-                return true;
-        }
-        return true;
+        retrieveVisitor = visitor;
+        boolean hasMoreData = channels.retrieveData();
+        retrieveVisitor = null;
+        return hasMoreData;
     }
 
     @Override
@@ -620,18 +565,8 @@ public class AgentAdapter extends MessageAdapter {
     @Override
     public long nextRetrieveTime(long currentTime) {
         long time = super.nextRetrieveTime(currentTime);
-        if (channels != null) {
-            for (AgentChannel channel : channels) {
-                if (channel == null)
-                    continue; // not initialized yet (no subscription)
-                time = Math.min(time, channel.nextRetrieveTime(currentTime));
-            }
-        }
+        if (channels != null)
+            time = Math.min(time, channels.nextRetrieveTime(currentTime));
         return time;
-    }
-
-    // extension method for SubscriptionAdapter in feed tool
-    protected boolean visitData(MessageVisitor visitor, RecordProvider provider, MessageType message) {
-        return visitor.visitData(provider, message);
     }
 }

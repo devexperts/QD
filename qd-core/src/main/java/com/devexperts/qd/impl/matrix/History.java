@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -57,7 +57,7 @@ public class History extends Collector implements QDHistory {
     static final boolean FOB_FLAG = SystemProperties.getBooleanProperty("dxscheme.fob", false);
     // By default, all records except Order are conflated.
     static final String CONFLATE_FILTER = SystemProperties.getProperty(History.class, "conflateFilter",
-        FOB_FLAG ? "!:Order*" : "*");
+        FOB_FLAG ? "!(:Order*,:OptionSale)" : "!:OptionSale");
 
     /*
      * Event flags.

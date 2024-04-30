@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -96,6 +96,8 @@ public class CompositeFilters {
      */
     public static QDFilterFactory getFactory(DataScheme scheme) {
         QDFilterFactory baseFactory = scheme.getService(QDFilterFactory.class);
+        if (baseFactory == null)
+            return new Factory(scheme);
         return baseFactory instanceof Factory ? baseFactory : new Factory(baseFactory);
     }
 
@@ -514,6 +516,11 @@ public class CompositeFilters {
         Factory(QDFilterFactory baseFactory) {
             super(baseFactory.getScheme());
             this.baseFactory = baseFactory;
+        }
+
+        Factory(DataScheme scheme) {
+            super(scheme);
+            this.baseFactory = null;
         }
 
         @Override

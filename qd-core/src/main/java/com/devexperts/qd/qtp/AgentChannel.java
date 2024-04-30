@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,10 +11,10 @@
  */
 package com.devexperts.qd.qtp;
 
+import com.devexperts.qd.DataProvider;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
-import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.QDStream;
 import com.devexperts.qd.SubscriptionFilter;
@@ -389,7 +389,7 @@ class AgentChannel implements RecordListener {
 
     // ---------------------- config ----------------------
 
-    final AgentAdapter adapter;
+    final AgentChannels.Owner owner;
     final ChannelShaper shaper;
 
     // ---------------------- subscription (pending change) ----------------------
@@ -442,10 +442,11 @@ class AgentChannel implements RecordListener {
 
     // ======================================== creation ========================================
 
-    AgentChannel(AgentAdapter adapter, ChannelShaper shaper) {
-        this.adapter = adapter;
+    AgentChannel(AgentChannels.Owner owner, ChannelShaper shaper) {
+        this.owner = owner;
         this.shaper = shaper;
         subActionConfig = createNewConfig();
+        shaper.bind(this);
     }
 
     private boolean hasSubscriptionExecutor() {
@@ -455,7 +456,7 @@ class AgentChannel implements RecordListener {
     private Config createNewConfig() {
         QDFilter subscriptionFilter = shaper.getSubscriptionFilter();
         QDFilter completeSubscriptionFilter =
-            CompositeFilters.makeAnd(adapter.peerFilter[shaper.getContract().ordinal()], subscriptionFilter);
+            CompositeFilters.makeAnd(owner.getPeerFilter(shaper.getContract()), subscriptionFilter);
         byte subFilterMode;
         if (completeSubscriptionFilter == QDFilter.ANYTHING) {
             subFilterMode = SUB_NO_FILTER;
@@ -485,28 +486,28 @@ class AgentChannel implements RecordListener {
             return Thread.holdsLock(this);
     }
 
+    // call from shaper update
     void reconfigureIfNeeded() {
         // quick lock-free check if there is any need to reconfigure (double check under lock)
-        if (!needToReconfigure(subActionConfig))
-            return;
-        reconfigureIfNeededSync();
+        if (needToReconfigure())
+            reconfigureIfNeededSync(); // synchronize this
     }
 
-    private boolean needToReconfigure(Config config) {
+    // assign CLOSED_CONFIG value to the subActionConfig field only during synchronization by this object
+    private boolean needToReconfigure() {
+        Config config = this.subActionConfig; // Atomic read
         return config != CLOSED_CONFIG &&
             (config.collector != shaper.getCollector() ||
             config.subscriptionFilter != shaper.getSubscriptionFilter() ||
-            config.aggregationPeriod != shaper.getAggregationPeriod() ||
-            adapter.isClosed());
+            config.aggregationPeriod != shaper.getAggregationPeriod());
     }
 
+    // sync call from sub-change or unsync from shaper update
     private synchronized void reconfigureIfNeededSync() {
-        if (!needToReconfigure(subActionConfig))
+        if (!needToReconfigure())
             return; // no actual reconfiguration needed
-        if (adapter.isClosed()) {
-            close();
+        if (isChannelClosed())
             return;
-        }
         // Capture current configuration change request
         subActionConfig = createNewConfig();
         subActionQueue.addAction(subActionConfig, ACTION_RECONFIGURE_1);
@@ -516,7 +517,7 @@ class AgentChannel implements RecordListener {
         assert underLockOrInSubActionThread();
         assert a.sub == null;
         if (agentConfig == null)
-            return null; // there's nothing to do since there is no agent yet
+            initNewAgentIfNeeded(a.config);
         Config oldConfig = agentConfig.config;
         boolean collectorChanged = oldConfig.collector != a.config.collector;
         boolean filterChanged =  !oldConfig.completeSubscriptionFilter.equals(a.config.completeSubscriptionFilter) ||
@@ -525,7 +526,7 @@ class AgentChannel implements RecordListener {
         if (!collectorChanged && !filterChanged && !aggregationChanged) {
             // nothing actually changed -- it was just a fluke (filter instance might have changed without substance)
             agentConfig = new AgentConfig(a.config, agentConfig.agent);
-            return null;
+            filterChanged = true;
         }
         if (!collectorChanged && !filterChanged) {
             // update aggregation period change
@@ -707,28 +708,43 @@ class AgentChannel implements RecordListener {
         QDCollector collector = config.collector;
         return collector == null ?
             // create void agent just to keep subscription if actual collector is null
-            QDFactory.getDefaultFactory().
-            createVoidAgentBuilder(shaper.getContract(), adapter.getScheme()).build() :
+            owner.createVoidAgent(shaper.getContract()) :
             // create real agent if collector is defined
-            adapter.createAgent(collector,
-            config.subFilterMode == SUB_FILTER_AGENT ? config.completeSubscriptionFilter : QDFilter.ANYTHING,
-            adapter.getStats().getFullKeyProperties());
+            owner.createAgent(collector,
+            config.subFilterMode == SUB_FILTER_AGENT ? config.completeSubscriptionFilter : QDFilter.ANYTHING);
     }
 
     private synchronized QDAgent getOrCreateRejectedAgent() {
         if (rejectedAgent != null)
             return rejectedAgent;
         // create rejected agent (if needed)
-        return rejectedAgent = QDFactory.getDefaultFactory().
-            createVoidAgentBuilder(shaper.getContract(), adapter.getScheme()).build();
+        return rejectedAgent = owner.createVoidAgent(shaper.getContract());
     }
 
     final synchronized void close() {
-        if (subActionConfig == CLOSED_CONFIG)
+        if (isChannelClosed())
             return;
         shaper.close(); // immediately close shaper (stop tracking dynamic filters)
         subActionConfig = CLOSED_CONFIG;
         subActionQueue.addCloseAction();
+    }
+
+    private boolean isChannelClosed() {
+        return subActionConfig == CLOSED_CONFIG;
+    }
+
+    final synchronized void closeAndExamineDataBySubscription(RecordBuffer buf) {
+        if (isChannelClosed())
+            return;
+        shaper.close(); // immediately close shaper (stop tracking dynamic filters)
+        subActionConfig = CLOSED_CONFIG;
+        if (agentConfig == null)
+            return; // nothing to do -- agent was not created yet
+        QDAgent agent = agentConfig.agent;
+        // update agent's configuration (first time)
+        if (agentConfig.config != CLOSED_CONFIG)
+            agentConfig = new AgentConfig(CLOSED_CONFIG, agent);
+        agent.closeAndExamineDataBySubscription(buf);
     }
 
     // ======================================== data retrieval ========================================
@@ -749,13 +765,13 @@ class AgentChannel implements RecordListener {
             if ((oldState & DATA_WAIT) != 0)
                 return; // Do not send notification -- wait until next retrieve time comes
             // otherwise, on DATA_NOT_AVAILABLE -> DATA_AVAILABLE transition send notification to the listener
-            adapter.notifyListener();
+            owner.recordsAvailable();
         } else if (agentConfig.config.hasAggregationPeriod() && provider == agent.getSnapshotProvider()) {
             // snapshot
             if (snapshotIsAvailable)
                 return;
             snapshotIsAvailable = true;
-            adapter.notifyListener(); // hasSnapshotOrDataForNow is now true !!!
+            owner.recordsAvailable(); // hasSnapshotOrDataForNow is now true !!!
         }
     }
 
@@ -775,10 +791,13 @@ class AgentChannel implements RecordListener {
 
     // This method is never invoked concurrently, but it can be concurrent with recordsAvailable.
     // Note, that this method is the only method that updates nextDataTime.
-    boolean retrieveSnapshotOrData(MessageVisitor visitor, long currentTime) {
+    boolean retrieveSnapshotOrData(long currentTime) {
         AgentConfig agentConfig = this.agentConfig; // volatile read current config, it cannot be null
         Config config = agentConfig.config;
         QDAgent agent = agentConfig.agent;
+        //  see com.devexperts.qd.impl.matrix.Ticker.retrieveDataLLLocked method when we retrieve data, we also retrieve
+        //  a snapshot, and if the snapshot has been processed, the next call to retrieve the snapshot
+        //  under if "snapshotIsAvailable" will not call the event listener
         if (hasDataForNow(currentTime)) {
             // this is protective measure, so that time "resets" in non-wait modes, thus making code more robust in presence of clock jumps
             if (dataAvailableState == DATA_AVAILABLE)
@@ -789,7 +808,7 @@ class AgentChannel implements RecordListener {
             // Perform the retrieve
             boolean result = true;
             try {
-                result = retrieveFromProvider(config, agent, visitor);
+                result = retrieveFromProvider(config, agent);
             } finally {
                 // Analyze retrieve result
                 if (result) {
@@ -821,7 +840,7 @@ class AgentChannel implements RecordListener {
             snapshotIsAvailable = false; // It is set to false only when we are about to retrieveFromProvider
             boolean result = true;
             try {
-                result = retrieveFromProvider(config, agent.getSnapshotProvider(), visitor);
+                result = retrieveFromProvider(config, agent.getSnapshotProvider());
             } finally {
                 if (result) {
                     snapshotIsAvailable = true;
@@ -865,7 +884,7 @@ class AgentChannel implements RecordListener {
 
     // This method is never invoked concurrently
     // supports filtering (!)
-    private boolean retrieveFromProvider(Config config, RecordProvider provider, MessageVisitor visitor) {
+    private boolean retrieveFromProvider(Config config, RecordProvider provider) {
         try {
             // if config.subFilterMode != SUB_FILTER_AGENT, then completeSubscriptionFilter was not used in createAgentAndUpdateConfig
             // So, stream contract with wildcard support needs additional data filtering (all other contracts are precise on sub)
@@ -879,7 +898,7 @@ class AgentChannel implements RecordListener {
                 filteringRecordProvider.set(provider, remainingSubscriptionFilter, dataFilter);
                 provider = filteringRecordProvider;
             }
-            return adapter.visitData(visitor, provider, MessageType.forData(shaper.getContract()));
+            return owner.retrieveData(provider, shaper.getContract());
         } finally {
             if (filteringRecordProvider != null)
                 filteringRecordProvider.set(null, null, null);
@@ -888,8 +907,7 @@ class AgentChannel implements RecordListener {
 
     // ======================================== subscription processing ========================================
 
-    synchronized void processSubscription(MessageType message, RecordSource source) {
-        assert message.getContract() == shaper.getContract() && message.isSubscription();
+    synchronized void processSubscription(RecordSource source, boolean isSubscriptionAdd) {
         // check if configuration needs to be updated
         reconfigureIfNeededSync();
         // read current config
@@ -897,8 +915,8 @@ class AgentChannel implements RecordListener {
         if (config == CLOSED_CONFIG)
             return; // nothing to do when closed
         byte action = config.subFilterMode == SUB_FILTER_EXECUTOR ?
-            (message.isSubscriptionAdd() ? ACTION_ADD_SUB_FILTER : ACTION_REMOVE_SUB_FILTER) :
-            (message.isSubscriptionAdd() ? ACTION_ADD_SUB : ACTION_REMOVE_SUB);
+            (isSubscriptionAdd ? ACTION_ADD_SUB_FILTER : ACTION_REMOVE_SUB_FILTER) :
+            (isSubscriptionAdd ? ACTION_ADD_SUB : ACTION_REMOVE_SUB);
         if (config.subFilterMode == SUB_FILTER_PROCESS) { // filter subscription right here in this mode
             filterSubscriptionAndAddActions(source, config, action);
             return;
@@ -999,7 +1017,7 @@ class AgentChannel implements RecordListener {
     private SubAction processCloseAction(SubAction a) {
         assert underLockOrInSubActionThread();
         assert a.action == ACTION_CLOSE && a.sub == null;
-        assert subActionConfig == CLOSED_CONFIG;
+        assert isChannelClosed();
         if (agentConfig == null)
             return null; // nothing to do -- agent was not created yet
         QDAgent agent = agentConfig.agent;

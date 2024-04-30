@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,8 +12,10 @@
 package com.dxfeed.api;
 
 import com.devexperts.io.IOUtil;
+import com.devexperts.logging.Logging;
 import com.devexperts.util.IndexedSet;
 import com.devexperts.util.IndexerFunction;
+import com.devexperts.util.TimePeriod;
 import com.dxfeed.api.osub.ObservableSubscription;
 import com.dxfeed.api.osub.ObservableSubscriptionChangeListener;
 import com.dxfeed.api.osub.TimeSeriesSubscriptionSymbol;
@@ -41,8 +43,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -191,14 +191,8 @@ import javax.annotation.Nullable;
  * {@code DXFeedSubscription} instances. If event processing is mostly CPU-bound, then the good rule of thumb
  * is to have as many {@code DXFeedSubscription} instances as there are CPU cores in the system.
  *
- * <p> However, multiple tasks can get submitted to the executor at the same time. In the current implementation,
- * at most two tasks are submitted at any time if
- * {@link DXEndpoint#DXFEED_AGGREGATION_PERIOD_PROPERTY DXFEED_AGGREGATION_PERIOD_PROPERTY} is used.
- * One task for immediate processing of data snapshots via {@link Executor#execute(Runnable) Executor.execute} method
- * and another task for delayed processing of data updates via
- * {@link ScheduledExecutorService#schedule(Runnable, long, TimeUnit) ScheduledExecutorService.schedule} method
- * if the executor implements {@link ScheduledExecutorService} interface.
- * At most one task is submitted at any time if this property is not used.
+ * <p> The effective aggregation period is a maximum of individual period of this subscription and the
+ * {@link DXEndpoint#DXFEED_AGGREGATION_PERIOD_PROPERTY global} aggregation period.
  *
  * <p> Installed {@link ObservableSubscriptionChangeListener} instances are notified on symbol set changes
  * while holding the lock on this subscription and in the same thread that changed the set of subscribed symbols
@@ -238,6 +232,18 @@ import javax.annotation.Nullable;
 public class DXFeedSubscription<E> implements Serializable, ObservableSubscription<E>, AutoCloseable {
     private static final long serialVersionUID = 0;
 
+    // These constants are linked with same ones in RecordBuffer - POOLED_CAPACITY and UNLIMITED_CAPACITY.
+    /**
+     * The optimal events' batch limit for single notification in {@link DXFeedEventListener#eventsReceived}.
+     */
+    public static final int OPTIMAL_BATCH_LIMIT = 0;
+    /**
+     * The maximum events' batch limit for single notification in {@link DXFeedEventListener#eventsReceived}.
+     */
+    public static final int MAX_BATCH_LIMIT = Integer.MAX_VALUE;
+
+    private static final Logging log = Logging.getLogging(DXFeedSubscription.class);
+
     // closed state
     private volatile boolean closed;
 
@@ -252,6 +258,8 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
     // initialized on first use
     private transient Set<?> undecoratedSymbols;
     private transient Set<?> decoratedSymbols;
+    private transient volatile TimePeriod aggregationPeriod;
+    private transient volatile int eventsBatchLimit = OPTIMAL_BATCH_LIMIT;
 
     /**
      * Creates <i>detached</i> subscription for a single event type.
@@ -576,6 +584,32 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
     }
 
     /**
+     * Returns the aggregation period for data for this subscription instance.
+     *
+     * @return The aggregation period for data, represented as a {@link TimePeriod} object.
+     */
+    public TimePeriod getAggregationPeriod() {
+        return aggregationPeriod;
+    }
+
+    /**
+     * Sets the aggregation period for data.
+     * This method sets a new aggregation period for data, which will only take effect on the next iteration of
+     * data notification. For example, if the current aggregation period is 5 seconds and it is changed
+     * to 1 second, the next call to the next call to the retrieve method may take up to 5 seconds, after which
+     * the new aggregation period will take effect.
+     * @param aggregationPeriod the new aggregation period for data
+     */
+    public synchronized void setAggregationPeriod(TimePeriod aggregationPeriod) {
+        if (Objects.equals(this.aggregationPeriod, aggregationPeriod))
+            return;
+        this.aggregationPeriod = aggregationPeriod;
+        ObservableSubscriptionChangeListener listeners = changeListeners;
+        if (listeners != null)
+            listeners.configurationChanged();
+    }
+
+    /**
      * Adds listener for events.
      * Event lister can be added only when subscription is not producing any events.
      * The subscription must be either empty
@@ -844,6 +878,28 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
         changeListeners = simplifyListener(readCompactCollection(in), ChangeListeners::new);
     }
 
+    /**
+     * Returns maximum number of events in the single notification of {@link DXFeedEventListener#eventsReceived}.
+     * Special cases are supported for constants {@link #OPTIMAL_BATCH_LIMIT} and {@link #MAX_BATCH_LIMIT}.
+     */
+    public int getEventsBatchLimit() {
+        return eventsBatchLimit;
+    }
+
+    /**
+     * Sets maximum number of events in the single notification of {@link DXFeedEventListener#eventsReceived}.
+     * Special cases are supported for constants {@link #OPTIMAL_BATCH_LIMIT} and {@link #MAX_BATCH_LIMIT}.
+     *
+     * @param eventsBatchLimit the notification events limit
+     * @throws IllegalArgumentException if eventsBatchLimit < 0 (see {@link #OPTIMAL_BATCH_LIMIT} or
+     *     {@link #MAX_BATCH_LIMIT}
+     */
+    public void setEventsBatchLimit(int eventsBatchLimit) {
+        if (eventsBatchLimit < 0)
+            throw new IllegalArgumentException();
+        this.eventsBatchLimit = eventsBatchLimit;
+    }
+
     private class SymbolView extends AbstractSet<Object> {
         private final boolean undecorate;
 
@@ -982,7 +1038,7 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
             for (Object listener : a) {
                 try {
                     ((DXFeedEventListener<E>) listener).eventsReceived(events);
-                } catch (RuntimeException|Error e) {
+                } catch (Throwable e) {
                     error = e;
                 }
             }
@@ -1001,7 +1057,7 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
             for (Object listener : a) {
                 try {
                     ((ObservableSubscriptionChangeListener) listener).symbolsAdded(symbols);
-                } catch (RuntimeException|Error e) {
+                } catch (Throwable e) {
                     error = e;
                 }
             }
@@ -1014,7 +1070,7 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
             for (Object listener : a) {
                 try {
                     ((ObservableSubscriptionChangeListener) listener).symbolsRemoved(symbols);
-                } catch (RuntimeException|Error e) {
+                } catch (Throwable e) {
                     error = e;
                 }
             }
@@ -1027,7 +1083,20 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
             for (Object listener : a) {
                 try {
                     ((ObservableSubscriptionChangeListener) listener).subscriptionClosed();
-                } catch (RuntimeException|Error e) {
+                } catch (Throwable e) {
+                    error = e;
+                }
+            }
+            rethrow(error);
+        }
+
+        @Override
+        public void configurationChanged() {
+            Throwable error = null;
+            for (Object listener : a) {
+                try {
+                    ((ObservableSubscriptionChangeListener) listener).configurationChanged();
+                } catch (Throwable e) {
                     error = e;
                 }
             }
@@ -1036,9 +1105,15 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
     }
 
     static void rethrow(Throwable error) {
-        if (error instanceof RuntimeException)
+        if (error instanceof RuntimeException) {
             throw (RuntimeException) error;
-        if (error instanceof Error)
+        }
+        if (error instanceof Error) {
             throw (Error) error;
+        }
+        if (error != null) {
+            log.error("Unexpected exception in listener", error);
+            throw new RuntimeException(error);
+        }
     }
 }

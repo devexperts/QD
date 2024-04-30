@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,8 +12,11 @@
 package com.dxfeed.api.impl;
 
 import com.devexperts.logging.Logging;
+import com.devexperts.qd.DataProvider;
 import com.devexperts.qd.QDAgent;
+import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
+import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.QDHistory;
 import com.devexperts.qd.QDTicker;
@@ -26,6 +29,10 @@ import com.devexperts.qd.ng.RecordListener;
 import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.ng.RecordProvider;
 import com.devexperts.qd.ng.RecordSource;
+import com.devexperts.qd.qtp.AgentChannels;
+import com.devexperts.qd.qtp.ChannelShaper;
+import com.devexperts.qd.qtp.DynamicChannelShaper;
+import com.devexperts.qd.util.DxTimer;
 import com.devexperts.qd.util.RecordProcessor;
 import com.devexperts.util.IndexedSet;
 import com.devexperts.util.IndexerFunction;
@@ -46,6 +53,7 @@ import com.dxfeed.promise.Promise;
 import com.dxfeed.promise.PromiseHandler;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -54,10 +62,9 @@ import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 public class DXFeedImpl extends DXFeed {
@@ -76,7 +83,6 @@ public class DXFeedImpl extends DXFeed {
 
     private final DXEndpointImpl endpoint;
     private final QDFilter filter;
-    private final QDFilter.UpdateListener filterListener;
     private final RecordMode retrieveMode;
     private final QDAgent.Builder[] eventProcessorAgentBuilders = new QDAgent.Builder[N_CONTRACTS];
     private final IndexedSet<DXFeedSubscription<?>, EventProcessor<?, ?>> eventProcessors =
@@ -102,13 +108,6 @@ public class DXFeedImpl extends DXFeed {
     public DXFeedImpl(DXEndpointImpl endpoint, QDFilter filter) {
         this.endpoint = endpoint;
         this.filter = filter;
-        if (filter.isDynamic()) {
-            // Add filter to force automatic update
-            filterListener = this::updateSubscriptionsOnFilterUpdate;
-            filter.getUpdated().addUpdateListener(filterListener);
-        } else {
-            filterListener = null;
-        }
 
         RecordMode mode = RecordMode.FLAGGED_DATA.withAttachment();
         if (endpoint.getQDEndpoint().hasEventTimeSequence())
@@ -134,13 +133,7 @@ public class DXFeedImpl extends DXFeed {
 
     // helper method for detachSubscriptionAndClear method and for OnDemandService implementation
     public static void clearDataInBuffer(RecordBuffer buf, boolean keepTime) {
-        RecordCursor cur;
-        while ((cur = buf.writeNext()) != null) {
-            for (int i = (keepTime ? 2 : 0); i < cur.getIntCount(); i++)
-                cur.setInt(i, 0);
-            for (int i = 0; i < cur.getObjCount(); i++)
-                cur.setObj(i, null);
-        }
+        AgentChannels.clearDataInBuffer(buf, keepTime);
     }
 
     public void awaitTerminationAndCloseImpl() throws InterruptedException {
@@ -174,12 +167,6 @@ public class DXFeedImpl extends DXFeed {
         closeables.clear();
         if (lastEventsProcessor != null)
             lastEventsProcessor.close();
-
-        // Remove listener for dynamic filter
-        if (filterListener != null) {
-            assert filter.isDynamic(); // filter listener is created only for dynamic filters
-            filter.getUpdated().removeUpdateListener(filterListener);
-        }
     }
 
     private void removeEventProcessor(DXFeedSubscription<?> subscription) {
@@ -577,23 +564,6 @@ public class DXFeedImpl extends DXFeed {
         return aggregationPeriodMillis;
     }
 
-    private void updateSubscriptionsOnFilterUpdate(QDFilter updatedFilter) {
-        // Filter parameter is ignored since agents will always use latest filter version on subscription
-        for (EventProcessor<?, ?> processor : eventProcessors.toArray(new EventProcessor[0])) {
-            DXFeedSubscription<?> subscription = processor.subscription;
-            synchronized (subscription) {
-                // Need to take decorated symbols in order to not change contracts (e.g. HISTORY vs STREAM)
-                Set<?> symbols = subscription.getDecoratedSymbols();
-                EnumMap<QDContract, RecordBuffer> sub = toSubscription(subscription, symbols, true);
-                for (QDContract contract : sub.keySet()) {
-                    RecordBuffer buffer = sub.get(contract);
-                    processor.getOrCreateAgent(contract).setSubscription(buffer);
-                    buffer.release();
-                }
-            }
-        }
-    }
-
     private <E> void executePromiseHandler(final Promise<E> promise, final PromiseHandler<? super E> handler) {
         if (handler != null)
             endpoint.getOrCreateExecutor().execute(() -> handler.promiseDone(promise));
@@ -742,7 +712,7 @@ public class DXFeedImpl extends DXFeed {
             for (QDContract contract : sub.keySet()) {
                 RecordBuffer buffer = sub.get(contract);
                 if (processor != null)
-                    processor.getOrCreateAgent(contract).addSubscription(buffer);
+                    processor.channels.processSubscription(buffer, contract, true);
                 buffer.release();
             }
         }
@@ -762,7 +732,7 @@ public class DXFeedImpl extends DXFeed {
             for (QDContract contract : sub.keySet()) {
                 RecordBuffer buffer = sub.get(contract);
                 if (processor != null)
-                    processor.getOrCreateAgent(contract).removeSubscription(buffer);
+                    processor.channels.processSubscription(buffer, contract, false);
                 buffer.release();
             }
         }
@@ -770,6 +740,18 @@ public class DXFeedImpl extends DXFeed {
         @Override
         public void subscriptionClosed() {
             closeEventProcessor(subscription, clearOnClose);
+        }
+
+        @Override
+        public void configurationChanged() {
+            EventProcessor<?, ?> processor = eventProcessors.getByKey(subscription);
+            if (processor == null)
+                return;
+            TimePeriod timePeriod = subscription.getAggregationPeriod();
+            long maxPeriod = Math.max(getAggregationPeriodMillis(), timePeriod == null ? 0 : timePeriod.getTime());
+            for (ChannelShaper shaper : processor.shapers) {
+                shaper.setAggregationPeriod(maxPeriod);
+            }
         }
 
         public DXFeedImpl feed() {
@@ -792,28 +774,19 @@ public class DXFeedImpl extends DXFeed {
         }
     }
 
-    // States for EventProcessor
-    private static final int STATE_AVAILABLE_DATA_MASK = (1 << N_CONTRACTS) - 1;
-    private static final int STATE_AVAILABLE_SNAPSHOT_MASK = ((1 << N_CONTRACTS) - 1) << N_CONTRACTS;
-    private static final int STATE_SCHEDULED_DATA = 1 << 30;
-    private static final int STATE_SCHEDULED_SNAPSHOT = 1 << 31;
-
-    private class EventProcessor<T, E extends EventType<T>> implements RecordListener, Runnable {
+    private class EventProcessor<T, E extends EventType<T>> implements AgentChannels.Owner {
         // agents in this event processor
-        final QDAgent[] agents = new QDAgent[N_CONTRACTS];
+        final AgentChannels channels;
+        final List<ChannelShaper> shapers;
 
-        // State bits:
-        //  -- first N_CONTRACTS bits are for dataAvailable,
-        //  -- next N_CONTRACT bits for snapshotAvailable (only used when hasAggregationPeriod is true)
-        //  -- last bits for "taskScheduled" flags
-        final AtomicInteger state = new AtomicInteger();
+        final AtomicBoolean retrieveDataRunning = new AtomicBoolean();
 
         // Associated subscription
         final DXFeedSubscription<E> subscription;
 
-        // == null when only updates are processed (DXFeed does not have aggregation period)
-        // != null when hasAggregationPeriod is true
-        final Runnable snapshotTask;
+        final AtomicReference<DxTimer.Cancellable> retrieveTimer = new AtomicReference<>(() -> {});
+
+        private RecordBuffer retrieveBuffer;
 
         // Latch to make sure all data is processed before close.
         // A latch may be set once, if some waiting thread appears but should be reused by all waiting threads.
@@ -824,164 +797,97 @@ public class DXFeedImpl extends DXFeed {
 
         EventProcessor(DXFeedSubscription<E> subscription) {
             this.subscription = subscription;
-            snapshotTask = hasAggregationPeriod() ? () -> executeTask(true) : null;
+            TimePeriod timePeriod = subscription.getAggregationPeriod();
+            long maxPeriod = Math.max(getAggregationPeriodMillis(), timePeriod == null ? 0 : timePeriod.getTime());
+            shapers = Arrays.stream(CONTRACTS).map(contract -> {
+                //TODO null or subscription.getExecutor() or endpoint.getOrCreateExecutor()
+                DynamicChannelShaper channelShaper = new DynamicChannelShaper(contract, null, filter);
+                channelShaper.setCollector(endpoint.getCollector(contract));
+                channelShaper.setAggregationPeriod(maxPeriod);
+                return channelShaper;
+            }).collect(Collectors.toList());
+            channels = new AgentChannels(this, shapers);
         }
 
-        private boolean setState(int mask) {
-            int cur;
-            do {
-                cur = state.get();
-                if ((cur & mask) != 0)
-                    return false;
-            } while (!state.compareAndSet(cur, cur | mask));
-            return true;
+        @Override
+        public QDAgent createAgent(QDCollector collector, QDFilter filter) {
+            QDAgent agent = eventProcessorAgentBuilders[collector.getContract().ordinal()]
+                .withFilter(filter.getUpdatedFilter()).build();
+            if (endpoint.getRole() == DXEndpoint.Role.STREAM_FEED)
+                agent.setBufferOverflowStrategy(QDAgent.BufferOverflowStrategy.BLOCK);
+            return agent;
         }
 
-        private void clearState(int mask) {
-            int cur;
-            do {
-                cur = state.get();
-            } while ((cur & mask) != 0 && !state.compareAndSet(cur, cur & ~mask));
+        @Override
+        public QDAgent createVoidAgent(QDContract contract) {
+            return QDFactory.getDefaultFactory().createVoidAgentBuilder(contract,
+                endpoint.getQDEndpoint().getScheme()).build();
         }
 
-        private void rescheduleTask(boolean snapshot) {
+        @Override
+        public QDFilter getPeerFilter(QDContract contract) {
+            return QDFilter.ANYTHING;
+        }
+
+        @Override
+        public void recordsAvailable() {
+            examineAndScheduleRetrieveTask();
+        }
+
+        @Override
+        public boolean retrieveData(DataProvider dataProvider, QDContract contract) {
+            return dataProvider.retrieveData(retrieveBuffer);
+        }
+
+        private void examineAndScheduleRetrieveTask() {
+            long currentTime = System.currentTimeMillis();
+            long examineTime = channels.nextRetrieveTime(currentTime);
+            if (examineTime <= currentTime) {
+                retrieveTimer.get().cancel();
+                submitRetrieveTask();
+            } else if (examineTime != Long.MAX_VALUE) {
+                retrieveTimer.getAndSet(endpoint.getOrCreateTimer().runOnce(this::submitRetrieveTask,
+                    examineTime - currentTime)).cancel();
+            }
+        }
+
+        private void submitRetrieveTask() {
             Executor executor = subscription.getExecutor();
             if (executor == null)
                 executor = endpoint.getOrCreateExecutor();
-            long aggregationPeriodMillis = getAggregationPeriodMillis();
-            if (snapshot)
-                executor.execute(snapshotTask);
-            else if (aggregationPeriodMillis == 0 || !(executor instanceof ScheduledExecutorService))
-                executor.execute(this);
-            else
-                ((ScheduledExecutorService) executor).schedule(this, aggregationPeriodMillis, TimeUnit.MILLISECONDS);
+            executor.execute(this::retrieveData);
         }
 
-        private void scheduleTaskIfNeeded(boolean snapshot) {
-            if (setState(snapshot ? STATE_SCHEDULED_SNAPSHOT : STATE_SCHEDULED_DATA))
-                rescheduleTask(snapshot);
-        }
-
-        @Override
-        public void run() {
-            executeTask(false);
-        }
-
-        /**
-         * Executes data processing task.
-         * Synchronized is needed here to ensure at most one copy is run concurrently.
-         * Note, that two copies can be scheduled -- snapshot & data.
-         * Data can be scheduled for retrieval at some future time (when aggregation is set),
-         * while snapshot can arrive and get scheduled for immediate processing.
-         */
-        synchronized void executeTask(boolean snapshot) {
-            boolean rescheduleTask = true; // Reschedule task if an exception was thrown.
-            int availableMask = snapshot ? STATE_AVAILABLE_SNAPSHOT_MASK : STATE_AVAILABLE_DATA_MASK;
+        private void retrieveData() {
+            // AtomicBoolean provides sequential execution of channels.retrieveData & process(buf)
+            if (!retrieveDataRunning.compareAndSet(false, true))
+                return;
             try {
-                // INVARIANT: taskScheduled == true here
-                int available = state.get();
-                if ((available & availableMask) != 0) { // check available just in case
-                    RecordBuffer buf = RecordBuffer.getInstance(retrieveMode);
-                    buf.setCapacityLimited(true); // retrieve up to buffer capacity only
-                    retrieveImpl(buf, available, snapshot);
-                    if (!buf.isEmpty())
-                        process(buf);
-                    buf.release();
-                }
-                // available state was updated by retrieveImpl and concurrent notifications
-                rescheduleTask = (state.get() & availableMask) != 0;
+                RecordBuffer buf = RecordBuffer.getInstance(retrieveMode);
+                buf.setCapacityLimit(subscription.getEventsBatchLimit());
+                retrieveBuffer = buf;
+                channels.retrieveData();
+                retrieveBuffer = null;
+                if (!buf.isEmpty())
+                    process(buf); // create events and put in event listener
+                buf.release();
             } finally {
-                if (rescheduleTask)
-                    rescheduleTask(snapshot);
-                else {
-                    clearState(snapshot ? STATE_SCHEDULED_SNAPSHOT : STATE_SCHEDULED_DATA);
-                    // Concurrent dataAvailable notification might have happened - recheck available flags
-                    if ((state.get() & availableMask) != 0)
-                        scheduleTaskIfNeeded(snapshot);
-                }
-                if (!hasMoreDataToProcess())
-                    signalNoMoreDataToProcess();
+                retrieveBuffer = null;
+                retrieveDataRunning.set(false);
+                examineAndScheduleRetrieveTask();
+                if (terminationLatch.get() != null && readyToTerminate())
+                    signalReadyToTerminate();
             }
-        }
-
-        private void retrieveImpl(RecordBuffer buf, int available, boolean snapshot) {
-            int offset = snapshot ? N_CONTRACTS : 0;
-            for (int i = 0; i < N_CONTRACTS; i++) {
-                int mask = 1 << (i + offset);
-                if ((available & mask) != 0) {
-                    clearState(mask); // clear before starting retrieve
-                    // Note, that [QD-981] dxFeed API: Parsing events from file sporadically fails
-                    // could have been reproduced by introducing a Thread.sleep at this point
-                    boolean more = true;
-                    try {
-                        RecordProvider provider = snapshot ? agents[i].getSnapshotProvider() : agents[i];
-                        more = provider.retrieve(buf);
-                    } finally {
-                        // if crashed, consider it as still available
-                        if (more) { // ... normally this happens when there's no more capacity in buffer
-                            setState(mask);
-                            return;
-                        }
-                    }
-                }
-            }
-        }
-
-        @Override
-        public void recordsAvailable(RecordProvider provider) {
-            // updates
-            for (int i = 0; i < N_CONTRACTS; i++) {
-                if (provider == agents[i]) {
-                    if (setState(1 << i))
-                        scheduleTaskIfNeeded(false);
-                    return;
-                }
-            }
-            if (snapshotTask != null) {
-                for (int i = 0; i < N_CONTRACTS; i++) {
-                    QDAgent agent = agents[i];
-                    if (agent != null && provider == agent.getSnapshotProvider()) {
-                        if (setState(1 << (i + N_CONTRACTS)))
-                            scheduleTaskIfNeeded(true);
-                        return;
-                    }
-                }
-            }
-        }
-
-        // This method is guarded by DXFeedSubscription monitor
-        QDAgent getOrCreateAgent(QDContract contract) {
-            QDAgent agent = agents[contract.ordinal()];
-            if (agent != null)
-                return agent;
-            agent = eventProcessorAgentBuilders[contract.ordinal()].withFilter(filter.getUpdatedFilter()).build();
-            if (endpoint.getRole() == DXEndpoint.Role.STREAM_FEED)
-                agent.setBufferOverflowStrategy(QDAgent.BufferOverflowStrategy.BLOCK);
-            agents[contract.ordinal()] = agent;
-            agent.setRecordListener(this);
-            if (snapshotTask != null)
-                agent.getSnapshotProvider().setRecordListener(this);
-            return agent;
         }
 
         // This close method is never concurrent with getOrCreateAgent
         void closeAgents() {
-            for (int i = 0; i < N_CONTRACTS; i++) {
-                QDAgent agent = agents[i];
-                if (agent != null)
-                    agent.close();
-            }
+            channels.close();
         }
 
         // This closeAndExamineDataBySubscription method is never concurrent with getOrCreateAgent
         void closeAgentsAndExamineDataBySubscription(RecordBuffer buf) {
-            for (int i = 0; i < N_CONTRACTS; i++) {
-                QDAgent agent = agents[i];
-                if (agent != null) {
-                    agent.closeAndExamineDataBySubscription(buf);
-                    clearDataInBuffer(buf, CONTRACTS[i] == QDContract.HISTORY);
-                }
-            }
+            channels.closeAndExamineDataBySubscription(buf);
         }
 
         void close(boolean clear) {
@@ -995,17 +901,18 @@ public class DXFeedImpl extends DXFeed {
                 }
                 process(buf);
                 buf.release();
-            } else
+            } else {
                 closeAgents();
+            }
         }
 
-        private boolean hasMoreDataToProcess() {
-            // [QD-981] dxFeed API: Parsing events from file sporadically fails
-            // It is critical to check for both available & scheduled masks
-            return (state.get() & (STATE_AVAILABLE_DATA_MASK | STATE_SCHEDULED_DATA)) != 0;
+        private boolean readyToTerminate() {
+            // It is critical to check for both no more data available & no retrieve data is running
+            return channels.nextRetrieveTime(System.currentTimeMillis()) == Long.MAX_VALUE &&
+                !retrieveDataRunning.get();
         }
 
-        private void signalNoMoreDataToProcess() {
+        private void signalReadyToTerminate() {
             if (TRACE_LOG)
                 log.trace("signalNoMoreDataToProcess on " + this);
             CountDownLatch latch = terminationLatch.get();
@@ -1014,7 +921,7 @@ public class DXFeedImpl extends DXFeed {
         }
 
         private void awaitTermination() throws InterruptedException {
-            if (!hasMoreDataToProcess()) {
+            if (readyToTerminate()) {
                 // happy path
                 if (TRACE_LOG)
                     log.trace("awaitTermination on " + this + " -- no more data to process");
@@ -1025,7 +932,7 @@ public class DXFeedImpl extends DXFeed {
                 terminationLatch.compareAndSet(null, new CountDownLatch(1));
                 latch = terminationLatch.get();
             }
-            if (hasMoreDataToProcess()) {
+            if (!readyToTerminate()) {
                 if (TRACE_LOG)
                     log.trace("awaitTermination on " + this + " -- await");
                 latch.await();

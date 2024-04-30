@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -44,12 +44,13 @@ public class LoggedThreadPoolExecutor extends ScheduledThreadPoolExecutor {
     @Override
     protected void afterExecute(Runnable r, Throwable t) {
         super.afterExecute(r, t);
-        if (t == null && r instanceof Future<?>) {
+        if (t == null && r instanceof Future<?> && !((Future<?>) r).isCancelled()) {
             try {
                 ((Future<?>) r).get();
             } catch (ExecutionException e) {
                 t = e.getCause();
             } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt(); // ignore/reset
             }
         }
         if (t != null) {

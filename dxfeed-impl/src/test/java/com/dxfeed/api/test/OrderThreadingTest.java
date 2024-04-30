@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 
@@ -41,6 +42,7 @@ public class OrderThreadingTest {
 
     private final BlockingQueue<Order> queue = new ArrayBlockingQueue<>(10);
     private final ConcurrentLinkedQueue<Runnable> executorQueue = new ConcurrentLinkedQueue<>();
+    private final AtomicInteger counterCallback = new AtomicInteger(0);
 
     private final long t0 = System.currentTimeMillis() / 1000 * 1000; // round to seconds
     private final long t1 = t0 - 1000; // round to seconds
@@ -54,7 +56,10 @@ public class OrderThreadingTest {
         publisher = endpoint.getPublisher();
         sub = feed.createSubscription(Order.class);
         endpoint.executor(executorQueue::add);
-        sub.addEventListener(queue::addAll);
+        sub.addEventListener(orders -> {
+            counterCallback.getAndIncrement();
+            queue.addAll(orders);
+        });
         sub.addSymbols(SYMBOL);
     }
 
@@ -92,11 +97,13 @@ public class OrderThreadingTest {
         order.setTime(t2);
         publisher.publishEvents(Collections.singleton(order));
 
-        // ensure that we STILL have one task in executor queue
-        assertEquals(1, executorQueue.size());
-
         // execute the task
-        executorQueue.poll().run();
+        Runnable task;
+        while ((task = executorQueue.poll()) != null)
+            task.run();
+
+        // ensure that we have one task in call-back queue
+        assertEquals(1, counterCallback.get());
 
         // ensure that we have no most tasks
         assertEquals(0, executorQueue.size());

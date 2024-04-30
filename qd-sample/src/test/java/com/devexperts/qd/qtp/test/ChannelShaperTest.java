@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -162,6 +163,30 @@ public class ChannelShaperTest {
         endpoint.close();
         MessageConnectors.stopMessageConnectors(connectors);
         ThreadCleanCheck.after();
+    }
+
+    @Test
+    public void testChannelShaperAfterChangingFilterEventPasses() throws InterruptedException {
+        subscription.addSymbols(KEEP_INIT_REJECTED, KEEP_REJECTED);
+        assertSubAddOnly(KEEP_REJECTED);
+        ensureEventGoesThroughOn(KEEP_REJECTED);
+        keepRejectedShaper.setSubscriptionFilter(KEEP_REJECTED_WITH_INIT_FILTER);
+        ensureEventGoesThroughOn(KEEP_INIT_REJECTED);
+    }
+
+    @Test
+    public void testChannelShaperAfterChangingFilterEventPasses2() throws InterruptedException {
+        Wrap wrap = new Wrap(KEEP_REJECTED_FILTER);
+        keepRejectedShaper.setSubscriptionFilter(wrap);
+        subscription.addSymbols(KEEP_INIT_REJECTED);
+        assertNoSubAddRemove();
+        // We have to wait for the subscription to be processed, because it will not reach the distributor
+        // (the filter will not let it through). Subscriptions create agents and the filter must be updated
+        // after the agent has been created for the update to apply. If the filter checks the subscription,
+        // it is an indirect sign that the channel has already been created.
+        wrap.await();
+        keepRejectedShaper.setSubscriptionFilter(KEEP_REJECTED_WITH_INIT_FILTER);
+        ensureEventGoesThroughOn(KEEP_INIT_REJECTED);
     }
 
     @Test
@@ -427,6 +452,7 @@ public class ChannelShaperTest {
 
     private static class Wrap extends QDFilter {
         private final QDFilter delegate;
+        private final CountDownLatch latch = new CountDownLatch(1);
 
         private Wrap(QDFilter delegate) {
             super(SCHEME);
@@ -435,6 +461,7 @@ public class ChannelShaperTest {
 
         @Override
         public boolean accept(QDContract contract, DataRecord record, int cipher, String symbol) {
+            latch.countDown();
             return delegate.accept(contract, record, cipher, symbol);
         }
 
@@ -446,6 +473,10 @@ public class ChannelShaperTest {
         @Override
         public String getDefaultName() {
             return delegate.toString();
+        }
+
+        public void await() throws InterruptedException {
+            latch.await();
         }
     }
 }
