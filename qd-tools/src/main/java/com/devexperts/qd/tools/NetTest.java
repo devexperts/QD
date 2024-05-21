@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -33,6 +33,7 @@ import com.devexperts.util.TimePeriod;
 @ServiceProvider
 public class NetTest extends AbstractTool {
     private final OptionCollector collector = new OptionCollector("ticker");
+    private final OptionStripe stripe = new OptionStripe();
     private final OptionSymbols symbols = new OptionSymbols();
     private final OptionInteger connections = new OptionInteger('C', "connections", "<number>", "Number of connections to create.");
     private final Option wildcard = new Option('w', "wildcard", "Enable wildcard subscription (for stream collector).");
@@ -41,7 +42,7 @@ public class NetTest extends AbstractTool {
 
     @Override
     protected Option[] getOptions() {
-        return new Option[] { logfile, collector, symbols, connections, stat, wildcard };
+        return new Option[] { logfile, collector, stripe, symbols, connections, stat, wildcard };
     }
 
     @Override
@@ -85,7 +86,7 @@ public class NetTest extends AbstractTool {
         private int perEntity;
 
         OptionSymbols() {
-            super('S', "symbols", "<total>[/per-entity>]" ,
+            super('S', "symbols", "<total>[/per-entity>]",
                 "Number of symbols. (<total> is total number of used symbols and " +
                 "<per-entity> is average number of symbols interesting for one entity " +
                 "connection (distributor or agent), same as <total> by default)."

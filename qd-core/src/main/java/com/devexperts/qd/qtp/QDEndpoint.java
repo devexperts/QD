@@ -23,6 +23,8 @@ import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDHistory;
 import com.devexperts.qd.QDStream;
 import com.devexperts.qd.QDTicker;
+import com.devexperts.qd.SymbolStriper;
+import com.devexperts.qd.kit.MonoStriper;
 import com.devexperts.qd.kit.RecordOnlyFilter;
 import com.devexperts.qd.kit.SymbolSetFilter;
 import com.devexperts.qd.ng.RecordBuffer;
@@ -43,6 +45,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -58,12 +61,20 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class QDEndpoint implements Closeable {
     /**
-     * Defines property for endpoint name that is used to distinguish multiple endpoints
+     * Defines name for an endpoint that is used to distinguish multiple endpoints
      * in the same JVM in logs and in other diagnostic means.
      * Use {@link Builder#withProperty(String, String)} method.
      * This property is also changed by {@link Builder#withName(String)} method.
      */
     public static final String NAME_PROPERTY = "name";
+
+    /**
+     * Defines symbol striping strategy for an endpoint.
+     * Use {@link Builder#withProperty(String, String)}. This property is also changed by
+     * {@link Builder#withStripe(String)} or {@link Builder#withStriper(SymbolStriper)} method.
+     * @see SymbolStriper
+     */
+    public static final String DXFEED_STRIPE_PROPERTY = "dxfeed.stripe";
 
     /**
      * Creates new {@link Builder} instance.
@@ -107,6 +118,7 @@ public class QDEndpoint implements Closeable {
     private final List<Plugin> plugins = new ArrayList<>();
     private final boolean withEventTimeSequence;
     private final boolean storeEverything;
+    private final SymbolStriper striper;
 
     private volatile boolean closed;
 
@@ -115,18 +127,40 @@ public class QDEndpoint implements Closeable {
      * This constructor is used only if user defines all management for this endpoint and
      * automated management is not necessary.
      *
-     * <p> For routine case, always use {@link Builder#build()}.
+     * @deprecated  Use {@link Builder#build()} or builder constructor.
      */
+    @Deprecated
     protected QDEndpoint(String name, DataScheme scheme, QDStats rootStats,
         List<QDCollector.Factory> collectors, boolean withEventTimeSequence, boolean storeEverything)
     {
-        this.name = name;
-        this.scheme = scheme;
-        this.rootStats = rootStats;
+        this(new Builder()
+            .withName(name)
+            .withScheme(scheme)
+            .withCollectors(collectors)
+            .withEventTimeSequence(withEventTimeSequence)
+            .withStoreEverything(storeEverything),
+            rootStats);
+    }
+
+    protected QDEndpoint(Builder builder, QDStats rootStats) {
+        this.name = builder.getOrCreateName();
+        this.scheme = builder.getSchemeOrDefault();
+        this.rootStats = Objects.requireNonNull(rootStats, "rootStats");
         this.endpointId = EndpointId.newEndpointId(name);
-        this.withEventTimeSequence = withEventTimeSequence;
-        this.storeEverything = storeEverything;
-        initCollectors(collectors);
+        this.withEventTimeSequence = builder.withEventTimeSequence;
+        this.storeEverything = builder.storeEverything;
+        this.striper = builder.getStriperOrDefault();
+
+        checkSchemes(scheme, rootStats.getScheme(), "rootStats");
+        checkSchemes(scheme, striper.getScheme(), "striper");
+        initCollectors(builder.collectors);
+    }
+
+    private static void checkSchemes(DataScheme expected, DataScheme scheme, String source) {
+        if (scheme != null && scheme != expected) {
+            throw new IllegalArgumentException(
+                "Different scheme in " + source + ": " + "found " + scheme + ", expected " + expected);
+        }
     }
 
     public Object getLock() {
@@ -143,21 +177,26 @@ public class QDEndpoint implements Closeable {
                 .withScheme(scheme)
                 .withStats(rootStats.create(factory.getStatsType()))
                 .withEventTimeSequence(withEventTimeSequence)
-                .withStoreEverything(storeEverything);
+                .withStoreEverything(storeEverything)
+                .withStriper(striper);
             QDCollector collector = factory.createCollector(defaultFactory, builder);
-            if (this.collectors.containsKey(collector.getContract()))
-                throw new IllegalArgumentException("Cannot have two collectors with " + collector.getContract() + " contract");
+            if (this.collectors.containsKey(collector.getContract())) {
+                throw new IllegalArgumentException("Multiple collectors with the same contract: " +
+                    collector.getContract());
+            }
             collectors.put(collector.getContract(), collector);
             switch (collector.getContract()) {
-            case TICKER:
-                ticker = (QDTicker) collector;
-                break;
-            case STREAM:
-                stream = (QDStream) collector;
-                break;
-            case HISTORY:
-                history = (QDHistory) collector;
-                break;
+                case TICKER:
+                    ticker = (QDTicker) collector;
+                    break;
+                case STREAM:
+                    stream = (QDStream) collector;
+                    break;
+                case HISTORY:
+                    history = (QDHistory) collector;
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unexpected contract " + collector.getContract());
             }
         }
     }
@@ -219,8 +258,9 @@ public class QDEndpoint implements Closeable {
      */
     public boolean hasEventTimeSequence() {
         boolean hasEventTimeSequence = withEventTimeSequence;
-        for (QDCollector c : collectorsValues)
+        for (QDCollector c : collectorsValues) {
             hasEventTimeSequence |= c.hasEventTimeSequence();
+        }
         return hasEventTimeSequence;
     }
 
@@ -232,7 +272,7 @@ public class QDEndpoint implements Closeable {
         return name;
     }
 
-    public Map<String,String> getDescriptorProperties() {
+    public Map<String, String> getDescriptorProperties() {
         return Collections.emptyMap();
     }
 
@@ -273,56 +313,46 @@ public class QDEndpoint implements Closeable {
         return connectors;
     }
 
-    /**
-     * This method is used only for the endpoint,
-     * which was created with {@link #QDEndpoint(String, DataScheme, QDStats, List, boolean, boolean)}. If this endpoint was created by using
-     * {@link Builder#build()}, collectors had to be added by {@link Builder#withCollectors(Collection)}.
-     * @param collector which to be added to this endpoint
-     * @return this endpoint
-     */
+    @Deprecated
     public QDEndpoint addCollector(QDCollector collector) {
         synchronized (lock) {
-            if (collector.getScheme() != scheme)
+            if (collector.getScheme() != scheme) {
                 throw new IllegalArgumentException("Different scheme in endpoint collector. " +
                     "Found " + collector.getScheme() + ", expected " + scheme);
+            }
             if (closed)
                 return this;
             QDContract contract = collector.getContract();
             switch (contract) {
-            case TICKER:
-                if (ticker != null)
-                    collectorRedefined(contract);
-                ticker = (QDTicker) collector;
-                break;
-            case STREAM:
-                if (stream != null)
-                    collectorRedefined(contract);
-                stream = (QDStream) collector;
-                break;
-            case HISTORY:
-                if (history != null)
-                    collectorRedefined(contract);
-                history = (QDHistory) collector;
-                break;
-            default:
-                throw new IllegalArgumentException("Unexpected contract " + contract);
+                case TICKER:
+                    if (ticker != null)
+                        collectorRedefined(contract);
+                    ticker = (QDTicker) collector;
+                    break;
+                case STREAM:
+                    if (stream != null)
+                        collectorRedefined(contract);
+                    stream = (QDStream) collector;
+                    break;
+                case HISTORY:
+                    if (history != null)
+                        collectorRedefined(contract);
+                    history = (QDHistory) collector;
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unexpected contract " + contract);
             }
             collectors.put(contract, collector);
         }
         return this;
     }
 
-    /**
-     * This method is used only for the endpoint,
-     * which was created with {@link #QDEndpoint(String, DataScheme, QDStats, List, boolean, boolean)}. If this endpoint was created by using
-     * {@link Builder#build()}, collectors had to be added by {@link Builder#withCollectors(Collection)}.
-     * @param collectors which to be added to this endpoint
-     * @return this endpoint
-     */
+    @Deprecated
     public QDEndpoint addCollectors(QDCollector... collectors) {
         synchronized (lock) {
-            for (QDCollector collector : collectors)
+            for (QDCollector collector : collectors) {
                 addCollector(collector);
+            }
         }
         return this;
     }
@@ -409,8 +439,9 @@ public class QDEndpoint implements Closeable {
 
     // SYNC(lock)
     private void onConnectorsChanged() {
-        for (Plugin plugin : plugins)
+        for (Plugin plugin : plugins) {
             plugin.connectorsChanged(connectors);
+        }
     }
 
     public QDEndpoint startConnectors() {
@@ -541,9 +572,9 @@ public class QDEndpoint implements Closeable {
     // SYNC(lock)
     private void updateUserAndPasswordImpl(Collection<MessageConnector> connectors) {
         for (MessageConnector connector : connectors) {
-            if (user.length() > 0)
+            if (!user.isEmpty())
                 connector.setUser(user);
-            if (password.length() > 0)
+            if (!password.isEmpty())
                 connector.setPassword(password);
         }
     }
@@ -585,6 +616,7 @@ public class QDEndpoint implements Closeable {
         protected Properties props = new Properties();
         protected boolean withEventTimeSequence = false;
         protected boolean storeEverything = false;
+        protected SymbolStriper striper;
 
         private String subscribeSupportPrefix;
 
@@ -657,6 +689,17 @@ public class QDEndpoint implements Closeable {
             return this;
         }
 
+        public final Builder withStripe(String stripe) {
+            return withProperty(DXFEED_STRIPE_PROPERTY, stripe);
+        }
+
+        public final Builder withStriper(SymbolStriper striper) {
+            // Remove previous stripe property, if any
+            this.props.remove(QDEndpoint.DXFEED_STRIPE_PROPERTY);
+            this.striper = Objects.requireNonNull(striper, "striper");
+            return this;
+        }
+
         /**
          * Invoke this method with a property key prefix like "dxfeed.qd.subscribe." or
          * "multiplexor.qd.subscribe." to enable support for permanent subscription.
@@ -686,8 +729,9 @@ public class QDEndpoint implements Closeable {
          */
         public final Builder withProperties(Properties props) {
             // Properties.stringPropertyNames() is properly synchronized to avoid ConcurrentModificationException.
-            for (String key : props.stringPropertyNames())
+            for (String key : props.stringPropertyNames()) {
                 withProperty(key, props.getProperty(key));
+            }
             return this;
         }
 
@@ -696,7 +740,7 @@ public class QDEndpoint implements Closeable {
          * @see #withProperty(String, String)
          */
         public boolean supportsProperty(String key) {
-            return NAME_PROPERTY.equals(key) ||
+            return NAME_PROPERTY.equals(key) || DXFEED_STRIPE_PROPERTY.equals(key) ||
                 (subscribeSupportPrefix != null && key.startsWith(subscribeSupportPrefix));
         }
 
@@ -712,9 +756,18 @@ public class QDEndpoint implements Closeable {
             return scheme == null ? QDFactory.getDefaultScheme() : scheme;
         }
 
+        protected final SymbolStriper getStriperOrDefault() {
+            String stripe = props.getProperty(DXFEED_STRIPE_PROPERTY);
+            if (stripe != null) {
+                // Presence of stripe property means that it was set after possible withStriper() method
+                return SymbolStriper.definedValueOf(getSchemeOrDefault(), stripe);
+            }
+            return striper == null ? MonoStriper.INSTANCE : striper;
+        }
+
         public QDEndpoint build() {
-            QDEndpoint endpoint = new QDEndpoint(getOrCreateName(), getSchemeOrDefault(),
-                QDFactory.createStats(QDStats.SType.ANY, scheme), collectors, withEventTimeSequence, storeEverything);
+            QDStats rootStats = QDFactory.createStats(QDStats.SType.ANY, getSchemeOrDefault());
+            QDEndpoint endpoint = new QDEndpoint(this, rootStats);
             subscribe(endpoint);
             return endpoint;
         }
@@ -743,16 +796,20 @@ public class QDEndpoint implements Closeable {
                 String[] s = value.split("\\s+", 3);
                 if (s.length < 2)
                     throw new InvalidFormatException("Property '" + key + "' shall have '<records> <symbols> [<date-time>]' value");
+
                 DataScheme scheme = endpoint.getScheme();
                 RecordOnlyFilter records = RecordOnlyFilter.valueOf(s[0], scheme);
                 SymbolSetFilter symbols = SymbolSetFilter.valueOf(s[1], scheme);
+                if (symbols.getSymbolSet() == null)
+                    throw new InvalidFormatException("Symbol filter is not supported: " + s[1]);
                 long millis = 0;
-                if (s.length == 3)
+                if (s.length == 3) {
                     try {
                         millis = TimeFormat.DEFAULT.parse(s[2]).getTime();
                     } catch (InvalidFormatException e) {
                         throw new InvalidFormatException("Property '" + key + "' has wrong date-time value", e);
                     }
+                }
                 final long qdTime = (millis / 1000) << 32;
                 final RecordBuffer buf = RecordBuffer.getInstance(RecordMode.HISTORY_SUBSCRIPTION);
                 for (int i = 0; i < scheme.getRecordCount(); i++) {

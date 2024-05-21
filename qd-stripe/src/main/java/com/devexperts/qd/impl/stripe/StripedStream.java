@@ -13,13 +13,14 @@ package com.devexperts.qd.impl.stripe;
 
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDStream;
+import com.devexperts.qd.SymbolStriper;
 import com.devexperts.qd.stats.QDStats;
 
 class StripedStream extends StripedCollector<QDStream> implements QDStream {
     private final QDStream[] collectors;
 
-    StripedStream(QDFactory base, Builder<?> builder, int n) {
-        super(builder, n);
+    StripedStream(QDFactory base, Builder<?> builder, SymbolStriper striper) {
+        super(builder, striper);
         collectors = new QDStream[n];
         for (int i = 0; i < n; i++) {
             collectors[i] = base.streamBuilder()

@@ -37,11 +37,21 @@ public class MonitoredQDEndpoint extends QDEndpoint {
     private Runnable logConnectorCountersTask; // only when LOG_COLLECTOR_COUNTERS
     private EnumMap<QDContract, CollectorCounters> lastCounters; // only when LOG_COLLECTOR_COUNTERS
 
+    @Deprecated
     protected MonitoredQDEndpoint(MonitoringEndpoint monitoringEndpoint, List<QDCollector.Factory> collectors,
         boolean withEventTimeSequence, boolean storeEverything)
     {
-        super(monitoringEndpoint.getName(), monitoringEndpoint.getScheme(), monitoringEndpoint.getRootStats(),
-            collectors, withEventTimeSequence, storeEverything);
+        this(new BuilderImpl()
+            .withName(monitoringEndpoint.getName())
+            .withScheme(monitoringEndpoint.getScheme())
+            .withCollectors(collectors)
+            .withEventTimeSequence(withEventTimeSequence)
+            .withStoreEverything(storeEverything),
+            monitoringEndpoint);
+    }
+
+    protected MonitoredQDEndpoint(Builder builder, MonitoringEndpoint monitoringEndpoint) {
+        super(builder, monitoringEndpoint.getRootStats());
         this.monitoringEndpoint = monitoringEndpoint;
         if (LOG_COLLECTOR_COUNTERS) {
             lastCounters = new EnumMap<>(QDContract.class);
@@ -100,13 +110,13 @@ public class MonitoredQDEndpoint extends QDEndpoint {
             CollectorCounters delta = counters.since(lastCounters.get(contract));
             lastCounters.put(contract, counters);
             String text = delta.textReport().replaceAll("\\r?\\n", "\n    ");
-            log.info("\b{" + collector.toString() + "} " + text);
+            log.info("\b{" + collector + "} " + text);
         }
     }
 
     @ServiceProvider
     public static class BuilderImpl extends QDEndpoint.Builder {
-        private MonitoringEndpoint.Builder monitoringEndpointBuilder = MonitoringEndpoint.newBuilder();
+        private final MonitoringEndpoint.Builder monitoringEndpointBuilder = MonitoringEndpoint.newBuilder();
 
         @Override
         public boolean supportsProperty(String key) {
@@ -115,9 +125,9 @@ public class MonitoredQDEndpoint extends QDEndpoint {
 
         @Override
         public QDEndpoint build() {
-            MonitoredQDEndpoint endpoint = new MonitoredQDEndpoint(
-                monitoringEndpointBuilder.withScheme(getSchemeOrDefault()).withProperties(props).acquire(),
-                collectors, withEventTimeSequence, storeEverything);
+            MonitoringEndpoint monitoringEndpoint =
+                monitoringEndpointBuilder.withScheme(getSchemeOrDefault()).withProperties(props).acquire();
+            MonitoredQDEndpoint endpoint = new MonitoredQDEndpoint(this, monitoringEndpoint);
             subscribe(endpoint);
             return endpoint;
         }

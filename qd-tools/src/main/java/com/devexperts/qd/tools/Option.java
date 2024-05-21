@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,26 +12,36 @@
 package com.devexperts.qd.tools;
 
 public class Option {
-    private final char short_name;
-    private final String full_name;
+    private final char shortName;
+    private final String fullName;
     private final String description;
-    private boolean is_set;
+    private boolean isSet;
     private String deprecated;
 
-    public Option(char short_name, String full_name, String description) {
-        this.short_name = short_name;
-        if (short_name == 'D')
+    public Option(char shortName, String fullName, String description) {
+        if (shortName == '\0' && fullName == null)
+            throw new IllegalArgumentException("Either short or full name must be specified!");
+        this.shortName = shortName;
+        if (shortName == 'D')
             throw new IllegalArgumentException("-D is reserved for JVM system options");
-        this.full_name = full_name;
+        this.fullName = fullName;
         this.description = description;
     }
 
     public char getShortName() {
-        return short_name;
+        return shortName;
+    }
+
+    public boolean hasShortName(char name) {
+        return shortName != '\0' && shortName == name;
     }
 
     public String getFullName() {
-        return full_name;
+        return fullName;
+    }
+
+    public boolean hasFullName(String name) {
+        return fullName != null && fullName.equals(name);
     }
 
     public String getDescription() {
@@ -47,18 +57,20 @@ public class Option {
     }
 
     public boolean isSet() {
-        return is_set;
+        return isSet;
     }
 
     public int parse(int i, String[] args) throws OptionParseException {
-        if (is_set)
+        if (isSet)
             throw new OptionParseException(this + " option is already set");
-        is_set = true;
+        isSet = true;
         return i;
     }
 
     public String toString() {
-        return "-" + short_name + "|--" + full_name;
+        boolean hasShort = shortName != '\0';
+        boolean hasFull = fullName != null;
+        return (hasShort ? "-" + shortName : "  ") + "|" + (hasFull ? "--" + fullName : "");
     }
 
     public void init() {

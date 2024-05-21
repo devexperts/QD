@@ -22,6 +22,8 @@ import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.SymbolCodec;
+import com.devexperts.qd.SymbolStriper;
+import com.devexperts.qd.kit.MonoStriper;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.qtp.AgentAdapter;
 import com.devexperts.qd.qtp.DistributorAdapter;
@@ -559,6 +561,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
         DXFEED_USER_PROPERTY,
         DXFEED_PASSWORD_PROPERTY,
         DXFEED_WILDCARD_ENABLE_PROPERTY,
+        DXFEED_STRIPE_PROPERTY,
         DXENDPOINT_EVENT_TIME_PROPERTY,
         DXENDPOINT_STORE_EVERYTHING_PROPERTY,
         DXSCHEME_NANO_TIME_PROPERTY,
@@ -661,24 +664,36 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
             loadProperties();
             // Create scheme
             DataScheme scheme = QDFactory.getDefaultScheme();
-            if (scheme == DXFeedScheme.getInstance())
+            if (scheme == DXFeedScheme.getInstance()) {
                 scheme = DXFeedScheme.withProperties(new SchemeProperties(props));
-            else if (scheme instanceof ConfigurableDataScheme)
-                scheme = ((ConfigurableDataScheme)scheme).withProperties(props);
+            } else if (scheme instanceof ConfigurableDataScheme) {
+                scheme = ((ConfigurableDataScheme) scheme).withProperties(props);
+            }
+            // Resolve properties
+            SymbolStriper striper = SymbolStriper.definedValueOf(scheme,
+                props.getProperty(DXFEED_STRIPE_PROPERTY, MonoStriper.MONO_STRIPER_NAME));
+            boolean isEventTime = Boolean.parseBoolean(
+                props.getProperty(DXENDPOINT_EVENT_TIME_PROPERTY, "false"));
+            boolean isStoreEverything = Boolean.parseBoolean(
+                props.getProperty(DXENDPOINT_STORE_EVERYTHING_PROPERTY, "false"));
+
             // create QD endpoint
-            QDEndpoint qdEndpoint = qdEndpointBuilder.
-                withProperties(props).
-                withCollectors(getRoleContracts(role)).
-                withScheme(scheme).
-                withEventTimeSequence(Boolean.parseBoolean(props.getProperty(DXENDPOINT_EVENT_TIME_PROPERTY, "false"))).
-                withStoreEverything(Boolean.parseBoolean(props.getProperty(DXENDPOINT_STORE_EVERYTHING_PROPERTY, "false"))).
-                build();
+            QDEndpoint qdEndpoint = qdEndpointBuilder
+                .withProperties(props)
+                .withCollectors(getRoleContracts(role))
+                .withScheme(scheme)
+                .withEventTimeSequence(isEventTime)
+                .withStoreEverything(isStoreEverything)
+                .withStriper(striper)
+                .build();
+            
             // log DXEndpoint properties
             for (Map.Entry<Object, Object> entry : new TreeMap<>(props).entrySet()) {
                 String key = (String) entry.getKey();
-                if (!qdEndpointBuilder.supportsProperty(key) && supportsProperty(key))
+                if (!qdEndpointBuilder.supportsProperty(key) && supportsProperty(key)) {
                     log.info(qdEndpoint.getName() + " DXEndpoint with " + key + "=" +
                         (MASKED_PROPERTIES.contains(key) ? "****" : props.getProperty(key)));
+                }
             }
             // create DXEndpoint
             DXEndpointImpl dxEndpoint = new DXEndpointImpl(role, qdEndpoint, props);

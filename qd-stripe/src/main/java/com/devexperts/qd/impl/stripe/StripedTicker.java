@@ -16,16 +16,15 @@ import com.devexperts.qd.DataObjField;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDTicker;
-import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.SymbolStriper;
 import com.devexperts.qd.ng.RecordCursor;
-import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.stats.QDStats;
 
 class StripedTicker extends StripedCollector<QDTicker> implements QDTicker {
     private final QDTicker[] collectors;
 
-    StripedTicker(QDFactory base, Builder<?> builder, int n) {
-        super(builder, n);
+    StripedTicker(QDFactory base, Builder<?> builder, SymbolStriper striper) {
+        super(builder, striper);
         collectors = new QDTicker[n];
         for (int i = 0; i < n; i++) {
             collectors[i] = base.tickerBuilder()
@@ -68,14 +67,5 @@ class StripedTicker extends StripedCollector<QDTicker> implements QDTicker {
     @Override
     public boolean getDataIfSubscribed(RecordCursor.Owner owner, DataRecord record, int cipher, String symbol) {
         return collector(cipher, symbol).getDataIfSubscribed(owner, record, cipher, symbol);
-    }
-
-    @Override
-    public void remove(RecordSource source) {
-        RecordBuffer[] buf = Buffers.filterData(this, source);
-        for (int i = 0; i < n; i++) {
-            if (buf[i] != null && !buf[i].isEmpty())
-                collectors[i].remove(buf[i]);
-        }
     }
 }

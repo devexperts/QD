@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -65,6 +65,23 @@ public class RangeUtil {
         return code;
     }
 
+    public static long encodeSymbol(char[] s, int from, int to) {
+        if (from >= to)
+            return 0;
+
+        int length = Math.min(CODE_LENGTH, to - from);
+        long code = 0;
+        int shift = 64;
+        for (int i = 0; i < length; i++) {
+            // If character is outside the byte range replace it with the largest positive byte char
+            long c = Math.min(0x7F, s[from + i]);
+
+            shift -= 8;
+            code |= c << shift;
+        }
+        return code;
+    }
+
     /**
      * Utility method to compare two strings: one as a char array and another one as a substring.
      *
@@ -83,6 +100,17 @@ public class RangeUtil {
             }
         }
         return s1.length - (s2.length() - s2from);
+    }
+
+    public static int compareByString(char[] s1, char[] s2, int s2from, int s2to) {
+        for (int i = 0, j = s2from; i < s1.length && j < s2to; i++, j++) {
+            char c1 = s1[i];
+            char c2 = s2[j];
+            if (c1 != c2) {
+                return c1 - c2;
+            }
+        }
+        return s1.length - (s2to - s2from);
     }
 
     /**
@@ -160,9 +188,24 @@ public class RangeUtil {
         return skipUnusedPrefix(symbol, nonSpreadIdx, length);
     }
 
+    public static int skipPrefix(char[] symbol, int from, int to) {
+        if (from >= to)
+            return from;
+        int nonSpreadIdx = (symbol[from] == '=') ? skipSpreadPrefix(symbol, from + 1, to) : from;
+        return skipUnusedPrefix(symbol, nonSpreadIdx, to);
+    }
+
     private static int skipUnusedPrefix(String symbol, int from, int to) {
         for (int i = from; i < to; i++) {
             if (isValidRangeChar(symbol.charAt(i)))
+                return i;
+        }
+        return to;
+    }
+
+    private static int skipUnusedPrefix(char[] symbol, int from, int to) {
+        for (int i = from; i < to; i++) {
+            if (isValidRangeChar(symbol[i]))
                 return i;
         }
         return to;
@@ -186,6 +229,24 @@ public class RangeUtil {
         return idx;
     }
 
+    private static int skipSpreadPrefix(char[] symbol, int from, int to) {
+        if (from >= to)
+            return to;
+
+        // Skip optional sign
+        char sign = symbol[from];
+        int idx = (sign == '+' || sign == '-') ? from + 1 : from;
+
+        // Skip decimal number (if present)
+        int numIdx = indexOfNumber(symbol, idx, to);
+
+        // After the number there must be a '*'
+        if (numIdx >= 0 && numIdx < to && symbol[numIdx] == '*') {
+            idx = numIdx + 1;
+        }
+        return idx;
+    }
+
     private static int indexOfNumber(String symbol, int from, int to) {
         boolean seenDigit = false;
         boolean seenDot = false;
@@ -193,6 +254,29 @@ public class RangeUtil {
 
         while (i < to) {
             char c = symbol.charAt(i);
+            if ('0' <= c && c <= '9') {
+                seenDigit = true;
+                i++;
+            } else if (c == '.') {
+                if (seenDot || !seenDigit) {
+                    return -1;
+                }
+                seenDot = true;
+                i++;
+            } else {
+                break;
+            }
+        }
+        return seenDigit ? i : -1;
+    }
+
+    private static int indexOfNumber(char[] symbol, int from, int to) {
+        boolean seenDigit = false;
+        boolean seenDot = false;
+        int i = from;
+
+        while (i < to) {
+            char c = symbol[i];
             if ('0' <= c && c <= '9') {
                 seenDigit = true;
                 i++;

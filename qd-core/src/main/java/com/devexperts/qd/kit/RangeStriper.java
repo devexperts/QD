@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -114,7 +114,7 @@ public abstract class RangeStriper implements SymbolStriper {
         validateRanges(ranges);
 
         // Constructor invariant: spec must be valid
-        assert(spec == null || spec.equals(formatName(ranges)));
+        assert (spec == null || spec.equals(formatName(ranges)));
         this.name = (spec != null) ? spec : formatName(ranges);
         this.scheme = scheme;
         this.codec = scheme.getCodec();
@@ -198,6 +198,18 @@ public abstract class RangeStriper implements SymbolStriper {
             int index = Arrays.binarySearch(rangeCodes, keyCode);
             return (index < 0) ? (-index - 1) : (index + 1);
         }
+
+        @Override
+        public int getStripeIndex(char[] symbol, int offset, int length) {
+            // No special handling for wildcard, since "*" will be empty symbol after skipping unused prefix
+
+            int from = skipPrefix(symbol, offset, offset + length);
+            int to = Math.min(from + codeLength, length);
+
+            long keyCode = encodeSymbol(symbol, from, to);
+            int index = Arrays.binarySearch(rangeCodes, keyCode);
+            return (index < 0) ? (-index - 1) : (index + 1);
+        }
     }
 
     protected static class StringRangeStriper extends RangeStriper {
@@ -207,8 +219,9 @@ public abstract class RangeStriper implements SymbolStriper {
             super(scheme, ranges, spec);
 
             this.rangeChars = new char[ranges.length][];
-            for (int i = 0; i < ranges.length; i++)
+            for (int i = 0; i < ranges.length; i++) {
                 rangeChars[i] = ranges[i].toCharArray();
+            }
         }
 
         @Override
@@ -241,6 +254,17 @@ public abstract class RangeStriper implements SymbolStriper {
             return (index < 0) ? (-index - 1) : (index + 1);
         }
 
+        @Override
+        public int getStripeIndex(char[] symbol, int offset, int length) {
+            // No special handling for wildcard, since "*" will be empty symbol after skipping unused prefix
+
+            int to = offset + length;
+            int from = skipPrefix(symbol, offset, to);
+
+            int index = binarySearchByString(rangeChars, symbol, from, to);
+            return (index < 0) ? (-index - 1) : (index + 1);
+        }
+
         private static int binarySearchByString(char[][] ranges, String symbol, int from) {
             int low = 0;
             int high = ranges.length - 1;
@@ -249,12 +273,32 @@ public abstract class RangeStriper implements SymbolStriper {
                 int mid = (low + high) >>> 1;
                 char[] midVal = ranges[mid];
                 int cmp = compareByString(midVal, symbol, from);
-                if (cmp < 0)
+                if (cmp < 0) {
                     low = mid + 1;
-                else if (cmp > 0)
+                } else if (cmp > 0) {
                     high = mid - 1;
-                else
+                } else {
                     return mid; // key found
+                }
+            }
+            return -(low + 1);  // key not found.
+        }
+
+        private static int binarySearchByString(char[][] ranges, char[] symbol, int from, int to) {
+            int low = 0;
+            int high = ranges.length - 1;
+
+            while (low <= high) {
+                int mid = (low + high) >>> 1;
+                char[] midVal = ranges[mid];
+                int cmp = compareByString(midVal, symbol, from, to);
+                if (cmp < 0) {
+                    low = mid + 1;
+                } else if (cmp > 0) {
+                    high = mid - 1;
+                } else {
+                    return mid; // key found
+                }
             }
             return -(low + 1);  // key not found.
         }
@@ -267,12 +311,13 @@ public abstract class RangeStriper implements SymbolStriper {
                 int mid = (low + high) >>> 1;
                 char[] midVal = ranges[mid];
                 int cmp = compareByCode(midVal, symbolCode);
-                if (cmp < 0)
+                if (cmp < 0) {
                     low = mid + 1;
-                else if (cmp > 0)
+                } else if (cmp > 0) {
                     high = mid - 1;
-                else
+                } else {
                     return mid; // key found
+                }
             }
             return -(low + 1);  // key not found.
         }

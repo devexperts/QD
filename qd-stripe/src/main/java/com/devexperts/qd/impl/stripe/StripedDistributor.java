@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -77,13 +77,13 @@ class StripedDistributor<C extends QDCollector> extends AbstractDistributor {
 
     @Override
     public void process(RecordSource source) {
-        RecordBuffer[] buf = Buffers.filterData(collector, source);
-        for (int i = 0; i < n; i++)
+        RecordBuffer[] buf = StripedBuffersUtil.stripeData(collector, source);
+        for (int i = 0; i < n; i++) {
             if (buf[i] != null && !buf[i].isEmpty()) {
                 dists[i].processData(buf[i]);
-                buf[i].clear();
             }
-        Buffers.buf.set(buf);
+        }
+        StripedBuffersUtil.releaseBuf(buf);
     }
 
     abstract class SubProvider extends AbstractRecordProvider {

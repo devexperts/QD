@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -103,7 +103,7 @@ public class RangeStriperTest {
     }
 
     @Test
-    public void testDenisRange() {
+    public void testCustomRange() {
         RangeStriper striper = RangeStriper.valueOf(SCHEME, "byrange-B1234567-");
         assertStriper(striper, "B12345669", 0);
         assertStriper(striper, "B1234567", 1);
@@ -130,6 +130,20 @@ public class RangeStriperTest {
         RangeStriper striper = RangeStriper.valueOf(SCHEME, "byrange-A-B-C-");
         assertNotNull(striper);
         assertSame(striper.getStripeFilter(2), striper.getStripeFilter(2));
+    }
+
+    @Test
+    public void testChar() {
+        RangeStriper striper1 = RangeStriper.valueOf(SCHEME, "byrange-S-");
+        RangeStriper striper2 = RangeStriper.valueOf(SCHEME, "byrange-K-S-");
+        RangeStriper striper3 = RangeStriper.valueOf(SCHEME, "byrange-K-S-U-");
+
+        assertStriper(striper1, "IBM", 0);
+        assertStriper(striper1, "EUD/USD", 0);
+        assertStriper(striper2, "IBM", 0);
+        assertStriper(striper2, "EUD/USD", 0);
+        assertStriper(striper3, "IBM", 0);
+        assertStriper(striper3, "EUD/USD", 0);
     }
 
     // Utility methods
@@ -159,5 +173,10 @@ public class RangeStriperTest {
             assertEquals("Index for symbol " + s + " in " + striper, index, striper.getStripeIndex(cipher, null));
         }
         assertEquals("Index for symbol " + s + " in " + striper, index, striper.getStripeIndex(0, s));
+        assertEquals("Index for symbol " + s + " in " + striper, index,
+            striper.getStripeIndex(s.toCharArray(), 0, s.length()));
+        for (int i = 0; i < striper.getStripeCount(); i++) {
+            assertEquals(i == index, striper.getStripeFilter(i).accept(null, null, cipher, s));
+        }
     }
 }

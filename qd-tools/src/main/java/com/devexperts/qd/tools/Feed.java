@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -36,6 +36,7 @@ import java.util.List;
 public class Feed extends AbstractTool {
     private final OptionLog logfile = OptionLog.getInstance();
     private final OptionCollector collector = new OptionCollector("all");
+    private final OptionStripe stripe = new OptionStripe();
     private final OptionFile file = new OptionFile();
     private final OptionWrite write = new OptionWrite(file);
     private final Option raw = new Option('R', "raw", "Use raw feed connection (do not subscribe to stream '*').");
@@ -54,7 +55,9 @@ public class Feed extends AbstractTool {
 
     @Override
     protected Option[] getOptions() {
-        return new Option[] { logfile, collector, file, write, raw, subscribe, delay, buffer, name, stat, html, rmi };
+        return new Option[] {
+            logfile, collector, stripe, file, write, raw, subscribe, delay, buffer, name, stat, html, rmi
+        };
     }
 
     @Override
@@ -81,20 +84,20 @@ public class Feed extends AbstractTool {
             delayer = new FeedDelayer(delay.getValue().getTime(), (long) buffer.getValue(), log);
         }
 
-        String feed_address = args[0];
-        String agent_address = args[1];
+        String feedAddress = args[0];
+        String agentAddress = args[1];
 
-        log.info("Using feed address " + LogUtil.hideCredentials(feed_address));
+        log.info("Using feed address " + LogUtil.hideCredentials(feedAddress));
         connectors.addAll(
             MessageConnectors.createMessageConnectors(
                 new FeedAdapter.Factory(endpoint, null, raw.isSet(), subscribe.isSet(), delayer),
-                feed_address, endpoint.getRootStats()));
+                feedAddress, endpoint.getRootStats()));
 
-        log.info("Using agent address " + LogUtil.hideCredentials(agent_address));
+        log.info("Using agent address " + LogUtil.hideCredentials(agentAddress));
         connectors.addAll(
             MessageConnectors.createMessageConnectors(
                 new AgentAdapter.Factory(endpoint, null),
-                agent_address, endpoint.getRootStats()));
+                agentAddress, endpoint.getRootStats()));
 
         endpoint.addConnectors(connectors).startConnectors();
         if (delayer != null)

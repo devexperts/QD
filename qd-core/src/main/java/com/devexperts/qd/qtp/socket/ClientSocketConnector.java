@@ -328,9 +328,7 @@ public class ClientSocketConnector extends AbstractMessageConnector
 
             final SymbolStriper striper;
             if (stripeConfig != null && !stripeConfig.isEmpty() && !stripeConfig.equals(AUTO_STRIPE_CONFIG)) {
-                striper = SymbolStriper.valueOf(findDataScheme(), stripeConfig);
-                if (striper == null)
-                    throw new IllegalArgumentException("Unknown striper: " + stripeConfig);
+                striper = SymbolStriper.definedValueOf(findDataScheme(), stripeConfig);
             } else {
                 // Reset striper to empty, including "auto" config.
                 // If striper is "auto" it will be resolved on connector's start.

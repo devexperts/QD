@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -316,6 +316,16 @@ public interface QDCollector extends SubscriptionContainer, QDStatsContainer {
          * Returns filter to be used for "story everything" feature.
          */
         public SubscriptionFilter getStoreEverythingFilter();
+
+        /**
+         * Specifies symbol striper to be used for collector.
+         */
+        public Builder<T> withStriper(SymbolStriper striper);
+
+        /**
+         * Returns symbol striper for collector.
+         */
+        public SymbolStriper getStriper();
 
         /**
          * Copies properties from others.

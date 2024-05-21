@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -280,6 +280,11 @@ public abstract class DXEndpoint implements AutoCloseable {
      * {@link WildcardSymbol} support and for the use of "tape:..." address in {@link DXPublisher}.
      */
     public static final String DXFEED_WILDCARD_ENABLE_PROPERTY = "dxfeed.wildcard.enable";
+
+    /**
+     * Defines symbol striping strategy for an endpoint.
+     */
+    public static final String DXFEED_STRIPE_PROPERTY = "dxfeed.stripe";
 
     /**
      * Defines path to a file with properties for an endpoint with role {@link Role#PUBLISHER PUBLISHER}.

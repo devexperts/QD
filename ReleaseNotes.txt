@@ -1,3 +1,17 @@
+QDS 3.332:
+
+* [QD-1542] [dxLink] Provide the ability to override the XML parser for the Android environment
+  - lookup for 'javax.xml.parsers.DocumentBuilderFactory' through service-loading facility was added.
+* [QD-201] Support custom symbol striping of QD Collectors
+  - QDCollector is augmented with SymbolStriper, which can be specified via QDCollector.Builder
+  - QDEndpoint.Builder and DXEndpoint.Builder provide means to configure SymbolStriper
+  - New option "--stripe <stripe>" can be used to configure symbol striper
+    for certain QDS tools like multiplexor and connect
+  - New JVM property "dxfeed.stripe" can be used to configure symbol striper for related collectors and endpoints;
+    see "help stripers" for it's syntax
+  - NOTE: Old system property "com.devexperts.qd.impl.stripe" is deprecated and will be removed later!
+    (it uses old syntax for number of hash stripes)
+
 QDS 3.331:
 
 * [QD-1543] Exclude OptionSale record from History conflateFilter by default

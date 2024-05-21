@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,11 +11,12 @@
  */
 package com.devexperts.qd;
 
+import com.devexperts.qd.kit.FilterSyntaxException;
 import com.devexperts.qd.kit.MonoStriper;
 import com.devexperts.qd.spi.SymbolStriperFactory;
 
 /**
- * Strategy that allows to split the whole symbol universe into several smaller "stripes".
+ * Symbol striping strategy that allows to split whole symbol universe into several smaller "stripes".
  * Striper can be used for example to split a large QD tape into several smaller parts based on some symbol pattern.
  *
  * <p>Stripes do not intersect, each stripe has a {@link #getStripeFilter(int) filter} that represents it.
@@ -73,6 +74,18 @@ public interface SymbolStriper {
     }
 
     /**
+     * Returns the index of the stripe that the given symbol (represented as character array) falls into.
+     * @param symbol array that is the source of the symbol
+     * @param offset the initial offset
+     * @param length the symbol's length
+     * @return stripe index
+     * @see #getStripeIndex(int, String)
+     */
+    public default int getStripeIndex(char[] symbol, int offset, int length) {
+        return getStripeIndex(new String(symbol, offset, length));
+    }
+
+    /**
      * Returns {@link QDFilter filter} corresponding for the given stripe index.
      * @param stripeIndex stripe index
      * @return QD filter for the stripe
@@ -86,9 +99,25 @@ public interface SymbolStriper {
      * @param scheme data scheme
      * @param spec striper specification
      * @return striper, or {@code null} if specification is unknown
-     * @throws IllegalArgumentException if spec is invalid
+     * @throws FilterSyntaxException if spec is invalid.
      */
     public static SymbolStriper valueOf(DataScheme scheme, String spec) {
         return scheme.getService(SymbolStriperFactory.class).createStriper(spec);
+    }
+
+    /**
+     * Creates {@link SymbolStriper} from the given specification for the given scheme, or throws exception.
+     * 
+     * @param scheme data scheme
+     * @param spec striper specification
+     * @return non-null striper
+     * @throws FilterSyntaxException if spec is invalid or unknown
+     */
+    public static SymbolStriper definedValueOf(DataScheme scheme, String spec) {
+        SymbolStriper striper = valueOf(scheme, spec);
+        if (striper == null) {
+            throw new FilterSyntaxException("Unknown stripe format: " + spec);
+        }
+        return striper;
     }
 }

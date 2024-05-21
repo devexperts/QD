@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,11 +11,8 @@
  */
 package com.devexperts.qd.benchmark.qd.kit.range;
 
-import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.SymbolCodec;
-import com.devexperts.qd.kit.RangeStriper;
 import com.devexperts.qd.SymbolStriper;
-import com.dxfeed.api.impl.DXFeedScheme;
 import com.dxfeed.ipf.InstrumentProfile;
 import com.dxfeed.ipf.InstrumentProfileReader;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -59,7 +56,6 @@ public class RangeStriperByFileBenchmark {
 
     public static int [] ciphers;
     public static String[] symbols;
-    public static final DataScheme scheme = DXFeedScheme.getInstance();
 
     @Param({
         "byrange-A-",
@@ -75,7 +71,6 @@ public class RangeStriperByFileBenchmark {
 
     @Param({
         "standard",
-        "another",
     })
     public String striperImpl;
 
@@ -100,17 +95,13 @@ public class RangeStriperByFileBenchmark {
         ciphers = new int[ITERATIONS];
         symbols = new String[ITERATIONS];
 
-        SymbolCodec codec = scheme.getCodec();
+        SymbolCodec codec = BenchmarkRangeStriper.SCHEME.getCodec();
         for (int i = 0; i < ITERATIONS; i++) {
             symbols[i] = profiles.get(i).getSymbol();
             ciphers[i] = codec.encode(symbols[i]);
         }
 
-        if (striperImpl.equals("standard")) {
-            striper = RangeStriper.valueOf(scheme, striperSpec);
-        } else {
-            striper = LambdaBasedRangeStriper.valueOf(scheme, striperSpec);
-        }
+        striper = BenchmarkRangeStriper.createRangeStriper(striperImpl, striperSpec);
     }
 
     @Benchmark

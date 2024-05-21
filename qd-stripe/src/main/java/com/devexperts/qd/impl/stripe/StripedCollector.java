@@ -14,7 +14,6 @@ package com.devexperts.qd.impl.stripe;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDCollector;
-import com.devexperts.qd.QDContract;
 import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDErrorHandler;
 import com.devexperts.qd.QDFilter;
@@ -22,7 +21,8 @@ import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.SymbolStriper;
 import com.devexperts.qd.impl.AbstractCollector;
-import com.devexperts.qd.kit.HashStriper;
+import com.devexperts.qd.kit.CompositeFilters;
+import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.stats.QDStats;
@@ -30,22 +30,23 @@ import com.devexperts.qd.stats.QDStats;
 abstract class StripedCollector<C extends QDCollector> extends AbstractCollector {
 
     final SymbolCodec codec;
-    final HashStriper striper;
-    final int n; // always power of 2
+    final SymbolStriper striper;
+    final int n;
     final QDStats stats;
     final int wildcard;
 
     boolean enableWildcards;
 
-    StripedCollector(Builder<?> builder, int n) {
+    StripedCollector(Builder<?> builder, SymbolStriper striper) {
         super(builder);
-        if ((n < 2) || ((n & (n - 1)) != 0))
-            throw new IllegalArgumentException("Striping factor N should a power of 2 and at least 2");
+        if (striper.getStripeCount() <= 1)
+            throw new IllegalArgumentException("Invalid striper: " + striper);
+
         this.codec = scheme.getCodec();
-        this.n = n;
         this.stats = builder.getStats();
         this.wildcard = scheme.getCodec().getWildcardCipher();
-        this.striper = (HashStriper) HashStriper.valueOf(scheme, n);
+        this.striper = striper;
+        this.n = striper.getStripeCount();
     }
 
     @Override
@@ -66,10 +67,23 @@ abstract class StripedCollector<C extends QDCollector> extends AbstractCollector
     @Override
     public void setStoreEverything(boolean storeEverything) {
         super.setStoreEverything(storeEverything);
+        updateStoreEverythingFilters();
+    }
+
+    @Override
+    public void setStoreEverythingFilter(SubscriptionFilter filter) {
+        super.setStoreEverythingFilter(filter);
+        updateStoreEverythingFilters();
+    }
+
+    protected void updateStoreEverythingFilters() {
+        boolean storeEverything = isStoreEverything();
+        QDFilter filter = storeEverythingFilter;
+
         for (int i = 0; i < n; i++) {
-            if (storeEverything)
-                collectors()[i].setStoreEverythingFilter(new StoreFilter(i));
-            collectors()[i].setStoreEverything(storeEverything);
+            C collector = collectors()[i];
+            collector.setStoreEverythingFilter(CompositeFilters.makeAnd(filter, striper.getStripeFilter(i)));
+            collector.setStoreEverything(storeEverything);
         }
     }
 
@@ -90,14 +104,15 @@ abstract class StripedCollector<C extends QDCollector> extends AbstractCollector
 
     @Override
     public void setErrorHandler(QDErrorHandler errorHandler) {
-        for (QDCollector collector : collectors())
+        for (QDCollector collector : collectors()) {
             collector.setErrorHandler(errorHandler);
+        }
     }
 
     @Override
     public String getSymbol(char[] chars, int offset, int length) {
-        int i = striper.getStripeIndex(chars, offset, length);
-        return collectors()[i].getSymbol(chars, offset, length);
+        int index = striper.getStripeIndex(chars, offset, length);
+        return collectors()[index].getSymbol(chars, offset, length);
     }
 
     @Override
@@ -145,43 +160,18 @@ abstract class StripedCollector<C extends QDCollector> extends AbstractCollector
 
     @Override
     public void remove(RecordSource source) {
-        long position = source.getPosition();
-        for (QDCollector collector : collectors()) {
-            source.setPosition(position);
-            collector.remove(source);
+        RecordBuffer[] buf = StripedBuffersUtil.stripeData(this, source);
+        for (int i = 0; i < n; i++) {
+            if (buf[i] != null && !buf[i].isEmpty())
+                collectors()[i].remove(buf[i]);
         }
+        StripedBuffersUtil.releaseBuf(buf);
     }
 
     @Override
     public void close() {
         for (QDCollector collector : collectors()) {
             collector.close();
-        }
-    }
-
-    private class StoreFilter extends QDFilter {
-        private final int i;
-
-        StoreFilter(int i) {
-            super(StripedCollector.this.scheme);
-            this.i = i;
-        }
-
-        @Override
-        public boolean isFast() {
-            return true;
-        }
-
-        @Override
-        public boolean accept(QDContract contract, DataRecord record, int cipher, String symbol) {
-            SubscriptionFilter storeEverythingFilter = StripedCollector.this.storeEverythingFilter;
-            return (storeEverythingFilter == null || storeEverythingFilter.acceptRecord(record, cipher, symbol)) &&
-                index(cipher, symbol) == i;
-        }
-
-        @Override
-        public String getDefaultName() {
-            return "storeFilter#" + i;
         }
     }
 }

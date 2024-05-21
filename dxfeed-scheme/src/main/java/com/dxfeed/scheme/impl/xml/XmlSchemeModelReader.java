@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -33,7 +33,6 @@ import org.xml.sax.SAXParseException;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import javax.xml.parsers.DocumentBuilder;
@@ -43,27 +42,12 @@ public class XmlSchemeModelReader extends XmlSchemeModelFormat implements Scheme
 
     private static final Logging log = Logging.getLogging(XmlSchemeModelReader.class);
 
-    public XmlSchemeModelReader() {
-        // Configure scheme
-        URL schemeURL = this.getClass().getClassLoader().getResource(SCHEMA_NAME);
-        if (schemeURL == null) {
-            throw new IllegalStateException("Cannot find XSD scheme, XML load failed");
-        }
-        DBF.setNamespaceAware(true);
-        DBF.setValidating(true);
-        DBF.setCoalescing(true);
-        DBF.setExpandEntityReferences(true);
-        DBF.setIgnoringComments(true);
-        DBF.setAttribute(JAXP_SCHEMA_LANGUAGE, W3C_XML_SCHEMA);
-        DBF.setAttribute(JAXP_SCHEMA_SOURCE, schemeURL.toString());
-    }
-
     @Override
     public void readModel(SchemeModel model, String parent, String name, InputStream in,
         ImportProcessor importProcessor) throws IOException, SchemeException
     {
         try {
-            DocumentBuilder db = DBF.newDocumentBuilder();
+            DocumentBuilder db = dbf.newDocumentBuilder();
             XMLErrorHandler errorHandler = new XMLErrorHandler();
             db.setErrorHandler(errorHandler);
             Element xml = db.parse(in).getDocumentElement();

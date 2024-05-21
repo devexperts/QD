@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,6 +17,8 @@ import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.SubscriptionFilter;
+import com.devexperts.qd.SymbolStriper;
+import com.devexperts.qd.kit.MonoStriper;
 import com.devexperts.qd.stats.QDStats;
 
 public abstract class AbstractCollectorBuilder<T extends QDCollector> implements QDCollector.Builder<T> {
@@ -28,6 +30,7 @@ public abstract class AbstractCollectorBuilder<T extends QDCollector> implements
     private boolean withEventTimeSequence;
     private boolean storeEverything;
     private SubscriptionFilter storeEverythingFilter;
+    private SymbolStriper striper;
 
     protected AbstractCollectorBuilder(QDContract contract) {
         this.contract = contract;
@@ -44,6 +47,7 @@ public abstract class AbstractCollectorBuilder<T extends QDCollector> implements
         withEventTimeSequence = other.hasEventTimeSequence();
         storeEverything = other.isStoreEverything();
         storeEverythingFilter = other.getStoreEverythingFilter();
+        striper = other.getStriper();
         return this;
     }
 
@@ -120,5 +124,18 @@ public abstract class AbstractCollectorBuilder<T extends QDCollector> implements
     @Override
     public SubscriptionFilter getStoreEverythingFilter() {
         return storeEverythingFilter;
+    }
+
+    @Override
+    public QDCollector.Builder<T> withStriper(SymbolStriper striper) {
+        this.striper = striper;
+        return this;
+    }
+
+    @Override
+    public SymbolStriper getStriper() {
+        if (striper == null)
+            striper = MonoStriper.INSTANCE;
+        return striper;
     }
 }

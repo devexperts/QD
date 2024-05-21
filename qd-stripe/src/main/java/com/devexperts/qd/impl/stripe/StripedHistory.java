@@ -15,14 +15,15 @@ import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataVisitor;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDHistory;
+import com.devexperts.qd.SymbolStriper;
 import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.stats.QDStats;
 
 class StripedHistory extends StripedCollector<QDHistory> implements QDHistory {
     private final QDHistory[] collectors;
 
-    StripedHistory(QDFactory base, Builder<?> builder, int n) {
-        super(builder, n);
+    StripedHistory(QDFactory base, Builder<?> builder, SymbolStriper striper) {
+        super(builder, striper);
         collectors = new QDHistory[n];
         for (int i = 0; i < n; i++) {
             collectors[i] = base.historyBuilder()

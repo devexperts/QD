@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -43,37 +43,33 @@ class StripedAgent<C extends QDCollector> extends AbstractAgent {
 
     @Override
     public void addSubscription(RecordSource source) {
-        RecordBuffer[] buf = Buffers.filterSub(collector, source);
+        RecordBuffer[] buf = StripedBuffersUtil.stripeSub(collector, source);
         for (int i = 0; i < n; i++) {
             if (buf[i] != null && !buf[i].isEmpty()) {
                 agents[i].addSubscription(buf[i]);
-                buf[i].clear();
             }
         }
-        Buffers.buf.set(buf);
+        StripedBuffersUtil.releaseBuf(buf);
     }
 
     @Override
     public void removeSubscription(RecordSource source) {
-        RecordBuffer[] buf = Buffers.filterSub(collector, source);
+        RecordBuffer[] buf = StripedBuffersUtil.stripeSub(collector, source);
         for (int i = 0; i < n; i++) {
             if (buf[i] != null && !buf[i].isEmpty()) {
                 agents[i].removeSubscription(buf[i]);
-                buf[i].clear();
             }
         }
-        Buffers.buf.set(buf);
+        StripedBuffersUtil.releaseBuf(buf);
     }
 
     @Override
     public void setSubscription(RecordSource source) {
-        RecordBuffer[] buf = Buffers.filterSub(collector, source);
+        RecordBuffer[] buf = StripedBuffersUtil.stripeSub(collector, source);
         for (int i = 0; i < n; i++) {
             agents[i].setSubscription(buf[i] == null ? RecordSource.VOID : buf[i]);
-            if (buf[i] != null)
-                buf[i].clear();
         }
-        Buffers.buf.set(buf);
+        StripedBuffersUtil.releaseBuf(buf);
     }
 
     @Override

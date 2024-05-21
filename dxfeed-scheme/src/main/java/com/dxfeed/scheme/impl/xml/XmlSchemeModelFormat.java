@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.dxfeed.scheme.impl.xml;
 
+import com.devexperts.services.Services;
 import org.xml.sax.ErrorHandler;
 import org.xml.sax.SAXParseException;
 
@@ -96,7 +97,7 @@ public class XmlSchemeModelFormat {
     protected static final String EL_VIS_TAGEXC = "exclude-tags";
     protected static final String EL_VIS_TAG = "tag";
 
-    protected final DocumentBuilderFactory DBF = DocumentBuilderFactory.newInstance();
+    protected final DocumentBuilderFactory dbf;
 
     protected XmlSchemeModelFormat() {
         // Configure scheme
@@ -104,13 +105,18 @@ public class XmlSchemeModelFormat {
         if (schemeURL == null) {
             throw new IllegalStateException("Cannot find XSD scheme, XML load failed");
         }
-        DBF.setNamespaceAware(true);
-        DBF.setValidating(true);
-        DBF.setCoalescing(true);
-        DBF.setExpandEntityReferences(true);
-        DBF.setIgnoringComments(true);
-        DBF.setAttribute(JAXP_SCHEMA_LANGUAGE, W3C_XML_SCHEMA);
-        DBF.setAttribute(JAXP_SCHEMA_SOURCE, schemeURL.toString());
+        DocumentBuilderFactory factory =
+            Services.createService(DocumentBuilderFactory.class, getClass().getClassLoader(), null);
+        if (factory == null)
+            factory = DocumentBuilderFactory.newInstance();
+        dbf = factory;
+        dbf.setNamespaceAware(true);
+        dbf.setValidating(true);
+        dbf.setCoalescing(true);
+        dbf.setExpandEntityReferences(true);
+        dbf.setIgnoringComments(true);
+        dbf.setAttribute(JAXP_SCHEMA_LANGUAGE, W3C_XML_SCHEMA);
+        dbf.setAttribute(JAXP_SCHEMA_SOURCE, schemeURL.toString());
     }
 
     protected static class XMLErrorHandler implements ErrorHandler {

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -55,16 +55,15 @@ public class SubscriptionDumpParser extends AbstractTool {
     public static final String ALL_COLUMNS = "'cCsrRaAtT'";
 
     private final OptionString columns = new OptionString('c', "columns", ALL_COLUMNS,
-        "Columns to output and their order, specified as (c)collector/(s)ymbol/(r)ecord/(a)gent/(t)ime. Default is '" + DEFAULT_COLUMNS + "'. " +
-        "Capital letters 'CRA' mean printing a name instead of a number. " +
+        "Columns to output and their order, specified as (c)collector/(s)ymbol/(r)ecord/(a)gent/(t)ime. " +
+        "Default is '" + DEFAULT_COLUMNS + "'. Capital letters 'CRA' mean printing a name instead of a number. " +
         "'t' prints the first int of time, 'T' prints the second one.");
     private final OptionString sort = new OptionString('s', "sort", ALL_COLUMNS,
         "Columns for sorting, specified as in columns. Default is none. " +
         "Prepend '-' to column name for reverse soring.");
     private final OptionString group = new OptionString('g', "group", ALL_COLUMNS,
-        "Groups by a specified set of columns, implies --" + sort.getFullName() + " and --" + columns.getFullName() + ", " +
-        "count in group is printed at the beginning. " +
-        "Pipe output to external 'sort' in order to order by count.");
+        "Groups by a specified set of columns, implies --" + sort.getFullName() + " and --" + columns.getFullName() +
+        ", count in group is printed at the beginning. Pipe output to external 'sort' in order to order by count.");
     private final OptionString output = new OptionString('o', "output", "<file>",
         "Output file, by default 'subscription.txt'.");
 
@@ -210,8 +209,10 @@ public class SubscriptionDumpParser extends AbstractTool {
     protected void executeImpl(String[] args) {
         if (args.length == 0)
             noArguments();
-        if (group.isSet() && (sort.isSet() || columns.isSet()))
-            throw new BadToolParametersException(group + " implies --" + sort.getFullName() + " and --" + columns.getFullName() + ", don't specify them together");
+        if (group.isSet() && (sort.isSet() || columns.isSet())) {
+            throw new BadToolParametersException(group + " implies --" + sort.getFullName() +
+                " and --" + columns.getFullName() + ", don't specify them together");
+        }
 
         List<SubRecord> subs = new ArrayList<>();
         for (String fileName : args) {
