@@ -1,658 +1,477 @@
-# Первая версия машинно-читаемой схемы для QD.
-## Формат.
-В качестве формата выбран XML, для которого написана XSD-схема,
-позволяющая максимально валидировать правильность схем стандартными средствами.
-
-К сожалению, полную валидацию на основе XSD не представляется возможным сделать
-по нескольким причинам: во-первых, в схеме будут элементы без глобально-уникальных
-идентификаторов и «прошить» всё проверками ссылок не получается и, во вторых,
-полная QD схема, подлежащая проверка, собирается из нескольких файлов.
-
-## Загрузка схемы — файлы и ссылки.
-QD-схема собирается из одного или нескольких файлов, каждый из которых должен
-быть правильным (valid) XML-файлом и проходить проверку с помощью XSD-схемы
-независимо от других файлов.
-
-Файлы грузятся один за другим, и каждый следующий файл имеет больший приоритет,
-чем все предыдущие. В случае ошибки загрузки или проверки любого файла загрузка
-всей схемы прекращается с ошибкой.
-
-После загрузки каждого следующего файла происходит его объединение с
-уже загруженными файлами. Объединение происходит на семантическом, а
-не синтаксическом уровне. Объекты с одинаковыми именами, встречающиеся в
-нескольких файлах, обновляются данными из только что загруженного файла.
-Любые разрешимые конфликты разрешаются в пользу данных загруженных из
-нового файла.
-
-Любой файл может содержать инструкции импорта других файлов в своём начале,
-в качестве первых инструкций. Такие импортированные файлы считаются загружаемыми
-перед включающим их файлом, в порядке инструкций о включении.
-
-Для предотвращения случайных переопределений объектов требуется, чтобы все
-обновления были помечены как обновления, а не новые объекты. Это позволяет избежать
-ситуации когда пользовательское добавление к стандартной схеме становится изменением
-новой версии стандартной схемы, в которую мы добавили объекты с такими же именами
-как (неизвестные нам) пользовательские.
-
-Разрешение всех ссылок между объектами (например, приписывание типов полям записей)
-и проверка их целостности происходит только после слияния всех файлов. Поэтому
-более поздние файлы могут изменить смысл типов, использованных в файлах,
-загруженных ранее.
-
-## Обзор типов объектов, описываемых схемой.
-QD-Схема может описывать следующие объекты, сгруппированные в соответствующие
-контейнеры:
-
-1. `type` — пользовательские типы данных и их именованные копии. Позволяет для
-   каких-то типов сделать пользовательский набор методов доступа, а так же
-   позволяет переключать представление типа `decimal` для всей схемы сразу
-   или отдельных полей.
-
-1. `enum` — описание типов-перечислений, которые могут быть использованы
-   для расшифровки полей-флагов.
-
-1. `record` — записи QD, используемые в транспортных форматах.
-
-1. `generator` — определение семейства одинаковых записей QD, отличающихся только
-   именами. Генераторы помещаются в тот же контейнер, что и объекты типа
-   `record`, но имеют отдельное от них пространство имён.
-
-1. `enable` и `disable` — правила включения и отключения отдельных полей записей в данном
-   экземпляре схемы.
-
-### Именованные объекты и их общие атрибуты.
-Почти все объекты схемы являются именованными, что позволяет переопределять
-и изменять их загружая несколько файлов. Каждый следующий файл
-может переопределять или изменять уже существующие именованные объекты.
-
-На данный момент только правила `visibility` не являются именованными.
-
-Все именованные объекты имеют обязательные атрибут `name` и
-опциональный `mode`.
-
-Атрибут `name` задаёт имя объекта, и все объекты одного типа должны быть
-уникальны в рамках одного файла. Именно это имя используется для
-сопоставления объектов при объединении нескольких файлов.
-
-Атрибут `mode` может принимать значения `new` (по умолчанию) или `update`.
-Этот атрибут определяет, является описываемый объект новым (`new`) или
-должен при слиянии файлов обновить существующий объект с таким же типом и
-именем.
-
-Если при объединении файлов объект с атрибутом `mode` со значением `new`
-пытается обновить существующий объект, то загрузка схемы завершается
-с ошибкой.
-
-Для каждого объекта с атрибутом `mode` со значением `update` должен найтись
-переопределяемый объект (из предыдущих по очереди загрузки файлов),
-иначе загрузка схемы завершается с ошибкой.
-
-### Обработка правил `visibility`.
-Правила включения-отключения полей записей и самих записей не имеют имён и не
-переопределяются.
-
-Все правила выполняются в момент конфигурирования ядра QD в том порядке,
-в котором они были загружены. Последнее сработавшее правило и определяет
-состояния поля или записи — разрешено или запрещено.
-
-### Документация.
-Почти все объекты в схеме (не только объекты верхнего уровня, такие как
-типы и записи, но и поля записей или значения перечислений) могут
-содержать вложенный элемент документации `<doc>`. Содержание этого
-элемента — произвольный текст, необходимый для документирования содержащего
-его объекта. Этот элемент, если он присутствует, должен быть первым
-элементом в своё родительском элементе и может присутствовать максимум
-один раз.
-
-## Общая структура одного файла схемы.
-На данный момент поддерживается только один формат файла схемы: XML.
-
-Каждый файл схемы должен быть полностью валидным XML-документом, отвечающим
-стандарту [Extensible Markup Language (XML) 1.1 (Second Edition)](https://www.w3.org/TR/xml11/)
-и содержащемся в пространстве имён `https://www.dxfeed.com/datascheme`.
-
-Файл так же может ссылаться на [XML-схему версии 1.0](https://www.w3.org/TR/xmlschema-1/) `dxfeed-schema.xsd` или
-[версии 1.1](https://www.w3.org/TR/xmlschema11-1/) `dxfeed-schema-1.1.xsd`. Даже в отсутствии такой ссылки
-файлы будут проверены на соответствие этой схеме.
-
-Корневым элементом (элементом документа) файла схемы является элемент `<dxfeed>`.
-
-В документе может содержаться несколько инструкций импорта других файлов,
-а так же контейнеры для типов, перечислений, записей и правил видимости.
-
-Инструкции импорта должны идти первыми, а контейнеры должны следовать после них 
-в описанном порядке. Каждый контейнер может встречаться один
-раз или отсутствовать.
-
-### Инструкции импорта.
-Инструкции импорта записываются как элемент `<import>` без атрибутов.
-Этот элемент должен содержать только простой текст и этот текст
-интерпретируется как URL, относительный URL родительского документа.
-
-В случае невозможности проинтерпретировать этот URL или загрузить
-файл по данному адресу загрузка схемы завершается с ошибкой.
-
-### Контейнер типов.
-Контейнером типов служит элемент `<types>` который не имеет атрибутов
-и содержит в себе произвольное число элементов `<type>`.
-
-### Контейнер перечислений.
-Контейнером перечислений служит элемент `<enums>` который не имеет атрибутов
-и содержит в себе произвольное число элементов `<enum>`.
-
-### Контейнер записей и генераторов записей.
-Контейнером записей служит элемент `<records>` который не имеет атрибутов
-и содержит в себе произвольный набор элементов `<record>` и `<generator>`.
-
-### Контейнер правил видимости.
-Контейнером записей служит элемент `<visibility>` который не имеет атрибутов
-и содержит в себе произвольное число элементов `<enable>` и `<disable>`
-в произвольном порядке. Порядок правил видимости важен.
-
-## Типы объектов подробно.
-### Типы.
-Элемент `<type>` описывает псевдоним для одного из встроенных типов.
-Это позволяет задавать формально независимые типы для различных полей
-и переключать их, переопределяя типы позже.
+# First version of a machine-readable schema for QD
 
-Элементы `<type>` помещаются в контейнер `<types>`.
-
-Тип является именованным объектом и может содержать документацию.
+## Format
 
-Помимо `name` у типа есть второй обязательный атрибут: `base`. Этот атрибут
-должен содержать имя другого типа, встроенного или так же определённого.
+We have opted for XML as the chosen format, for which an XML schema (XSD) has been designed, making it possible to
+validate the correctness of schemas using standard tools. Unfortunately, performing a comprehensive XSD-based validation
+seems impossible for two reasons: firstly, the schema contains elements without globally unique identifiers, and it is
+impossible to "pierce" everything with link checks. Secondly, the full QD schema to be verified is built up from
+multiple files.
 
-После загрузки и объединения всех файлов схемы для каждого типа выясняется,
-в какой встроенный тип он превращается. Это делается разрешением всех
-типов по цепочке. В случае, если тип ссылается на несуществующий тип
-или цепочка определений замыкается в кольцо, загрузка схемы завершается
-с ошибкой.
+## Schema loading - files and links
 
-#### Встроенные типы.
-Схема поддерживает следующие встроенные типы:
+The QD schema is assembled from one or more files, each of which must be a valid XML file and should be validated
+against the XSD schema independently of other files.
 
-- `byte`
-- `char — `UTF8_CHAR` в Java коде.
-- `short`
-- `int`
-- `compact_int`
-- `byte_array`
-- `utf_char_array`
-- `tiny_decimal` — `DECIMAL` в Java коде. `decimal` должен быть переопределён как
-  `tiny_decimal` или `wide_decimal` в схеме. 
-- `short_string`
-- `time_seconds`
-- `time_millis`
-- `time_nanos`
-- `time`
-- `sequence`
-- `date`
-- `long`
-- `wide_decimal`
-- `string`
-- `custom_object`
-- `serial_object`
+Files are loaded one by one, with each subsequent file holding a higher priority than the preceding one. In case there
+is an error during the loading or validation of any file, the loading of the entire schema terminates with an error.
 
-Кроме того, дополнительно поддерживаются типы, которые в будущем будет использоваться
-при генерировании связей между записями и объектами событий. 
+After loading each subsequent file, it is merged with the files that have already been loaded. The merging occurs at the
+semantic, not syntactic level. Objects with the same names found in multiple files are updated with data from the most
+recently uploaded file. Any resolvable conflicts are resolved in favor of the data loaded from the new file.
 
-- `time_nano_part` 
-- `index`
-- `flags`
+At the beginning of any file, import instructions for other files may be placed, referencing other schema files that
+need to be imported. The order of processing is as follows:
 
-Сейчас эти три дополнительных типа являются псевдонимами `compact_int`.
+1. Process imported files in the order of their appearance.
+2. Process the rest of the instructions in the current file.
 
-### Перечисления.
-> На данный момент перечисления никак не используются
-> в Java-реализации QD, так как Java-реализация QD ещё не имеет кодогенератора
-> событий и связей между событиями и записями, основанного на машино-читаемой
-> схеме.
+To prevent accidental overrides of objects, all updates must be marked as updates, not as new objects. This is done
+to avoid a situation where a user's custom addition to the default schema is treated as a modification in a new
+version of the same schema, with objects having identical names to those defined by the user (that we are unaware
+of).
 
-Элемент `<enum>` создаёт новый тип-перечисление. Перечисление состоит из
-списка возможных значений, каждое с уникальным именем и своим числовым значением.
-Числовые значения могут быть опущены, тогда элементы нумеруются с шагом 1 начиная
-с последнего заданного значения или нуля если значения вообще не заданы.
+The resolution of all references between the objects (such as assigning types to record fields) and the checking of
+their integrity occur only after all the files have been merged. Therefore, later files may change the meaning of the
+types used in the previously loaded files.
 
-Элементы `<enum>` помещаются в контейнер `<enums>`.
+## Overview of the object types described by the schema
 
-Перечисление является именованным объектом и может содержать документацию.
+The QD schema can describe the following objects, grouped into respective containers:
 
-Перечисление может содержать значения, определяемые элементами `<value>`.
+* `type`: identifies user-defined data types and their named copies. It enables the creation of a user-defined set of
+   access methods for certain types, as well as it makes it possible to switch the representation of the `decimal` type
+   across the entire schema or for its individual fields.
+* `enum`: describes enumeration types that can be used to decode flag fields.
+* `record`: specifies QD records used in transport formats.
+* `generator`: defines a family of identical QD records differing only in names. Generators are placed in the same
+   container as `record` objects but have a separate namespace.
+* visibility rules (`enable` and `disable`): identify rules for enabling and disabling individual record fields in the
+   given schema instance.
 
-Каждое значение является в свою очередь именованным объектом и может содержать
-документацию.
+### Named objects and their common attributes
 
-Помимо обязательного для именованных объектов атрибута `name` и опционального
-`mode`, элемент `<value>` может содержать опциональный атрибут `ord`. Значением
-этого атрибута должно быть неотрицательное целое число, записанное в десятичной системе
-счисления. Этот атрибут задаёт числовое значение соответствующее данному элементу
-перечисления. Если атрибут не задан, то новые добавленные значения нумеруются по
-порядку от предыдущего добавленного значения с заданным атрибутом `ord`
-или с нуля если атрибут `ord` не задан ни для одного значения.
+Almost all schema objects are named, allowing for overriding and modifying them by loading multiple files. Each
+subsequent file can override or modify the already existing named objects.
 
-При добавлении новых значений в уже существующее перечисление значения без атрибута
-`ord` нумеруются как если бы они были изначально созданы в исходном перечислении.
+* At the moment, only the `visibility` rules are not named.
+* All named objects have a required `name` attribute and an optional `mode` attribute.
+* The `name` attribute specifies the object's name, and all objects of the same type must be unique within the same
+  file. This name is used to match objects when merging multiple files.
+* The `mode` attribute can take the `new` (by default) or `update` values. This attribute specifies whether the
+  described object is new (`new`) or should update an existing object of the same type and name (`update`) during file
+  merging.
+* If, during file merging, an object with the `mode` attribute set to `new` attempts to update an existing object, the
+  schema loading fails.
+* For each object with the `mode` attribute set to `update`, there must be a corresponding overridden object (from the
+  previously loaded files in sequence). Otherwise, the schema loading fails.
 
-### Записи.
-Элемент `<record>` описывает одну или несколько (в случае регионалов)
-записей, используемых на транспортном уровне QD.
+### Processing `visibility` rules
 
-Элементы `<record>` помещаются в контейнер `<records>`.
+The rules for enabling/disabling both record fields and the records themselves do not have names and are not overridden.
+All rules are executed when configuring the QD core in the order in which they were loaded. The last triggered rule
+determines whether the field or record is enabled or disabled.
 
-Запись является именованным объектом и может содержать документацию.
+### Documentation
 
-Все записи, включённые прямо в контейнер `<records>`, образуют единое пространство
-имён.
+Nearly all objects in the schema (not only top-level objects such as types and records, but also record fields or enum
+values) can contain a nested documentation element `<doc>`. The content of this element is a user-defined text required
+for documenting the nesting object. If included, it must occupy the first position in its parent element and may be
+present only once.
 
-Запись содержит набор полей и опциональную конфигурации времени (индекса) для контракта
-history.
+## General structure of a single schema file
 
-Помимо обязательного для именованных объектов атрибута `name` и опционального
-`mode`, элемент `<record>` поддерживает следующие атрибуты:
+Currently, the only supported schema format is XML.
 
-- `copyFrom` — опциональный атрибут, определяющий имя записи-образца, см. ниже.
+Each schema file must be a fully valid XML document conforming to
+the [Extensible Markup Language (XML) 1.1 (Second Edition)](https://www.w3.org/TR/xml11/) standard and contained in the
+XML namespace `https://www.dxfeed.com/datascheme`.
 
-- `disabled` — опциональный атрибут логического типа (`false` по умолчанию).
+The file can also refer to [XML schema version 1.0](https://www.w3.org/TR/xmlschema-1/) `dxfeed-schema.xsd`
+or [version 1.1](https://www.w3.org/TR/xmlschema11-1/) `dxfeed-schema-1.1.xsd`. The files are validated against this
+schema even in the absence of such a link.
 
-  Если этот атрибут имеет значение `true` то данная запись не будет
-  сконфигурирована в ядре QD, но может использоваться как образец.
+The schema file's root element (document element) is the `<dxfeed>` element.
+A document can include multiple import directives for other files, as well as containers for types, enums, records, and
+visibility rules.
 
-  Так же на активность записи влияют правила видимости (см. ниже),
-  так что переопределять запись только для смены значения данного атрибута
-  необязательно.
+Import directives must come first, and containers must follow them in the specified order. Each container may occur once
+or not at all.
 
-- `regionals` — опциональный атрибут логического типа (`false` по умолчанию).
+### Import directives
 
-  Если атрибут установлен в `true`, то запись служит шаблоном для самой себя и
-  дополнительных 26 записей с суффиксами от `&A до `&Z`.
+Import directives are recorded as the `<import>` element with no attributes. This element must contain only plain text,
+which is interpreted as the relative URL of the parent document. The schema load fails if this URL cannot be interpreted
+or if the file cannot be loaded from the provided address.
 
-  Список регионалов не регулируется, но ненужные записи могут быть отключены
-  правилами видимости.
+### Type container
 
-- ~`eventName`~ — опциональный псевдоним записи для использования совместно
-  со специальными правилами видимости.
+The type container is the `<types>` element, which has no attributes and contains an arbitrary number of `<type>`
+elements.
 
-  Если этот атрибут не задан, то он совпадает с именем самой записи.
+### Enum container
 
-  > Данный атрибут существует только для обеспечения обратной
-  > совместимости и не должен использоваться не-Java реализациями QD.
+The enum container is the `<enums>` element, which has no attributes and contains an arbitrary number of `<enum>`
+elements.
 
+### Record container and record generators
 
-##### Создание записей по образцу.
-Новая запись может быть построена на основе другой, уже описанной, записи
-(называемой дальше «образцом»).
+The record container is the `<records>` element, which has no attributes and contains an arbitrary set of `<record>`
+and `<generator>` elements.
 
-При этом разрешение такой ссылки происходит прямо во время чтения каждого файла и образец
-должен существовать в тот момент, когда на него ссылаются. Если запись-образец
-будет обновлена дальнейшими файлами, это никак не повлияет на уже созданные по этому
-образцу записи. При создании записей по образцу атрибут образца `disabled` не наследуется,
-так что образец может быть выключен (`disabled="true"`), но все записи,
-созданные на его основе, будут разрешены по умолчанию.
+### Visibility rules container
 
-Невозможно создать по образцу обновление записи, так что значение `update` атрибута `mode`
-не совместимо с наличием атрибута `copyFrom`.
+The record container is a `<visibility>` element, which has no attributes and contains an arbitrary number of `<enable>`
+and `<disable>` elements in no particular order. The order of visibility rules is important.
 
-##### Поля, составляющие время (индекс) записи.
-Записи, передаваемые с контрактом history, должны содержать 1 или 2 поля помеченные для
-использования в качестве времени (индекса).
+## Object types in detail
 
-Эти поля задаются с помощью элемента `<index>`, который может быть включён в запись 1 раз
-или не включён вовсе. У этого элемента есть 2 атрибута `field0` и `field1`. Хотя бы
-один из этих атрибутов должен присутствовать. Значениями этих атрибутов служат имена полей,
-присутствующих в записи.
+### Types
 
-Этот элемент может идти до определения всех полей записи, так как его проверка происходит
-после загрузки схемы.
+The `<type>` element describes an alias for one of the built-in types. This allows for assigning formally independent
+types to different fields and then switching between them by redefining types later. All the `<type>` elements are
+placed in the `<types>` container. A type is a named object and may contain documentation. In addition to `name`, the
+type has a second mandatory attribute: `base`. This attribute must contain the name of another type, whether built-in or
+defined in a similar way.
 
-Если один из атрибутов элемента `<index>` ссылается на отсутствующее поле, то загрузка
-схемы завершится с ошибкой.
+After loading and merging all the schema files, it should be found out for each type which built-in type it becomes.
+This is done by resolving all types one by one. If the type refers to a non-existent type or if the chain of definitions
+forms a loop, the schema loading fails.
 
-Если одно из полей индекса отсутствует (не задано), то при конфигурации ядра QD будет
-сформировано поле-заглушка с типом `void`.
+#### Built-in types
 
-#### Поля записи.
-Новая запись должна включать одно или больше полей. Записи с режимом `update` может
-не содержать полей вовсе и быть задана для изменения атрибутов или индекса контракта
-history.
+The schema supports the following built-in types:
 
-Каждое поле задаётся элементом `<field>`. Поле является именованным объектом
-и может содержать документацию.
+* `byte`
+* `char` - `UTF8_CHAR` in Java code.
+* `short`
+* `int`
+* `compact_int`
+* `byte_array`
+* `utf_char_array`
+* `tiny_decimal` - `DECIMAL` in Java code. `decimal` must be redefined as `tiny_decimal` or `wide_decimal` in the
+  schema.
+* `short_string`
+* `time_seconds`
+* `time_millis`
+* `time_nanos`
+* `time`
+* `sequence`
+* `date`
+* `long`
+* `wide_decimal`
+* `string`
+* `custom_object`
+* `serial_object`
 
-Каждое поле имеет тип. Окончательный (встроенный) тип поля определяется
-после чтения и объединения всех файлов схемы, так что более позднее определение
-типа влияет на поля записей, описанные до данного определения типа. Это позволяет
-настраивать некоторые типы добавляя небольшой файл настройки типов после стандартной
-схемы, не затрагивая файлы стандартной схемы. Также это позволяет
-при определении поля ссылаться на ещё не определённый тип.
+Additionally, the schema supports types that will be used in the future when generating relationships between records
+and event objects:
 
-Если после загрузки и объединения всех файлов схемы какие-то поля будут ссылаться
-на неизвестные типы, загрузка схемы прервётся с ошибкой.
+* `time_nano_part`
+* `index`
+* `flags`
 
-Помимо обязательного для именованных объектов атрибута `name` и опционального
-`mode`, элемент `<field>` поддерживает следующие атрибуты:
+In the current implementation, these three additional types are aliases to `compact_int`.
 
-- `type` — обязательный атрибут, задающий тип поля.
+### Enums
 
-  Этот атрибут должен содержать имя встроенного типа или типа определённого
-  с помощью конструкции `<type>`.
+> At the moment, enums are not used in the QD Java implementation, since it does not yet have a code generator for
+> events and the relationships between events and records based on a machine-readable schema.
 
-  Атрибут обязателен только для полей с атрибутом `mode` равным `new`.
-  Переопределение поля в последующих файлах может не содержать этот атрибут,
-  тогда тип поля не меняется, но могут быть изменены другие его атрибуты и
-  свойства.
+The `<enum>` element creates a new enum type. It includes a list of possible values, each with a unique name and an
+optional numeric value. If no numeric value is defined, the elements are numbered in increments of 1, starting from
+the last given value. If no value is given, numbering begins at zero.
 
-- `disabled` — опциональный атрибут логического типа (`false` по умолчанию).
+The `<enum>` elements are placed in the `<enums>` container and serve as named objects that may contain documentation.
+They can include values defined by the `<value>` element. Each of these values is a named object that may contain
+documentation as well.
 
-  Если этот атрибут имеет значение `true` то данное поле записи не будет
-  сконфигурировано в ядре QD.
+In addition to the `name` attribute, which is required for named objects, and the optional `mode` attribute, `<value>`
+can contain the optional `ord` attribute. Its value must be a non-negative integer recorded in decimal notation. This
+attribute specifies the numeric value corresponding to the given enum element. If the attribute is not set, newly added
+values are enumerated sequentially, starting from the previously added value with a specified `ord` attribute, or from
+zero if `ord` is not set for a value.
 
-  Так же на активность поля записи влияют правила видимости (см. ниже),
-  так что переопределять запись и поле только для смены значения данного
-  атрибута необязательно.
+When adding new values to an existing enum, values without `ord` are numbered as if they were initially created in the
+original enum.
 
-- `compositeOnly` — опциональный атрибут логического типа (`false`
-  по умолчанию).
-  
-  Если этот атрибут имеет значение `true` то данное поле будет
-  сконфигурировано в ядре QD только для записи не имеющей регионального
-  суффикса (см. атрибут `regionals` у записи).
+### Records
 
-  Для полей, включённых в запись без атрибута `regionals` это поле
-  допускается, но не оказывает никакого влияния.
+The `<record>` element describes one or more (in the case of regionals) records used at the QD transport layer. They are
+a named object that may contain documentation and are placed in the `<records>` container. All records in
+the `<records>` container form a single namespace.
 
-- ~`eventName`~ — опциональный псевдоним записи для использования совместно
-  со специальными правилами видимости.
+The record contains a field set and an optional time (index) configuration for the "history" contract. In addition to
+the `name` attribute and the optional `mode` attribute, the record supports the following attributes:
 
-  Если этот атрибут не задан, то он совпадает с `eventName` самой записи.
+* `copyFrom`: an optional attribute that defines a template record name. See the "Creation of Records According to the
+  Template" section for more information.
+* `disabled`: an optional boolean-type attribute that is `false` by default. If it is `true`, the given record is not
+  configured in the QD core but can be used as a template.
+* `regionals`: an optional boolean-type attribute, that is `false` by default. When set to `true`, the record serves as
+  a template for itself and 26 records with the suffixes `&A` through `&Z`. The list of regionals is not regulated, but
+  unnecessary records can be disabled by the visibility rules.
+* `eventName`: an optional record alias used with special visibility rules. If this attribute is not specified, it takes
+  the same name as the parent record.
+  > This attribute only exists for backward compatibility and should not be used for non-Java implementations of QD.
 
-  Данный атрибут позволяет полю виртуально принадлежать событию с именем
-  отличным от имени записи.
+##### Creating records based on a template
 
-  > Данный атрибут существует только для обеспечения обратной
-  > совместимости и не должен использоваться не-Java реализациями QD.
+A new record can be built based on a previously described one, which will be referred to as a "template" hereafter.
 
-Каждое поле может помимо перечисленных атрибутов обладать несколькими
-псевдонимами и несколькими тегами.
+In this case, the resolution of such a link occurs during the reading of each file, and the template must already exist
+when it is referenced. Updating a template record with new files does not affect other records created from the
+template.
 
-Так же поля типа `flags` могут иметь описание битовых под-полей
-внутри себя.
+When creating records based on a template, the `disabled` attribute is not inherited. Therefore, while the template
+itself can be disabled (by setting `disabled` to `true`) all records based on it are enabled by default.
 
-#### Псевдонимы полей.
-Поле, помимо основного имени, может иметь несколько псевдонимов. Один
-из псевдонимов считается главным.
+It is impossible to create a record update from a template, so the `update` value of the `mode` attribute is
+incompatible with the presence of the `copyFrom` attribute.
 
-> На данный момент используется только главный псевдоним, остальные
-> загружаются из файлов схемы, но не используются.
+##### Fields making up time (index) of the record
 
-Псевдонимы поля перечисляются в элементах `<alias>`, вложенных
-в элемент `<field>`. Каждый элемент `<alias>` может иметь три атрибута:
+Records passed on with the history contract must contain 1 or 2 designated fields for use as time (index).
 
-- `name` — обязательный атрибут, определяющий псевдоним.
+These fields are specified using the `<index>` element, which may be included in the records once or not at all. The
+element has two attributes, `field0` and `field1`. At least one of these attributes must be present. The values of these
+attributes are the names of the fields in the record. This element can be placed before all record fields are defined
+since its validation occurs after the schema loading.
 
-- `main` — опциональный атрибут логического типа.
+If one of the `<index>` element attributes refers to a missing field the loading fails.
 
-  Определяет, является ли данный псевдоним главным.
+If one of the index fields is not specified, the QD core configuration generates a stub field with the `void` type.
 
-  У поля может быть только одни псевдоним, помеченный как главный.
-  В случае, если несколько псевдонимов имеют этот атрибут установленным
-  в `true`, загрузка схемы завершается с ошибкой.
+#### Record fields
 
-- `mode` — опциональный атрибут, принимающий значения `add` (по умолчанию)
-  или `remove`.
+A new record must include one or more fields. The `update` mode records may contain no fields and can be configured to
+change the attributes or index of the history contract.
 
-  Этот атрибут позволяет удалить псевдоним у уже определённого поля при
-  обновлении записи в последующих файлах.
+Each field is specified by the `<field>` element. The field is a named object and may contain documentation.
 
-  Добавление уже существующего псевдонима или удаление несуществующего приводит
-  к ошибке загрузки схемы.
+Each field has a type. The final (built-in) type of a field is determined after reading and merging all schema files.
+This ensures that a later type definition affects record fields declared before the given type definition. This enables
+customizing certain types by adding a small type customization file after the default schema, without affecting the
+default schema files. Additionally, it allows referring to a type that has yet to be defined when defining a field.
 
-Если ни один из псевдонимов не помечен как главный, главным выбирается
-псевдоним определённый первым.
+If some fields refer to unknown types after loading and merging all schema files, the schema loading aborts, resulting
+in an error.
 
-Если у поля есть главный псевдоним (т.е. определён хотя бы один псевдоним),
-то именно он используется как имя поля записи в ядре QD. В таком
-случае имя поля используется в качестве имени свойства (property name) QD-записи.
+In addition to the `name` attribute required for named objects and the optional `mode` attribute, the `<field>` element
+supports the following attributes:
 
-#### Теги полей.
-Поле может быть помечено одним или несколькими тегами.
+* `type`: a required attribute that specifies the type of the field. This attribute must contain the name of either a
+  built-in type or a type defined with the `<type>` construct. It is only required for fields with the `mode` set to
+  `new`. Redefinitions in subsequent files may not have this attribute, in which case the field type remains unchanged,
+  but other properties may be modified.
+* `disabled`: an optional boolean-type attribute, which is `false` by default. If set to `true`, the record field is not
+  configured in the QD core. Visibility rules also affect the activity of the record field, so it is not necessary to
+  redefine the record only to modify this attribute.
+* `compositeOnly`: an optional boolean-type attribute, which is `false` by default. If set to `true`, this field is
+  configured in the QD core for records without a regional suffix (see the `regionals` attribute). This field does not
+  affect fields recorded without the `regionals` attribute.
+* `eventName`: an optional record alias for use with special visibility rules. If it is not specified, it takes the same
+  value as the parent `eventName`. This attribute allows the field to virtually belong to an event having a different
+  name than the record.
+  > This attribute only exists for backward compatibility and should not be used for non-Java implementations of QD.
 
-Теги используются в правилах видимости полей и позволяют упростить эти
-правила, группируя родственные поля и разрешая или запрещая их
-одним правилом.
+Each field can have multiple aliases and tags, in addition to these attributes. Moreover, fields of the `flags` type can
+include descriptions of bit subfields within them.
 
-Теги поля перечисляются в элементах `<tag>`, вложенных
-в элемент `<field>`. Каждый элемент `<tag>` имеет два атрибута:
+#### Field aliases
 
-- `name` — обязательный атрибут, определяющий тег.
+Besides the main name, a field may have several aliases. One of the aliases is considered the main one.
+> Currently, only the main alias is in use. Others are loaded from schema files but remain unused.
 
-- `mode` — опциональный атрибут, принимающий значения `add` (по умолчанию)
-  или `remove`.
+Field aliases are listed in the `<alias>` elements nested within the `<field>` element. Each `<alias>` element can have
+three attributes:
 
-  Этот атрибут позволяет удалить тег у уже определённого поля при
-  обновлении записи в последующих файлах.
+* `name`: a required attribute that defines the alias.
+* `main`: an optional boolean-type attribute. It determines if the given alias is considered the primary one. A field
+  can only have one alias marked as the main one, and if multiple aliases are set to `true`, the loading fails.
+* `mode`: an optional attribute that takes the `add` (by default) or `remove` values. This attribute allows removing an
+  alias from an already defined field when updating a record in subsequent files.
 
-  Добавление уже существующего тега или удаление не существующего приводит
-  к ошибке загрузки схемы.
+Attempting to add an alias that already exists or delete an alias that does not exist results in an error during the
+schema loading process. If none of the aliases is marked as "main", the first-defined alias is selected as the primary
+one.
 
-#### Битовые поля флагов.
-Поля типа `flags` могут иметь описание битовых под-полей внутри себя.
+If the field has the main alias (i.e., at least one alias is defined), it is used as the name of the record field in
+the QD core. In such a case, the field name is used as the property name of the QD record.
 
-> На данный момент битовые поля внутри флагов никак не используются
-> в Java-реализации QD, так как Java-реализация QD ещё не имеет кодогенератора
-> событий и связей между событиями и записями, основанного на машино-читаемой
-> схеме.
+#### Field tags
 
-Битовые поля определяются помещением элемента-контейнера `<bitfields>` в элемент
-`<field>`. Если поле имеет тип отличный от `flags`, то появление элемента
-`<bitfields>` является ошибкой и приводит к ошибке загрузки всей схемы.
+A field can be labeled with one or more tags. Tags are used in the field visibility rules to simplify the rules by
+grouping together related fields. This allows for enabling or disabling these fields through a single rule.
 
-Тип поля `flags` должен быть задан непосредственно, а не через промежуточный
-псевдоним типа `<type>`.
+Field tags are listed in the `<tag>` elements nested within the `<field>` element. Each `<tag>` element has two
+attributes:
 
-Контейнер `<bitfields>` содержит одно или больше определение битового поля.
+* `name`: a required attribute that defines the tag.
+* `mode`: an optional attribute that takes the `add` (by default) or `remove` values. This attribute makes it possible
+  to remove a tag from an already-defined field when updating a record in subsequent files.
+  Attempting to add an existing tag or delete a non-existing one results in an error during the schema loading process.
 
-Каждое битовое поле определяется элементом `<field>` (отличным от родительского
-элемента `<field>`).
+#### Flag bit fields
 
-Битовое поле является именованным объектом и может содержать документацию.
+The `flags`-type fields can include the descriptions of bit subfields within them.
+> At the moment, bit fields within flags are not used in the Java implementation of QD, since it does not yet have a
+> code generator for events and the relationships between events and records based on a machine-readable schema.
 
-Помимо обязательного для именованных объектов атрибута `name` и опционального
-`mode`, битовое поле поддерживает следующие атрибуты:
+Bit fields are defined by placing the `<bitfields>` container element within the `<field>` element. If the field type is
+different from `flags`, the presence of the `<bitfields>` element leads to an error causing the failure to load the
+entire schema.
 
-- `offset` — обязательный атрибут числового типа в диапазоне от 0 до 63 (включительно).
+* The `flags`-type field must be explicitly specified, which cannot be done via an intermediate alias of the
+  `<type>`-type.
+* The `<bitfields>` container includes one or more bit field definitions.
+* Each bit field is defined by the `<field>` element, distinct from its parent `<field>` element.
+* The bit field is a named object and may contain documentation.
+  In addition to the `name` attribute required for named objects and the optional `mode` attribute, the bit field
+  supports the following attributes:
+* `offset`: a required attribute of a numeric type in the range from 0 to 63 (inclusive). This attribute specifies the
+  offset of a bit field within a 64-bit field of the `flags` type.
+* `size`: a required attribute of a numeric type in the range from 1 to 64 (inclusive). This attribute specifies the
+  size of a bit field within a 64-bit field of the `flags` type.
+* `disabled`: an optional boolean-type attribute (`false` by default).
+  All bit fields of the same `flags`-type field must not overlap. If this rule is violated, the schema loading fails.
 
-  Этот атрибут определяет смещение битового поля внутри 64-х битного поля типа `flags.
+### Record family generators
 
-- `size` — обязательный атрибут числового типа в диапазоне от 1 до 64 (включительно).
+Groups of identical records that differ only in names can be generated using record generators.
 
-  Этот атрибут определяет размер битового поля внутри 64-х битного поля типа `flags.
+The `<generator>` element describes a single generator that creates multiple records of the same structure used at the
+QD transport layer. These elements are placed in the `<records>` container. They are named objects and may contain
+documentation.
 
-- `disabled` — опциональный атрибут логического типа (`false` по умолчанию).
+Generators form a namespace separate from records and common for all generators. Each generator consists of an iterator
+that defines a list of strings varying in the names of the generated records, along with one or more records acting as
+templates for generation.
 
-Все битовые поля одного поля типа `flags` не должны пересекаться. В случае нарушения
-этого правила загрузка схемы завершается с ошибкой.
+The generator for each template record configures as many records in the QD core as there are strings in its iterator,
+modifying only the record name and preserving the structure. If a template has regionals, regional records are also
+generated.
 
-### Генераторы семейства записей.
-Группы одинаковых записей, отличающихся только именами, могут быть сгенерированы
-с помощью генераторов записей.
+All template records within one "parent" generator form a separate namespace that does not intersect with the namespace
+of simple records or with the namespaces of templates of other generators.
 
-Элемент `<generator>` описывает один генератор, создающий несколько
-одинаковых по структуре записей, используемых на транспортном уровне QD.
+Currently, there are only two types of transformation applied to template names during generation: adding a string from
+the iterator to the beginning or end of the name.
 
-Элементы `<generator>` помещаются в контейнер `<records>`.
+Additionally, a delimiter string can be set for the generator, which is added between the template name and the string
+from the iterator if the iterator's string is not empty.
 
-Генератор является именованным объектом и может содержать документацию.
+In addition to the `name` attribute required for named objects and the optional `mode` attribute, the `<generator>`
+element supports the following attributes:
 
-Генераторы образуют отдельное от записей и единое для всех генераторов
-пространство имён.
+* `type`: an optional attribute for the record name transformation mode. It can take the `prefix` and `suffix` values.
+  The default value is `suffix`.
+* `delimiter`: an optional attribute that specifies a delimiter string for the template name and the iterator's string.
+  The default value is an empty string.
 
-Каждый генератор состоит из итератора, определяющего список строк
-которыми будут отличаться имена сгенерированных записей и одной или
-нескольких записей, служащих шаблонами для генерации.
+#### Iterator
 
-Генератор для каждой записи-шаблона конфигурирует в ядре QD столько записей,
-сколько строк в его итераторе, трансформируя только имя записи и полностью
-сохраняя структуру. Если образец имеет регионалы, то генерируются и
-региональные варианты записи.
+The iterator is defined by the `<iterator>` element, which must precede all template records.
 
-Все записи-шаблоны в рамках одного «родительского» генератора
-образуют отдельное пространство имён, не пересекающееся ни с пространством
-имён простых записей ни с пространствами имён образцов других генераторов.
+The iterator has one optional attribute:
 
-На данный момент существует всего два вида трансформации имён шаблонов
-при генерации: добавление строки из итератора в начало (prefix) или конец
-(suffix) имени.
+* `mode`: an optional attribute that specifies how this iterator should be handled when merging files. The possible
+  values are
+    * `new`: the default value, which is similar to the `new` value of the `mode` attribute for named objects. It
+      specifies whether the described object is new (`new`) or should update an existing object of the same type and
+      name
+      during file merging (`update`).
+    * `append`: specifies that this iterator contents should be added to existing contents of the iterator when merging
+      files.
+    * `replace`: specifies that this iterator's contents should replace the existing contents of the iterator when
+      merging
+      files.
 
-Так же для генератора может быть задана строка-разделитель, которая будет
-добавляться между именем шаблона и строкой из итератора только в том случае, если
-строка из итератора не пуста.
+An iterator with the `append` and `replace` values for the `mode` attribute can only be placed within a generator with
+the `mode` attribute set to `update`. Otherwise, loading fails.
 
-Помимо обязательного для именованных объектов атрибута `name` и опционального
-`mode`, элемент `<generator>` поддерживает следующие атрибуты:
+The strings that form a set are placed within the iterator. Each string is provided by the content of a `<value>`
+element with no attributes. The string may be empty.
 
-- `type` — опциональный атрибут режима трансформации имён записей.
-  Может принимать значения `prefix` и `suffix`. Значение по умолчанию —
-  `suffix`.
+An iterator can contain an arbitrary number of the `<value>` elements.
 
-- `delimiter` — опциональный атрибут, задающий строку-разделитель
-  имени образца и строки-итератора. Значение по умолчанию — пустая
-  строка.
+#### Template records
 
-#### Итератор.
-Итератор определяется элементом `<iterator>`, который должен идти
-до всех записей-шаблонов.
+Template records are described by the `<record>` element, which is equivalent to describing an individual record. The
+only difference is that these records are placed in a separate namespace and may overlap in name (before being
+transformed with strings from the iterator) with existing record names.
 
-Итератор имеет один необязательный атрибут:
+Another peculiarity concerns handling the `copyFrom` attribute: the search for the template record occurs within the
+namespace of simple records, not within generator templates.
 
-- `mode` — опциональный атрибут, определяющий как должен обрабатываться
-  данный итератор при объединении файлов. Возможные значения:
-  - `new` — значение по умолчанию. Аналогично значению `new` атрибута
-    `mode` у именованных объектов.
-  - `append` — содержимое данного итератора должно быть добавлено к 
-    уже существующему содержимому итератора при слиянии файлов.
-  - `replace` — содержимое данного итератора должно заместить 
-    уже существующее содержимое итератора при слиянии файлов.
+### Visibility rules
 
-Итератор со значениями `append` и `replace` у атрибута `mode`
-может быть размещён только в генераторе, у которого атрибут `mode`
-имеет значение `update`, иначе загрузка схемы завершится с ошибкой.
+The `<enable>` and `<disable>` elements define instructions for enabling and disabling the configuration of individual
+records and their fields in the QD core. They are designed to fine-tune a data schema based on the standard schema by
+disabling unused fields, or vice versa, enabling optional fields that are typically not included.
 
-Внутри итератора помещаются строки, образующие множество (set).
+These instructions are processed when configuring the QD core in the order they are loaded from schema files. Therefore,
+the order in which they are placed within the schema files is significant.
 
-Каждая строка задаётся содержимым элемента `<value>` не имеющего
-атрибутов. Строка может быть пустой. 
+For each record and field, all instructions from the first to the last are checked, and the last instruction that takes
+effect determines the final record or field visibility. If no rule matches the given record or field, the `disabled`
+attribute value of the object is used.
 
-Итератор может содержать произвольное число элементов `<value>`.
+An enable instruction is written as the `<enable>` element, and a disable instruction is represented by the `<disable>`
+element. The `<enable>` and `<disable>` elements are placed within the `<visibility>` container.
 
-#### Записи-шаблоны.
-Записи-шаблоны описываются элементом `<record>`, который эквивалентен
-описанию отдельной записи.
+The two elements have an identical structure and support the following attributes:
 
-Единственное отличие состоит в том, что эти записи помещаются в отдельное
-пространство имён и могут пересекаться именем (до его трансформации с
-помощью строк из итератора) с уже существующими именами записей.
+* `record`: a required attribute with the Java regex format. This attribute determines which records or record fields
+  this rule is applied to. The regex is compared against the full name of the record, implying the use of the prefix `^`
+  and suffix `$`.
+* `field`: an optional attribute with the Java regex format. If this attribute is set, the rule must be applied to
+  individual record fields. If it is not specified, the rule applies to records as a whole.
+* ~~`useEventName`~~: an optional boolean-type attribute (`false` by default). This attribute specifies whether the
+  expression in the `record` attribute is compared to the record name or the `eventName` attribute.
+  > This attribute only exists for backward compatibility and should not be used for non-Java implementations of QD.
 
-Также есть особенность в обработке атрибута `copyFrom`: поиск записи-образца
-производится в пространстве имён простых записей, не шаблонов генератора.
+Additionally, the visibility rule can search for matches with record fields not only by name but also by the presence or
+absence of specific tags, enabling the creation of more flexible rules that do not list numerous field names.
 
-### Правила видимости.
-Элементы `<enable>` и `<disable>` определяют инструкции разрешения и 
-запрещения конфигурирования отдельных записей и их отдельных
-полей в ядре QD. Они позволяют тонко настраивать схему данных,
-основанную на стандартной схеме, путём отключения ненужных в данном случае
-полей или наоборот разрешении опциональных полей, которые обычно не включены.
+These filters are specified by two elements: `<include-tags>` and `<exclude-tags>`. Each element can contain any number
+of `<tag>` elements that define the corresponding matching conditions.
 
-Эти инструкции обрабатываются при конфигурировании ядра QD
-в порядке их загрузки из файлов схем. Поэтому порядок их размещения
-в файлах схем очень важен.
+#### Operation algorithm of visibility rules
 
-Для каждой записи и каждого поля проверяются все инструкции от первой
-до последней и «побеждает» последняя сработавшая инструкция.
+##### Visibility rule for one record
 
-Если же ни одна инструкция не подходит данной записи или данному полю,
-то используется значение атрибута `disabled` этого объекта.
+1. If the rule has the `field` attribute or one of the `include-tags` or `exclude-tags` filters, the rule does not match
+   the given record and **does not affect** its visibility. Further conditions are not checked.
+2.
+    1. If the `useEventName` attribute of the rule is `false`, the **actual record name** is taken as the record name
+       with all the transformations specified by the generator and/or the record regional option.
+    2. If the `useEventName` rule is `true`, the **actual name of the record** is taken as the value of the `eventName`
+       attribute of the record.
+3. If the **actual record name** does not match the regex specified by the `record` attribute, the rule does not match
+   the given record and **does not affect** its visibility.
+4. In all other cases, the rule **affects** the record visibility.
 
-Инструкция разрешения записывается ка элемент `<enable>` а инструкция
-запрещения как элемент `<disable>`.
+##### Visibility rule for one record field
 
-Элементы `<enable>` и `<disable>` помещаются в контейнер `<visibility>`.
+1. If the rule does not have the `field` attribute and both the `include-tags` and `exclude-tags` filters are missing,
+   the rule does not match the given field and **does not affect** its visibility. Further conditions are not checked.
+2.
+    1. If the `useEventName` attribute of the rule is `false`, the **actual parent record name** is taken as the name of
+       the record including the field with all the transformations specified by the generator and/or the record regional
+       option.
+    2. If the `useEventName` rule is `true`, the **actual name of the parent record** is taken as the value of the
+       `eventName` attribute of the field.
+3. If the **actual parent record name** does not match the regex specified by the `record` attribute, the rule does not
+   match the given field and **does not affect** its visibility. Further conditions are not checked.
+4. If the field name does not match the regex specified by the `field` attribute, the rule does not match the given
+   field and **does not affect** its visibility. Further conditions are not checked.
+5. The field must have **all** tags included in the `include-tags` set. If not, the rule does not match the given field
+   and **does not affect** its visibility. Further conditions are not checked.
+6. The field must not have **any** tags from the `exclude-tags` set. If it does, the rule doesn't match the given field
+   and **does not affect** its visibility. Further conditions are not checked.
+7. In all other cases, the rule **affects** the field visibility.
 
-Эти два элемента имеют идентичную структуру и поддерживают следующие атрибуты:
-
-- `record` — обязательный атрибут, имеющий формат регулярного
-  выражения Java.
-
-  Этот атрибут определяет к каким записям или полям каких
-  записей будет применено данное правило.
-
-  Регулярное выражение сравнивается с полным именем записи,
-  так что `^` в начале и `$` в конце подразумеваются.
-
-- `field` — опциональный атрибут, имеющий формат регулярного выражения.
-
-  Если этот атрибут задан, то правило применяется к отдельным полям
-  записей. Если атрибут не задан, то правило применяется к записям в целом.
-  
-- ~`useEventName`~ — опциональный атрибут логического типа. Значение по умолчанию
-  `false`.
-
-  Определяет, будет выражение, описанное в атрибуте `record` сравнивается
-  с именем записи или с её атрибутом `eventName`.
-
-  > Данный атрибут существует только для обеспечения обратной
-  > совместимости и не должен использоваться не-Java реализациями QD.
-
-Также правило видимости может искать совпадения с полями записей не только
-по имени, но и по наличию или отсутствию определённых тегов, что позволяет
-писать более гибкие правила, не перечисляющие множество имён полей.
-
-Эти фильтры задаются двумя элементами: `<include-tags>` и `<exclude-tags>`.
-Каждый из этих элементов может содержать любое количество элементов
-`<tag>` которые и задают соответствующие условия совпадения.
-
-#### Алгоритм работы правила видимости.
-##### Правило видимости одной записи.
-1. Если у правила есть атрибут `field` или один из фильтров `include-tags` или
-   `exclude-tags`, то правило не подходит к данной записи и **не влияет** на её
-   видимость. Дальнейшие условия не проверяются.
-1. 
-   1. Если у правила атрибут `useEventName` имеет значение `false`, то за 
-      *фактическое имя записи* принимается имя записи со всеми
-      преобразованиями, заданными генератором и/или региональностью записи.
-   1. Если у правила `useEventName` имеет значение `true`, то за
-      *фактическое имя записи* принимается значение атрибута `eventName`
-      записи.
-1. Если *фактическое имя записи* не соответствует регулярному выражению,
-   заданному атрибутом `record`, то правило не подходит к данной записи
-   и **не влияет** на её видимость.
-1. Во всех остальных случаях правило **влияет** на видимость данной записи.
-
-##### Правило видимости одного поля записи.
-1. Если у правила нет атрибута `field` и отсутствуют оба фильтра `include-tags` и
-   `exclude-tags`, то правило не подходит к данному полю и **не влияет** на его
-   видимость. Дальнейшие условия не проверяются.
-1.
-    1. Если у правила атрибут `useEventName` имеет значение `false`, то за
-       *фактическое имя родительской записи* принимается имя записи, содержащей
-       данное поле, со всеми преобразованиями, заданными генератором
-       и/или региональностью записи.
-    1. Если у правила `useEventName` имеет значение `true`, то за
-       *фактическое имя родительской записи* принимается значение атрибута
-       `eventName` поля.
-1. Если *фактическое имя родительской записи* не соответствует регулярному
-   выражению, заданному атрибутом `record`, то правило не подходит к данному
-   полю и **не влияет** на его видимость. Дальнейшие условия не проверяются.
-1. Если имя поля не соответствует регулярному выражению, заданному атрибутом
-   `field`, то правило не подходит к данному полю и **не влияет** на его
-   видимость. Дальнейшие условия не проверяются.
-1. Поле должно иметь *все* теги, входящие во множество
-   `include-tags`. Если это не так, то правило не подходит к данному полю
-   и **не влияет** на его видимость. Дальнейшие условия не проверяются. 
-1. Поле должно не иметь *ни одного* тега из входящих во множество
-   `exclude-tags`. Если это не так, то правило не подходит к данному полю
-   и **не влияет** на его видимость. Дальнейшие условия не проверяются.
-1. Во всех остальных случаях правило **влияет** на видимость данного поля.
-
-Обратите внимание, что если множество `include-tags` или `exclude-tags` 
-пустые, то соответствующие условия выполняются автоматически для любого
-набора тегов, которыми помечено поле.
+Note that if the `include-tags` or `exclude-tags` set is empty, the corresponding conditions are automatically satisfied
+for any set of tags that mark the field.
+                                                      

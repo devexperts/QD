@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -49,10 +49,12 @@ public class TimingTest {
     private enum TestInstance {
         GMT(TimeUtil.getTimeZoneGmt(), Timing.GMT),
         CST(TimeUtil.getTimeZone("America/Chicago"), Timing.CST),
-        EST(TimeUtil.getTimeZone("America/New_York"), Timing.EST);
-
-        // Note: Moscow timezone will not pass the test, since it is buggy on days 8122-8123 transition
-        //MSK(TimeZone.getTimeZone("Europe/Moscow"), new Timing(TimeZone.getTimeZone("Europe/Moscow")));
+        EST(TimeUtil.getTimeZone("America/New_York"), Timing.EST),
+        CET(TimeUtil.getTimeZone("Europe/Brussels"), new Timing(TimeUtil.getTimeZone("Europe/Brussels"))),
+        MSK(TimeUtil.getTimeZone("Europe/Moscow"), new Timing(TimeUtil.getTimeZone("Europe/Moscow"))),
+        CUSTOM1(TimeUtil.getTimeZone("GMT+08:00"), new Timing(TimeUtil.getTimeZone("GMT+08:00"))),
+        CUSTOM2(TimeUtil.getTimeZone("GMT-08:00"), new Timing(TimeUtil.getTimeZone("GMT-08:00"))),
+        ;
 
         final TimeZone timezone;
         final Timing timing;
@@ -232,7 +234,7 @@ public class TimingTest {
 
     @Test
     public void testZoneId() {
-        for (TestInstance ti: TestInstance.values()) {
+        for (TestInstance ti : TestInstance.values()) {
             Timing timing = ti.timing;
             TimeZone timezone = ti.timezone;
             assertEquals(timezone.toZoneId(), timing.getZoneId());

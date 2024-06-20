@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.util;
 
+import java.time.Clock;
 import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.Comparator;
@@ -19,28 +20,31 @@ import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * The <code>Timing</code> class provides utility methods for fast operations
+ * The {@code Timing} class provides utility methods for fast operations
  * with time and dates. It accepts and returns time values in milliseconds
  * since midnight of January 1, 1970 UTC - the same concept as the one used
  * by {@link System#currentTimeMillis()} method and {@link Date java.util.Date} class.
- * <p/>
- * Beside conventional time, the <code>Timing</code> class also introduces
- * concept of 'day_id' - the day identifier, which is equal to number of days
+ *
+ * <p>Beside conventional time, the {@code Timing} class also uses
+ * concept of 'day_id' from {@link DayUtil} - the day identifier, which is equal to number of days
  * passed since January 1, 1970 (that day has identifier of 0 and previous
  * days have negative identifiers). Note that any given day begins and ends
  * at different time depending on used time zone, however, its 'day_id' remains
  * the same since it is linked to its 'date' with disregard of time zone.
- * <p/>
- * Note that whenever the <code>Timing</code> class operates with time period
+ *
+ * <p>Note that whenever the {@code Timing} class operates with time period
  * boundaries (such as day end or year start), it uses <i>inclusive</i> boundaries
  * (i.e. millisecond denoted by that boundary is part of corresponding time
  * period).
+ *
+ * @see DayUtil
  */
 public class Timing {
     // ========== private static stuff ==========
 
     private static final long DAY_LENGTH = 24 * 3600 * 1000;
-    private static final int MAX_DAYS_SIZE = SystemProperties.getIntProperty(Timing.class, "cacheSize", 25000, 100, 100000);
+    private static final int MAX_DAYS_SIZE =
+        SystemProperties.getIntProperty(Timing.class, "cacheSize", 25000, 100, 100000);
 
     private static final Comparator<Day> DAY_USAGE_COMPARATOR = Comparator.comparingLong(day -> day.usage_counter);
     private static final IndexerFunction.IntKey<Day> DAY_INDEXER = day -> day.day_id;
@@ -55,7 +59,7 @@ public class Timing {
     public static final Timing CST = new Timing(TimeUtil.getTimeZone("America/Chicago"));
 
     /**
-     * The <code>Day</code> record holds all required data for a given day.
+     * The {@code Day} record holds all required data for a given day.
      */
     public static class Day {
         /**
@@ -119,8 +123,8 @@ public class Timing {
         private long usage_counter; // Copy of usage counter when this day was accessed last time.
 
         protected Day(int day_id, long day_start, long day_end, long week_start, long week_end,
-            long month_start, long month_end, long year_start, long year_end,
-            int year_month_day_number, BusinessSchedule.OperatingMode mode)
+            long month_start, long month_end, long year_start, long year_end, int year_month_day_number,
+            BusinessSchedule.OperatingMode mode)
         {
             this.day_id = day_id;
             this.day_start = day_start;
@@ -192,8 +196,9 @@ public class Timing {
         }
 
         /**
-         * Returns the "universal" milliseconds for this day. This magic long value, passed to the {@link Timing#getByTime(long)}
-         * method, will produce the same day_id, regardless of the {@link Timing}'s time zone.
+         * Returns the "universal" milliseconds for this day.
+         * This magic long value, passed to the {@link Timing#getByTime(long)} method, will produce the same day_id,
+         * regardless of the {@link Timing}'s time zone.
          */
         public long getGMTNoon() {
             return Timing.getGMTNoon(day_id);
@@ -205,68 +210,94 @@ public class Timing {
     }
 
     /**
-     * Creates <code>Timing</code> instance for specified calendar and business schedule.
+     * Creates {@code Timing} instance for the specified calendar and business schedule.
      */
-    public Timing(Calendar calendar, BusinessSchedule business_schedule) {
+    public Timing(Calendar calendar, BusinessSchedule businessSchedule) {
+        // Custom constructor and order of initialization to preserve the given Calendar
         this.calendar = (Calendar) calendar.clone();
-        this.time_zone = (TimeZone) calendar.getTimeZone().clone();
-        this.raw_offset = time_zone.getRawOffset();
-        this.business_schedule = business_schedule;
+        this.timeZone = this.calendar.getTimeZone();
+        this.clock = Clock.system(timeZone.toZoneId());
+        this.rawOffset = timeZone.getRawOffset();
+        this.businessSchedule = businessSchedule;
     }
 
     /**
-     * Creates <code>Timing</code> instance for specified timezone with default calendar and US business schedule.
+     * Creates {@code Timing} instance for the specified zoneId using US business schedule.
      * The US business schedule is used because of compatibility issues and to simplify migration.
      */
-    public Timing(TimeZone time_zone) {
-        this(Calendar.getInstance(time_zone), BusinessSchedule.US);
+    public Timing(ZoneId zoneId) {
+        this(Clock.system(zoneId), TimeZone.getTimeZone(zoneId), BusinessSchedule.US);
     }
 
     /**
-     * Returns copy of calendar used by this <code>Timing</code>.
+     * Creates {@code Timing} instance for the specified timezone using US business schedule.
+     * The US business schedule is used because of compatibility issues and to simplify migration.
      */
+    public Timing(TimeZone timeZone) {
+        this(Clock.system(timeZone.toZoneId()), timeZone, BusinessSchedule.US);
+    }
+
+    /**
+     * Creates {@code Timing} instance for the specified clock using US business schedule.
+     * The US business schedule is used because of compatibility issues and to simplify migration.
+     */
+    public Timing(Clock clock) {
+        this(clock, TimeZone.getTimeZone(clock.getZone()), BusinessSchedule.US);
+    }
+
+    /**
+     * Creates {@code Timing} instance for specified clock and business schedule.
+     */
+    private Timing(Clock clock, TimeZone timeZone, BusinessSchedule businessSchedule) {
+        this.clock = clock;
+        this.timeZone = timeZone;
+        this.calendar = Calendar.getInstance(timeZone);
+        this.rawOffset = timeZone.getRawOffset();
+        this.businessSchedule = businessSchedule;
+    }
+
+    /**
+     * Returns copy of calendar used by this {@code Timing}.
+     * @deprecated No replacement.
+     */
+    @Deprecated
     public Calendar getCalendar() {
         return (Calendar) calendar.clone();
     }
 
     /**
-     * Returns copy of timezone used by this <code>Timing</code>.
+     * Returns copy of timezone used by this {@code Timing}.
      */
     public TimeZone getTimeZone() {
-        return (TimeZone) time_zone.clone();
+        return (TimeZone) timeZone.clone();
     }
 
     /**
      * Returns {@link ZoneId} corresponding to the timezone of this {@code Timing}.
      */
     public ZoneId getZoneId() {
-        ZoneId zId = zoneId;
-        if (zId == null) {
-            zId = time_zone.toZoneId();
-            zoneId = zId;
-        }
-        return zId;
+        return clock.getZone();
     }
 
     /**
-     * Returns <code>Day</code> record that corresponds to current moment of time.
+     * Returns {@code Day} record that corresponds to current moment of time.
      */
     public Day today() {
-        return getByTime(System.currentTimeMillis());
+        return getByTime(clock.millis());
     }
 
     /**
-     * Returns corresponding <code>Day</code> record for specified
+     * Returns corresponding {@code Day} record for specified
      * time in UTC millis (number of milliseconds elapsed since midnight,
      * January 1, 1970 UTC). Creates new record if no such record exist yet.
      * Counts usage of Day records, maintains cache of most recently used
      * records and gathers usage statistics.
      */
     public Day getByTime(long millis) {
-        usage_counter.incrementAndGet();
+        usageCounter.incrementAndGet();
 
         // Calculate approximate day_id.
-        int day_id = dayId(millis + raw_offset);
+        int day_id = dayId(millis + rawOffset);
 
         // Locate proper Day record.
         Day d = getCachedDay(day_id);
@@ -287,19 +318,19 @@ public class Timing {
     }
 
     /**
-     * Returns corresponding <code>Day</code> record for specified
+     * Returns corresponding {@code Day} record for specified
      * day_id (number of this day since January 1, 1970 in used TimeZone).
      * Creates new record if no such record exist yet.
      * Counts usage of Day records, maintains cache of most recently used
      * records and gathers usage statistics.
      */
     public Day getById(int day_id) {
-        usage_counter.incrementAndGet();
+        usageCounter.incrementAndGet();
 
         Day d = getCachedDay(day_id);
         if (d == null) {
             // Locate proper Day record.
-            d = createCachedDay(day_id * DAY_LENGTH - raw_offset + DAY_LENGTH / 2);
+            d = createCachedDay(day_id * DAY_LENGTH - rawOffset + DAY_LENGTH / 2);
             while (d.day_id > day_id)
                 d = createCachedDay(d.day_start - DAY_LENGTH / 2);
             while (d.day_id < day_id)
@@ -311,7 +342,7 @@ public class Timing {
     }
 
     /**
-     * Returns corresponding <code>Day</code> record for specified year, month and day numbers.
+     * Returns corresponding {@code Day} record for specified year, month and day numbers.
      * Year, month, and day numbers shall be decimally packed in the following way:
      * <pre>year_month_day_number = year * 10000 + month * 100 + day</pre>
      * For example, September 28, 1977 has value 19770928.
@@ -324,12 +355,12 @@ public class Timing {
      * records and gathers usage statistics.
      */
     public Day getByYmd(int year_month_day_number) {
-        usage_counter.incrementAndGet();
+        usageCounter.incrementAndGet();
 
         // Try direct approach - works for fully correct cached days.
-        Day d = ymds_cache.getByKey(year_month_day_number);
+        Day d = ymdsCache.getByKey(year_month_day_number);
         if (d != null) {
-            d.usage_counter = usage_counter.get();
+            d.usage_counter = usageCounter.get();
             return d;
         }
 
@@ -352,9 +383,9 @@ public class Timing {
             month = day = 1;
 
         // Try corrected date - works for partially correct cached days.
-        d = ymds_cache.getByKey(year * 10000 + month * 100 + day);
+        d = ymdsCache.getByKey(year * 10000 + month * 100 + day);
         if (d != null) {
-            d.usage_counter = usage_counter.get();
+            d.usage_counter = usageCounter.get();
             return d;
         }
 
@@ -362,7 +393,7 @@ public class Timing {
         int day_id = DayUtil.getDayIdByYearMonthDay(year, month, day);
         d = getCachedDay(day_id);
         if (d == null)
-            d = createCachedDay(day_id * DAY_LENGTH - raw_offset + DAY_LENGTH / 2);
+            d = createCachedDay(day_id * DAY_LENGTH - rawOffset + DAY_LENGTH / 2);
         while (d.year_month_day_number > year_month_day_number)
             d = createCachedDay(d.day_start - DAY_LENGTH / 2);
         while (d.year_month_day_number < year_month_day_number)
@@ -372,8 +403,9 @@ public class Timing {
     }
 
     /**
-     * Returns the "universal" milliseconds for this day. This magic long value, passed to the {@link Timing#getByTime(long)}
-     * method, will produce the same day_id for all popular time zones (except exotic ones).
+     * Returns the "universal" milliseconds for this day.
+     * This magic long value, passed to the {@link Timing#getByTime(long)} method, will produce the same day_id
+     * for all popular time zones (except exotic ones).
      */
     public static long getGMTNoon(int day_id) {
         return day_id * DAY_LENGTH + DAY_LENGTH / 2;
@@ -397,59 +429,59 @@ public class Timing {
      * Returns gathered statistics in human-readable form.
      */
     public String getStatistics() {
-        int days = days_cache.size();
-        long uses = usage_counter.get();
-        long hits = uses - creation_counter.get();
+        int days = daysCache.size();
+        long uses = usageCounter.get();
+        long hits = uses - creationCounter.get();
         double eff = hits <= 0 || uses <= 0 ? 0 : (10000 * hits + uses / 2) / uses / 100.0;
-        return "Timing." + time_zone.getDisplayName(false, TimeZone.SHORT) +
+        return "Timing." + timeZone.getDisplayName(false, TimeZone.SHORT) +
             ": days = " + days + ", efficiency = " + hits + "/" + uses + " (" + eff + "%)";
     }
 
     // ========== Internal Timing Implementation ==========
 
+    private final Clock clock; // Calendar used by Timing.
+    private final TimeZone timeZone; // TimeZone where Timing works.
     private final Calendar calendar; // Calendar used by Timing.
-    private final TimeZone time_zone; // TimeZone where Timing works.
-    private final int raw_offset; // time_zone.getRawOffset()
-    private final BusinessSchedule business_schedule;
-    private volatile ZoneId zoneId; // lazy initialized ZoneId of the time_zone
+    private final int rawOffset; // timeZone.getRawOffset()
+    private final BusinessSchedule businessSchedule;
 
     private final Object lock = new Object();
-    private final IndexedSet<Integer, Day> days_cache = IndexedSet.createInt(DAY_INDEXER);
-    private final IndexedSet<Integer, Day> ymds_cache = IndexedSet.createInt(YMD_INDEXER);
+    private final IndexedSet<Integer, Day> daysCache = IndexedSet.createInt(DAY_INDEXER);
+    private final IndexedSet<Integer, Day> ymdsCache = IndexedSet.createInt(YMD_INDEXER);
 
     // Number of Day creations.
-    private final AtomicLong creation_counter = new AtomicLong(0);
+    private final AtomicLong creationCounter = new AtomicLong(0);
 
     // Number of Timing usages.
-    private final AtomicLong usage_counter = new AtomicLong(0);
+    private final AtomicLong usageCounter = new AtomicLong(0);
 
     /**
-     * Returns cached <code>Day</code> record for specified day_id.
+     * Returns cached {@code Day} record for specified day_id.
      * Updates day usage counter.
      */
     private Day getCachedDay(int day_id) {
-        Day d = days_cache.getByKey(day_id);
+        Day d = daysCache.getByKey(day_id);
         if (d != null)
-            d.usage_counter = usage_counter.get();
+            d.usage_counter = usageCounter.get();
         return d;
     }
 
     /**
-     * Creates new <code>Day</code> record for specified time in
+     * Creates new {@code Day} record for specified time in
      * UTC millis and caches it (or retrieves cached one if present).
      * Updates day usage counter.
      */
     private Day createCachedDay(long millis) {
         synchronized (lock) {
             Day d = createDay(millis);
-            Day old = days_cache.getByValue(d);
+            Day old = daysCache.getByValue(d);
             if (old == null) {
-                days_cache.put(d);
-                ymds_cache.put(d);
+                daysCache.put(d);
+                ymdsCache.put(d);
             } else
                 d = old;
             checkDaysCacheSize(d.day_id);
-            d.usage_counter = usage_counter.get();
+            d.usage_counter = usageCounter.get();
             return d;
         }
     }
@@ -484,19 +516,20 @@ public class Timing {
     }
 
     /**
-     * Creates new <code>Day</code> record for specified time
+     * Creates new {@code Day} record for specified time
      * in UTC millis and gathers creation statistics.
      * Sets day usage counter.
      */
     // GuardedBy: lock
     private Day createDay(long millis) {
-        creation_counter.incrementAndGet();
+        creationCounter.incrementAndGet();
 
         Calendar c = calendar;
         c.setTimeInMillis(millis);
 
         int day_id = dayId(c.getTime().getTime() + c.get(Calendar.ZONE_OFFSET) + c.get(Calendar.DST_OFFSET));
-        int year_month_day_number = c.get(Calendar.YEAR) * 10000 + (c.get(Calendar.MONTH) + 1) * 100 + c.get(Calendar.DAY_OF_MONTH);
+        int year_month_day_number = c.get(Calendar.YEAR) * 10000 + (c.get(Calendar.MONTH) + 1) * 100 +
+            c.get(Calendar.DAY_OF_MONTH);
 
         long day_start = dayStart(c);
         long day_end = dayEnd(c);
@@ -518,18 +551,21 @@ public class Timing {
         c.add(Calendar.DAY_OF_YEAR, 6);
         long week_end = dayEnd(c);
 
-        return createDay(day_id, day_start, day_end, week_start, week_end, month_start, month_end, year_start, year_end, year_month_day_number);
+        return createDay(day_id, day_start, day_end, week_start, week_end,
+            month_start, month_end, year_start, year_end, year_month_day_number);
     }
 
     /**
      * @deprecated This is a migration method only
      */
-    protected Day createDay(int day_id, long day_start, long day_end, long week_start, long week_end, long month_start, long month_end, long year_start, long year_end, int year_month_day_number) {
-        BusinessSchedule.OperatingMode mode = business_schedule.getOperatingMode(year_month_day_number, dayOfWeekNumber(day_start, week_start));
+    protected Day createDay(int day_id, long day_start, long day_end, long week_start, long week_end,
+        long month_start, long month_end, long year_start, long year_end, int year_month_day_number)
+    {
+        BusinessSchedule.OperatingMode mode = businessSchedule.getOperatingMode(year_month_day_number,
+            dayOfWeekNumber(day_start, week_start));
 
         return new Day(day_id, day_start, day_end, week_start, week_end,
-            month_start, month_end, year_start, year_end,
-            year_month_day_number, mode);
+            month_start, month_end, year_start, year_end, year_month_day_number, mode);
     }
 
     /**
@@ -538,14 +574,14 @@ public class Timing {
      */
     // GuardedBy: lock
     private void checkDaysCacheSize(int keep_day_id) {
-        if (days_cache.size() <= MAX_DAYS_SIZE)
+        if (daysCache.size() <= MAX_DAYS_SIZE)
             return;
-        Day[] a = days_cache.toArray(new Day[days_cache.size()]);
+        Day[] a = daysCache.toArray(new Day[daysCache.size()]);
         QuickSort.sort(a, DAY_USAGE_COMPARATOR);
         for (int i = a.length / 2; --i >= 0;)
             if (a[i].day_id != keep_day_id) {
-                days_cache.removeKey(a[i].day_id);
-                ymds_cache.removeKey(a[i].year_month_day_number);
+                daysCache.removeKey(a[i].day_id);
+                ymdsCache.removeKey(a[i].year_month_day_number);
             }
     }
 }

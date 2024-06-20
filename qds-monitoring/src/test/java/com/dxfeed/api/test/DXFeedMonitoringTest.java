@@ -11,6 +11,7 @@
  */
 package com.dxfeed.api.test;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.mars.common.MARSNode;
 import com.devexperts.qd.monitoring.JMXEndpoint;
 import com.devexperts.qd.monitoring.MonitoringEndpoint;
@@ -45,6 +46,9 @@ public class DXFeedMonitoringTest {
 
     @Test
     public void testResourcesCleanup() throws InterruptedException {
+        // IMPORTANT: Some logging facilities also initiate some beans and threads
+        Logging.getLogging(DXFeedMonitoringTest.class).info("Starting testResourcesCleanup...");
+
         Set<String> initialBeans = getBeans();
         Set<String> initialThreads = getThreadsNames();
 

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.dxfeed.ipf;
 
+import com.devexperts.auth.AuthToken;
 import com.devexperts.io.StreamCompression;
 import com.devexperts.io.URLInputStream;
 import com.devexperts.io.UncloseableInputStream;
@@ -110,15 +111,37 @@ public class InstrumentProfileReader {
      * <p>This operation updates {@link #getLastModified() lastModified} and {@link #wasComplete() wasComplete}.
      *
      * @param address URL of file to read from
-     * @param user the user name (may be null)
-     * @param password the password (may be null)
+     * @param user the username, may be null
+     * @param password the password, may be null
      * @return list of instrument profiles
      * @throws InstrumentProfileFormatException if input stream does not conform to the Instrument Profile Format
      * @throws IOException If an I/O error occurs
      */
     public List<InstrumentProfile> readFromFile(String address, String user, String password) throws IOException {
+        return readFromFile(address, AuthToken.createBasicTokenOrNull(user, password));
+    }
+
+    /**
+     * Reads and returns instrument profiles from specified address with a specified token credentials.
+     * This method recognizes data compression formats "zip" and "gzip" automatically.
+     * In case of <em>zip</em> the first file entry will be read and parsed as a plain data stream.
+     * In case of <em>gzip</em> compressed content will be read and processed.
+     * In other cases data considered uncompressed and will be parsed as is.
+     *
+     * <p>Specified token take precedence over authentication information that is supplied to this method
+     * as part of URL user info like {@code "http://user:password@host:port/path/file.ipf"}.
+     *
+     * <p>This operation updates {@link #getLastModified() lastModified} and {@link #wasComplete() wasComplete}.
+     *
+     * @param address URL of file to read from
+     * @param token the token, may be null
+     * @return list of instrument profiles
+     * @throws InstrumentProfileFormatException if input stream does not conform to the Instrument Profile Format
+     * @throws IOException If an I/O error occurs
+     */
+    public List<InstrumentProfile> readFromFile(String address, AuthToken token) throws IOException {
         String url = resolveSourceURL(address);
-        URLConnection connection = URLInputStream.openConnection(URLInputStream.resolveURL(url), user, password);
+        URLConnection connection = URLInputStream.openConnection(URLInputStream.resolveURL(url), token);
         connection.setRequestProperty(LIVE_PROP_KEY, LIVE_PROP_REQUEST_NO);
         try (InputStream in = connection.getInputStream()) {
             URLInputStream.checkConnectionResponseCode(connection);

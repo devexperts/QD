@@ -28,17 +28,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Phaser;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
+import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class DXEndpointRestoreTest {
 
     private static final int PUB_COUNT = 3;
-    private static final int WAIT_TIMEOUT = 20; // seconds
+    private static final int WAIT_TIMEOUT = 20_000; // millis
 
     private String testId;
 
@@ -91,23 +92,17 @@ public class DXEndpointRestoreTest {
 
         feedEndpoint = DXEndpoint.create(DXEndpoint.Role.STREAM_FEED);
 
-        Phaser phaser = new Phaser();
-        phaser.register();
-        feedEndpoint.addStateChangeListener(evt -> {
-            if (evt.getNewValue() == DXEndpoint.State.CONNECTED) {
-                phaser.arrive();
-            }
-        });
-
-        // block first port to force connecting to second one
+        // block the first port to force connecting to the second one
         blockedPorts.add(ports.get(0));
         feedEndpoint.connect(testId + ":" + address);
-        phaser.awaitAdvanceInterruptibly(0, WAIT_TIMEOUT, TimeUnit.SECONDS);
+        assertTrue("Connect expected",
+            waitCondition(WAIT_TIMEOUT, 10, () -> feedEndpoint.getState() == DXEndpoint.State.CONNECTED));
 
         ClientSocketConnector connector = getFirstConnector(feedEndpoint);
-        assertEquals(ports.get(1).intValue(), connector.getCurrentPort());
+        int secondPort = ports.get(1);
+        assertEquals("Connect to the second publisher is expected", secondPort, connector.getCurrentPort());
 
-        // reactivate all ports to test restore to first port
+        // reactivate all ports to test restore to the first port
         blockedPorts.clear();
 
         if (manual) {
@@ -116,9 +111,21 @@ public class DXEndpointRestoreTest {
             connector.restoreGracefully("0.001");
         }
 
-        phaser.awaitAdvanceInterruptibly(1, WAIT_TIMEOUT, TimeUnit.SECONDS);
+        // await that the first publisher is connected again
+        int firstPort = ports.get(0);
+        assertTrue("Connect to the first publisher is expected",
+            waitCondition(WAIT_TIMEOUT, 10, () -> connector.getCurrentPort() == firstPort));
+    }
 
-        assertEquals(ports.get(0).intValue(), connector.getCurrentPort());
+    // FIXME: copy-paste from NTU. We need a more commonly-available test utils
+    public static boolean waitCondition(long timeout, long pollPeriod, BooleanSupplier condition) {
+        long deadline = System.nanoTime() + MILLISECONDS.toNanos(timeout);
+        while (!condition.getAsBoolean()) {
+            LockSupport.parkNanos(MILLISECONDS.toNanos(pollPeriod));
+            if (System.nanoTime() - deadline >= 0)
+                return condition.getAsBoolean();
+        }
+        return true;
     }
 
     private ClientSocketConnector getFirstConnector(DXEndpoint feedEndpoint) {
@@ -145,7 +152,7 @@ public class DXEndpointRestoreTest {
             String symbol = String.valueOf((char) ('A' + i));
             promises.add(addPublisher(symbol));
         }
-        Promises.allOf(promises).await(WAIT_TIMEOUT, TimeUnit.SECONDS);
+        Promises.allOf(promises).await(WAIT_TIMEOUT, MILLISECONDS);
         promises.stream().map(Promise::getResult).forEach(ports::add);
     }
 }

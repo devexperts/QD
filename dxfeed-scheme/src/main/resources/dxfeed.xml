@@ -281,6 +281,8 @@
                 <value>pink</value>
                 <value>ARCA</value>
                 <value>arca</value>
+                <value>CEDX</value>
+                <value>cedx</value>
             </iterator>
             <!-- Simple copy from "OrderBase" -->
             <record name="Order" copyFrom="OrderIcebergBase"/>
