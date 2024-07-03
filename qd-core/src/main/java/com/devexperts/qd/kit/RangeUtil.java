@@ -21,10 +21,13 @@ public class RangeUtil {
 
     private RangeUtil() {} // do not create
 
-    private static final boolean[] RANGE_CHARS = new boolean[128];
+    private static final int[] RANGE_INTS = new int[128 / 32];
+
     static {
-        for (int c = 0; c < RANGE_CHARS.length; c++) {
-            RANGE_CHARS[c] = String.valueOf((char) c).matches("[a-zA-Z0-9]");
+        for (int c = 0; c < 128; c++) {
+            if (String.valueOf((char) c).matches("[a-zA-Z0-9]")) {
+                RANGE_INTS[c >> 5] |= (Integer.MIN_VALUE >>> (c & 31));
+            }
         }
     }
 
@@ -102,41 +105,6 @@ public class RangeUtil {
         return s1.length - (s2.length() - s2from);
     }
 
-    public static int compareByString(char[] s1, char[] s2, int s2from, int s2to) {
-        for (int i = 0, j = s2from; i < s1.length && j < s2to; i++, j++) {
-            char c1 = s1[i];
-            char c2 = s2[j];
-            if (c1 != c2) {
-                return c1 - c2;
-            }
-        }
-        return s1.length - (s2to - s2from);
-    }
-
-    /**
-     * Utility method to compare two strings: one as a char array and another one as a string encoded as long.
-     *
-     * @param s string represented as a char array
-     * @param code string encoded as a long value
-     * @return the sign of the comparison
-     * @see String#compareTo(String)
-     */
-    public static int compareByCode(char[] s, long code) {
-        int k = 0;
-        long mask = 0x7FL << 56;
-
-        while (k < s.length && code != 0) {
-            char c1 = s[k];
-            char c2 = (char) ((code & mask) >> 56);
-            if (c1 != c2) {
-                return c1 - c2;
-            }
-            k++;
-            code <<= 8;
-        }
-        return (k == s.length) ? ((code == 0) ? 0 : -1) : 1;
-    }
-
     /**
      * Returns {@code true} if the given char is a valid range character
      * for the {@link RangeStriper} and {@link RangeFilter}.
@@ -145,7 +113,7 @@ public class RangeUtil {
      * @return {@code true} if the given char is a valid range char
      */
     public static boolean isValidRangeChar(char c) {
-        return (c < RANGE_CHARS.length && RANGE_CHARS[c]);
+        return ((c - 128) & (RANGE_INTS[(c >> 5) & 3] << c)) < 0;
     }
 
     /**

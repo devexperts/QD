@@ -22,7 +22,6 @@ import java.util.Arrays;
 
 import static com.devexperts.qd.kit.RangeFilter.RANGE_DELIMITER;
 import static com.devexperts.qd.kit.RangeFilter.RANGE_DELIMITER_CHAR;
-import static com.devexperts.qd.kit.RangeUtil.CODE_LENGTH;
 
 /**
  * Research and comparison implementations of code-based {@link RangeStriper}.
@@ -61,7 +60,7 @@ public abstract class BenchmarkRangeStriper extends RangeStriper {
 
     @FunctionalInterface
     private interface RangeStriperFactory {
-        public SymbolStriper createRangeStriper(DataScheme scheme, String[] ranges, int codeLength, String spec);
+        public SymbolStriper createRangeStriper(DataScheme scheme, String[] ranges, String spec);
     }
 
     private static SymbolStriper createRangeStriper(String spec, RangeStriperFactory factory) {
@@ -78,17 +77,13 @@ public abstract class BenchmarkRangeStriper extends RangeStriper {
         if (ranges.length < 1)
             throw new IllegalArgumentException("Invalid range striper definition: " + spec);
 
-        int codeLength = Arrays.stream(ranges).mapToInt(String::length).max().orElse(0);
-        if (codeLength > CODE_LENGTH)
-            throw new UnsupportedOperationException("Large string ranges are not supported for benchmark");
-
-        return factory.createRangeStriper(SCHEME, ranges, codeLength, spec);
+        return factory.createRangeStriper(SCHEME, ranges, spec);
     }
 
     // "Array-first" striper where strings are converted to char array
-    public static class ArrayBasedRangeStriper extends RangeStriper.CodeRangeStriper {
-        public ArrayBasedRangeStriper(DataScheme scheme, String[] ranges, int codeLength, String spec) {
-            super(scheme, ranges, codeLength, spec);
+    public static class ArrayBasedRangeStriper extends RangeStriper {
+        public ArrayBasedRangeStriper(DataScheme scheme, String[] ranges, String spec) {
+            super(scheme, ranges, spec);
         }
 
         @Override
@@ -103,9 +98,9 @@ public abstract class BenchmarkRangeStriper extends RangeStriper {
     }
 
     // "String-first" striper where char arrays are converted to strings
-    public static class StringBasedRangeStriper extends RangeStriper.CodeRangeStriper {
-        public StringBasedRangeStriper(DataScheme scheme, String[] ranges, int codeLength, String spec) {
-            super(scheme, ranges, codeLength, spec);
+    public static class StringBasedRangeStriper extends RangeStriper {
+        public StringBasedRangeStriper(DataScheme scheme, String[] ranges, String spec) {
+            super(scheme, ranges, spec);
         }
 
         @Override
@@ -115,9 +110,9 @@ public abstract class BenchmarkRangeStriper extends RangeStriper {
     }
 
     // Strings and arrays are abstracted through non-capturing lambda
-    public static class LambdaRangeStriper extends RangeStriper.CodeRangeStriper {
-        public LambdaRangeStriper(DataScheme scheme, String[] ranges, int codeLength, String spec) {
-            super(scheme, ranges, codeLength, spec);
+    public static class LambdaRangeStriper extends RangeStriper {
+        public LambdaRangeStriper(DataScheme scheme, String[] ranges, String spec) {
+            super(scheme, ranges, spec);
         }
 
         @Override
@@ -150,8 +145,8 @@ public abstract class BenchmarkRangeStriper extends RangeStriper {
     // Subclass of LambdaRangeStriper to cause troubles
     public static class MegaMorphLambdaRangeStriper extends LambdaRangeStriper {
 
-        public MegaMorphLambdaRangeStriper(DataScheme scheme, String[] ranges, int codeLength, String spec) {
-            super(scheme, ranges, codeLength, spec);
+        public MegaMorphLambdaRangeStriper(DataScheme scheme, String[] ranges, String spec) {
+            super(scheme, ranges, spec);
         }
 
         @Override
@@ -171,9 +166,9 @@ public abstract class BenchmarkRangeStriper extends RangeStriper {
     }
 
     // Strings and arrays are abstracted through capturing lambda
-    public static class CaptureLambdaRangeStriper extends RangeStriper.CodeRangeStriper {
-        public CaptureLambdaRangeStriper(DataScheme scheme, String[] ranges, int codeLength, String spec) {
-            super(scheme, ranges, codeLength, spec);
+    public static class CaptureLambdaRangeStriper extends RangeStriper {
+        public CaptureLambdaRangeStriper(DataScheme scheme, String[] ranges, String spec) {
+            super(scheme, ranges, spec);
         }
 
         @Override
@@ -205,8 +200,8 @@ public abstract class BenchmarkRangeStriper extends RangeStriper {
 
     // Subclass of CaptureLambdaRangeStriper to cause troubles
     public static class MegaMorphCaptureLambdaRangeStriper extends CaptureLambdaRangeStriper {
-        public MegaMorphCaptureLambdaRangeStriper(DataScheme scheme, String[] ranges, int codeLength, String spec) {
-            super(scheme, ranges, codeLength, spec);
+        public MegaMorphCaptureLambdaRangeStriper(DataScheme scheme, String[] ranges, String spec) {
+            super(scheme, ranges, spec);
         }
 
         @Override

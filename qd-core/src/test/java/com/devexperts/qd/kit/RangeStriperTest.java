@@ -12,15 +12,21 @@
 package com.devexperts.qd.kit;
 
 import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDFilter;
+import com.devexperts.qd.SymbolStriper;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 public class RangeStriperTest {
 
@@ -50,6 +56,9 @@ public class RangeStriperTest {
         assertInvalidStriper("byrange-A-A-");
         assertInvalidStriper("byrange-B-A-");
         assertInvalidStriper("byrange-B-B-");
+
+        // Length
+        assertInvalidStriper("byrange-A12456678-B12345678-");
     }
 
     @Test
@@ -57,7 +66,7 @@ public class RangeStriperTest {
         assertValidStriper("byrange-A-");
         assertValidStriper("byrange-A-B-");
         assertValidStriper("byrange-AAA-AAAA-");
-        assertValidStriper("byrange-AAAAAAAAA-AAAAAAAAB-");
+        assertValidStriper("byrange-AAAAAAAA-AAAAAAAB-");
     }
 
     @Test
@@ -92,37 +101,12 @@ public class RangeStriperTest {
     }
 
     @Test
-    public void testLongRange() {
-        RangeStriper striper = RangeStriper.valueOf(SCHEME, "byrange-B0000000A-B0000000F-F-");
-        assertStriper(striper, "A", 0);
-        assertStriper(striper, "B", 0);
-        assertStriper(striper, "C", 2);
-        assertStriper(striper, "D", 2);
-        assertStriper(striper, "F", 3);
-        assertStriper(striper, "G", 3);
-    }
-
-    @Test
     public void testCustomRange() {
         RangeStriper striper = RangeStriper.valueOf(SCHEME, "byrange-B1234567-");
         assertStriper(striper, "B12345669", 0);
         assertStriper(striper, "B1234567", 1);
         assertStriper(striper, "B1234568", 1);
         assertStriper(striper, "B12345679", 1);
-    }
-
-    @Test
-    public void testLongRangeLongSymbol() {
-        RangeStriper striper = RangeStriper.valueOf(SCHEME, "byrange-B0000000A-B0000000C-B0000000F-F-");
-        assertStriper(striper, "AAAAAAAAA", 0);
-        assertStriper(striper, "B00000000", 0);
-        assertStriper(striper, "B0000000A", 1);
-        assertStriper(striper, "B0000000B", 1);
-        assertStriper(striper, "B0000000C", 2);
-        assertStriper(striper, "B0000000F", 3);
-        assertStriper(striper, "BBBBBBBBB", 3);
-        assertStriper(striper, "EEEEEEEEE", 3);
-        assertStriper(striper, "FFFFFFFFF", 4);
     }
 
     @Test
@@ -144,6 +128,62 @@ public class RangeStriperTest {
         assertStriper(striper2, "EUD/USD", 0);
         assertStriper(striper3, "IBM", 0);
         assertStriper(striper3, "EUD/USD", 0);
+    }
+
+    @Test
+    public void testIntersects() {
+        RangeStriper striper = RangeStriper.valueOf(SCHEME, "byrange-C-K-P-");
+
+        // Single stripe intersect
+        assertIntersect(striper, "range--A-", "1000");
+        assertIntersect(striper, "range--C-", "1000");
+        assertIntersect(striper, "range-A-B-", "1000");
+
+        assertIntersect(striper, "range-C-K-", "0100");
+        assertIntersect(striper, "range-D-E-", "0100");
+
+        assertIntersect(striper, "range-K-P-", "0010");
+        assertIntersect(striper, "range-M-O-", "0010");
+
+        assertIntersect(striper, "range-P--", "0001");
+        assertIntersect(striper, "range-T--", "0001");
+        assertIntersect(striper, "range-T-V-", "0001");
+
+        // Double stripe intersect
+        assertIntersect(striper, "range--K-", "1100");
+        assertIntersect(striper, "range--E-", "1100");
+        assertIntersect(striper, "range-B-E-", "1100");
+
+        assertIntersect(striper, "range-C-M-", "0110");
+        assertIntersect(striper, "range-E-M-", "0110");
+        assertIntersect(striper, "range-C-P-", "0110");
+
+        assertIntersect(striper, "range-K--", "0011");
+        assertIntersect(striper, "range-M--", "0011");
+        assertIntersect(striper, "range-M-T-", "0011");
+
+        // Triple stripe intersect
+        assertIntersect(striper, "range--P-", "1110");
+        assertIntersect(striper, "range--M-", "1110");
+        assertIntersect(striper, "range-A-M-", "1110");
+        assertIntersect(striper, "range-C--", "0111");
+        assertIntersect(striper, "range-D--", "0111");
+        assertIntersect(striper, "range-C-T-", "0111");
+        assertIntersect(striper, "range-D-T-", "0111");
+
+        // All stripes intersect
+        assertIntersect(striper, "range-B--", "1111");
+        assertIntersect(striper, "range-A-T-", "1111");
+        assertIntersect(striper, "range--T-", "1111");
+    }
+
+    @Test
+    public void testIntersectsUnknownFilter() {
+        SymbolStriper striper = RangeStriper.valueOf(SCHEME, "byrange-C-K-P-");
+        assertNull(striper.getIntersectingStripes(QDFilter.ANYTHING));
+        assertNull(striper.getIntersectingStripes(QDFilter.NOTHING));
+        //TODO Possible place for improvement for pattern filters with fixed prefix
+        assertNull(striper.getIntersectingStripes(CompositeFilters.valueOf("A*", SCHEME)));
     }
 
     // Utility methods
@@ -177,6 +217,21 @@ public class RangeStriperTest {
             striper.getStripeIndex(s.toCharArray(), 0, s.length()));
         for (int i = 0; i < striper.getStripeCount(); i++) {
             assertEquals(i == index, striper.getStripeFilter(i).accept(null, null, cipher, s));
+        }
+    }
+
+    private static void assertIntersect(RangeStriper striper, String filter, String stripes) {
+        BitSet intersect = striper.getIntersectingStripes(RangeFilter.valueOf(SCHEME, filter));
+
+        if (stripes.length() != striper.getStripeCount())
+            throw new IllegalArgumentException();
+
+        for (int i = 0; i < stripes.length(); i++) {
+            if (stripes.charAt(i) == '1') {
+                assertTrue(filter + " should intersect with " + striper.getStripeFilter(i), intersect.get(i));
+            } else {
+                assertFalse(filter + " should not intersect with " + striper.getStripeFilter(i), intersect.get(i));
+            }
         }
     }
 }

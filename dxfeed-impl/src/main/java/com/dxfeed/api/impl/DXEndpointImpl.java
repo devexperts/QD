@@ -114,9 +114,11 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
                 @Override
                 public MessageAdapter createAdapter(QDStats stats) {
                     // TODO here we lost capability to configure channels via connector spec, if it ever worked here
-                    return new AgentAdapter(endpoint, ticker, stream, history, getFilter(), stats) {
+                    return new AgentAdapter(endpoint, ticker, stream, history, getFilter(), getStripe(), stats) {
                         @Override
-                        protected QDAgent createAgent(QDCollector collector, SubscriptionFilter filter, String keyProperties) {
+                        protected QDAgent createAgent(
+                            QDCollector collector, SubscriptionFilter filter, String keyProperties)
+                        {
                             QDAgent agent = super.createAgent(collector, filter, keyProperties);
                             agent.setBufferOverflowStrategy(QDAgent.BufferOverflowStrategy.BLOCK);
                             return agent;

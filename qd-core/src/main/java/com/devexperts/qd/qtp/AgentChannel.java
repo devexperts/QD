@@ -254,7 +254,7 @@ class AgentChannel implements RecordListener {
         }
 
         synchronized void addActionListToHeadAndConsumeBuffers(Config config, byte action, List<RecordBuffer> subList) {
-            assert running; // only used from inside of the running action
+            assert running; // only used inside the running action
             if (isClosed())
                 return;
             for (int i = subList.size(); --i >= 0;) {
@@ -455,6 +455,7 @@ class AgentChannel implements RecordListener {
 
     private Config createNewConfig() {
         QDFilter subscriptionFilter = shaper.getSubscriptionFilter();
+        //TODO peerFilter should be part of the ChannelShaper
         QDFilter completeSubscriptionFilter =
             CompositeFilters.makeAnd(owner.getPeerFilter(shaper.getContract()), subscriptionFilter);
         byte subFilterMode;
@@ -468,7 +469,7 @@ class AgentChannel implements RecordListener {
         } else {
             // Without subscription executor check fast filter under agent's global lock when we don't need to keep rejected stuff
             // (default behavior for ordinary filters that are typically used in mux),
-            // but move slow filters outside of global lock (still taking processing thread, though)
+            // but move slow filters outside the global lock (still taking processing thread, though)
             subFilterMode = completeSubscriptionFilter.isFast() && !shaper.isKeepRejected() ?
                 SUB_FILTER_AGENT : SUB_FILTER_PROCESS;
         }

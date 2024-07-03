@@ -268,8 +268,9 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
                 acf = acf.clone();
                 MessageAdapter.Factory factory = MessageConnectors.retrieveMessageAdapterFactory(acf);
                 if (factory instanceof MessageAdapter.ConfigurableFactory) {
-                    ((MessageAdapter.ConfigurableFactory) factory).setConfiguration(
-                        MessageConnectors.FILTER_CONFIGURATION_KEY, stripeFilter.toString());
+                    MessageAdapter.ConfigurableFactory maf = (MessageAdapter.ConfigurableFactory) factory;
+                    maf.setConfiguration(MessageConnectors.FILTER_CONFIGURATION_KEY, stripeFilter.toString());
+                    maf.setConfiguration(MessageConnectors.STRIPE_FILTER_CONFIGURATION_KEY, stripeFilter.toString());
                 } else {
                     throw new NullPointerException("Cannot create striped connection from " + factory.getClass());
                 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -276,6 +276,7 @@ public interface QDAgent extends RecordProvider, SubscriptionContainer, QDStatsC
      */
     public interface Builder {
         public QDFilter getFilter();
+        public QDFilter getStripe();
         public String getKeyProperties();
         public AttachmentStrategy<?> getAttachmentStrategy();
         public boolean useHistorySnapshot();
@@ -283,6 +284,7 @@ public interface QDAgent extends RecordProvider, SubscriptionContainer, QDStatsC
         public boolean hasVoidRecordListener();
 
         public Builder withFilter(QDFilter filter);
+        public Builder withStripe(QDFilter stripeFilter);
         public Builder withKeyProperties(String keyProperties);
         public Builder withAttachmentStrategy(AttachmentStrategy<?> attachmentStrategy);
         public Builder withHistorySnapshot(boolean useHistorySnapshot);

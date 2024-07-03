@@ -1,3 +1,8 @@
+QDS 3.334:
+
+* [QD-1515] Optimize the performance of striped connections
+* [QD-1559] Create TextMessage record
+
 QDS 3.333:
 
 * [QD-1555] Adjust Timing for easier testing

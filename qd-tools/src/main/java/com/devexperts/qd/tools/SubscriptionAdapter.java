@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,6 +14,7 @@ package com.devexperts.qd.tools;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
+import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.QDHistory;
 import com.devexperts.qd.QDStream;
 import com.devexperts.qd.QDTicker;
@@ -37,7 +38,7 @@ class SubscriptionAdapter extends AgentAdapter {
         private final MessageListener listener;
         private final MessageVisitor dataVisitor;
 
-        public Factory(QDEndpoint endpoint, SubscriptionFilter filter, MessageListener listener, MessageVisitor dataVisitor) {
+        public Factory(QDEndpoint endpoint, QDFilter filter, MessageListener listener, MessageVisitor dataVisitor) {
             super(endpoint, filter);
             this.listener = listener;
             this.dataVisitor = dataVisitor;
@@ -45,7 +46,8 @@ class SubscriptionAdapter extends AgentAdapter {
 
         @Override
         public MessageAdapter createAdapter(QDStats stats) {
-            return new SubscriptionAdapter(endpoint, ticker, stream, history, getFilter(), stats, listener, dataVisitor);
+            return new SubscriptionAdapter(endpoint, ticker, stream, history,
+                getFilter(), getStripe(), stats, listener, dataVisitor);
         }
     }
 
@@ -53,15 +55,17 @@ class SubscriptionAdapter extends AgentAdapter {
     private final MessageListener listener;
 
     SubscriptionAdapter(QDEndpoint endpoint, QDTicker ticker, QDStream stream, QDHistory history,
-        SubscriptionFilter filter, QDStats stats, MessageListener listener, MessageVisitor dataVisitor)
+        QDFilter filter, QDFilter stripe, QDStats stats, MessageListener listener, MessageVisitor dataVisitor)
     {
-        super(endpoint, ticker, stream, history, filter, stats);
+        super(endpoint, ticker, stream, history, filter, stripe, stats);
         this.dataVisitor = dataVisitor;
         this.listener = listener;
     }
 
     @Override
-    protected QDAgent.Builder createAgentBuilder(QDCollector collector, SubscriptionFilter filter, String keyProperties) {
+    protected QDAgent.Builder createAgentBuilder(
+        QDCollector collector, SubscriptionFilter filter, String keyProperties)
+    {
         return super.createAgentBuilder(collector, filter, keyProperties).withVoidRecordListener(dataVisitor == null);
     }
 

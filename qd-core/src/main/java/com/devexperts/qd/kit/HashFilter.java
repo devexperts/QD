@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -35,9 +35,9 @@ public class HashFilter extends QDFilter {
 
     private static final Pattern FILTER_PATTERN = Pattern.compile(HASH_FILTER_PREFIX + "([0-9]+)of([0-9]+)");
 
-    private final int index;
-    private final int shift;
-    private final int wildcard;
+    protected final int index;
+    protected final int shift;
+    protected final int wildcard;
 
     /**
      * Parses a given specification as hash filter for a given scheme.

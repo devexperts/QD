@@ -73,7 +73,7 @@
     </enums>
 
     <records>
-        <!-- MarketFactoryImpl:51 -->
+        <!-- MarketFactoryImpl -->
         <record name="Quote" regionals="true">
             <field name="Sequence" type="sequence" disabled="true"/>
             <field name="TimeNanoPart" type="time_nano_part" disabled="true"/>
@@ -87,7 +87,7 @@
             <field name="AskSize" type="size"><alias name="Ask.Size"/></field>
         </record>
 
-        <!-- MarketFactoryImpl:84 -->
+        <!-- MarketFactoryImpl -->
         <record name="Trade" regionals="true">
             <field name="Time" type="time"><alias name="Last.Time"/></field>
             <field name="Sequence" type="sequence"><alias name="Last.Sequence"/></field>
@@ -109,7 +109,7 @@
             </field>
         </record>
 
-        <!-- MarketFactoryImpl:113 -->
+        <!-- MarketFactoryImpl -->
         <record name="TradeETH" regionals="true">
             <field name="Time" type="time"><alias name="ETHLast.Time"/></field>
             <field name="Sequence" type="sequence"><alias name="ETHLast.Sequence"/></field>
@@ -130,7 +130,7 @@
             </field>
         </record>
 
-        <!-- MarketFactoryImpl:138 -->
+        <!-- MarketFactoryImpl -->
         <record name="Summary" regionals="true">
             <field name="DayId" type="date"/>
             <field name="DayOpenPrice" type="price"><alias name="DayOpen.Price"/></field>
@@ -149,7 +149,7 @@
             </field>
         </record>
 
-        <!-- MarketFactoryImpl:161 -->
+        <!-- MarketFactoryImpl -->
         <record name="Fundamental" regionals="true">
             <field name="OpenPrice" type="price"><alias name="Open.Price"/></field>
             <field name="HighPrice" type="price"><alias name="High.Price"/></field>
@@ -159,7 +159,7 @@
         </record>
 
         <!--
-        MarketFactoryImpl:174
+        MarketFactoryImpl
         Used with its own visibility rule to enable only "Book&I" by default
         -->
         <record name="Book" regionals="true">
@@ -174,7 +174,7 @@
             <field name="Symbol" type="utf_char_array"/>
         </record>
 
-        <!-- MarketFactoryImpl:186 -->
+        <!-- MarketFactoryImpl -->
         <record name="Profile">
             <field name="Beta" type="decimal"/>
             <field name="Eps" type="decimal"/>
@@ -199,7 +199,7 @@
             <field name="StatusReason" type="utf_char_array"/>
         </record>
 
-        <!-- MarketFactoryImpl:203 -->
+        <!-- MarketFactoryImpl -->
         <record name="OrderBase" disabled="true">
             <index field1="Index"/>
             <field name="Index" type="compact_int"/>
@@ -240,7 +240,7 @@
             </field>
         </record>
 
-        <!-- MarketFactoryImpl:203 -->
+        <!-- MarketFactoryImpl -->
         <generator name="Order" type="suffix" delimiter="#">
             <iterator>
                 <value/>
@@ -288,7 +288,7 @@
             <record name="Order" copyFrom="OrderIcebergBase"/>
         </generator>
 
-        <!-- MarketFactoryImpl:228 -->
+        <!-- MarketFactoryImpl -->
         <generator name="AnalyticOrder" type="suffix" delimiter="#">
             <iterator>
                 <value/>
@@ -298,7 +298,7 @@
             <record name="AnalyticOrder" copyFrom="OrderIcebergBase"/>
         </generator>
 
-        <!-- MarketFactoryImpl:253 -->
+        <!-- MarketFactoryImpl -->
         <generator name="OtcMarketsOrder" type="suffix" delimiter="#">
             <iterator>
                 <value/>
@@ -319,7 +319,7 @@
             </record>
         </generator>
 
-        <!-- MarketFactoryImpl:276 -->
+        <!-- MarketFactoryImpl -->
         <generator name="SpreadOrder" type="suffix" delimiter="#">
             <iterator>
                 <value/>
@@ -330,7 +330,7 @@
             </record>
         </generator>
 
-        <!-- MarketFactoryImpl:297 -->
+        <!-- MarketFactoryImpl -->
         <record name="MarketMaker">
             <index field0="MMExchange" field1="MMID"/>
             <field name="MMExchange" type="char"/>
@@ -345,7 +345,7 @@
             <field name="MMAskCount" type="count"><alias name="MMAsk.Count"/></field>
         </record>
 
-        <!-- MarketFactoryImpl:308 -->
+        <!-- MarketFactoryImpl -->
         <record name="TimeAndSale" regionals="true">
             <index field0="Time" field1="Sequence"/>
             <field name="Time" type="time"/>
@@ -372,7 +372,7 @@
             <field name="Seller" type="string" disabled="true"/>
         </record>
 
-        <!-- MarketFactoryImpl:336 -->
+        <!-- MarketFactoryImpl -->
         <record name="OptionSale">
             <index field0="" field1="Index"/>
             <field name="Index" type="compact_int"/>
@@ -402,7 +402,7 @@
             <field name="OptionSymbol" type="utf_char_array"/>
         </record>
 
-        <!-- CandleFactoryImpl:39 -->
+        <!-- CandleFactoryImpl -->
         <record name="TradeHistory">
             <index field0="Time" field1="Sequence"/>
             <field name="Time" type="time"/>
@@ -414,7 +414,7 @@
             <field name="Ask" type="price"/>
         </record>
 
-        <!-- CandleFactoryImpl:47 -->
+        <!-- CandleFactoryImpl -->
         <record name="CandleBase" disabled="true">
             <index field0="Time" field1="Sequence"/>
             <field name="Time" type="time"/>
@@ -432,7 +432,7 @@
             <field name="OpenInterest" type="oi"/>
         </record>
 
-        <!-- CandleFactoryImpl:47 -->
+        <!-- CandleFactoryImpl -->
         <generator name="Candle" type="suffix">
             <!-- Only with empty suffix by default -->
             <iterator>
@@ -441,7 +441,7 @@
             <record name="Candle" copyFrom="CandleBase"/>
         </generator>
 
-        <!-- CandleFactoryImpl:64 -->
+        <!-- CandleFactoryImpl -->
         <generator name="OldStyleCandle" type="suffix" delimiter=".">
             <!-- Only with empty suffix by default -->
             <iterator>
@@ -482,18 +482,25 @@
             <record name="Trade" copyFrom="CandleBase" eventName="Candle"/>
         </generator>
 
-        <!-- MiscFactoryImpl:36 -->
+        <!-- MiscFactoryImpl -->
         <record name="Message">
             <field name="Message" type="serial_object"/>
         </record>
 
-        <!-- MiscFactoryImpl:38 -->
+        <!-- MiscFactoryImpl -->
+        <record name="TextMessage">
+            <field name="Time" type="time"/>
+            <field name="Sequence" type="sequence"/>
+            <field name="Text" type="utf_char_array"/>
+        </record>
+
+        <!-- MiscFactoryImpl -->
         <record name="Configuration">
             <field name="Version" type="compact_int"/>
             <field name="Configuration" type="serial_object"/>
         </record>
 
-        <!-- OptionFactoryImpl:39 -->
+        <!-- OptionFactoryImpl -->
         <record name="Greeks">
             <index field0="Time" field1="Sequence"/>
             <field name="Time" type="time"/>
@@ -507,7 +514,7 @@
             <field name="Vega" type="decimal"/>
         </record>
 
-        <!-- OptionFactoryImpl:49 -->
+        <!-- OptionFactoryImpl -->
         <record name="TheoPrice">
             <index field0="Time" field1="Sequence"/>
             <field name="Time" type="time"><alias name="Theo.Time"/></field>
@@ -520,7 +527,7 @@
             <field name="TheoInterest" type="decimal"><alias name="Theo.Interest"/></field>
         </record>
 
-        <!-- OptionFactoryImpl:58 -->
+        <!-- OptionFactoryImpl -->
         <record name="Underlying">
             <index field0="Time" field1="Sequence"/>
             <field name="Time" type="time"/>
@@ -533,7 +540,7 @@
             <field name="PutCallRatio" type="decimal"/>
         </record>
 
-        <!-- OptionFactoryImpl:67 -->
+        <!-- OptionFactoryImpl -->
         <record name="Series">
             <index field0="" field1="Index"/>
             <field name="Index" type="compact_int"/>

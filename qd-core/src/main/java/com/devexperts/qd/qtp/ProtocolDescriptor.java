@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -42,8 +42,9 @@ public final class ProtocolDescriptor {
     static {
         int n = MAGIC_STRING.length();
         MAGIC_BYTES = new byte[n];
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < n; i++) {
             MAGIC_BYTES[i] = (byte) MAGIC_STRING.charAt(i);
+        }
     }
 
     public static final String TYPE_PROPERTY = "type";
@@ -52,13 +53,14 @@ public final class ProtocolDescriptor {
     public static final String TIME_PROPERTY = "time";
     public static final String NAME_PROPERTY = "name";
     public static final String FILTER_PROPERTY = "filter"; // using QDFilter syntax
+    public static final String STRIPE_PROPERTY = "stripe"; // using SymbolStriper QDFilter
     public static final String SERVICES_PROPERTY = "services"; // using ServiceFilter syntax
     public static final String AUTHORIZATION_PROPERTY = "authorization";
     public static final String AUTHENTICATION_PROPERTY = "authentication";
     public static final String RMI_PROPERTY = "rmi";
     public static final String BASIC_AUTHORIZATION = "Basic";
 
-    private final Map<String,String> properties = new LinkedHashMap<>();
+    private final Map<String, String> properties = new LinkedHashMap<>();
     private final Set<MessageDescriptor> send = new LinkedHashSet<>();
     private final Set<MessageDescriptor> receive = new LinkedHashSet<>();
     private EndpointId endpointId;

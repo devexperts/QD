@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -101,25 +101,6 @@ public class BenchmarkRangeFilterTest {
     }
 
     @Test
-    public void testLongSymbol() {
-        QDFilter f = filter("range-12345678A-12345678B-");
-        assertFilter(f, "1234567", false);
-        assertFilter(f, "12345678", false);
-
-        assertFilter(f, "12345678A", true);
-        assertFilter(f, "12345678AA", true);
-        assertFilter(f, ".12345678A", true);
-        assertFilter(f, "/12345678A", true);
-        assertFilter(f, "=-1.23*12345678A", true);
-        assertFilter(f, "12345678AB", true);
-        assertFilter(f, "12345678AAA", true);
-        assertFilter(f, "12345678AAB", true);
-
-        assertFilter(f, "12345678B", false);
-        assertFilter(f, "12345678BA", false);
-    }
-
-    @Test
     public void testLeftRangeSymbol() {
         QDFilter f = filter("range--AAA-");
         assertFilter(f, "", true);
@@ -207,16 +188,6 @@ public class BenchmarkRangeFilterTest {
 
         assertFilter(f, "B", false);
         assertFilter(f, "C", false);
-    }
-
-    @Test
-    public void testLongSymbolCode() {
-        QDFilter f = filter("range-AAAA00000ZZZ-AABB0000ZZZ-");
-        assertFilter(f, "AAAA", false);
-
-        assertFilter(f, "AABB", true);
-
-        assertFilter(f, "AABBB", false);
     }
 
     // Utility methods

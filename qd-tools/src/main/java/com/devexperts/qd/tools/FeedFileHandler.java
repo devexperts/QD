@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,7 +12,7 @@
 package com.devexperts.qd.tools;
 
 import com.devexperts.logging.Logging;
-import com.devexperts.qd.SubscriptionFilter;
+import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.qtp.DistributorAdapter;
 import com.devexperts.qd.qtp.InputStreamParser;
 import com.devexperts.qd.qtp.MessageAdapter;
@@ -34,29 +34,31 @@ class FeedFileHandler {
     private static final Logging log = Logging.getLogging(FeedFileHandler.class);
 
     private final QDEndpoint endpoint;
-    private final SubscriptionFilter filter;
+    private final QDFilter filter;
     private final File file;
     private final File backupFile;
     private final File parentFile;
 
-    FeedFileHandler(QDEndpoint endpoint, String file_name, SubscriptionFilter filter) {
+    FeedFileHandler(QDEndpoint endpoint, String fileName, QDFilter filter) {
         this.endpoint = endpoint;
         this.filter = filter;
-        this.file = new File(file_name);
-        this.backupFile = new File(file_name + ".bak");
+        this.file = new File(fileName);
+        this.backupFile = new File(fileName + ".bak");
         this.parentFile = file.getParentFile() != null ? file.getParentFile() : new File(".");
     }
 
     public void readFile() throws IOException {
-        MessageAdapter adapter = new DistributorAdapter(endpoint.getTicker(), endpoint.getStream(), endpoint.getHistory(), filter, QDStats.VOID);
+        MessageAdapter adapter = new DistributorAdapter(endpoint,
+            endpoint.getTicker(), endpoint.getStream(), endpoint.getHistory(), filter, null, QDStats.VOID, null);
         try {
             adapter.start();
             if (file.exists()) {
                 readFileInternal(file, adapter);
             } else if (backupFile.exists()) {
                 readFileInternal(backupFile, adapter);
-            } else
+            } else {
                 log.info("Storage file " + LogUtil.hideCredentials(file) + " is not found -- starting with empty storage");
+            }
         } finally {
             adapter.close();
         }

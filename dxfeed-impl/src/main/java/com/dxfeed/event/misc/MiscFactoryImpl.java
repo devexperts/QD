@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -23,6 +23,7 @@ import com.dxfeed.api.impl.EventDelegateFlags;
 import com.dxfeed.api.impl.SchemeBuilder;
 import com.dxfeed.event.misc.impl.ConfigurationMapping;
 import com.dxfeed.event.misc.impl.MessageMapping;
+import com.dxfeed.event.misc.impl.TextMessageMapping;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -35,6 +36,10 @@ public final class MiscFactoryImpl extends EventDelegateFactory implements Recor
     public void buildScheme(SchemeBuilder builder) {
         builder.addRequiredField("Message", "Message", SerialFieldType.SERIAL_OBJECT);
 
+        builder.addRequiredField("TextMessage", "Time", SerialFieldType.TIME_SECONDS);
+        builder.addRequiredField("TextMessage", "Sequence", SerialFieldType.SEQUENCE);
+        builder.addRequiredField("TextMessage", "Text", SerialFieldType.UTF_CHAR_ARRAY);
+
         builder.addOptionalField("Configuration", "Version", SerialFieldType.COMPACT_INT, "Configuration", "Version", true);
         builder.addRequiredField("Configuration", "Configuration", SerialFieldType.SERIAL_OBJECT);
     }
@@ -44,6 +49,8 @@ public final class MiscFactoryImpl extends EventDelegateFactory implements Recor
         Collection<EventDelegate<?>> result = new ArrayList<>();
         if (record.getMapping(MessageMapping.class) != null) {
             result.add(new MessageDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
+        } else if (record.getMapping(TextMessageMapping.class) != null) {
+            result.add(new TextMessageDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
         } else if (record.getMapping(ConfigurationMapping.class) != null) {
             result.add(new ConfigurationDelegate(record, QDContract.TICKER, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB)));
             result.add(new ConfigurationDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
@@ -56,6 +63,8 @@ public final class MiscFactoryImpl extends EventDelegateFactory implements Recor
         Collection<EventDelegate<?>> result = new ArrayList<>();
         if (record.getMapping(MessageMapping.class) != null) {
             result.add(new MessageDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
+        } else if (record.getMapping(TextMessageMapping.class) != null) {
+            result.add(new TextMessageDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
         } else if (record.getMapping(ConfigurationMapping.class) != null) {
             result.add(new ConfigurationDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
         }
@@ -67,6 +76,8 @@ public final class MiscFactoryImpl extends EventDelegateFactory implements Recor
         String baseRecordName = getBaseRecordName(record.getName());
         if (baseRecordName.equals("Message"))
             return new MessageMapping(record);
+        if (baseRecordName.equals("TextMessage"))
+            return new TextMessageMapping(record);
         if (baseRecordName.equals("Configuration"))
             return new ConfigurationMapping(record);
         return null;

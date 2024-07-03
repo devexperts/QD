@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.333</version>
+    <version>3.334</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -178,7 +178,7 @@
         <slf4j.version>1.7.30</slf4j.version>
         <aspectj.version>1.8.2</aspectj.version>
         <junit.version>4.13.2</junit.version>
-        <jmh.version>1.21</jmh.version>
+        <jmh.version>1.37</jmh.version>
         <jmxtools.version>1.2.8</jmxtools.version>
         <mycila-license-maven-plugin.version>3.0</mycila-license-maven-plugin.version>
 

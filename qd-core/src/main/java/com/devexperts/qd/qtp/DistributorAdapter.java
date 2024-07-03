@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -99,7 +99,8 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
 
         @Override
         public MessageAdapter createAdapter(QDStats stats) {
-            return new DistributorAdapter(endpoint, ticker, stream, history, getFilter(), stats, fieldReplacer);
+            return new DistributorAdapter(endpoint, ticker, stream, history,
+                getFilter(), getStripe(), stats, fieldReplacer);
         }
 
         /**
@@ -125,11 +126,15 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
     // ------------------------- instance fields -------------------------
 
     private final DataScheme scheme;
-    private final QDFilter filter; // @NotNull
+    private final QDFilter localFilter; // @NotNull
+    private final QDFilter localStripe; // @NotNull
 
     private final QDCollector[] collectors = new QDCollector[N_CONTRACTS];
     private final AtomicReferenceArray<QDDistributor> distributors = new AtomicReferenceArray<>(N_CONTRACTS);
-    private final QDFilter[] peerFilter = new QDFilter[N_CONTRACTS]; // peer filters
+
+    // Filters received from remote peer in DESCRIBE PROTOCOL message
+    private final QDFilter[] peerFilter = new QDFilter[N_CONTRACTS];
+    private QDFilter peerStripe;
 
     private final RecordListener subListener = new SubListener();
 
@@ -141,27 +146,37 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
     // ------------------------- constructors -------------------------
 
     public DistributorAdapter(QDEndpoint endpoint, QDTicker ticker, QDStream stream, QDHistory history,
-            SubscriptionFilter filter, QDStats stats, FieldReplacersCache fieldReplacer)
+        SubscriptionFilter filter, QDFilter stripe, QDStats stats, FieldReplacersCache fieldReplacer)
     {
         super(endpoint, stats);
         this.scheme = getCommonScheme(ticker, stream, history);
-        this.filter = QDFilter.fromFilter(filter, scheme);
+        this.localFilter = QDFilter.fromFilter(filter, scheme);
+        this.localStripe = (stripe != null) ? stripe : QDFilter.ANYTHING;
         this.fieldReplacer = fieldReplacer;
         collectors[QDContract.TICKER.ordinal()] = ticker;
         collectors[QDContract.STREAM.ordinal()] = stream;
         collectors[QDContract.HISTORY.ordinal()] = history;
     }
 
+    @Deprecated
     public DistributorAdapter(QDEndpoint endpoint, QDTicker ticker, QDStream stream, QDHistory history,
-            SubscriptionFilter filter, QDStats stats)
+        SubscriptionFilter filter, QDStats stats, FieldReplacersCache fieldReplacer)
     {
-        this(endpoint, ticker, stream, history, filter, stats, null);
+        this(endpoint, ticker, stream, history, filter, null, stats, fieldReplacer);
     }
 
-    public DistributorAdapter(QDTicker ticker, QDStream stream, QDHistory history, SubscriptionFilter filter,
-            QDStats stats)
+    @Deprecated
+    public DistributorAdapter(QDEndpoint endpoint, QDTicker ticker, QDStream stream, QDHistory history,
+        SubscriptionFilter filter, QDStats stats)
     {
-        this(null, ticker, stream, history, filter, stats, null);
+        this(endpoint, ticker, stream, history, filter, null, stats, null);
+    }
+
+    @Deprecated
+    public DistributorAdapter(QDTicker ticker, QDStream stream, QDHistory history,
+        SubscriptionFilter filter, QDStats stats)
+    {
+        this(null, ticker, stream, history, filter, null, stats, null);
     }
 
     // ------------------------- instance methods -------------------------
@@ -170,16 +185,23 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
         return collectors[contract.ordinal()];
     }
 
+    @Deprecated
+    protected QDDistributor createDistributor(QDCollector collector, SubscriptionFilter filter, String keyProperties) {
+        return createDistributor(collector, QDFilter.fromFilter(filter, scheme), QDFilter.ANYTHING, keyProperties);
+    }
+
     /**
      * This method is used internally by distributor adapter to create agent for the corresponding
-     * collector, filter, and keyProperties from this adapter's constructor.
-     * This implementation returns <code>collector.createDistributor(filter, keyProperties)</code>.
+     * collector, filter, stripe, and keyProperties from this adapter's constructor.
      * This method may be overridden to create agent with other filter, otherwise customize the agent
      * that is being created, or to keep track of created agents.
      */
-    protected QDDistributor createDistributor(QDCollector collector, SubscriptionFilter filter, String keyProperties) {
+    protected QDDistributor createDistributor(
+        QDCollector collector, QDFilter filter, QDFilter stripe, String keyProperties)
+    {
         return collector.distributorBuilder()
-            .withFilter(QDFilter.fromFilter(filter, scheme))
+            .withFilter(filter)
+            .withStripe(stripe)
             .withKeyProperties(keyProperties)
             .build();
     }
@@ -195,15 +217,25 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
             distributor = distributors.get(i);
             if (distributor != null)
                 return distributor;
-            distributor = createDistributor(collector, CompositeFilters.makeAnd(peerFilter[i], filter),
+
+            // Create distributor combining filters and stripes from both local and remote parties
+            distributor = createDistributor(collector,
+                CompositeFilters.makeAnd(peerFilter[i], localFilter),
+                intersectStripes(peerStripe, localStripe),
                 getStats().getFullKeyProperties());
             distributors.set(i, distributor);
         }
         return distributor;
     }
 
+    // For tests only!
+    @Deprecated
+    QDDistributor getDistributor(QDContract contract) {
+        return distributors.get(contract.ordinal());
+    }
+
     public String toString() {
-        return super.toString() + (filter == QDFilter.ANYTHING  ? "" : "[" + filter + "]");
+        return super.toString() + (localFilter == QDFilter.ANYTHING  ? "" : "[" + localFilter + "]");
     }
 
     @Override
@@ -238,10 +270,10 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
 
     @Override
     protected void startImpl(MasterMessageAdapter master) {
-        if (filter.isDynamic())
-            log.warn("Using dynamic filter '" + LogUtil.hideCredentials(filter) + "'" +
+        if (localFilter.isDynamic())
+            log.warn("Using dynamic filter '" + LogUtil.hideCredentials(localFilter) + "'" +
                 " in distributor address will cause connection reset when filter changes");
-        filter.addUpdateListener(this); // listen for filter updates
+        localFilter.addUpdateListener(this); // listen for filter updates
         // Legacy behavior: immediately send subscription if we are not using DESCRIBE_PROTOCOL messages,
         // which is when useDescribeProtocol() was not called before start.
         if (!useDescribeProtocol)
@@ -251,7 +283,7 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
 
     @Override
     protected void closeImpl() {
-        filter.removeUpdateListener(this);
+        localFilter.removeUpdateListener(this);
         for (int i = 0; i < N_CONTRACTS; i++)
             if (distributors.get(i) != null)
                 distributors.get(i).close();
@@ -293,7 +325,7 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
     @Override
     public void prepareProtocolDescriptor(ProtocolDescriptor desc) {
         super.prepareProtocolDescriptor(desc);
-        QDFilter stableFilter = CompositeFilters.toStableFilter(this.filter);
+        QDFilter stableFilter = CompositeFilters.toStableFilter(this.localFilter);
         if (stableFilter != QDFilter.ANYTHING)
             desc.setProperty(ProtocolDescriptor.FILTER_PROPERTY, stableFilter.toString());
         for (QDContract contract : QD_CONTRACTS)
@@ -303,12 +335,27 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
                 desc.addReceive(desc.newMessageDescriptor(MessageType.forData(contract)));
             }
         desc.addReceive(desc.newMessageDescriptor(MessageType.RAW_DATA));
+        QDFilter stableStripe = CompositeFilters.toStableFilter(localStripe);
+        if (stableStripe != QDFilter.ANYTHING) {
+            desc.setProperty(ProtocolDescriptor.STRIPE_PROPERTY, stableStripe.toString());
+        }
     }
 
     @Override
     public void processDescribeProtocol(ProtocolDescriptor desc, boolean logDescriptor) {
         super.processDescribeProtocol(desc, logDescriptor);
+
         QDFilterFactory filterFactory = CompositeFilters.getFactory(scheme);
+        String stripe = desc.getProperty(ProtocolDescriptor.STRIPE_PROPERTY);
+        if (stripe != null) {
+            try {
+                peerStripe = filterFactory.createFilter(stripe, QDFilterContext.REMOTE_FILTER);
+            } catch (IllegalArgumentException e) {
+                log.warn("Cannot parse stripe filter '" + LogUtil.hideCredentials(stripe) + "'" +
+                    " from " + LogUtil.hideCredentials(getRemoteHostAddress()), e);
+            }
+        }
+
         Map<String, QDFilter> filters = new HashMap<>();
         filters.put(null, QDFilter.ANYTHING);
         for (QDContract contract : QD_CONTRACTS) {

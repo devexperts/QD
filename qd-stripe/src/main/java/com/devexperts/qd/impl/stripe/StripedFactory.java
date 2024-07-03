@@ -36,7 +36,7 @@ public class StripedFactory extends QDFactory {
     private static final Logging log = Logging.getLogging(StripedFactory.class);
 
     static {
-        if (System.getProperty(STRIPE_PROPERTY) != null) {
+        if (SystemProperties.getProperty(STRIPE_PROPERTY, null) != null) {
             log.warn("WARNING: DEPRECATED use of \"" + STRIPE_PROPERTY + "\" property, use \"" +
                 QDEndpoint.DXFEED_STRIPE_PROPERTY + "=byhash<N>\" instead!");
         }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -19,6 +19,7 @@ import com.devexperts.qd.ng.RecordProvider;
 import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.stats.QDStats;
 
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -45,9 +46,7 @@ final class Distributor extends AbstractDistributor {
     Distributor(Collector collector, int number, QDFilter filter, QDStats stats) {
         this.collector = collector;
         this.number = number;
-        if (filter == null)
-            throw new NullPointerException();
-        this.filter = filter;
+        this.filter = Objects.requireNonNull(filter, "filter");
         this.stats = stats;
         this.added_provider = new SubProvider(this, true, stats.create(QDStats.SType.DISTRIBUTOR_ASUB));
         this.removed_provider = new SubProvider(this, false, stats.create(QDStats.SType.DISTRIBUTOR_RSUB));

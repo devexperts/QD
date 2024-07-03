@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -41,11 +41,13 @@ import javax.swing.JTable;
 import javax.swing.SwingUtilities;
 
 public class SampleClient {
+    private SampleClient() {}
+
     public static void main(String[] args) {
-        initClient(args.length <= 0 ? "127.0.0.1:5555" : args[0], 1236);
+        initClient(args.length == 0 ? "127.0.0.1:5555" : args[0], 1236);
     }
 
-    public static final String[] symbols = {
+    public static final String[] STRINGS = {
         "SPX", "NDX", "DJX", "QQQ", "XEO",
         "C", "T", "IBM", "BEA", "AOL",
         "MSFT", "INTC", "SUNW", "ORCL", "YHOO",
@@ -57,7 +59,7 @@ public class SampleClient {
         QDEndpoint endpoint = QDEndpoint.newBuilder()
             .withName("client")
             .withScheme(scheme)
-            .withContracts(EnumSet.of(QDContract.TICKER, QDContract.STREAM, QDContract.HISTORY))
+            .withCollectors(EnumSet.of(QDContract.TICKER, QDContract.STREAM, QDContract.HISTORY))
             .withProperties(Sample.getMonitoringProps(jmxHtmlPort))
             .build();
         endpoint.getStream().setEnableWildcards(true);
@@ -68,43 +70,45 @@ public class SampleClient {
         endpoint.startConnectors();
 
         // Ticker GUI creation.
-        List<String> ticker_symbols = new ArrayList<>(Arrays.asList(symbols));
-        TickerModel ticker_model = new TickerModel(endpoint.getTicker(), createColumns(new DataRecord[] {
-            scheme.getRecord(0), scheme.getRecord(1) }), ticker_symbols.toArray(new String[ticker_symbols.size()]));
-        JPanel ticker_panel = new JPanel(new BorderLayout());
-        ticker_panel.add(new ActivatorCheckBox(ticker_model), BorderLayout.SOUTH);
-        ticker_panel.add(new JLabel("Ticker"), BorderLayout.NORTH);
-        ticker_panel.add(new JScrollPane(new JTable(ticker_model)), BorderLayout.CENTER);
+        List<String> tickerSymbols = new ArrayList<>(Arrays.asList(STRINGS));
+        TickerModel tickerModel = new TickerModel(endpoint.getTicker(), createColumns(new DataRecord[] {
+            scheme.getRecord(0), scheme.getRecord(1) }), tickerSymbols.toArray(new String[0]));
+        JPanel tickerPanel = new JPanel(new BorderLayout());
+        tickerPanel.add(new ActivatorCheckBox(tickerModel), BorderLayout.SOUTH);
+        tickerPanel.add(new JLabel("Ticker"), BorderLayout.NORTH);
+        tickerPanel.add(new JScrollPane(new JTable(tickerModel)), BorderLayout.CENTER);
 
         // Stream GUI creation.
-        StreamModel stream_model = new StreamModel(endpoint.getStream(), createColumns(scheme.getRecord(1)), symbols);
-        JPanel stream_panel = new JPanel(new BorderLayout());
-        stream_panel.add(new ActivatorCheckBox(stream_model), BorderLayout.SOUTH);
-        stream_panel.add(new JLabel("Stream subscribe by list"), BorderLayout.NORTH);
-        stream_panel.add(new JScrollPane(new JTable(stream_model)), BorderLayout.CENTER);
+        StreamModel streamModel = new StreamModel(endpoint.getStream(), createColumns(scheme.getRecord(1)), STRINGS);
+        JPanel streamPanel = new JPanel(new BorderLayout());
+        streamPanel.add(new ActivatorCheckBox(streamModel), BorderLayout.SOUTH);
+        streamPanel.add(new JLabel("Stream subscribe by list"), BorderLayout.NORTH);
+        streamPanel.add(new JScrollPane(new JTable(streamModel)), BorderLayout.CENTER);
 
         // Stream GUI creation 2
-        StreamModel stream_model2 = new StreamModel(endpoint.getStream(), createColumns(scheme.getRecord(1)), new String[] {"*"});
-        JPanel stream_panel2 = new JPanel(new BorderLayout());
-        stream_panel2.add(new ActivatorCheckBox(stream_model2), BorderLayout.SOUTH);
-        stream_panel2.add(new JLabel("Stream subscribe by *"), BorderLayout.NORTH);
-        stream_panel2.add(new JScrollPane(new JTable(stream_model2)), BorderLayout.CENTER);
+        StreamModel streamModel2 = new StreamModel(endpoint.getStream(),
+            createColumns(scheme.getRecord(1)), new String[] {"*"});
+        JPanel streamPanel2 = new JPanel(new BorderLayout());
+        streamPanel2.add(new ActivatorCheckBox(streamModel2), BorderLayout.SOUTH);
+        streamPanel2.add(new JLabel("Stream subscribe by *"), BorderLayout.NORTH);
+        streamPanel2.add(new JScrollPane(new JTable(streamModel2)), BorderLayout.CENTER);
 
         // History GUI creation.
-        HistoryModel history_model = new HistoryModel(endpoint.getHistory(), createColumns(scheme.getRecord(2)), symbols[0]);
-        JPanel history_panel = new JPanel(new BorderLayout());
-        history_panel.add(new ActivatorCheckBox(history_model), BorderLayout.SOUTH);
-        history_panel.add(new JLabel("History for " + symbols[0]), BorderLayout.NORTH);
-        history_panel.add(new JScrollPane(new JTable(history_model)), BorderLayout.CENTER);
+        HistoryModel historyModel = new HistoryModel(endpoint.getHistory(),
+            createColumns(scheme.getRecord(2)), STRINGS[0]);
+        JPanel historyPanel = new JPanel(new BorderLayout());
+        historyPanel.add(new ActivatorCheckBox(historyModel), BorderLayout.SOUTH);
+        historyPanel.add(new JLabel("History for " + STRINGS[0]), BorderLayout.NORTH);
+        historyPanel.add(new JScrollPane(new JTable(historyModel)), BorderLayout.CENTER);
 
         // Frame packaging.
         JFrame frame = new JFrame();
         JPanel panel = new JPanel();
         panel.setLayout(new GridLayout(2, 2));
-        panel.add(ticker_panel);
-        panel.add(stream_panel);
-        panel.add(stream_panel2);
-        panel.add(history_panel);
+        panel.add(tickerPanel);
+        panel.add(streamPanel);
+        panel.add(streamPanel2);
+        panel.add(historyPanel);
         frame.getContentPane().add(panel);
         frame.pack();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -121,12 +125,14 @@ public class SampleClient {
         for (DataRecord record : records) {
             int nint = record.getIntFieldCount();
             int nobj = record.getObjFieldCount();
-            for (int j = 0; j < nint; j++)
+            for (int j = 0; j < nint; j++) {
                 result.add(new SampleColumn.IntColumn(record.getIntField(j)));
-            for (int j = 0; j < nobj; j++)
+            }
+            for (int j = 0; j < nobj; j++) {
                 result.add(new SampleColumn.ObjColumn(record.getObjField(j)));
+            }
         }
-        return result.toArray(new GUIColumn[result.size()]);
+        return result.toArray(new GUIColumn[0]);
     }
 
     private static class ClientAdapterFactory extends DistributorAdapter.Factory
@@ -149,11 +155,12 @@ public class SampleClient {
 
         @Override
         public MessageAdapter createAdapterWithSocket(Socket socket, QDStats stats)
-        throws SecurityException, IOException
+            throws SecurityException, IOException
         {
             // Send auth token to the other side.
-            if (customAuth)
+            if (customAuth) {
                 socket.getOutputStream().write(SampleServer.AUTH_TOKEN_BYTES);
+            }
             return createAdapter(stats);
         }
 
@@ -164,7 +171,8 @@ public class SampleClient {
 
         private class SwingDistributorAdapter extends DistributorAdapter {
             SwingDistributorAdapter(QDStats stats) {
-                super(ClientAdapterFactory.this.endpoint, ClientAdapterFactory.this.ticker, ClientAdapterFactory.this.stream, ClientAdapterFactory.this.history, null, stats);
+                super(ClientAdapterFactory.this.endpoint, ClientAdapterFactory.this.ticker,
+                    ClientAdapterFactory.this.stream, ClientAdapterFactory.this.history, null, null, stats, null);
             }
 
             @Override

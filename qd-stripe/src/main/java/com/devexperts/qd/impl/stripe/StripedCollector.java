@@ -22,6 +22,7 @@ import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.SymbolStriper;
 import com.devexperts.qd.impl.AbstractCollector;
 import com.devexperts.qd.kit.CompositeFilters;
+import com.devexperts.qd.kit.FilterSyntaxException;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.ng.RecordSource;
@@ -47,6 +48,11 @@ abstract class StripedCollector<C extends QDCollector> extends AbstractCollector
         this.wildcard = scheme.getCodec().getWildcardCipher();
         this.striper = striper;
         this.n = striper.getStripeCount();
+
+        for (int i = 0; i < n; i++) {
+            if (!striper.getStripeFilter(i).isStable())
+                throw new FilterSyntaxException("Unstable striper filter: " + striper.getStripeFilter(i));
+        }
     }
 
     @Override
@@ -89,12 +95,12 @@ abstract class StripedCollector<C extends QDCollector> extends AbstractCollector
 
     @Override
     public QDAgent buildAgent(QDAgent.Builder builder) {
-        return new StripedAgent<>(this, builder);
+        return StripedAgent.createAgent(this, builder);
     }
 
     @Override
     public QDDistributor buildDistributor(QDDistributor.Builder builder) {
-        return new StripedDistributor<>(this, builder);
+        return StripedDistributor.createDistributor(this, builder);
     }
 
     @Override

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -68,10 +68,6 @@ public class RangeStringStriperGroupBenchmark {
         "code2",
         "code3",
         "code4",
-        "text1",
-        "text2",
-        "text3",
-        "text4",
     })
     public String striperSpec;
 
@@ -94,7 +90,7 @@ public class RangeStringStriperGroupBenchmark {
             if (url == null)
                 throw new IOException("Cannot find resource file for " + group);
             symbols1 = Files.readAllLines(Paths.get(url.toURI()));
-        } catch (IOException| URISyntaxException e) {
+        } catch (IOException | URISyntaxException e) {
             System.err.println("Error reading instruments from " + group + ".csv");
             e.printStackTrace(System.err);
             System.exit(-1);
@@ -114,16 +110,12 @@ public class RangeStringStriperGroupBenchmark {
         }
 
         // Create striper spec from formula:
+        // code1 == "byrange-A-B-...-Z-"
         // code2 == "byrange-AA-BB-...-ZZ-"
-        // text2 == "byrange-AA-BB-...-ZZ0123456789-"
+        // etc
         List<String> ranges = generateRanges(striperSpec.charAt(4) - '0');
-        if (striperSpec.startsWith("text")) {
-            int index = 'Z' - 'A';
-            ranges.set(index, ranges.get(index) + "0123456789");
-        }
 
         striper = RangeStriper.valueOf(scheme, ranges);
-        //System.out.println(striper);
     }
 
     @Benchmark

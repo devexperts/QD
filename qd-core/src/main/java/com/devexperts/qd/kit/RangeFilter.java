@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,10 +20,6 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.devexperts.qd.kit.RangeUtil.compareByString;
-import static com.devexperts.qd.kit.RangeUtil.encodeSymbol;
-import static com.devexperts.qd.kit.RangeUtil.skipPrefix;
-
 /**
  * Range symbol filter with specification {@code range-<A>-<B>-}, where A and B are range boundaries
  * using dictionary [a-zA-Z0-9], accepts symbols that are greater or equal than A and less than B skipping
@@ -34,8 +30,9 @@ import static com.devexperts.qd.kit.RangeUtil.skipPrefix;
  * will all start with "ES" after removing unused prefixes and will all fall into {@code range-ES-ET-} stripe.
  * The range boundary can be empty, so {@code range-M--} will accept all symbols starting from "M" and greater.
  *
- * <p>RangeFilter can be matched by the following regex: <b>{@code range-([a-zA-Z0-9]*)-([a-zA-Z0-9]*)-}</b>,
+ * <p>RangeFilter can be matched by the following regex: <b>{@code range-([a-zA-Z0-9]{0,8})-([a-zA-Z0-9]{0,8})-}</b>,
  * where the first matched group defines range's left boundary, and the second group - range's right boundary.
+ * For performance reasons ranges must not be greater than 8 characters long.
  *
  * @see #SYMBOL_PATTERN
  */
@@ -72,7 +69,7 @@ public class RangeFilter extends QDFilter {
      */
     public static final String SYMBOL_PATTERN = "(?:=[-+]?[0-9]+(?:\\.[0-9]*)?\\*)?[^a-zA-Z0-9]*(.*)";
 
-    protected static final String BOUNDARY_PATTERN = "([a-zA-Z0-9]*)";
+    protected static final String BOUNDARY_PATTERN = "([a-zA-Z0-9]{0,8})";
     protected static final Pattern FILTER_PATTERN = Pattern.compile(RANGE_FILTER_PREFIX +
         RANGE_DELIMITER + BOUNDARY_PATTERN + RANGE_DELIMITER + BOUNDARY_PATTERN + RANGE_DELIMITER);
 
@@ -133,10 +130,10 @@ public class RangeFilter extends QDFilter {
             throw new FilterSyntaxException("Invalid range filter definition: " + this);
 
         this.leftChars = left.toCharArray();
-        this.leftCode = !left.isEmpty() ? encodeSymbol(left) : 0;
+        this.leftCode = !left.isEmpty() ? RangeUtil.encodeSymbol(left) : 0;
 
         this.rightChars = right.toCharArray();
-        this.rightCode = !right.isEmpty() ? encodeSymbol(right) : Long.MAX_VALUE;
+        this.rightCode = !right.isEmpty() ? RangeUtil.encodeSymbol(right) : Long.MAX_VALUE;
 
         this.wildcard = getScheme().getCodec().getWildcardCipher();
     }
@@ -180,14 +177,14 @@ public class RangeFilter extends QDFilter {
 
     protected boolean acceptString(String symbol) {
         int length = symbol.length();
-        int symbolIdx = skipPrefix(symbol, length);
+        int symbolIdx = RangeUtil.skipPrefix(symbol, length);
 
-        return (leftCode == 0 || compareByString(leftChars, symbol, symbolIdx) <= 0) &&
-            (rightCode == Long.MAX_VALUE || compareByString(rightChars, symbol, symbolIdx) > 0);
+        return (leftCode == 0 || RangeUtil.compareByString(leftChars, symbol, symbolIdx) <= 0) &&
+            (rightCode == Long.MAX_VALUE || RangeUtil.compareByString(rightChars, symbol, symbolIdx) > 0);
     }
 
     protected boolean acceptCode(long symbolCode) {
-        long code = skipPrefix(symbolCode);
+        long code = RangeUtil.skipPrefix(symbolCode);
         return (leftCode <= code && code < rightCode);
     }
 }

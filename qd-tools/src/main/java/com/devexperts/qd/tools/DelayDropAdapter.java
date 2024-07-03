@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,13 +13,12 @@ package com.devexperts.qd.tools;
 
 import com.devexperts.qd.DataIterator;
 import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.QDHistory;
 import com.devexperts.qd.QDStream;
 import com.devexperts.qd.QDTicker;
-import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordConsumer;
-import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.qtp.DistributorAdapter;
 import com.devexperts.qd.qtp.MessageAdapter;
 import com.devexperts.qd.qtp.MessageType;
@@ -33,76 +32,80 @@ import java.util.TimerTask;
 
 class DelayDropAdapter extends DistributorAdapter {
     public static class Factory extends DistributorAdapter.Factory {
-        private final long delay_millis;
-        private final double drop_fraction;
+        private final long delayMillis;
+        private final double dropFraction;
 
-        public Factory(QDEndpoint endpoint, SubscriptionFilter filter, long delay_millis, double drop_fraction) {
+        public Factory(QDEndpoint endpoint, QDFilter filter, long delayMillis, double dropFraction) {
             super(endpoint, filter);
-            this.delay_millis = delay_millis;
-            this.drop_fraction = drop_fraction;
+            this.delayMillis = delayMillis;
+            this.dropFraction = dropFraction;
         }
 
         @Override
         public MessageAdapter createAdapter(QDStats stats) {
-            return new DelayDropAdapter(ticker, stream, history, getFilter(), stats, delay_millis, drop_fraction);
+            return new DelayDropAdapter(endpoint, ticker, stream, history,
+                getFilter(), getStripe(), stats, delayMillis, dropFraction);
         }
     }
 
-    private static final Timer delay_timer = new Timer(true);
-    private static final Random drop_random = new Random();
+    private static final Timer delayTimer = new Timer(true);
+    private static final Random dropRandom = new Random();
 
-    private final long delay_millis;
-    private final double drop_fraction;
+    private final long delayMillis;
+    private final double dropFraction;
 
-    DelayDropAdapter(QDTicker ticker, QDStream stream, QDHistory history, SubscriptionFilter filter, QDStats stats, long delay_millis, double drop_fraction) {
-        super(ticker, stream, history, filter, stats);
-        this.delay_millis = delay_millis;
-        this.drop_fraction = drop_fraction;
+    DelayDropAdapter(QDEndpoint endpoint, QDTicker ticker, QDStream stream, QDHistory history,
+        QDFilter filter, QDFilter stripe, QDStats stats, long delayMillis, double dropFraction)
+    {
+        super(endpoint, ticker, stream, history, filter, stripe, stats, null);
+        this.delayMillis = delayMillis;
+        this.dropFraction = dropFraction;
     }
 
     private static void copyRecord(DataRecord record, DataIterator iterator, RecordBuffer buf) {
         buf.visitRecord(record, iterator.getCipher(), iterator.getSymbol());
-        for (int i = 0, n = record.getIntFieldCount(); i < n; i++)
+        for (int i = 0, n = record.getIntFieldCount(); i < n; i++) {
             buf.visitIntField(record.getIntField(i), iterator.nextIntField());
-        for (int i = 0, n = record.getObjFieldCount(); i < n; i++)
+        }
+        for (int i = 0, n = record.getObjFieldCount(); i < n; i++) {
             buf.visitObjField(record.getObjField(i), iterator.nextObjField());
+        }
     }
 
     private void processData(DataIterator iterator, final RecordConsumer consumer) {
         final RecordBuffer buf = new RecordBuffer();
 
         // drop records if needed
-        if (drop_fraction == 0)
+        if (dropFraction == 0) {
             buf.processData(iterator);
-        else
+        } else {
             while (true) {
                 DataRecord record = iterator.nextRecord();
                 if (record == null)
                     break;
-                if (drop_random.nextDouble() < drop_fraction)
+                if (dropRandom.nextDouble() < dropFraction) {
                     DataIterators.skipRecord(record, iterator);
-                else
+                } else {
                     copyRecord(record, iterator, buf);
+                }
             }
+        }
 
         // delay records if needed
-        if (delay_millis == 0)
+        if (delayMillis == 0) {
             consumer.process(buf);
-        else
-            delay_timer.schedule(new TimerTask() {
+        } else {
+            delayTimer.schedule(new TimerTask() {
                 @Override
                 public void run() {
                     consumer.process(buf);
                 }
-            }, delay_millis);
+            }, delayMillis);
+        }
     }
 
     @Override
     protected void processData(DataIterator iterator, final MessageType message) {
-        processData(iterator, new RecordConsumer() {
-            public void process(RecordSource source) {
-                DelayDropAdapter.super.processData(source, message);
-            }
-        });
+        processData(iterator, source -> DelayDropAdapter.super.processData(source, message));
     }
 }

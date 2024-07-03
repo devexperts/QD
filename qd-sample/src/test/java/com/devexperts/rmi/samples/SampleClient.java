@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -72,8 +72,6 @@ public class SampleClient {
 
         // Client QD connection.
         ClientAdapterFactory factory = new ClientAdapterFactory(endpoint);
-//      endpoint.addConnectors(MessageConnectors.createMessageConnectors(
-//          factory, address, endpoint.getRootStats()));
         RMIEndpoint clientRMI = new RMIEndpointImpl(RMIEndpoint.Side.CLIENT, endpoint, factory, null);
         endpoint.initializeConnectorsForAddress(address);
         endpoint.startConnectors();
@@ -167,7 +165,7 @@ public class SampleClient {
 
         private class SwingDistributorAdapter extends DistributorAdapter {
             SwingDistributorAdapter(QDStats stats) {
-                super(ClientAdapterFactory.this.endpoint, ticker, stream, history, null, stats);
+                super(ClientAdapterFactory.this.endpoint, ticker, stream, history, null, null, stats, null);
             }
 
             @Override

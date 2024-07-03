@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -24,7 +24,6 @@ import com.devexperts.qd.SubscriptionListener;
 import com.devexperts.qd.SubscriptionProvider;
 import com.devexperts.qd.impl.hash.HashFactory;
 import com.devexperts.qd.kit.CompositeFilters;
-import com.devexperts.qd.kit.PatternFilter;
 import org.junit.Test;
 
 import java.util.Date;
@@ -211,9 +210,9 @@ public class SubConsistencyTest {
 
     private static class Runner {
         private final QDCollector collector;
-        private final SubscriptionFilter agentFilter;
-        private final SubscriptionFilter distFilter;
-        private final SubscriptionFilter combinedFilter;
+        private final QDFilter agentFilter;
+        private final QDFilter distFilter;
+        private final QDFilter combinedFilter;
         private final DistOp[] ops;
         private final QDAgent agent;
         private final int coreSize;
@@ -243,9 +242,9 @@ public class SubConsistencyTest {
             this.extraSize = extraSize;
         }
 
-        private SubscriptionFilter randomFilter() {
+        private QDFilter randomFilter() {
             return RND.nextBoolean() ? null : CompositeFilters.makeNot(
-                PatternFilter.valueOf("" + (char) ('A' + RND.nextInt('Z' - 'A')) + "*", SCHEME));
+                CompositeFilters.valueOf("" + (char) ('A' + RND.nextInt('Z' - 'A')) + "*", SCHEME));
         }
 
         public void run() {

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -138,49 +138,52 @@ public class CompositeFiltersTest {
         // null elimination
         checkSame("A*,*", null, false);
         checkSame("*,A*", null, false);
-        checkSame("A*&*", PatternFilter.valueOf("A*", null), false);
-        checkSame("*&A*", PatternFilter.valueOf("A*", null), false);
+        checkSame("A*&*", CompositeFilters.valueOf("A*", SCHEME), false);
+        checkSame("*&A*", CompositeFilters.valueOf("A*", SCHEME), false);
 
         // escaping
-        checkSame("[&,()*]*", PatternFilter.valueOf("[&,()*]*", null), true);
-        checkSame("[&]*,[,]*,[(]*,[)]*,[*]*", PatternFilter.valueOf("[&,()*]*", null), false);
-        checkSame("[&]*,(((!![,]*,[(]*))),[)]*,!![*]*", PatternFilter.valueOf("[&,()*]*", null), false);
+        checkSame("[&,()*]*", CompositeFilters.valueOf("[&,()*]*", SCHEME), true);
+        checkSame("[&]*,[,]*,[(]*,[)]*,[*]*", CompositeFilters.valueOf("[&,()*]*", SCHEME), false);
+        checkSame("[&]*,(((!![,]*,[(]*))),[)]*,!![*]*", CompositeFilters.valueOf("[&,()*]*", SCHEME), false);
 
         // more escaping
         checkSame("A or B", CompositeFilters.makeOr(
-            PatternFilter.valueOf("A", SCHEME), PatternFilter.valueOf("B", SCHEME)), false);
+            CompositeFilters.valueOf("A", SCHEME), CompositeFilters.valueOf("B", SCHEME)), false);
         checkSame("[A] or [B]", CompositeFilters.makeOr(
-            PatternFilter.valueOf("A", SCHEME), PatternFilter.valueOf("B", SCHEME)), false);
-        checkSame("[A]or[B]", PatternFilter.valueOf("[A]or[B]", SCHEME), true);
+            CompositeFilters.valueOf("A", SCHEME), CompositeFilters.valueOf("B", SCHEME)), false);
+        checkSame("[A]or[B]", CompositeFilters.valueOf("[A]or[B]", SCHEME), true);
 
         // logic
-        checkSame("A*,B*",
-            CompositeFilters.makeOr(PatternFilter.valueOf("A*", null), PatternFilter.valueOf("B*", null)), true);
+        checkSame("A*,B*", CompositeFilters.makeOr(
+            CompositeFilters.valueOf("A*", SCHEME), CompositeFilters.valueOf("B*", SCHEME)), true);
         checkSame("A*,B*,C*,D*",
             CompositeFilters.makeOr(
-                CompositeFilters.makeOr(PatternFilter.valueOf("A*", null), PatternFilter.valueOf("B*", null)),
-                CompositeFilters.makeOr(PatternFilter.valueOf("C*", null), PatternFilter.valueOf("D*", null))), true);
+                CompositeFilters.makeOr(
+                    CompositeFilters.valueOf("A*", SCHEME), CompositeFilters.valueOf("B*", SCHEME)),
+                CompositeFilters.makeOr(
+                    CompositeFilters.valueOf("C*", SCHEME), CompositeFilters.valueOf("D*", SCHEME))), true);
         checkSame("X*&Y*",
-            CompositeFilters.makeAnd(PatternFilter.valueOf("X*", null), PatternFilter.valueOf("Y*", null)), true);
+            CompositeFilters.makeAnd(
+                CompositeFilters.valueOf("X*", SCHEME), CompositeFilters.valueOf("Y*", SCHEME)), true);
         checkSame("!E*",
-            CompositeFilters.makeNot(PatternFilter.valueOf("E*", null)), true);
+            CompositeFilters.makeNot(CompositeFilters.valueOf("E*", SCHEME)), true);
         checkSame("F*,A*&!AB*&!AZ*&!AK*",
             CompositeFilters.makeOr(
-                PatternFilter.valueOf("F*", null),
+                CompositeFilters.valueOf("F*", SCHEME),
                 CompositeFilters.makeAnd(
-                    PatternFilter.valueOf("A*", null),
+                    CompositeFilters.valueOf("A*", SCHEME),
                     CompositeFilters.makeNot(
                         CompositeFilters.makeOr(
-                            PatternFilter.valueOf("AB*", null),
+                            CompositeFilters.valueOf("AB*", SCHEME),
                             CompositeFilters.makeOr(
-                                PatternFilter.valueOf("AZ*", null),
-                                PatternFilter.valueOf("AK*", null)
+                                CompositeFilters.valueOf("AZ*", SCHEME),
+                                CompositeFilters.valueOf("AK*", SCHEME)
                             )
                         )
                     ))), true);
         checkSame("!*&A", CompositeFilters.makeAnd(
             QDFilter.NOTHING,
-            PatternFilter.valueOf("A", null)
+            CompositeFilters.valueOf("A", SCHEME)
         ), false);
     }
 

@@ -15,6 +15,8 @@ import com.devexperts.qd.kit.FilterSyntaxException;
 import com.devexperts.qd.kit.MonoStriper;
 import com.devexperts.qd.spi.SymbolStriperFactory;
 
+import java.util.BitSet;
+
 /**
  * Symbol striping strategy that allows to split whole symbol universe into several smaller "stripes".
  * Striper can be used for example to split a large QD tape into several smaller parts based on some symbol pattern.
@@ -91,6 +93,16 @@ public interface SymbolStriper {
      * @return QD filter for the stripe
      */
     public QDFilter getStripeFilter(int stripeIndex);
+
+    /**
+     * Returns bit set of {@link #getStripeCount()} size that specifies stripes that
+     * intersect with the given filter. If intersection cannot be calculated {@code null} can be returned.
+     * @param filter QD filter to check for intersection
+     * @return bitset of {@link #getStripeCount()} size of intersecting stripes, or {@code null}.
+     */
+    public default BitSet getIntersectingStripes(QDFilter filter) {
+        return null;
+    }
 
     /**
      * Creates {@link SymbolStriper} from the given specification for the given scheme,

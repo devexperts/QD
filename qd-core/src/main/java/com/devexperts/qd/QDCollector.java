@@ -324,6 +324,7 @@ public interface QDCollector extends SubscriptionContainer, QDStatsContainer {
 
         /**
          * Returns symbol striper for collector.
+         * Striper must be stable in the sense that all its filters must be {@link QDFilter#isStable() stable}.
          */
         public SymbolStriper getStriper();
 

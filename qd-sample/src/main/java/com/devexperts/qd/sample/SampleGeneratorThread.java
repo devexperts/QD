@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -25,8 +25,7 @@ import com.devexperts.util.TimePeriod;
 
 public class SampleGeneratorThread extends Thread {
     private static final long DELAY_MILLIS = TimePeriod.valueOf(
-        SystemProperties.getProperty(SampleGeneratorThread.class, "delay", "0.5s")).
-        getTime();
+        SystemProperties.getProperty(SampleGeneratorThread.class, "delay", "0.5s")).getTime();
 
     private final DataScheme scheme;
     private final QDTicker ticker;
@@ -49,9 +48,9 @@ public class SampleGeneratorThread extends Thread {
             history.distributorBuilder().build()
         };
         DataProvider[] providers = {
-            new RandomRecordsProvider(scheme.getRecord(0), SampleClient.symbols, 10),
-            new RandomRecordsProvider(scheme.getRecord(1), SampleClient.symbols, 3),
-            new RandomRecordsProvider(scheme.getRecord(2), new String[] {SampleClient.symbols[0]}, 3)
+            new RandomRecordsProvider(scheme.getRecord(0), SampleClient.STRINGS, 10),
+            new RandomRecordsProvider(scheme.getRecord(1), SampleClient.STRINGS, 3),
+            new RandomRecordsProvider(scheme.getRecord(2), new String[] {SampleClient.STRINGS[0]}, 3)
         };
         RecordBuffer buffer = new RecordBuffer();
         try {

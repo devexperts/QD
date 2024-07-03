@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,12 +13,12 @@ package com.devexperts.qd.benchmark.qd.kit.range;
 
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.kit.RangeFilter;
+import com.devexperts.qd.kit.RangeUtil;
 
 import java.util.Objects;
 import java.util.regex.Matcher;
 
 import static com.devexperts.qd.kit.RangeUtil.CODE_LENGTH;
-import static com.devexperts.qd.kit.RangeUtil.skipPrefix;
 
 // An attempt to create a range filter without iteration over char array and only work with long codes
 public class LongCodePrefixRangeFilter extends RangeFilter {
@@ -41,13 +41,13 @@ public class LongCodePrefixRangeFilter extends RangeFilter {
     @Override
     protected boolean acceptString(String symbol) {
         int length = symbol.length();
-        int symbolIdx = skipPrefix(symbol, length);
+        int symbolIdx = RangeUtil.skipPrefix(symbol, length);
         return compareByCode(symbol, symbolIdx, length);
     }
 
     @Override
     protected boolean acceptCode(long symbolCode) {
-        long code = skipPrefix(symbolCode);
+        long code = RangeUtil.skipPrefix(symbolCode);
         return (leftCode <= code && code < rightCode);
     }
 

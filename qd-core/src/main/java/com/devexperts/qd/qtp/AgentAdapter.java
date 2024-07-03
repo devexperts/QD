@@ -63,7 +63,8 @@ import javax.annotation.Nonnull;
 public class AgentAdapter extends MessageAdapter {
     private static final QDContract[] QD_CONTRACTS = QDContract.values();
     private static final int N_CONTRACTS = QD_CONTRACTS.length;
-    private static final Iterable<ChannelShapersFactory> CHANNEL_SHAPERS_FACTORIES = Services.createServices(ChannelShapersFactory.class, null);
+    private static final Iterable<ChannelShapersFactory> CHANNEL_SHAPERS_FACTORIES =
+        Services.createServices(ChannelShapersFactory.class, null);
 
     private static final Logging log = Logging.getLogging(AgentAdapter.class);
 
@@ -223,7 +224,8 @@ public class AgentAdapter extends MessageAdapter {
 
         @Override
         public MessageAdapter createAdapter(QDStats stats) {
-            AgentAdapter adapter = new AgentAdapter(endpoint, getCommonScheme(ticker, stream, history), getFilter(), stats);
+            AgentAdapter adapter = new AgentAdapter(endpoint,
+                getCommonScheme(ticker, stream, history), getFilter(), getStripe(), stats);
             adapter.setAgentFactory(this);
             return adapter;
         }
@@ -232,11 +234,14 @@ public class AgentAdapter extends MessageAdapter {
     // ------------------------- instance fields -------------------------
 
     private final DataScheme scheme;
-    private final QDFilter filter; // @NotNull
+    private final QDFilter localFilter; // @NotNull
+    protected QDFilter localStripe; // @NotNull
     private AgentAdapter.Factory factory;
     private boolean skipRemoveSubscription = false; // current implementation supports only infinite keep-alive period
 
-    final QDFilter[] peerFilter = new QDFilter[N_CONTRACTS]; // filters received from remote peer in DESCRIBE PROTOCOL message
+    // Filters received from remote peer in DESCRIBE PROTOCOL message
+    final QDFilter[] peerFilter = new QDFilter[N_CONTRACTS];
+    QDFilter peerStripe;
 
     private AgentChannels channels; // effectively final, filled by initialize method
 
@@ -248,13 +253,16 @@ public class AgentAdapter extends MessageAdapter {
      * Creates new agent adapter for specified endpoints, ticker, stream, history, filter and stats.
      * Any of the endpoint, collectors and/or filter may be {@code null}.
      *
-     * The resulting adapter will be {@link #initialize(ChannelShaper[]) initiailized}.
+     * <p>The resulting adapter will be {@link #initialize(ChannelShaper[]) initiailized}.
      * It will use equal weight of 1 and no aggregation for all collectors.
      */
-    public AgentAdapter(QDEndpoint endpoint, QDTicker ticker, QDStream stream, QDHistory history, SubscriptionFilter filter, QDStats stats) {
+    public AgentAdapter(QDEndpoint endpoint, QDTicker ticker, QDStream stream, QDHistory history,
+        SubscriptionFilter filter, QDFilter stripe, QDStats stats)
+    {
         super(endpoint, stats);
         this.scheme = getCommonScheme(ticker, stream, history);
-        this.filter = QDFilter.fromFilter(filter, scheme);
+        this.localFilter = QDFilter.fromFilter(filter, scheme);
+        this.localStripe = (stripe != null) ? stripe : QDFilter.ANYTHING;
         ArrayList<ChannelShaper> shapers = new ArrayList<>();
         if (ticker != null)
             shapers.add(newDynamicShaper(ticker));
@@ -265,40 +273,47 @@ public class AgentAdapter extends MessageAdapter {
         channels = new AgentChannels(new OwnerImpl(), shapers);
     }
 
+    @Deprecated
+    public AgentAdapter(QDEndpoint endpoint, QDTicker ticker, QDStream stream, QDHistory history,
+        SubscriptionFilter filter, QDStats stats)
+    {
+        this(endpoint, ticker, stream, history, filter, null, stats);
+    }
+
     /**
      * Creates new agent adapter for specified ticker, stream, history, filter and stats.
      * Any of the collectors and/or filter may be {@code null}.
      *
-     * The resulting adapter will be {@link #initialize(ChannelShaper[]) initiailized}.
+     * <p>The resulting adapter will be {@link #initialize(ChannelShaper[]) initiailized}.
      * It will use equal weight of 1 and no aggregation for all collectors.
      */
+    @Deprecated
     public AgentAdapter(QDTicker ticker, QDStream stream, QDHistory history, SubscriptionFilter filter, QDStats stats) {
-        this(null, ticker, stream, history, filter, stats);
+        this(null, ticker, stream, history, filter, null, stats);
     }
 
     /**
      * Creates new agent adapter for specified scheme and stats.
      *
-     * Adapter created by this constructor must be {@link #initialize(ChannelShaper[]) initialized}
+     * <p>Adapter created by this constructor must be {@link #initialize(ChannelShaper[]) initialized}
      * with shapers before being used.
      *
      * @param scheme data scheme
      * @param stats stats
      */
     public AgentAdapter(DataScheme scheme, QDStats stats) {
-        this(null, scheme, QDFilter.ANYTHING, stats);
+        this(null, scheme, QDFilter.ANYTHING, QDFilter.ANYTHING, stats);
     }
 
-    private AgentAdapter(QDEndpoint endpoint, DataScheme scheme, QDFilter filter, QDStats stats) {
+    private AgentAdapter(QDEndpoint endpoint, DataScheme scheme, QDFilter filter, QDFilter stripe, QDStats stats) {
         super(endpoint, stats);
-        if (scheme == null)
-            throw new NullPointerException();
-        this.scheme = scheme;
-        this.filter = filter;
+        this.scheme = Objects.requireNonNull(scheme, "scheme");
+        this.localFilter = Objects.requireNonNull(filter, "filter");
+        this.localStripe = Objects.requireNonNull(stripe, "stripe");
     }
 
     private DynamicChannelShaper newDynamicShaper(QDCollector collector) {
-        DynamicChannelShaper shaper = new DynamicChannelShaper(collector.getContract(), null, this.filter);
+        DynamicChannelShaper shaper = new DynamicChannelShaper(collector.getContract(), null, localFilter);
         shaper.setCollector(collector);
         return shaper;
     }
@@ -339,15 +354,19 @@ public class AgentAdapter extends MessageAdapter {
         return createAgentBuilder(collector, filter, keyProperties).build();
     }
 
-    protected QDAgent.Builder createAgentBuilder(QDCollector collector, SubscriptionFilter filter, String keyProperties) {
+    protected QDAgent.Builder createAgentBuilder(
+        QDCollector collector, SubscriptionFilter filter, String keyProperties)
+    {
         return collector.agentBuilder()
             .withFilter(QDFilter.fromFilter(filter, scheme))
+            //TODO Move to parameter (it will require changes in ChannelShaper and AgentChannel.Config)
+            .withStripe(MessageAdapter.intersectStripes(peerStripe, localStripe))
             .withKeyProperties(keyProperties)
             .withOptSet(getRemoteOptSet());
     }
 
     public String toString() {
-        return super.toString() + (filter == QDFilter.ANYTHING  ? "" : "[" + filter + "]");
+        return super.toString() + (localFilter == QDFilter.ANYTHING  ? "" : "[" + localFilter + "]");
     }
 
     @Override
@@ -471,13 +490,18 @@ public class AgentAdapter extends MessageAdapter {
             QDFilter combinedFilter = channels.combinedFilter(contract);
             if (combinedFilter != QDFilter.NOTHING) {
                 // prepare message for this contract
-                MessageDescriptor addSubscriptionMessage = desc.newMessageDescriptor(MessageType.forAddSubscription(contract));
+                MessageDescriptor addSubMessage = desc.newMessageDescriptor(MessageType.forAddSubscription(contract));
                 desc.addSend(desc.newMessageDescriptor(MessageType.forData(contract)));
-                desc.addReceive(addSubscriptionMessage);
+                desc.addReceive(addSubMessage);
                 desc.addReceive(desc.newMessageDescriptor(MessageType.forRemoveSubscription(contract)));
                 // postpone setting contract filter
-                messageTypeFilters.put(addSubscriptionMessage, combinedFilter.toString());
+                messageTypeFilters.put(addSubMessage, combinedFilter.toString());
             }
+        }
+        // Use any non-trivial striper for all collectors and messages
+        QDFilter stableStripe = CompositeFilters.toStableFilter(localStripe);
+        if (stableStripe != QDFilter.ANYTHING) {
+            desc.setProperty(ProtocolDescriptor.STRIPE_PROPERTY, stableStripe.toString());
         }
         // now check if filters for all message types are the same.
         HashSet<String> filtersStringSet = new HashSet<>(messageTypeFilters.values());
@@ -516,6 +540,15 @@ public class AgentAdapter extends MessageAdapter {
                     filters.put(filter, QDFilter.ANYTHING);
                 }
             peerFilter[contract.ordinal()] = filters.get(filter);
+        }
+        String stripe = desc.getProperty(ProtocolDescriptor.STRIPE_PROPERTY);
+        if (stripe != null) {
+            try {
+                peerStripe = filterFactory.createFilter(stripe, QDFilterContext.REMOTE_FILTER);
+            } catch (IllegalArgumentException e) {
+                log.warn("Cannot parse stripe filter '" + LogUtil.hideCredentials(stripe) + "'" +
+                    " from " + LogUtil.hideCredentials(getRemoteHostAddress()), e);
+            }
         }
     }
 

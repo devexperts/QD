@@ -16,6 +16,7 @@ import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.SymbolStriper;
 
+import java.util.BitSet;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -137,6 +138,27 @@ public class HashStriper implements SymbolStriper {
             filters[stripeIndex] = new HashFilter(this, stripeIndex);
         }
         return filters[stripeIndex];
+    }
+
+    @Override
+    public BitSet getIntersectingStripes(QDFilter filter) {
+        if (!(filter instanceof HashFilter))
+            return null;
+
+        BitSet result = new BitSet(getStripeCount());
+        HashFilter hashFilter = (HashFilter) filter;
+
+        int diff = this.shift - hashFilter.shift;
+        if (diff > 0) {
+            // Case: "byhash8" vs "hash1of16"
+            // Smaller filter is completely contained within one larger stripe
+            result.set(hashFilter.index >>> diff);
+        } else {
+            // Case: "byhash8" vs "hash1of4"
+            // Larger filter occupies several small stripes
+            result.set(hashFilter.index << -diff, (hashFilter.index + 1) << -diff);
+        }
+        return result;
     }
 
     @Override

@@ -24,20 +24,38 @@ import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.stats.QDStats;
 
+import java.util.BitSet;
+
 class StripedAgent<C extends QDCollector> extends AbstractAgent {
     private final StripedCollector<C> collector;
     private final int n;
-    private final QDAgent[] agents;
+    private final QDAgent[] agents; // Can contain null entries!
+    private QDAgent firstAgent;
     private final Provider provider;
     private volatile Provider snapshotProvider; // lazy init
 
-    StripedAgent(StripedCollector<C> collector, Builder builder) {
+    static <C extends QDCollector> QDAgent createAgent(StripedCollector<C> collector, Builder builder) {
+        BitSet stripes = collector.getStriper().getIntersectingStripes(builder.getStripe());
+        if (stripes != null && stripes.cardinality() == 1) {
+            // Do not create striped distributor for single stripe
+            int stripe = stripes.nextSetBit(0);
+            return collector.collectors()[stripe].buildAgent(builder);
+        }
+        return new StripedAgent<>(collector, builder, stripes);
+    }
+
+    private StripedAgent(StripedCollector<C> collector, Builder builder, BitSet stripes) {
         super(collector.getContract(), builder);
         this.collector = collector;
         n = collector.n;
         agents = new QDAgent[n];
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < collector.n; i++) {
+            if (stripes != null && !stripes.get(i))
+                continue;
             agents[i] = collector.collectors()[i].buildAgent(builder);
+            if (firstAgent == null)
+                firstAgent = agents[i];
+        }
         provider = new Provider(false);
     }
 
@@ -45,7 +63,7 @@ class StripedAgent<C extends QDCollector> extends AbstractAgent {
     public void addSubscription(RecordSource source) {
         RecordBuffer[] buf = StripedBuffersUtil.stripeSub(collector, source);
         for (int i = 0; i < n; i++) {
-            if (buf[i] != null && !buf[i].isEmpty()) {
+            if (agents[i] != null && buf[i] != null && !buf[i].isEmpty()) {
                 agents[i].addSubscription(buf[i]);
             }
         }
@@ -56,7 +74,7 @@ class StripedAgent<C extends QDCollector> extends AbstractAgent {
     public void removeSubscription(RecordSource source) {
         RecordBuffer[] buf = StripedBuffersUtil.stripeSub(collector, source);
         for (int i = 0; i < n; i++) {
-            if (buf[i] != null && !buf[i].isEmpty()) {
+            if (agents[i] != null && buf[i] != null && !buf[i].isEmpty()) {
                 agents[i].removeSubscription(buf[i]);
             }
         }
@@ -67,38 +85,47 @@ class StripedAgent<C extends QDCollector> extends AbstractAgent {
     public void setSubscription(RecordSource source) {
         RecordBuffer[] buf = StripedBuffersUtil.stripeSub(collector, source);
         for (int i = 0; i < n; i++) {
-            agents[i].setSubscription(buf[i] == null ? RecordSource.VOID : buf[i]);
+            if (agents[i] != null)
+                agents[i].setSubscription(buf[i] == null ? RecordSource.VOID : buf[i]);
         }
         StripedBuffersUtil.releaseBuf(buf);
     }
 
     @Override
     public void close() {
-        for (int i = 0; i < n; i++)
-            agents[i].close();
+        for (int i = 0; i < n; i++) {
+            if (agents[i] != null)
+                agents[i].close();
+        }
     }
 
     @Override
     public void closeAndExamineDataBySubscription(RecordSink sink) {
-        for (int i = 0; i < n; i++)
-            agents[i].closeAndExamineDataBySubscription(sink);
+        for (int i = 0; i < n; i++) {
+            if (agents[i] != null)
+                agents[i].closeAndExamineDataBySubscription(sink);
+        }
     }
 
     @Override
     public QDStats getStats() {
-        return agents[0].getStats();
+        return firstAgent.getStats();
     }
 
     @Override
     public void setBufferOverflowStrategy(BufferOverflowStrategy bufferOverflowStrategy) {
-        for (int i = 0; i < n; i++)
-            agents[i].setBufferOverflowStrategy(bufferOverflowStrategy);
+        for (int i = 0; i < n; i++) {
+            if (agents[i] != null)
+                agents[i].setBufferOverflowStrategy(bufferOverflowStrategy);
+        }
     }
 
     @Override
     public void setMaxBufferSize(int maxBufferSize) {
-        for (int i = 0; i < n; i++)
-            agents[i].setMaxBufferSize(maxBufferSize);
+        for (int i = 0; i < n; i++) {
+            if (agents[i] != null)
+                agents[i].setMaxBufferSize(maxBufferSize);
+        }
     }
 
     @Override
@@ -127,13 +154,14 @@ class StripedAgent<C extends QDCollector> extends AbstractAgent {
 
     @Override
     public boolean isSubscribed(DataRecord record, int cipher, String symbol, long time) {
-        return agents[collector.index(cipher, symbol)].isSubscribed(record, cipher, symbol, time);
+        QDAgent agent = agents[collector.index(cipher, symbol)];
+        return (agent != null) && agent.isSubscribed(record, cipher, symbol, time);
     }
 
     @Override
     public boolean examineSubscription(RecordSink sink) {
         for (int i = 0; i < n; i++) {
-            if (agents[i].examineSubscription(sink))
+            if (agents[i] != null && agents[i].examineSubscription(sink))
                 return true;
         }
         return false;
@@ -142,8 +170,10 @@ class StripedAgent<C extends QDCollector> extends AbstractAgent {
     @Override
     public int getSubscriptionSize() {
         int sum = 0;
-        for (int i = 0; i < n; i++)
-            sum += agents[i].getSubscriptionSize();
+        for (int i = 0; i < n; i++) {
+            if (agents[i] != null)
+                sum += agents[i].getSubscriptionSize();
+        }
         return sum;
     }
 
@@ -157,15 +187,19 @@ class StripedAgent<C extends QDCollector> extends AbstractAgent {
             this.notify = new StripedNotification(n);
             if (snapshot) {
                 providers = new RecordProvider[n];
-                for (int i = 0; i < n; i++)
-                    providers[i] = agents[i].getSnapshotProvider();
+                for (int i = 0; i < n; i++) {
+                    if (agents[i] != null)
+                        providers[i] = agents[i].getSnapshotProvider();
+                }
                 notificationProvider = this;
             } else {
                 providers = agents;
                 notificationProvider = StripedAgent.this;
             }
-            for (int i = 0; i < n; ++i)
-                providers[i].setRecordListener(new Listener(i));
+            for (int i = 0; i < n; ++i) {
+                if (providers[i] != null)
+                    providers[i].setRecordListener(new Listener(i));
+            }
         }
 
         @Override
@@ -176,11 +210,12 @@ class StripedAgent<C extends QDCollector> extends AbstractAgent {
         @Override
         public boolean retrieve(RecordSink sink) {
             int i;
-            while ((i = notify.next()) >= 0)
-                if (providers[i].retrieve(sink)) {
+            while ((i = notify.next()) >= 0) {
+                if (providers[i] != null && providers[i].retrieve(sink)) {
                     notify.notify(i);
                     return true;
                 }
+            }
             return false;
         }
 
@@ -189,11 +224,15 @@ class StripedAgent<C extends QDCollector> extends AbstractAgent {
             boolean wasVoid = this.listener == RecordListener.VOID;
             boolean nowVoid = listener == RecordListener.VOID;
             this.listener = listener;
-            if (nowVoid != wasVoid)
-                for (int i = 0; i < n; ++i)
-                    providers[i].setRecordListener(nowVoid ? RecordListener.VOID : new Listener(i));
-            if (notify.hasNext())
+            if (nowVoid != wasVoid) {
+                for (int i = 0; i < n; ++i) {
+                    if (providers[i] != null)
+                        providers[i].setRecordListener(nowVoid ? RecordListener.VOID : new Listener(i));
+                }
+            }
+            if (notify.hasNext()) {
                 notifyListener();
+            }
         }
 
         private void notifyListener() {
@@ -203,8 +242,9 @@ class StripedAgent<C extends QDCollector> extends AbstractAgent {
         }
 
         void recordsAvailable(int i) {
-            if (notify.notify(i))
+            if (notify.notify(i)) {
                 notifyListener();
+            }
         }
 
         private class Listener implements RecordListener {

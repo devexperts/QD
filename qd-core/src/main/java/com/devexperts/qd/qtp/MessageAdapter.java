@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -171,6 +171,10 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
         protected QDFilter filter;
 
         @Nonnull
+        @GuardedBy("this")
+        protected QDFilter stripe;
+
+        @Nonnull
         private final QDFilter initialFilter;
 
         /**
@@ -188,6 +192,7 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
             this.history = history;
             this.initialFilter = QDFilter.fromFilter(filter, getCommonScheme(ticker, stream, history));
             this.filter = initialFilter;
+            this.stripe = QDFilter.ANYTHING;
         }
 
         protected AbstractFactory(QDEndpoint endpoint, SubscriptionFilter filter) {
@@ -198,6 +203,7 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
             this.history = endpoint.getHistory();
             this.initialFilter = QDFilter.fromFilter(filter, scheme);
             this.filter = initialFilter;
+            this.stripe = QDFilter.ANYTHING;
             setEndpoint(QDEndpoint.class, endpoint);
         }
 
@@ -230,6 +236,27 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
                 CompositeFilters.makeAnd(CompositeFilters.valueOf(filterString, scheme), initialFilter);
         }
 
+        @Nonnull
+        public synchronized QDFilter getStripe() {
+            return stripe;
+        }
+
+        @Nonnull
+        public synchronized String getStripeFilter() {
+            return stripe.toString();
+        }
+
+        /**
+         * Sets stripe (represented as QDFilter) for this factory.
+         * @param stripeString stripe for this message adapter.
+         * @throws FilterSyntaxException if stripe filter specification is invalid.
+         */
+        @SuppressWarnings("unused")
+        @Configurable(description = "default filter for all channels")
+        public synchronized void setStripeFilter(String stripeString) {
+            this.stripe = CompositeFilters.valueOf(stripeString, scheme);
+        }
+
         @Override
         public String toString() {
             String s = super.toString();
@@ -246,12 +273,12 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
 
     /**
      * Returns common data scheme or throws IllegalArgumentException.
-     * Accepts <code>null</code> parameters.
+     * Accepts {@code null} parameters.
      * @param c1 QDCollector
      * @param c2 QDCollector
      * @param c3 QDCollector
      * @return common data scheme.
-     * @throws IllegalArgumentException if collectors have different schemes or all are <code>null</code>.
+     * @throws IllegalArgumentException if collectors have different schemes or all are {@code null}.
      */
     public static DataScheme getCommonScheme(QDCollector c1, QDCollector c2, QDCollector c3) {
         DataScheme s1 = c1 != null ? c1.getScheme() : null;
@@ -383,7 +410,7 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
             return;
         if (loginManager != null || authManager != null)
             throw new IllegalStateException(); // at most one must be set at most once
-        this.loginManager = new LoginManager(loginHandler, this, endpoint.getName());
+        this.loginManager = new LoginManager(loginHandler, this, (endpoint != null) ? endpoint.getName() : null);
     }
 
     // ========== Connection variables support ==========
@@ -764,5 +791,18 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
 
     protected static long clearMessageMask(long mask, MessageType message) {
         return mask & ~getMessageMask(message);
+    }
+
+    protected static QDFilter intersectStripes(QDFilter stripe1, QDFilter stripe2) {
+        if (stripe1 == null && stripe2 == null) {
+            return QDFilter.ANYTHING;
+        } else if (stripe1 == null || stripe1 == QDFilter.ANYTHING) {
+            return stripe2;
+        } else if (stripe2 == null || stripe2 == QDFilter.ANYTHING) {
+            return stripe1;
+        } else if (stripe1.toString().equals(stripe2.toString())) {
+            return stripe1;
+        }
+        return QDFilter.ANYTHING;
     }
 }

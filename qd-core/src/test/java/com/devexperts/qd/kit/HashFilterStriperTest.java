@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,8 +16,12 @@ import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.SymbolStriper;
 import org.junit.Test;
 
+import java.util.BitSet;
+
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
@@ -120,5 +124,50 @@ public class HashFilterStriperTest {
         HashFilter f3 = (HashFilter) HashFilter.valueOf(SCHEME, "hash000of1024");
         assertNotNull(f3);
         assertEquals("hash000of1024", f3.toString());
+    }
+
+    @Test
+    public void testHashIntersectsFilter() {
+        SymbolStriper s1 = HashStriper.valueOf(SCHEME, 8);
+        SymbolStriper s2 = HashStriper.valueOf(SCHEME, 64);
+        int ratio = s2.getStripeCount() / s1.getStripeCount();
+
+        // Larger striper vs smaller
+        for (int i = 0; i < s1.getStripeCount(); i++) {
+            HashFilter f1 = (HashFilter) s1.getStripeFilter(i);
+            BitSet set = s2.getIntersectingStripes(f1);
+
+            for (int j = 0; j < s2.getStripeCount(); j++) {
+                HashFilter f2 = (HashFilter) s2.getStripeFilter(j);
+                if (j / ratio == i) {
+                    assertTrue(f1 + " should intersect with " + f2, set.get(j));
+                } else {
+                    assertFalse(f1 + " should not intersect with " + f2, set.get(j));
+                }
+            }
+        }
+
+        // Smaller striper vs larger
+        for (int j = 0; j < s2.getStripeCount(); j++) {
+            HashFilter f2 = (HashFilter) s2.getStripeFilter(j);
+            BitSet set = s1.getIntersectingStripes(f2);
+
+            for (int i = 0; i < s1.getStripeCount(); i++) {
+                HashFilter f1 = (HashFilter) s1.getStripeFilter(i);
+                if (j / ratio == i) {
+                    assertTrue(f1 + " should intersect with " + f2, set.get(i));
+                } else {
+                    assertFalse(f1 + " should not intersect with " + f2, set.get(i));
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testHashIntersectsUnknownFilter() {
+        SymbolStriper striper = HashStriper.valueOf(SCHEME, 8);
+        assertNull(striper.getIntersectingStripes(QDFilter.ANYTHING));
+        assertNull(striper.getIntersectingStripes(QDFilter.NOTHING));
+        assertNull(striper.getIntersectingStripes(CompositeFilters.valueOf("A*", SCHEME)));
     }
 }

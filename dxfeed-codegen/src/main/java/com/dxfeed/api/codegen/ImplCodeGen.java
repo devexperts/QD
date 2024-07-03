@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -35,6 +35,7 @@ import com.dxfeed.event.market.impl.MarketEventMapping;
 import com.dxfeed.event.market.impl.OrderBaseMapping;
 import com.dxfeed.event.misc.Configuration;
 import com.dxfeed.event.misc.Message;
+import com.dxfeed.event.misc.TextMessage;
 import com.dxfeed.event.option.Greeks;
 import com.dxfeed.event.option.Series;
 import com.dxfeed.event.option.TheoPrice;
@@ -566,6 +567,11 @@ public class ImplCodeGen {
 
         ctx.delegate("Message", Message.class, "Message").
             map("MarshalledAttachment", "Message", "Message", FieldType.MARSHALLED).
+            publishable();
+
+        ctx.delegate("TextMessage", TextMessage.class, "TextMessage").
+            mapTimeAndSequence().
+            map("Text", "Text", FieldType.STRING).
             publishable();
 
         ctx.delegate("Configuration", Configuration.class, "Configuration").
