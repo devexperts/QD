@@ -195,16 +195,19 @@ public class MonitoringEndpoint implements MonitoringEndpointMXBean {
     }
 
     private Management.Registration registerConnector(MessageConnector connector) {
-        String jmxName = "com.devexperts.qd.qtp:type=Connector,name=" +
-            JMXNameBuilder.quoteKeyPropertyValue(connector.getName());
-
         int index = 0;
-        Management.Registration registration = Management.registerMBean(connector, null, jmxName);
+        Management.Registration registration = Management.registerMBean(
+            connector, null, getConnectorJmxName(connector.getName()));
         while (registration.hasExisted()) {
             // Add index to the connector's name if there is already a connector with the same name
-            registration = Management.registerMBean(connector, null, jmxName + "-" + (++index));
+            registration = Management.registerMBean(
+                connector, null, getConnectorJmxName(connector.getName() + "-" + (++index)));
         }
         return registration;
+    }
+
+    private static String getConnectorJmxName(String name) {
+        return "com.devexperts.qd.qtp:type=Connector,name=" + JMXNameBuilder.quoteKeyPropertyValue(name);
     }
 
     public static class Builder {

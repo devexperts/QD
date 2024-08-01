@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -107,6 +107,36 @@ public class InstrumentProfileTransformTest {
         check("ABC;TMP;XYZ", removeTransform, "TMP", "ABC;XYZ");
         check("AAA;A", removeTransform, "A", "AAA");
         check("AAA;A;B", removeTransform, "A", "AAA;B");
+    }
+
+    @Test
+    public void testRetainFields() throws Exception {
+        InstrumentProfile profile = new InstrumentProfile();
+        profile.setSymbol("TEST");
+        profile.setType("STOCK");
+        profile.setDescription("Description");
+        profile.setExchangeData("ExchangeData");
+        profile.setOPOL("OPOL");
+        profile.setField("FOO", "1");
+        profile.setField("BAR", "2");
+        profile.setField("BAZ", "3");
+
+        InstrumentProfileTransform transform = InstrumentProfileTransform.compile(
+            new StringReader("retainFields(SYMBOL,TYPE,OPOL,BAR);")
+        );
+
+        List<InstrumentProfile> transformed = transform.transform(Collections.singletonList(profile));
+        assertEquals(1, transformed.size());
+        InstrumentProfile result = transformed.get(0);
+
+        assertEquals("TEST", result.getSymbol());
+        assertEquals("STOCK", result.getType());
+        assertEquals("", result.getDescription());
+        assertEquals("", result.getExchangeData());
+        assertEquals("OPOL", result.getOPOL());
+        assertEquals("", result.getField("FOO"));
+        assertEquals("2", result.getField("BAR"));
+        assertEquals("", result.getField("BAZ"));
     }
 
     private void check(String old, InstrumentProfileTransform transform, String item, String expected) {

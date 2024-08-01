@@ -166,6 +166,7 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
         protected final QDStream stream;
         protected final QDHistory history;
 
+        // Result filter === rawFilter & initialFilter & stripe
         @Nonnull
         @GuardedBy("this")
         protected QDFilter filter;
@@ -176,6 +177,9 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
 
         @Nonnull
         private final QDFilter initialFilter;
+
+        // Filter provided via setFilter
+        private QDFilter rawFilter;
 
         /**
          * Creates new factory. Accepts <code>null</code> parameters.
@@ -191,8 +195,8 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
             this.stream = stream;
             this.history = history;
             this.initialFilter = QDFilter.fromFilter(filter, getCommonScheme(ticker, stream, history));
-            this.filter = initialFilter;
             this.stripe = QDFilter.ANYTHING;
+            this.filter = calculateResultFilter();
         }
 
         protected AbstractFactory(QDEndpoint endpoint, SubscriptionFilter filter) {
@@ -202,8 +206,8 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
             this.stream = endpoint.getStream();
             this.history = endpoint.getHistory();
             this.initialFilter = QDFilter.fromFilter(filter, scheme);
-            this.filter = initialFilter;
             this.stripe = QDFilter.ANYTHING;
+            this.filter = calculateResultFilter();
             setEndpoint(QDEndpoint.class, endpoint);
         }
 
@@ -216,7 +220,8 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
         }
 
         /**
-         * Returns current filter of this factory.
+         * Returns current filter of this factory. It is a result of combining initial filter and stripe
+         * with the filter set by {@link #setFilter(String)} method.
          * @return current filter of this factory.
          */
         public synchronized QDFilter getFilter() {
@@ -232,8 +237,9 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
          */
         @Configurable(description = "default filter for all channels")
         public synchronized void setFilter(String filterString) throws FilterSyntaxException {
-            filter = filterString == null || filterString.isEmpty() ? initialFilter :
-                CompositeFilters.makeAnd(CompositeFilters.valueOf(filterString, scheme), initialFilter);
+            rawFilter = (filterString == null || filterString.isEmpty()) ?
+                null : CompositeFilters.valueOf(filterString, scheme);
+            filter = calculateResultFilter();
         }
 
         @Nonnull
@@ -252,9 +258,15 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
          * @throws FilterSyntaxException if stripe filter specification is invalid.
          */
         @SuppressWarnings("unused")
-        @Configurable(description = "default filter for all channels")
+        @Configurable(description = "default stripe for all channels")
         public synchronized void setStripeFilter(String stripeString) {
-            this.stripe = CompositeFilters.valueOf(stripeString, scheme);
+            stripe = CompositeFilters.valueOf(stripeString, scheme);
+            filter = calculateResultFilter();
+        }
+
+        private QDFilter calculateResultFilter() {
+            // Method makeAnd efficiently handles nulls and QDFilter.ANYTHING
+            return CompositeFilters.makeAnd(CompositeFilters.makeAnd(rawFilter, initialFilter), stripe);
         }
 
         @Override

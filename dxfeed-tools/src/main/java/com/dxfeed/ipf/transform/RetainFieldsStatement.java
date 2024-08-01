@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -29,6 +29,7 @@ class RetainFieldsStatement extends Statement {
     @Override
     ControlFlow execute(TransformContext ctx) {
         boolean modified = false;
+        //noinspection ForLoopReplaceableByForEach
         for (int i = 0; i < removeStandard.size(); i++) {
             InstrumentProfileField ipf = removeStandard.get(i);
             if (ipf.isNumericField()) {
@@ -37,7 +38,7 @@ class RetainFieldsStatement extends Statement {
                     modified = true;
                 }
             } else {
-                if (ipf.getField(ctx.currentProfile()).length() != 0) {
+                if (!ipf.getField(ctx.currentProfile()).isEmpty()) {
                     ipf.setField(ctx.copyProfile(), "");
                     modified = true;
                 }
@@ -46,11 +47,13 @@ class RetainFieldsStatement extends Statement {
         List<String> customFields = ctx.customFieldsForRetainFieldsStatement;
         customFields.clear();
         ctx.currentProfile().addNonEmptyCustomFieldNames(customFields);
-        for (int i = 0; i < customFields.size(); i++)
+        //noinspection ForLoopReplaceableByForEach
+        for (int i = 0; i < customFields.size(); i++) {
             if (!retainCustom.contains(customFields.get(i))) {
                 ctx.copyProfile().setField(customFields.get(i), "");
                 modified = true;
             }
+        }
         if (modified)
             incModificationCounter(ctx);
         return ControlFlow.NORMAL;

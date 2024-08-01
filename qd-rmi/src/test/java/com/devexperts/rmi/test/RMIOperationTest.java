@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,6 +12,7 @@
 package com.devexperts.rmi.test;
 
 import com.devexperts.rmi.RMIOperation;
+import com.devexperts.rmi.RMIServiceInterface;
 import com.dxfeed.promise.Promise;
 import org.junit.Test;
 
@@ -70,5 +71,22 @@ public class RMIOperationTest {
         RMIOperation<?> op = RMIOperation.valueOf(Hack.class.getName(), method);
         String signature =  Hack.class.getName() + "#hack(java.util.Set):java.util.Collection";
         assertEquals(op.getSignature(), signature);
+    }
+
+    @RMIServiceInterface(name = "WithAnnotationXXX")
+    interface WithAnnotation {
+        int baz();
+    }
+
+    @Test
+    public void testValueOfClassWithAnnotatedService() throws NoSuchMethodException {
+        Method method = WithAnnotation.class.getMethod("baz");
+        RMIOperation<Void> actual = RMIOperation.valueOf(WithAnnotation.class, method);
+        RMIOperation<Void> expected = RMIOperation.valueOf("WithAnnotationXXX", method);
+        assertEquals(expected, actual);
+
+        RMIOperation<Integer> actual2 = RMIOperation.valueOf(WithAnnotation.class, Integer.class, "baz");
+        RMIOperation<Integer> expected2 = RMIOperation.valueOf("WithAnnotationXXX", Integer.class, "baz");
+        assertEquals(expected2, actual2);
     }
 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -23,28 +23,62 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Predicate;
 
 /**
  * Composer for Instrument Profile Format.
  * Please see <b>Instrument Profile Format</b> documentation for complete description.
  */
 public class InstrumentProfileComposer implements Closeable {
-    private static final InstrumentProfileField[] FIELDS = InstrumentProfileField.values();
+    // All fields from enum except TYPE and SYMBOL
+    private static final InstrumentProfileField[] FIELDS = Arrays.stream(InstrumentProfileField.values())
+        .filter(field -> (field != InstrumentProfileField.TYPE) && (field != InstrumentProfileField.SYMBOL))
+        .toArray(InstrumentProfileField[]::new);
+
     private static final String REMOVED_TYPE = InstrumentProfileType.REMOVED.name();
 
+    // Raw enum fields by type
+    private final Map<String, EnumSet<InstrumentProfileField>> rawEnumFormats = new HashMap<>();
+    // Filtered enum fields by type
     private final Map<String, EnumSet<InstrumentProfileField>> enumFormats = new HashMap<>();
+    // Raw custom fields by type (HashSet for fast "contains" check)
+    private final Map<String, HashSet<String>> rawCustomFormats = new HashMap<>();
+    // Filtered custom fields by type (TreeSet is used for ordering fields by name)
     private final Map<String, TreeSet<String>> customFormats = new HashMap<>();
+
     private final List<String> types = new ArrayList<>(); // atomically captures types
     private final CSVWriter writer;
+    private final Predicate<? super String> fieldFilter;
 
+    /**
+     * Creates composer for the specified output stream.
+     * @param out output stream to which instrument profiles will be written
+     */
     public InstrumentProfileComposer(OutputStream out) {
-        writer = new CSVWriter(new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8)));
+        this(out, s -> true);
+    }
+
+    /**
+     * Creates composer for the specified output stream and the field name filter.
+     *
+     * <p><b>Note</b> that fields {@link InstrumentProfileField#TYPE TYPE} and
+     * {@link InstrumentProfileField#SYMBOL SYMBOL} are required and cannot be filtered out.
+     *
+     * @param out output stream to which instrument profiles will be written
+     * @param fieldFilter predicate allowing to filter instrument profile fields by name.
+     */
+    public InstrumentProfileComposer(OutputStream out, Predicate<? super String> fieldFilter) {
+        this.writer = new CSVWriter(new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8)));
+        this.fieldFilter = Objects.requireNonNull(fieldFilter, "fieldFilter");
     }
 
     @Override
@@ -86,40 +120,72 @@ public class InstrumentProfileComposer implements Closeable {
     }
 
     private void writeFormats(List<InstrumentProfile> profiles, boolean skipRemoved) throws IOException {
-        Set<String> updated = new TreeSet<>();
+        Set<String> updatedTypes = new TreeSet<>();
         for (int i = 0; i < profiles.size(); i++) {
             String type = types.get(i); // atomically captured
             if (REMOVED_TYPE.equals(type) && skipRemoved)
                 continue;
-            InstrumentProfile ip = profiles.get(i);
-            EnumSet<InstrumentProfileField> enumFormat = enumFormats.get(type);
-            TreeSet<String> customFormat = customFormats.get(type);
-            if (enumFormat == null) {
-                updated.add(type);
-                // always write symbol (type is always written by a special code)
-                enumFormats.put(type, enumFormat = EnumSet.of(InstrumentProfileField.SYMBOL));
-                customFormats.put(type, customFormat = new TreeSet<>());
+
+            boolean updated = false;
+            EnumSet<InstrumentProfileField> rawEnumFormat = rawEnumFormats.get(type);
+            HashSet<String> rawCustomFormat = rawCustomFormats.get(type);
+            if (rawEnumFormat == null) {
+                updated = true;
+                rawEnumFormats.put(type, rawEnumFormat = EnumSet.of(InstrumentProfileField.SYMBOL));
+                rawCustomFormats.put(type, rawCustomFormat = new HashSet<>());
             }
+
+            InstrumentProfile ip = profiles.get(i);
             if (!REMOVED_TYPE.equals(type)) {
-                // collect actual used fields for non-removed instrument profiles
-                for (InstrumentProfileField ipf : FIELDS)
-                    if (ipf != InstrumentProfileField.TYPE && ipf.getField(ip).length() > 0)
-                        if (enumFormat.add(ipf))
-                            updated.add(type);
-                if (ip.addNonEmptyCustomFieldNames(customFormat))
-                    updated.add(type);
+                // Collect actual used fields for non-removed instrument profiles
+                for (InstrumentProfileField field : FIELDS) {
+                    if (!field.getField(ip).isEmpty() && rawEnumFormat.add(field)) {
+                        updated = true;
+                    }
+                }
+                if (ip.addNonEmptyCustomFieldNames(rawCustomFormat))
+                    updated = true;
+            }
+            if (updated)
+                updatedTypes.add(type);
+        }
+        for (String type : updatedTypes) {
+            if (filterFormat(type)) {
+                writeFormat(type);
             }
         }
-        for (String type : updated)
-            writeFormat(type);
+    }
+
+    private boolean filterFormat(String type) {
+        boolean updated = false;
+        EnumSet<InstrumentProfileField> enumFormat = enumFormats.get(type);
+        TreeSet<String> customFormat = customFormats.get(type);
+        if (enumFormat == null) {
+            updated = true;
+            // Always write symbol (type is always written by a special code)
+            enumFormats.put(type, enumFormat = EnumSet.of(InstrumentProfileField.SYMBOL));
+            customFormats.put(type, customFormat = new TreeSet<>());
+        }
+
+        for (InstrumentProfileField field : rawEnumFormats.get(type)) {
+            if (fieldFilter.test(field.name()) && enumFormat.add(field))
+                updated = true;
+        }
+        for (String field : rawCustomFormats.get(type)) {
+            if (fieldFilter.test(field) && customFormat.add(field))
+                updated = true;
+        }
+        return updated;
     }
 
     private void writeFormat(String type) throws IOException {
         writer.writeField(Constants.METADATA_PREFIX + type + Constants.METADATA_SUFFIX);
-        for (InstrumentProfileField field : enumFormats.get(type))
+        for (InstrumentProfileField field : enumFormats.get(type)) {
             writer.writeField(field.name());
-        for (String field : customFormats.get(type))
+        }
+        for (String field : customFormats.get(type)) {
             writer.writeField(field);
+        }
         writer.writeRecord(null);
     }
 

@@ -19,7 +19,10 @@ import com.devexperts.qd.QDContract;
 import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDFilter;
+import com.devexperts.qd.QDTicker;
 import com.devexperts.qd.SymbolStriper;
+import com.devexperts.qd.impl.stripe.StripedFactory;
+import com.devexperts.qd.kit.RangeStriper;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.qtp.socket.ServerSocketTestHelper;
@@ -39,6 +42,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -72,8 +76,28 @@ public class StripedCollectorMatchingTest {
         serverAdapters.clear();
         clientAdapters.clear();
 
-        client.close();
-        server.close();
+        if (client != null)
+            client.close();
+        if (server != null)
+            server.close();
+    }
+
+    @Test
+    public void testCollectorStripingMatching() {
+        SymbolStriper hashStriper = SymbolStriper.valueOf(SCHEME, "byhash4");
+        RangeStriper rangeStriper = RangeStriper.valueOf(SCHEME, "byrange-A-K-T-");
+
+        QDTicker ticker = (QDTicker) StripedFactory.getInstance().collectorBuilder(QDContract.TICKER)
+            .withStriper(hashStriper)
+            .build();
+
+        // Hash striping with compatible striping should result in non-striped agent/distributor
+        assertFalse(isStriped(ticker.agentBuilder().withStripe(hashStriper.getStripeFilter(0)).build()));
+        assertFalse(isStriped(ticker.distributorBuilder().withStripe(hashStriper.getStripeFilter(1)).build()));
+
+        // Hash striping with range striping should result in striped agent/distributor
+        assertTrue(isStriped(ticker.agentBuilder().withStripe(rangeStriper.getStripeFilter(0)).build()));
+        assertTrue(isStriped(ticker.distributorBuilder().withStripe(rangeStriper.getStripeFilter(1)).build()));
     }
 
     @Test
@@ -247,11 +271,15 @@ public class StripedCollectorMatchingTest {
             DistributorAdapter distributorAdapter = (DistributorAdapter) adapter;
             QDCollector collector = distributorAdapter.getCollector(QDContract.TICKER);
             assertNotNull(collector);
-            assertEquals(stripedCollector, collector.getClass().getSimpleName().contains("Striped"));
+            assertEquals(stripedCollector, isStriped(collector));
 
             QDDistributor distributor = distributorAdapter.getDistributor(QDContract.TICKER);
             assertNotNull(distributor);
-            assertEquals(stripedDistributor, distributor.getClass().getSimpleName().contains("Striped"));
+            assertEquals(stripedDistributor, isStriped(distributor));
         }
+    }
+
+    private static boolean isStriped(Object object) {
+        return object.getClass().getSimpleName().contains("Striped");
     }
 }

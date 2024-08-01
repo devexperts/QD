@@ -1,3 +1,10 @@
+QDS 3.335:
+
+* [QD-1568] Striping specification breaks QD filters in connection string
+* [QD-1567] Exception in logs "Unexpected MBean registration exception"
+* [QD-1557] [dxFeed API] Add 'fields' filter to InstrumentProfileComposer
+* [QD-1564] [RMI] RMIOperation.valueOf shall support RMIServiceInterface annotation
+
 QDS 3.334:
 
 * [QD-1515] Optimize the performance of striped connections

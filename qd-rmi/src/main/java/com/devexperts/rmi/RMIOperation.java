@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,6 +12,7 @@
 package com.devexperts.rmi;
 
 import com.devexperts.io.Marshaller;
+import com.devexperts.rmi.task.RMIService;
 import com.dxfeed.promise.Promise;
 
 import java.lang.reflect.Method;
@@ -53,7 +54,7 @@ public final class RMIOperation<T> {
      * @return constructed {@link RMIOperation}.
      */
     public static <T> RMIOperation<T> valueOf(Class<?> serviceInterface, Method method) {
-        return valueOf(serviceInterface.getName(), method);
+        return valueOf(RMIService.getServiceName(serviceInterface), method);
     }
 
     /**
@@ -118,7 +119,8 @@ public final class RMIOperation<T> {
     public static <T> RMIOperation<T> valueOf(Class<?> serviceInterface,
         Class<T> resultClass, String methodName, Class<?>... parameterClasses)
     {
-        return new RMIOperation<>(serviceInterface.getName(), resultClass, methodName, parameterClasses);
+        return
+            new RMIOperation<>(RMIService.getServiceName(serviceInterface), resultClass, methodName, parameterClasses);
     }
 
     /**

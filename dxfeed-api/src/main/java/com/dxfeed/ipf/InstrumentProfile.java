@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -890,20 +890,22 @@ public final class InstrumentProfile implements Comparable<InstrumentProfile>, S
     }
 
     /**
-     * Adds names of non-empty custom fields to specified collection.
-     * @return <tt>true</tt> if {@code targetFieldNames} changed as a result of the call
+     * Adds names of non-empty custom fields to the specified collection.
+     * @return {@code true} if {@code targetFieldNames} changed as a result of the call
      */
     public boolean addNonEmptyCustomFieldNames(Collection<? super String> targetFieldNames) {
         boolean updated = false;
         String[] customFields = this.customFields; // Atomic read.
-        if (customFields != null)
-            for (int i = customFields.length & ~1; (i -= 2) >= 0;) {
+        if (customFields != null) {
+            for (int i = customFields.length & ~1; (i -= 2) >= 0; ) {
                 String name = customFields[i]; // Atomic read.
                 String value = customFields[i + 1]; // Atomic read.
-                if (name != null && value != null && value.length() > 0)
+                if (name != null && value != null && !value.isEmpty()) {
                     if (targetFieldNames.add(name))
                         updated = true;
+                }
             }
+        }
         return updated;
     }
 
