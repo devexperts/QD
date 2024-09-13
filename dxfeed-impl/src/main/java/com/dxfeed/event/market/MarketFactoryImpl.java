@@ -361,6 +361,10 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             result.add(new OrderByQuoteBidDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.WILDCARD)));
             result.add(new OrderByQuoteAskDelegate(record, QDContract.TICKER, EnumSet.of(EventDelegateFlags.SUB)));
             result.add(new OrderByQuoteAskDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.WILDCARD)));
+            result.add(new OrderByQuoteBidUnitaryDelegate(record, QDContract.TICKER, EnumSet.of(EventDelegateFlags.SUB)));
+            result.add(new OrderByQuoteBidUnitaryDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.WILDCARD)));
+            result.add(new OrderByQuoteAskUnitaryDelegate(record, QDContract.TICKER, EnumSet.of(EventDelegateFlags.SUB)));
+            result.add(new OrderByQuoteAskUnitaryDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.WILDCARD)));
         } else if (record.getMapping(TradeMapping.class) != null) {
             result.add(new TradeDelegate(record, QDContract.TICKER, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB)));
             result.add(new TradeDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
@@ -390,6 +394,12 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             result.add(new OrderByMarketMakerBidDelegate(record, QDContract.HISTORY, EnumSet.of(EventDelegateFlags.SUB)));
             result.add(new OrderByMarketMakerAskDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.WILDCARD)));
             result.add(new OrderByMarketMakerAskDelegate(record, QDContract.HISTORY, EnumSet.of(EventDelegateFlags.SUB)));
+            result.add(new OrderByMarketMakerBidUnitaryDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.WILDCARD)));
+            result.add(new OrderByMarketMakerBidUnitaryDelegate(record, QDContract.HISTORY, EnumSet.of(EventDelegateFlags.SUB)));
+            result.add(new OrderByMarketMakerAskUnitaryDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.WILDCARD)));
+            result.add(new OrderByMarketMakerAskUnitaryDelegate(record, QDContract.HISTORY, EnumSet.of(EventDelegateFlags.SUB)));
+            result.add(new MarketMakerDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
+            result.add(new MarketMakerDelegate(record, QDContract.HISTORY, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB)));
         } else if (record.getMapping(TimeAndSaleMapping.class) != null) {
             result.add(new TimeAndSaleDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
             result.add(new TimeAndSaleDelegate(record, QDContract.HISTORY, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.TIME_SERIES)));
@@ -407,6 +417,8 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             result.add(new QuoteDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
             result.add(new OrderByQuoteBidDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.WILDCARD)));
             result.add(new OrderByQuoteAskDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.WILDCARD)));
+            result.add(new OrderByQuoteBidUnitaryDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.WILDCARD)));
+            result.add(new OrderByQuoteAskUnitaryDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.WILDCARD)));
         } else if (record.getMapping(TradeMapping.class) != null) {
             result.add(new TradeDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
         } else if (record.getMapping(TradeETHMapping.class) != null) {
@@ -426,6 +438,9 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         } else if (record.getMapping(MarketMakerMapping.class) != null) {
             result.add(new OrderByMarketMakerBidDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.WILDCARD)));
             result.add(new OrderByMarketMakerAskDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.WILDCARD)));
+            result.add(new OrderByMarketMakerBidUnitaryDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.WILDCARD)));
+            result.add(new OrderByMarketMakerAskUnitaryDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.WILDCARD)));
+            result.add(new MarketMakerDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
         } else if (record.getMapping(TimeAndSaleMapping.class) != null) {
             result.add(new TimeAndSaleDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
         } else if (record.getMapping(OptionSaleMapping.class) != null) {

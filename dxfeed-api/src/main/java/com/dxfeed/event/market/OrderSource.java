@@ -26,12 +26,12 @@ import java.util.List;
  * Identifies source of {@link Order}, {@link AnalyticOrder}, {@link OtcMarketsOrder} and {@link SpreadOrder} events.
  * There are the following kinds of order sources:
  * <ul>
- * <li><em>Synthetic</em> sources {@link #COMPOSITE_BID}, {@link #COMPOSITE_ASK},
- *     {@link #REGIONAL_BID}, and {@link #REGIONAL_ASK} are provided for convenience of a consolidated
- *     order book and are automatically generated based on the corresponding {@link Quote} events.
- * <li><em>Aggregate</em> sources {@link #AGGREGATE_BID} and {@link #AGGREGATE_ASK} provide
+ * <li><em>Synthetic</em> sources {@link #COMPOSITE}, {@link #COMPOSITE_BID}, {@link #COMPOSITE_ASK},
+ *     {@link #REGIONAL}, {@link #REGIONAL_BID}, and {@link #REGIONAL_ASK} are provided for convenience
+ *     of a consolidated order book and are automatically generated based on the corresponding {@link Quote} events.
+ * <li><em>Aggregate</em> sources {@link #AGGREGATE}, {@link #AGGREGATE_BID} and {@link #AGGREGATE_ASK} provide
  *     futures depth (aggregated by price level) and NASDAQ Level II (top of book for each market maker).
- *     These source cannot be directly published to via dxFeed API.
+ *     These sources are automatically generated based on the corresponding {@link MarketMaker} events.
  * <li>{@link #isPublishable(Class) Publishable} sources {@link #DEFAULT}, {@link #NTV}, and {@link #ISE}
  *     support full range of dxFeed API features.
  * </ul>
@@ -69,51 +69,99 @@ public final class OrderSource extends IndexedEventSource {
 
     /**
      * Bid side of a composite {@link Quote}.
-     * It is a <em>synthetic</em> source.
+     * It is a <em>synthetic</em> and <em>separate</em> source.
      * It cannot be used with {@link DXFeed#getIndexedEventsPromise(Class, Object, IndexedEventSource) DXFeed.getIndexedEventsPromise}
      * method and it cannot be published directly to.
      * The subscription on composite {@link Quote} event is observed when this source is subscribed to.
+     * @deprecated Use the {@link #COMPOSITE} source.
      */
+    @Deprecated
     public static final OrderSource COMPOSITE_BID = new OrderSource(1, "COMPOSITE_BID", 0);
 
     /**
      * Ask side of a composite {@link Quote}.
-     * It is a <em>synthetic</em> source.
+     * It is a <em>synthetic</em> and <em>separate</em> source.
      * It cannot be used with {@link DXFeed#getIndexedEventsPromise(Class, Object, IndexedEventSource) DXFeed.getIndexedEventsPromise}
      * method and it cannot be published directly to.
      * The subscription on composite {@link Quote} event is observed when this source is subscribed to.
+     * @deprecated Use the {@link #COMPOSITE} source.
      */
+    @Deprecated
     public static final OrderSource COMPOSITE_ASK = new OrderSource(2, "COMPOSITE_ASK", 0);
 
     /**
      * Bid side of a regional {@link Quote}.
-     * It is a <em>synthetic</em> source.
+     * It is a <em>synthetic</em> and <em>separate</em> source.
      * It cannot be used with {@link DXFeed#getIndexedEventsPromise(Class, Object, IndexedEventSource) DXFeed.getIndexedEventsPromise}
      * method and it cannot be published directly to.
      * The subscription on regional {@link Quote} event is observed when this source is subscribed to.
+     * @deprecated Use the {@link #REGIONAL} source.
      */
+    @Deprecated
     public static final OrderSource REGIONAL_BID = new OrderSource(3, "REGIONAL_BID", 0);
 
     /**
      * Ask side of a regional {@link Quote}.
-     * It is a <em>synthetic</em> source.
+     * It is a <em>synthetic</em> and <em>separate</em> source.
      * It cannot be used with {@link DXFeed#getIndexedEventsPromise(Class, Object, IndexedEventSource) DXFeed.getIndexedEventsPromise}
      * method and it cannot be published directly to
      * The subscription on regional {@link Quote} event is observed when this source is subscribed to.
+     * @deprecated Use the {@link #REGIONAL} source.
      */
+    @Deprecated
     public static final OrderSource REGIONAL_ASK = new OrderSource(4, "REGIONAL_ASK", 0);
 
     /**
      * Bid side of an aggregate order book (futures depth and NASDAQ Level II).
+     * It is a <em>aggregate</em> and <em>separate</em> source.
      * This source cannot be directly published via dxFeed API, but otherwise it is fully operational.
+     * @deprecated Use the {@link #AGGREGATE} source.
      */
+    @Deprecated
     public static final OrderSource AGGREGATE_BID = new OrderSource(5, "AGGREGATE_BID", 0);
 
     /**
      * Ask side of an aggregate order book (futures depth and NASDAQ Level II).
+     * It is a <em>aggregate</em> and <em>separate</em> source.
      * This source cannot be directly published via dxFeed API, but otherwise it is fully operational.
+     * @deprecated Use the {@link #AGGREGATE} source.
      */
+    @Deprecated
     public static final OrderSource AGGREGATE_ASK = new OrderSource(6, "AGGREGATE_ASK", 0);
+
+    /**
+     * Composite {@link Quote}.
+     * It is a <em>synthetic</em> and <em>unitary</em> source, that represents both bid and ask side.
+     * It cannot be used with {@link DXFeed#getIndexedEventsPromise(Class, Object, IndexedEventSource) DXFeed.getIndexedEventsPromise}
+     * method and it cannot be published directly to.
+     * The subscription on composite {@link Quote} event is observed when this source is subscribed to.
+     * To use this source when subscribing to all sources (e.g., when subscribing to an order without specifying a source),
+     * instead of {@link #COMPOSITE_ASK} and {@link #COMPOSITE_BID}, set the system property
+     * <var>dxscheme.unitaryOrderSource</var> to {@code true}.
+     */
+    public static final OrderSource COMPOSITE = new OrderSource(7, "COMPOSITE", 0);
+
+    /**
+     * Regional {@link Quote}.
+     * It is a <em>synthetic</em> and <em>unitary</em> source, that represents both bid and ask side.
+     * It cannot be used with {@link DXFeed#getIndexedEventsPromise(Class, Object, IndexedEventSource) DXFeed.getIndexedEventsPromise}
+     * method and it cannot be published directly to.
+     * The subscription on regional {@link Quote} event is observed when this source is subscribed to.
+     * To use this source when subscribing to all sources (e.g., when subscribing to an order without specifying a source),
+     * instead of {@link #REGIONAL_ASK} and {@link #REGIONAL_BID}, set the system property
+     * <var>dxscheme.unitaryOrderSource</var> to {@code true}.
+     */
+    public static final OrderSource REGIONAL = new OrderSource(8, "REGIONAL", 0);
+
+    /**
+     * Aggregate order book (futures depth and NASDAQ Level II).
+     * It is a <em>aggregate</em> and <em>unitary</em> source, that represents both bid and ask side.
+     * This source cannot be directly published via dxFeed API, but otherwise it is fully operational.
+     * To use this source when subscribing to all sources (e.g., when subscribing to an order without specifying a source),
+     * instead of {@link #AGGREGATE_ASK} and {@link #AGGREGATE_BID}, set the system property
+     * <var>dxscheme.unitaryOrderSource</var> to {@code true}.
+     */
+    public static final OrderSource AGGREGATE = new OrderSource(9, "AGGREGATE", 0);
 
     /**
      * Default source for publishing custom order books.
@@ -417,7 +465,7 @@ public final class OrderSource extends IndexedEventSource {
      * @return <code>true</code> if it is a special source identifier
      */
     public static boolean isSpecialSourceId(int sourceId) {
-        return sourceId >= 1 && sourceId <= 6;
+        return sourceId >= 1 && sourceId <= 9;
     }
 
     /**

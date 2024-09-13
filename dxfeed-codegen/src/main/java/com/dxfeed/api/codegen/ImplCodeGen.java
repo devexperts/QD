@@ -18,6 +18,7 @@ import com.dxfeed.event.candle.DailyCandle;
 import com.dxfeed.event.candle.impl.CandleEventMapping;
 import com.dxfeed.event.market.AnalyticOrder;
 import com.dxfeed.event.market.MarketEventDelegateImpl;
+import com.dxfeed.event.market.MarketMaker;
 import com.dxfeed.event.market.OptionSale;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.OrderBase;
@@ -419,6 +420,45 @@ public class ImplCodeGen {
             assign("Scope", "m.getRecordExchange() == 0 ? Scope.COMPOSITE : Scope.REGIONAL").
             assign("MarketMaker", "null");
 
+        // DO NOT change order - OrderByQuoteBidUnitary delegate should be before OrderByQuoteAskUnitary
+        ctx.delegate("OrderByQuoteBidUnitary", Order.class, "Quote&").
+            inheritDelegateFrom(ORDER_BASE_DELEGATE).
+            subContract(QDContract.TICKER).
+            source("m.getRecordExchange() == 0 ? OrderSource.COMPOSITE : OrderSource.REGIONAL").
+            // unitary sources always represent both bid and ask sides combined in a single transaction,
+            // to do this, the order of delegate calls must be preserved, first bid and then ask.
+            injectGetEventCode("event.setEventFlags((cursor.getEventFlags() & ~(Order.SNAPSHOT_END | Order.SNAPSHOT_SNIP)) | Order.TX_PENDING);").
+            // set 47 bits, indicates the bid side.
+            assign("Index", "((long) getSource().id() << 48) | 1L << 47 | ((long) (m.getRecordExchange() & 0x7FFF) << 32)").
+            map("Time", "BidTime", "Bid.Time", FieldType.BID_ASK_TIME).optional().
+            assign("Sequence", "0").
+            map("Price", "BidPrice", "Bid.Price", FieldType.PRICE).
+            map("Size", "BidSize", "Bid.Size", FieldType.SIZE).
+            map("ExchangeCode", "BidExchangeCode", "Bid.Exchange", FieldType.CHAR).internal().
+            assign("ExchangeCode", "m.getRecordExchange() == 0 ? #ExchangeCode# : m.getRecordExchange()").
+            assign("OrderSide", "Side.BUY").
+            assign("Scope", "m.getRecordExchange() == 0 ? Scope.COMPOSITE : Scope.REGIONAL").
+            assign("MarketMaker", "null");
+
+        ctx.delegate("OrderByQuoteAskUnitary", Order.class, "Quote&").
+            inheritDelegateFrom(ORDER_BASE_DELEGATE).
+            subContract(QDContract.TICKER).
+            source("m.getRecordExchange() == 0 ? OrderSource.COMPOSITE : OrderSource.REGIONAL").
+            // unitary sources always represent both bid and ask sides combined in a single transaction,
+            // to do this, the order of delegate calls must be preserved, first bid and then ask.
+            injectGetEventCode("event.setEventFlags(cursor.getEventFlags() & ~Order.SNAPSHOT_BEGIN);").
+            // clear 47 bits, indicates the ask side.
+            assign("Index", "((long) getSource().id() << 48) | 0L << 47 | ((long) (m.getRecordExchange() & 0x7FFF) << 32)").
+            map("Time", "AskTime", "Ask.Time", FieldType.BID_ASK_TIME).optional().
+            assign("Sequence", "0").
+            map("Price", "AskPrice", "Ask.Price", FieldType.PRICE).
+            map("Size", "AskSize", "Ask.Size", FieldType.SIZE).
+            map("ExchangeCode", "AskExchangeCode", "Ask.Exchange", FieldType.CHAR).internal().
+            assign("ExchangeCode", "m.getRecordExchange() == 0 ? #ExchangeCode# : m.getRecordExchange()").
+            assign("OrderSide", "Side.SELL").
+            assign("Scope", "m.getRecordExchange() == 0 ? Scope.COMPOSITE : Scope.REGIONAL").
+            assign("MarketMaker", "null");
+
         ctx.delegate("OrderByMarketMakerBid", Order.class, "MarketMaker").
             inheritDelegateFrom(ORDER_BASE_DELEGATE).
             inheritMappingFrom(MARKET_EVENT_MAPPING).
@@ -437,6 +477,7 @@ public class ImplCodeGen {
 
         ctx.delegate("OrderByMarketMakerAsk", Order.class, "MarketMaker").
             inheritDelegateFrom(ORDER_BASE_DELEGATE).
+            inheritMappingFrom(MARKET_EVENT_MAPPING).
             source("OrderSource.AGGREGATE_ASK").
             withPlainEventFlags().
             assign("Index", "((long) getSource().id() << 48) | ((long) #ExchangeCode# << 32) | (#MarketMaker# & 0xFFFFFFFFL)").
@@ -449,6 +490,71 @@ public class ImplCodeGen {
             map("Count", "AskCount", "MMAsk.Count", FieldType.INT_DECIMAL).optional().
             assign("OrderSide", "Side.SELL").
             assign("Scope", "Scope.AGGREGATE");
+
+        // DO NOT change order - OrderByMarketMakerBidUnitary delegate should be before OrderByMarketMakerAskUnitary
+        ctx.delegate("OrderByMarketMakerBidUnitary", Order.class, "MarketMaker").
+            inheritDelegateFrom(ORDER_BASE_DELEGATE).
+            inheritMappingFrom(MARKET_EVENT_MAPPING).
+            source("OrderSource.AGGREGATE").
+            // unitary sources always represent both bid and ask sides combined in a single transaction,
+            // to do this, the order of delegate calls must be preserved, first bid and then ask.
+            injectGetEventCode("event.setEventFlags((cursor.getEventFlags() & ~(Order.SNAPSHOT_END | Order.SNAPSHOT_SNIP)) | Order.TX_PENDING);").
+            // set 47 bits, indicates the bid side.
+            assign("Index", "((long) getSource().id() << 48) | 1L << 47 | ((#ExchangeCode# & 0x7FFFL) << 32) | (#MarketMaker# & 0xFFFFFFFFL)").
+            map("ExchangeCode", "MMExchange", FieldType.CHAR).time(0).
+            map("MarketMaker", "MMID", FieldType.SHORT_STRING).time(1).
+            map("Time", "BidTime", "MMBid.Time", FieldType.BID_ASK_TIME).optional().
+            assign("Sequence", "0").
+            map("Price", "BidPrice", "MMBid.Price", FieldType.PRICE).
+            map("Size", "BidSize", "MMBid.Size", FieldType.SIZE).
+            map("Count", "BidCount", "MMBid.Count", FieldType.INT_DECIMAL).optional().
+            assign("OrderSide", "Side.BUY").
+            assign("Scope", "Scope.AGGREGATE");
+
+        ctx.delegate("OrderByMarketMakerAskUnitary", Order.class, "MarketMaker").
+            inheritDelegateFrom(ORDER_BASE_DELEGATE).
+            inheritMappingFrom(MARKET_EVENT_MAPPING).
+            source("OrderSource.AGGREGATE").
+            // unitary sources always represent both bid and ask sides combined in a single transaction,
+            // to do this, the order of delegate calls must be preserved, first bid and then ask.
+            injectGetEventCode("event.setEventFlags(cursor.getEventFlags() & ~Order.SNAPSHOT_BEGIN);").
+            // clear 47 bits, indicates the ask side.
+            assign("Index", "((long) getSource().id() << 48) | 0L << 47 | ((#ExchangeCode# & 0x7FFFL) << 32) | (#MarketMaker# & 0xFFFFFFFFL)").
+            map("ExchangeCode", "MMExchange", FieldType.CHAR).time(0).
+            map("MarketMaker", "MMID", FieldType.SHORT_STRING).time(1).
+            map("Time", "AskTime", "MMAsk.Time", FieldType.BID_ASK_TIME).optional().
+            assign("Sequence", "0").
+            map("Price", "AskPrice", "MMAsk.Price", FieldType.PRICE).
+            map("Size", "AskSize", "MMAsk.Size", FieldType.SIZE).
+            map("Count", "AskCount", "MMAsk.Count", FieldType.INT_DECIMAL).optional().
+            assign("OrderSide", "Side.SELL").
+            assign("Scope", "Scope.AGGREGATE");
+
+        ctx.delegate("MarketMaker", MarketMaker.class, "MarketMaker").
+            withPlainEventFlags().
+            map("ExchangeCode", "MMExchange", FieldType.CHAR).internal().time(0).
+            map("MarketMaker", "MMID", FieldType.SHORT_STRING).internal().time(1).
+            assign("Index", "((long) #ExchangeCode# << 32) | (#MarketMaker# & 0xFFFFFFFFL)").
+            injectPutEventCode(
+                "long index = event.getIndex();",
+                "#ExchangeCode=(char) (index >>> 32)#;",
+                "#MarketMaker=(int) index#;"
+            ).
+            map("BidTime", "BidTime", "MMBid.Time", FieldType.BID_ASK_TIME).optional().
+            map("BidPrice", "BidPrice", "MMBid.Price", FieldType.PRICE).
+            map("BidSize", "BidSize", "MMBid.Size", FieldType.SIZE).
+            map("BidCount", "BidCount", "MMBid.Count", FieldType.INT_DECIMAL).optional().
+            map("AskTime", "AskTime", "MMAsk.Time", FieldType.BID_ASK_TIME).optional().
+            map("AskPrice", "AskPrice", "MMAsk.Price", FieldType.PRICE).
+            map("AskSize", "AskSize", "MMAsk.Size", FieldType.SIZE).
+            map("AskCount", "AskCount", "MMAsk.Count", FieldType.INT_DECIMAL).optional().
+            injectPutEventCode(
+                "if (index < 0)",
+                "    throw new IllegalArgumentException(\"Invalid index to publish\");",
+                "if ((event.getEventFlags() & (MarketMaker.SNAPSHOT_END | MarketMaker.SNAPSHOT_SNIP)) != 0 && index != 0)",
+                "    throw new IllegalArgumentException(\"SNAPSHOT_END and SNAPSHOT_SNIP MarketMaker event must have index == 0\");"
+            ).
+            publishable();
 
         ctx.delegate("TimeAndSale", TimeAndSale.class, "TimeAndSale&").
             inheritDelegateFrom(MARKET_EVENT_DELEGATE).

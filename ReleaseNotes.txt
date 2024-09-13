@@ -1,3 +1,12 @@
+QDS 3.336:
+
+* [QD-1570] [dxFeed API] Add AGGREGATE, COMPOSITE, REGIONAL OrderSource
+  - new system property 'dxscheme.unitaryOrderSource=true|false' has been added. It controls whether a single or unitary
+    source is used when subscribing to all sources. It is set to 'false' by default. All separate sources, such as
+    'COMPOSITE_ASK', 'COMPOSITE_BID', 'REGIONAL_ASK', 'REGIONAL_BID', 'AGGREGATE_ASK' and 'AGGREGATE_BID' have been
+    declared deprecated.
+* [QD-1569] [dxFeed API] Add MarketMaker event
+
 QDS 3.335:
 
 * [QD-1568] Striping specification breaks QD filters in connection string
