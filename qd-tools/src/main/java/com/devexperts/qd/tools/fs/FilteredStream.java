@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -21,6 +21,8 @@ import com.devexperts.qd.QDTicker;
 import com.devexperts.qd.impl.AbstractCollector;
 import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.stats.QDStats;
+
+import java.util.function.Consumer;
 
 /**
  * A special implementation of QDStream. It filters incoming data with specified
@@ -128,5 +130,16 @@ public class FilteredStream extends AbstractCollector implements QDStream {
     public void close() {
         ticker.close();
         stream.close();
+    }
+
+    @Override
+    public void setDroppedLog(Consumer<String> droppedLog) {
+        super.setDroppedLog(droppedLog);
+        if (ticker instanceof AbstractCollector) {
+            ((AbstractCollector) ticker).setDroppedLog(droppedLog);
+        }
+        if (stream instanceof AbstractCollector) {
+            ((AbstractCollector) stream).setDroppedLog(droppedLog);
+        }
     }
 }

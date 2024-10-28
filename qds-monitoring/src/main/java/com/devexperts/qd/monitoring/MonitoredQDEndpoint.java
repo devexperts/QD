@@ -13,6 +13,7 @@ package com.devexperts.qd.monitoring;
 
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
+import com.devexperts.qd.impl.AbstractCollector;
 import com.devexperts.qd.impl.matrix.Collector;
 import com.devexperts.qd.impl.matrix.management.CollectorCounters;
 import com.devexperts.qd.qtp.MessageConnector;
@@ -53,6 +54,10 @@ public class MonitoredQDEndpoint extends QDEndpoint {
     protected MonitoredQDEndpoint(Builder builder, MonitoringEndpoint monitoringEndpoint) {
         super(builder, monitoringEndpoint.getRootStats());
         this.monitoringEndpoint = monitoringEndpoint;
+        for (QDCollector collector : getCollectors()) {
+            if (collector instanceof AbstractCollector)
+                ((AbstractCollector) collector).setDroppedLog(monitoringEndpoint.droppedLogAccept());
+        }
         if (LOG_COLLECTOR_COUNTERS) {
             lastCounters = new EnumMap<>(QDContract.class);
             logConnectorCountersTask = new Runnable() {

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -23,6 +23,8 @@ import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.LegacyAdapter;
+
+import java.util.function.Consumer;
 
 /**
  * The {@code HistoryViaTicker} simulates {@link QDHistory} interface using
@@ -145,5 +147,13 @@ public class HistoryViaTicker extends AbstractCollector implements QDHistory {
     @Override
     public void close() {
         ticker.close();
+    }
+
+    @Override
+    public void setDroppedLog(Consumer<String> droppedLog) {
+        super.setDroppedLog(droppedLog);
+        if (ticker instanceof AbstractCollector) {
+            ((AbstractCollector) ticker).setDroppedLog(droppedLog);
+        }
     }
 }

@@ -28,6 +28,8 @@ import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.stats.QDStats;
 
+import java.util.function.Consumer;
+
 abstract class StripedCollector<C extends QDCollector> extends AbstractCollector {
 
     final SymbolCodec codec;
@@ -178,6 +180,16 @@ abstract class StripedCollector<C extends QDCollector> extends AbstractCollector
     public void close() {
         for (QDCollector collector : collectors()) {
             collector.close();
+        }
+    }
+
+    @Override
+    public void setDroppedLog(Consumer<String> droppedLog) {
+        super.setDroppedLog(droppedLog);
+        for (QDCollector collector : collectors()) {
+            if (collector instanceof AbstractCollector) {
+                ((AbstractCollector) collector).setDroppedLog(droppedLog);
+            }
         }
     }
 }

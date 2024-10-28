@@ -182,7 +182,7 @@ public class History extends Collector implements QDHistory {
     }
 
     protected History(Builder<?> builder, RecordOnlyFilter conflateFilter) {
-        super(builder, true, true);
+        super(builder, true, true, true);
         HistorySubscriptionFilter historyFilter = builder.getHistoryFilter();
         // If history filter is not specified in builder get it as service.
         if (historyFilter == null)

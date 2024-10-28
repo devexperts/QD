@@ -18,6 +18,7 @@ import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimeFormat;
 
 import java.text.NumberFormat;
 import java.util.Collection;
@@ -25,7 +26,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Queue;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
@@ -54,6 +57,11 @@ public class ConnectorsMonitoringTask implements Runnable {
     private final MARSNode subscriptionNode;
     private final MARSNode storageNode;
     private final MARSNode bufferNode;
+    private final MARSNode droppedNode;
+    private final MARSNode droppedLogNode;
+    private final Queue<String> queueDroppedLog = new ConcurrentLinkedQueue<>();
+    private long prevDropped;
+    private boolean closed;
 
     private final MonitoringCounter time = new MonitoringCounter();
 
@@ -134,6 +142,8 @@ public class ConnectorsMonitoringTask implements Runnable {
         this.subscriptionNode = node.subNode("subscription", "Total subscription size");
         this.storageNode = node.subNode("storage", "Total storage size");
         this.bufferNode = node.subNode("buffer", "Total outgoing buffer size");
+        this.droppedNode = node.subNode("dropped", "Total dropped records");
+        this.droppedLogNode = node.subNode("dropped_log", "Last message about dropped records");
 
         rootCounters = new IOCounters(null, node);
 
@@ -153,7 +163,9 @@ public class ConnectorsMonitoringTask implements Runnable {
      * Releases resources associated with this connectors monitor task.
      */
     public void close() {
+        closed = true;
         cpu.close();
+        queueDroppedLog.clear();
     }
 
     public synchronized void addStats(QDStats stats) {
@@ -214,16 +226,24 @@ public class ConnectorsMonitoringTask implements Runnable {
         long subscription = 0;
         long storage = 0;
         long buffer = 0;
+        long totalDroppedRecords = 0;
 
         for (QDStats stats : rootStats) {
             subscription += stats.getOrVoid(QDStats.SType.UNIQUE_SUB).getValue(QDStats.SValue.RID_SIZE);
             storage += stats.getOrVoid(QDStats.SType.STORAGE_DATA).getValue(QDStats.SValue.RID_SIZE);
             buffer += stats.getOrVoid(QDStats.SType.AGENT_DATA).getValue(QDStats.SValue.RID_SIZE);
+            totalDroppedRecords += stats.getOrVoid(QDStats.SType.DROPPED_DATA).getValue(QDStats.SValue.RID_SIZE);
         }
+        long droppedByPeriod = totalDroppedRecords - prevDropped;
+        prevDropped = totalDroppedRecords;
 
         subscriptionNode.setDoubleValue(subscription);
         storageNode.setDoubleValue(storage);
         bufferNode.setDoubleValue(buffer);
+        droppedNode.setDoubleValue(droppedByPeriod);
+        for (String s; (s = queueDroppedLog.poll()) != null; ) {
+            droppedLogNode.setValue(TimeFormat.GMT.withTimeZone().format(System.currentTimeMillis()) + " " + s);
+        }
 
         rootCounters.beforeAggregate();
         snapshot.values().forEach(IOCounter::resetUnused);
@@ -291,6 +311,7 @@ public class ConnectorsMonitoringTask implements Runnable {
         buff.append("Subscription: ").append(integerFormat.format(subscription))
             .append("; Storage: ").append(integerFormat.format(storage))
             .append("; Buffer: ").append(integerFormat.format(buffer))
+            .append("; Dropped: ").append(integerFormat.format(droppedByPeriod))
             .append("; ");
         rootCounters.report(integerFormat, elapsedTime, buff);
         buff.append("; CPU: ").append(percentFormat.format(cpu.getCpuUsage()));
@@ -341,5 +362,10 @@ public class ConnectorsMonitoringTask implements Runnable {
         for (int i = s.length(); i < len; i++) {
             sb.append(' ');
         }
+    }
+
+    void droppedLogAccept(String message) {
+        if (!closed)
+            queueDroppedLog.add(message);
     }
 }

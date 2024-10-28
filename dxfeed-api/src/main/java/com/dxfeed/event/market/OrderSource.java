@@ -417,6 +417,13 @@ public final class OrderSource extends IndexedEventSource {
     public static final OrderSource OCEA = new OrderSource("OCEA", PUB_ORDER);
 
     /**
+     * Blue Ocean Technologies Alternative Trading System. Record for price level book.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource ocea = new OrderSource("ocea", PUB_ORDER);
+
+    /**
      * Pink Sheets. Record for price level book.
      * Pink sheets are listings for stocks that trade over-the-counter (OTC).
      * {@link Order} and {@link OtcMarketsOrder} events are {@link #isPublishable(Class) publishable} on this
@@ -451,6 +458,20 @@ public final class OrderSource extends IndexedEventSource {
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
      */
     public static final OrderSource cedx = new OrderSource("cedx", PUB_ORDER);
+
+    /**
+     * IG CFDs Gate.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource IGC = new OrderSource("IGC", PUB_ORDER);
+
+    /**
+     * IG CFDs Gate. Record for price level book.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource igc = new OrderSource("igc", PUB_ORDER);
 
     // ATTENTION: Every time a custom OrderSource constant is added run com.dxfeed.api.codegen.ImplCodeGen
     // and commit updated implementation classes.

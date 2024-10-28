@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -27,7 +27,6 @@ import com.devexperts.qd.qtp.QTPConstants;
 import com.devexperts.qd.qtp.RuntimeQTPException;
 import com.devexperts.qd.util.TimeSequenceUtil;
 import com.devexperts.util.SystemProperties;
-import com.devexperts.util.TimePeriod;
 import com.dxfeed.event.market.MarketEventSymbols;
 import io.netty.buffer.ByteBuf;
 
@@ -47,8 +46,6 @@ class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
         SystemProperties.getProperty("com.devexperts.qd.dxlink.protocolVersion", "0.1");
     private static final String SERVICE_NAME =
         SystemProperties.getProperty("com.devexperts.qd.dxlink.feedService.name", "FEED");
-    private static final TimePeriod ACCEPT_AGGREGATION_PERIOD = TimePeriod.valueOf(
-        SystemProperties.getProperty("com.devexperts.qd.dxlink.feedService.acceptAggregationPeriod", "0s"));
     private static final String ACCEPT_DATA_FORMAT =
         SystemProperties.getProperty("com.devexperts.qd.dxlink.feedService.acceptDataFormat", "COMPACT");
     private static final int MAIN_CHANNEL = 0;
@@ -265,10 +262,14 @@ class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
                 if (!fieldsByType.isEmpty()) {
                     List<String> fields = fieldsByType.remove(subscription.type);
                     if (fields != null) {
+                        List<String> acceptedFields = factory.getAcceptedEventFieldsByType(subscription.type);
+                        if (!acceptedFields.isEmpty())
+                            fields.removeIf(field -> !"eventSymbol".equals(field) && !acceptedFields.contains(field));
                         if (DxLinkJsonMessageParser.FULL.equals(ACCEPT_DATA_FORMAT))
                             fields.add(0, "eventType");
                         fieldsByTypeToSend.put(subscription.type, fields);
-                        feedSetup = messageFactory.createFeedSetup(channel, ACCEPT_AGGREGATION_PERIOD.getTime(),
+                        // TODO stop regenerating feedSetup for every new feedType
+                        feedSetup = messageFactory.createFeedSetup(channel, factory.getAcceptAggregationPeriod().getTime(),
                             ACCEPT_DATA_FORMAT, fieldsByTypeToSend);
                     }
                 }

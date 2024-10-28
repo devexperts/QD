@@ -27,12 +27,14 @@ import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.util.LegacyAdapter;
 
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 
 public abstract class AbstractCollector implements QDCollector {
     protected final QDContract contract;
     protected final DataScheme scheme;
     protected boolean storeEverything;
     protected QDFilter storeEverythingFilter; // @NotNull
+    protected Consumer<String> droppedLog;
 
     private final QDAgent.Builder agentBuilder;
     private final DistributorBuilder distributorBuilder = new DistributorBuilder();
@@ -45,6 +47,10 @@ public abstract class AbstractCollector implements QDCollector {
         this.storeEverything = builder.isStoreEverything();
         this.storeEverythingFilter = QDFilter.fromFilter(builder.getStoreEverythingFilter(), scheme);
         this.agentBuilder = new AgentBuilder().withEventTimeSequence(withEventTimeSequence);
+    }
+
+    public void setDroppedLog(Consumer<String> droppedLog) {
+        this.droppedLog = droppedLog;
     }
 
     @Override

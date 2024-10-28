@@ -215,6 +215,7 @@ public class QDStats {
 
         public static final SType UNIQUE_SUB = new SType("UniqueSub", FLAG_RID | FLAG_MEM);
         public static final SType STORAGE_DATA = new SType("StorageData", FLAG_RID | FLAG_MEM);
+        public static final SType DROPPED_DATA = new SType("DroppedData", FLAG_RID | FLAG_MEM);
 
         public static final SType AGENT = new SType("Agent");
         public static final SType AGENT_DATA = new SType("AgentData", FLAG_RID | FLAG_MEM);

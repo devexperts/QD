@@ -48,6 +48,6 @@ public class ConnectorsMonitoringTest {
         dist.processData(buf);
 
         String report = cmt.report();
-        assertTrue(report, report.matches("^Subscription: 10; Storage: 0; Buffer: 10; Read: 0 Bps; Write: 0 Bps; CPU: .*"));
+        assertTrue(report, report.matches("^Subscription: 10; Storage: 0; Buffer: 10; Dropped: 0; Read: 0 Bps; Write: 0 Bps; CPU: .*"));
     }
 }

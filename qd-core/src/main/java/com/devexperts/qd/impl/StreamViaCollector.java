@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -19,6 +19,8 @@ import com.devexperts.qd.QDErrorHandler;
 import com.devexperts.qd.QDStream;
 import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.stats.QDStats;
+
+import java.util.function.Consumer;
 
 /**
  * The {@code StreamViaCollector} simulates {@link QDStream} interface using
@@ -88,5 +90,13 @@ public class StreamViaCollector extends AbstractCollector implements QDStream {
     @Override
     public void close() {
         collector.close();
+    }
+
+    @Override
+    public void setDroppedLog(Consumer<String> droppedLog) {
+        super.setDroppedLog(droppedLog);
+        if (collector instanceof AbstractCollector) {
+            ((AbstractCollector) collector).setDroppedLog(droppedLog);
+        }
     }
 }

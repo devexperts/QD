@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -223,6 +223,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
 
     final QDStats stats;
     final QDStats statsStorage;
+    final QDStats statsDropped;
 
     final Agent total; // The special agent which contains total subscription and list heads.
 
@@ -254,7 +255,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
 
     //======================================= constructor =======================================
 
-    Collector(Builder<?> builder, boolean hasTime, boolean has_storage) {
+    Collector(Builder<?> builder, boolean hasTime, boolean has_storage, boolean has_dropped) {
         super(builder);
         this.management = CollectorManagement.getInstance(builder.getScheme(), getContract(), builder.getStats().getFullKeyProperties());
         this.counters = management.createCounters();
@@ -268,6 +269,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
 
         this.stats = builder.getStats();
         this.statsStorage = has_storage ? stats.create(QDStats.SType.STORAGE_DATA) : null;
+        this.statsDropped = has_dropped ? stats.create(QDStats.SType.DROPPED_DATA) : null;
 
         mapper.incMaxCounter(scheme.getRecordCount());
         QDStats unique_sub_stats = stats.create(QDStats.SType.UNIQUE_SUB);
@@ -1555,4 +1557,9 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
 
     // can be overriden in test code to deterministically do something between processing phases
     protected void onBetweenProcessPhases() {}
+
+    void droppedLogAccept(String message) {
+        if (droppedLog != null)
+            droppedLog.accept(message);
+    }
 }

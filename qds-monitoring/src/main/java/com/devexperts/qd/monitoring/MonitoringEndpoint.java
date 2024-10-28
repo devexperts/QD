@@ -37,6 +37,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 public class MonitoringEndpoint implements MonitoringEndpointMXBean {
     /**
@@ -208,6 +209,10 @@ public class MonitoringEndpoint implements MonitoringEndpointMXBean {
 
     private static String getConnectorJmxName(String name) {
         return "com.devexperts.qd.qtp:type=Connector,name=" + JMXNameBuilder.quoteKeyPropertyValue(name);
+    }
+
+    Consumer<String> droppedLogAccept() {
+        return cmt::droppedLogAccept;
     }
 
     public static class Builder {

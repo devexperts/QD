@@ -1,3 +1,16 @@
+QDS 3.337:
+
+* [QD-1547] Add buffer overflow as a metric for MARS
+* [QD-1571] [dxLink] Add acceptAggregationPeriod property for the dxLink QD connector
+* [QD-1572] [dxLink] Add "acceptEventFields" property support for dxLink QD connector
+  - The property allows to reduce set of event fields transmitted over the network.
+    Event types not included in the property are transmitted with all fields.
+  - VM option example: -Dcom.devexperts.qd.dxlink.websocket.acceptEventFields=(Quote[bidPrice,askPrice],Order[price])
+  - Address property example: dxlink:wss://demo.dxfeed.com/dxlink-ws[acceptEventFields=(Quote[bidPrice],Order[price])]
+* [QD-1577] [dxLink] Enable MarketMaker record in the dxlink.xml scheme
+* [QD-1586] New Order source for BlueOcean ATS: ocea
+* [QD-1591] New Order source for IG CFDs Gate: IGC
+
 QDS 3.336:
 
 * [QD-1570] [dxFeed API] Add AGGREGATE, COMPOSITE, REGIONAL OrderSource
