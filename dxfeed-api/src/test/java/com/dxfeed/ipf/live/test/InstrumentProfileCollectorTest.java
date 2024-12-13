@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -30,10 +30,16 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 public class InstrumentProfileCollectorTest {
-    InstrumentProfileCollector collector;
+
+    private RandomInstrumentProfiles profiles;
+    private InstrumentProfileCollector collector;
 
     @Before
     public void setUp() {
+        long seed = System.currentTimeMillis();
+        System.out.println("Seed: " + seed);
+
+        profiles = new RandomInstrumentProfiles(new Random(seed));
         collector = new InstrumentProfileCollector();
     }
 
@@ -43,8 +49,8 @@ public class InstrumentProfileCollectorTest {
         assertViewIdentities(); // empty
 
         // first instrument
-        InstrumentProfile i1 = new InstrumentProfile();
-        randomInstrument(i1, 20140618);
+        InstrumentProfile i1 = profiles.randomProfile();
+        i1.setSymbol("TEST_1");
         Object g1 = new Object();
         collector.updateInstrumentProfiles(Collections.singletonList(i1), g1);
         long update1 = collector.getLastUpdateTime();
@@ -52,8 +58,8 @@ public class InstrumentProfileCollectorTest {
         assertViewIdentities(i1);
 
         // second instrument has same symbol but "REMOVED" type
-        InstrumentProfile i2 = new InstrumentProfile();
-        randomInstrument(i2, 20140618);
+        InstrumentProfile i2 = profiles.randomProfile();
+        i2.setSymbol("TEST_1");
         i2.setType(InstrumentProfileType.REMOVED.name());
         Object g2 = new Object();
         collector.updateInstrumentProfiles(Collections.singletonList(i2), g2);
@@ -62,8 +68,8 @@ public class InstrumentProfileCollectorTest {
         assertViewIdentities(); // becomes empty
 
         // removed again (nothing shall change)
-        InstrumentProfile i3 = new InstrumentProfile();
-        randomInstrument(i3, 20140618);
+        InstrumentProfile i3 = profiles.randomProfile();
+        i3.setSymbol("TEST_1");
         i3.setType(InstrumentProfileType.REMOVED.name());
         Object g3 = new Object();
         collector.updateInstrumentProfiles(Collections.singletonList(i3), g3);
@@ -78,8 +84,7 @@ public class InstrumentProfileCollectorTest {
         assertViewIdentities(); // empty
 
         // first instrument
-        InstrumentProfile i1 = new InstrumentProfile();
-        randomInstrument(i1, 20140617);
+        InstrumentProfile i1 = profiles.randomProfile();
         Object g1 = new Object();
         collector.updateInstrumentProfiles(Collections.singletonList(i1), g1);
         long update1 = collector.getLastUpdateTime();
@@ -87,8 +92,7 @@ public class InstrumentProfileCollectorTest {
         assertViewIdentities(i1);
 
         // second instrument is equal to the first one (but different instance)
-        InstrumentProfile i2 = new InstrumentProfile();
-        randomInstrument(i2, 20140617);
+        InstrumentProfile i2 = new InstrumentProfile(i1);
         Object g2 = new Object();
         collector.updateInstrumentProfiles(Collections.singletonList(i2), g2);
         long update2 = collector.getLastUpdateTime();
@@ -156,19 +160,6 @@ public class InstrumentProfileCollectorTest {
         // remove second generation
         collector.removeGenerations(Collections.singleton(g2));
         assertViewSymbols();
-    }
-
-    private void randomInstrument(InstrumentProfile ip, long seed) {
-        Random r = new Random(seed);
-        for (InstrumentProfileField field : InstrumentProfileField.values()) {
-            if (field.isNumericField())
-                field.setNumericField(ip, r.nextInt(10000));
-            else
-                field.setField(ip, String.valueOf(r.nextInt(10000)));
-        }
-        for (int i = 0; i < 10; i++) {
-            ip.setField(String.valueOf(r.nextInt(10000)), String.valueOf(r.nextInt(10000)));
-        }
     }
 
     private void assertViewSymbols(String... symbols) {

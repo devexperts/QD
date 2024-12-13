@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.337</version>
+        <version>3.338</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -47,7 +47,7 @@
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <manifestEntries>
                                         <Main-Class>com.devexperts.qd.tools.Tools</Main-Class>
-                                        <Class-Path>qds.jar qds-file.jar qds-monitoring.jar dxlink-websocket.jar</Class-Path>
+                                        <Class-Path>qds.jar qds-file.jar qds-monitoring.jar dxlink-websocket.jar config.jar</Class-Path>
                                     </manifestEntries>
                                 </transformer>
                             </transformers>
@@ -84,6 +84,12 @@
             <groupId>com.devexperts.qd</groupId>
             <artifactId>qds-monitoring</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <!-- manually promote qd-tools transitive dependency -->
+        <dependency>
+            <groupId>com.typesafe</groupId>
+            <artifactId>config</artifactId>
+            <version>${typesafe-config.version}</version>
         </dependency>
         <!-- SHADED: shaded dependencies -->
         <dependency>

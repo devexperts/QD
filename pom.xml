@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.337</version>
+    <version>3.338</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -181,11 +181,14 @@
         <jmh.version>1.37</jmh.version>
         <jmxtools.version>1.2.8</jmxtools.version>
         <mycila-license-maven-plugin.version>3.0</mycila-license-maven-plugin.version>
-
+        <typesafe-config.version>1.4.3</typesafe-config.version>
         <netty.version>4.1.101.Final</netty.version>
         <reflections.version>0.10.2</reflections.version>
         <jsr305.version>3.0.0</jsr305.version>
         <openbeans.version>1.0.2</openbeans.version>
+        <wiremock.version>2.35.2</wiremock.version>
+        <awaitility.version>4.2.1</awaitility.version>
+        <hamcrest.version>2.2</hamcrest.version>
     </properties>
 
     <profiles>

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -19,9 +19,10 @@ import com.devexperts.qd.util.QDConfig;
 import com.devexperts.services.Services;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class FieldReplacersCache implements Consumer<RecordCursor> {
     private final DataScheme scheme;
@@ -37,16 +38,10 @@ public class FieldReplacersCache implements Consumer<RecordCursor> {
         Consumer<RecordCursor>[] replacers = new Consumer[scheme.getRecordCount()];
 
         // Get all services, which can implement
-        List<FieldReplacer.Factory> factories =
-            (List<FieldReplacer.Factory>) Services.createServices(FieldReplacer.Factory.class,
-                scheme.getClass().getClassLoader());
+        List<FieldReplacer.Factory> factories = (List<FieldReplacer.Factory>) Services.createServices(
+            FieldReplacer.Factory.class, scheme.getClass().getClassLoader());
 
-        List<String> fieldReplacerSpecs;
-        if (spec.startsWith("(")) {
-            fieldReplacerSpecs = QDConfig.splitParenthesisSeparatedString(spec);
-        } else {
-            fieldReplacerSpecs = Collections.singletonList(spec);
-        }
+        List<String> fieldReplacerSpecs = QDConfig.splitParenthesisSeparatedString(spec);
 
         // Create all field replacers (fabrics, realistically)
         List<FieldReplacer> allReplacers = new ArrayList<>();
@@ -68,7 +63,12 @@ public class FieldReplacersCache implements Consumer<RecordCursor> {
         // Convert field replacers into consumers
         // Create all possible consumers
         for (int rid = 0; rid < scheme.getRecordCount(); rid++) {
-            replacers[rid] = createFieldReplacerForRecord(scheme.getRecord(rid), allReplacers);
+            DataRecord record = scheme.getRecord(rid);
+            replacers[rid] = createComposite(allReplacers.stream()
+                .map(r -> r.createFieldReplacer(record))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList())
+            );
         }
         return new FieldReplacersCache(scheme, spec, replacers);
     }
@@ -94,44 +94,33 @@ public class FieldReplacersCache implements Consumer<RecordCursor> {
 
     @Override
     public void accept(RecordCursor cursor) {
-        DataRecord rec = cursor.getRecord();
-        Consumer<RecordCursor> replacer = replacers[rec.getId()];
+        Consumer<RecordCursor> replacer = replacers[cursor.getRecord().getId()];
         if (replacer == null)
             return;
         replacer.accept(cursor);
     }
 
-    private static Consumer<RecordCursor> createFieldReplacerForRecord(DataRecord record,
-        List<FieldReplacer> allReplacers)
-    {
-        List<Consumer<RecordCursor>> consumers = new ArrayList<>();
-        for (FieldReplacer r : allReplacers) {
-            Consumer<RecordCursor> consumer = r.createFieldReplacer(record);
-            if (consumer == null)
-                continue;
-            consumers.add(consumer);
-        }
-        if (consumers.isEmpty()) {
+    public static Consumer<RecordCursor> createComposite(List<Consumer<RecordCursor>> consumers) {
+        if (consumers == null || consumers.isEmpty()) {
             return null;
-        }
-        if (consumers.size() == 1) {
+        } else if (consumers.size() == 1) {
             return consumers.get(0);
-        }
-        if (consumers.size() == 2) {
+        } else if (consumers.size() == 2) {
             Consumer<RecordCursor> a = consumers.get(0);
             Consumer<RecordCursor> b = consumers.get(1);
             return rc -> {
                 a.accept(rc);
                 b.accept(rc);
             };
+        } else {
+            // Common case
+            @SuppressWarnings("unchecked")
+            Consumer<RecordCursor>[] arr = consumers.toArray(new Consumer[0]);
+            return rc -> {
+                for (Consumer<RecordCursor> c : arr) {
+                    c.accept(rc);
+                }
+            };
         }
-        // Common case
-        @SuppressWarnings("unchecked")
-        final Consumer<RecordCursor>[] arr = consumers.toArray(new Consumer[0]);
-        return rc -> {
-            for (int i = 0; i < arr.length; i++) {
-                arr[i].accept(rc);
-            }
-        };
     }
 }

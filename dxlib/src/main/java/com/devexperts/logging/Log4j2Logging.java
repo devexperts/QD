@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,21 +12,12 @@
 package com.devexperts.logging;
 
 import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.core.Appender;
-import org.apache.logging.log4j.core.Logger;
-import org.apache.logging.log4j.core.LoggerContext;
-import org.apache.logging.log4j.core.appender.ConsoleAppender;
-import org.apache.logging.log4j.core.appender.RollingFileAppender;
-import org.apache.logging.log4j.core.appender.rolling.SizeBasedTriggeringPolicy;
-import org.apache.logging.log4j.core.config.Configuration;
-import org.apache.logging.log4j.core.config.NullConfiguration;
-import org.apache.logging.log4j.core.filter.ThresholdFilter;
-import org.apache.logging.log4j.core.layout.AbstractStringLayout;
+import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.SimpleMessage;
+import org.apache.logging.log4j.spi.LoggerContext;
 import org.apache.logging.log4j.status.StatusLogger;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
 
@@ -35,99 +26,46 @@ import static org.apache.logging.log4j.Level.ERROR;
 import static org.apache.logging.log4j.Level.INFO;
 import static org.apache.logging.log4j.Level.OFF;
 import static org.apache.logging.log4j.Level.WARN;
-import static org.apache.logging.log4j.core.Filter.Result.ACCEPT;
-import static org.apache.logging.log4j.core.Filter.Result.DENY;
-import static org.apache.logging.log4j.core.config.ConfigurationSource.NULL_SOURCE;
 
 /**
  * Logging implementation that uses log4j2 logging facilities.
+ *
+ * <p>This class should strictly use only Log4j2 API and SPI functionality.
+ * This approach enables the use of other implementations that act as bridges to external logging frameworks.
  */
 class Log4j2Logging extends DefaultLogging {
     private static final String FQCN = Logging.class.getName() + ".";
+
+    private static final Log4j2Core core = createCoreIfAvailable();
 
     static {
         StatusLogger.getLogger().setLevel(OFF);
     }
 
+    private static Log4j2Core createCoreIfAvailable() {
+        // Use LoggerContext resolution via the LogManager,
+        // since it can be overridden even in the presence of Log4j2 Core implementation
+        LoggerContext context = LogManager.getContext(false);
+
+        boolean isCoreLib = context.getClass().getName().equals("org.apache.logging.log4j.core.LoggerContext");
+        try {
+            // Use Log4j2 Core for configuration
+            if (isCoreLib)
+                return new Log4j2Core();
+        } catch (Throwable ignored) {
+        }
+        // Use strictly Log4j2 API/SPI
+        return null;
+    }
+
     @Override
     Map<String, Exception> configure() {
-        LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
-        if (ctx.getConfiguration().getConfigurationSource() != NULL_SOURCE)
-            return Collections.emptyMap(); // do nothing since log4j2 was already configured
-        return configureLogFile(getProperty(Logging.LOG_FILE_PROPERTY, null));
-    }
-
-    private static Map<String, Exception> reconfigure(String logFile) {
-        LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
-        Configuration config = ctx.getConfiguration();
-
-        Map<String, Exception> errors = new LinkedHashMap<>();
-        config.getRootLogger().setLevel(DEBUG);
-        String errFile = getProperty(Logging.ERR_FILE_PROPERTY, null);
-        for (Map.Entry<String, Appender> entry : config.getRootLogger().getAppenders().entrySet()) {
-            entry.getValue().stop();
-            // Safe to delete here since config.getRootLogger().getAppenders() returns new map
-            config.getRootLogger().removeAppender(entry.getKey());
-        }
-
-        Appender appender = null;
-        if (logFile != null) {
-            try {
-                appender = createFileAppender("common", logFile, Logging.LOG_MAX_FILE_SIZE_PROPERTY, errors);
-            } catch (Exception e) {
-                errors.put(logFile, e);
-            }
-        }
-
-        if (appender == null)
-            appender = ConsoleAppender.newBuilder()
-                .withName("common")
-                .withLayout(getDetailedLayout())
-                .setTarget(ConsoleAppender.Target.SYSTEM_OUT)
-                .build();
-
-        config.getRootLogger().addAppender(appender, DEBUG,
-            errFile == null ? null : ThresholdFilter.createFilter(WARN, DENY, ACCEPT));
-
-        if (errFile != null) {
-            try {
-                Appender errAppender = createFileAppender("error", errFile, Logging.ERR_MAX_FILE_SIZE_PROPERTY, errors);
-                config.getRootLogger().addAppender(errAppender, WARN, ThresholdFilter.createFilter(WARN, ACCEPT, DENY));
-            } catch (Exception e) {
-                errors.put(errFile, e);
-            }
-        }
-        ctx.updateLoggers();
-        return errors;
-    }
-
-    private static AbstractStringLayout getDetailedLayout() {
-        return DxFeedPatternLayout.createDefaultLayout(null);
-    }
-
-    private static RollingFileAppender createFileAppender(String name, String logFile, String maxSizeKey,
-        Map<String, Exception> errors)
-    {
-        RollingFileAppender.Builder builder = RollingFileAppender.newBuilder();
-        builder.setConfiguration(new NullConfiguration());
-        builder.withName(name);
-        builder.withLayout(getDetailedLayout());
-        builder.withFileName(logFile);
-        builder.withFilePattern(logFile);
-        builder.withAppend(true);
-        builder.withImmediateFlush(true);
-
-        int limit = getLimit(maxSizeKey, errors);
-        if (limit == 0)
-            limit = 900 * 1024 * 1024; // Default in Logging.DEFAULT_MAX_FILE_SIZE
-        builder.withPolicy(SizeBasedTriggeringPolicy.createPolicy(Integer.toString(limit)));
-
-        return builder.build();
+        return (core != null) ? core.configure() : Collections.emptyMap();
     }
 
     @Override
     Map<String, Exception> configureLogFile(String logFile) {
-        return reconfigure(logFile);
+        return (core != null) ? core.reconfigure(logFile) : Collections.emptyMap();
     }
 
     @Override
@@ -147,27 +85,22 @@ class Log4j2Logging extends DefaultLogging {
 
     @Override
     void setDebugEnabled(Object peer, boolean debugEnabled) {
-        Logger logger = (Logger) peer;
-        if (debugEnabled) {
-            if (logger.getLevel().isMoreSpecificThan(DEBUG))
-                logger.setLevel(DEBUG);
-        } else {
-            if (logger.getLevel().isLessSpecificThan(INFO))
-                logger.setLevel(INFO);
-        }
+        if (core != null)
+            core.setDebugEnabled(peer, debugEnabled);
     }
 
     @Override
     void log(Object peer, Level level, String msg, Throwable t) {
         org.apache.logging.log4j.Level priority;
-        if (level.intValue() <= Level.FINE.intValue())
+        if (level.intValue() <= Level.FINE.intValue()) {
             priority = DEBUG;
-        else if (level.intValue() <= Level.INFO.intValue())
+        } else if (level.intValue() <= Level.INFO.intValue()) {
             priority = INFO;
-        else if (level.intValue() <= Level.WARNING.intValue())
+        } else if (level.intValue() <= Level.WARNING.intValue()) {
             priority = WARN;
-        else
+        } else {
             priority = ERROR;
+        }
 
         if (!((Logger) peer).isEnabled(priority))
             return;
@@ -177,7 +110,7 @@ class Log4j2Logging extends DefaultLogging {
         // We will re-establish "interrupted" flag later.
         boolean interrupted = Thread.interrupted();
         try {
-            ((Logger) peer).logMessage(FQCN, priority, null, new SimpleMessage(msg == null ? "" : msg), t);
+            ((Logger) peer).logMessage(priority, null, FQCN, null, new SimpleMessage(msg == null ? "" : msg), t);
         } catch (Exception e) {
             System.err.println(new LogFormatter().format('E', System.currentTimeMillis(),
                 Thread.currentThread().getName(), "Log4j", e + " during logging of " + msg));

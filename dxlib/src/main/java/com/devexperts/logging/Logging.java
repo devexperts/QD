@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,13 +22,19 @@ import java.util.logging.Level;
  * It supports use of both log4j and {@link java.util.logging} logging facilities.
  * <p>First it tries to use log4j logging. If this attempt fails, it uses {@link java.util.logging} logging,
  * so you'll always have some logging running.
- * <p>Usage pattern:
- * <br><code>public class SomeClass {
- * <br>private static final Logging log = Logging.getLogging(SomeClass.class);
- * <br>}
- * </code>
  *
- * @see Log4jLogging
+ * <p>Usage pattern:
+ * <pre><tt>
+ * public class SomeClass {
+ *     private static final Logging log = Logging. getLogging(SomeClass. class);
+ * }
+ * </tt></pre>
+ *
+ * <p><b>Note</b> that some configuration methods ({@link #configureLogFile(String)},
+ * {@link #configureDebugEnabled(boolean)}, and properties like {@link #LOG_FILE_PROPERTY}) may not work
+ * on some "bridge" implementations (i.e. SLF4J and others).
+ *
+ * @see Log4j2Logging
  * @see DefaultLogging
  * @see LogFormatter
  */
@@ -64,8 +70,8 @@ public class Logging {
      * Programmatically reconfigures logging to a specified file. This method
      * overrides the value of {@link #LOG_FILE_PROPERTY} system property.
      */
-    public static void configureLogFile(String log_file) {
-        reportErrors(IMPL, IMPL.configureLogFile(log_file));
+    public static void configureLogFile(String logFile) {
+        reportErrors(IMPL, IMPL.configureLogFile(logFile));
     }
 
     // ========== Instance =========

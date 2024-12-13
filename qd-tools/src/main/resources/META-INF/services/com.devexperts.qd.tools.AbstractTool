@@ -17,3 +17,5 @@ com.devexperts.qd.tools.SubscriptionDumpParser
 com.devexperts.qd.tools.SubscriptionDumpRepeater
 com.devexperts.qd.tools.TDP
 com.devexperts.qd.tools.Time
+com.devexperts.qd.tools.launcher.Launcher
+

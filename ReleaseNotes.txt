@@ -1,3 +1,31 @@
+QDS 3.338:
+
+* [QD-1573] Add Value and Date field replacers
+  - New ValueFieldReplacer allows to set value to the specified field of specified records.
+    Specification of this field replacer should be in the following format:
+        "value:<recordFilter>:<target>:<value>",
+    where "recordFilter" is a RecordOnlyFilter, "target" is a name of the target field.
+  - Examples: "value:Quote*:BidPrice:42.42", "value:Summary:DayId:20241225"
+  - New DateFieldReplacer allows to set date to the specified field of specified records according to the
+    specified strategy. Specification of this field replacer should be in the following format:
+        "date:<recordFilter>:<target>:<configuration>[:<timezone>]",
+    where "recordFilter" is a RecordOnlyFilter, "target" is a name of the date field,
+    "configuration" is a configuration of the replacing strategy, and "timezone" is a Java TimeZone.
+    Supported replacing strategies:
+    - "current"   - replaces date with the current date (timezone parameter is supported)
+    - "previous"  - replaces date with the previous date (timezone parameter is supported)
+    - "<date>"    - replaces date with specified date in "yyyyMMdd" format, or 0
+    - "+<number>" - increases date with the specified number of days
+    - "-<number>" - decreases date with the specified number of days
+  - Examples: "date:Summary:DayId:current", "date:Profile:ExdDivDate:-2"
+  - BACKWARD-INCOMPATIBLE CHANGES:
+    - Class TimeFieldReplacer$Factory is renamed to TimeFieldReplacerFactory
+    - Class SetFieldReplacer$Factory is renamed to SetFieldReplacerFactory
+* [QD-1578] [EXPERIMENTAL] [Spaces] Launcher tool
+* [QD-1595] dxLib: Add support for Log4j2 bridge via SLF4j
+* [QD-1597] Leakage in InstrumentProfileCollector
+* [QD-1598] [Schedule] Update holidays/short days for 2025
+
 QDS 3.337:
 
 * [QD-1547] Add buffer overflow as a metric for MARS

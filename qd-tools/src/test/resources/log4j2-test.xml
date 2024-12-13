@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  !++
+  QDS - Quick Data Signalling Library
+  !-
+  Copyright (C) 2002 - 2024 Devexperts LLC
+  !-
+  This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+  If a copy of the MPL was not distributed with this file, You can obtain one at
+  http://mozilla.org/MPL/2.0/.
+  !__
+-->
+<Configuration status="info" packages="org.apache.logging.log4j,com.devexperts.logging">
+    <Appenders>
+        <Console name="console" target="SYSTEM_OUT">
+            <dxFeedPatternLayout/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <!-- suppress jetty's very chatty debug logging -->
+        <Logger name="org.eclipse.jetty" level="info" />
+        <Root level="debug">
+            <AppenderRef ref="console"/>
+        </Root>
+    </Loggers>
+</Configuration>

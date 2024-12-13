@@ -79,13 +79,15 @@
         </fileSet>
     </fileSets>
 
-    <!--    to run com.devexperts.qd:dxlink-websocket-->
-    <!--    TODO Make sure there isn't a more universal solution (without manually keeping track of the dependency list). -->
+    <!-- TODO Make sure there isn't a more universal solution (without manually keeping track of the dependency list). -->
     <dependencySets>
         <dependencySet>
             <outputDirectory>/lib</outputDirectory>
             <outputFileNameMapping>${artifact.artifactId}.${artifact.extension}</outputFileNameMapping>
             <includes>
+                <!-- qds-tools dependencies -->
+                <include>com.typesafe:config</include>
+                <!-- to run com.devexperts.qd:dxlink-websocket -->
                 <include>io.netty:netty-codec-http</include>
                 <include>io.netty:netty-common</include>
                 <include>io.netty:netty-buffer</include>

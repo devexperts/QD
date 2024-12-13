@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2024 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -47,10 +47,12 @@ public class InstrumentProfileCollector {
 
     // =====================  private instance fields =====================
 
-    private final IndexedSet<String, Entry> entriesBySymbol = IndexedSet.create((IndexerFunction<String, Entry>) entry -> entry.symbol); // sync
+    // Invariant: For all entries in the set entry.old == false
+    private final IndexedSet<String, Entry> entriesBySymbol =
+        IndexedSet.create((IndexerFunction<String, Entry>) entry -> entry.symbol); // sync
     private final CopyOnWriteArrayList<Agent> agents = new CopyOnWriteArrayList<>(); // sync
     private volatile Executor executor = createAgentExecutor();
-    private Entry tail = new Entry(); // not-null, sync
+    private volatile Node tail = new Node(); // not-null, write sync
 
     private long lastUpdateTime = System.currentTimeMillis();
     private long lastReportedTime;
@@ -276,7 +278,7 @@ public class InstrumentProfileCollector {
             return false;
         }
         // CONCURRENCY NOTE: The order of numbered operations is important
-        // [0] Create a copy of the instrument (if copyInstrumentProfile is overridden is a subclass)
+        // [0] Create a copy of the instrument (if copyInstrumentProfile is overridden in a subclass)
         //     This captures this instrument profile state in case of its concurrent modifications
         ip = copyInstrumentProfile(ip);
         Entry newEntry = new Entry(symbol, ip);
@@ -315,29 +317,23 @@ public class InstrumentProfileCollector {
     }
 
     private void linkUpdatedEntryImpl(Entry entry) {
-        Entry oldTail = tail;
-        oldTail.next = entry; // new entry linearized in the list here
-        tail = entry;
+        Node node = new Node(entry);
+        Node oldTail = tail;
+        oldTail.next = node; // new entry linearized in the list here
+        tail = node;
     }
 
     private String debugString(InstrumentProfile ip) {
         return ip + " @" + Integer.toHexString(System.identityHashCode(ip));
     }
 
-    // =====================  private inner classes methods =====================
+    // =====================  private inner classes and methods =====================
 
     private static class Entry {
         final String symbol;
         final InstrumentProfile ip;
         Object generation; // sync
-        volatile Entry next;
         volatile boolean old; // true if this entry was replaced with a fresh, new one
-
-        // dummy initial tail entry constructor
-        Entry() {
-            this(null, null);
-            old = true;
-        }
 
         Entry(String symbol, InstrumentProfile ip) {
             this.symbol = symbol;
@@ -345,17 +341,32 @@ public class InstrumentProfileCollector {
         }
     }
 
+    private static class Node {
+        final Entry entry;
+        volatile Node next;
+
+        // Dummy initial tail node constructor
+        Node() {
+            this.entry = new Entry(null, null);
+            this.entry.old = true;
+        }
+
+        Node(Entry entry) {
+            this.entry = entry;
+        }
+    }
+
     private class Agent implements Iterator<InstrumentProfile> {
         final InstrumentProfileUpdateListener listener;
         Entry nextEntry;
-        Entry tailEntry;
+        Node tailNode;
         Iterator<Entry> snapshotIterator;
 
         Agent(InstrumentProfileUpdateListener listener) {
             this.listener = listener;
             // CONCURRENCY NOTE: The order of numbered operations is important
             // [1] capture current tail
-            tailEntry = tail;
+            tailNode = tail;
             // [2] capture current snapshot
             snapshotIterator = entriesBySymbol.concurrentIterator();
         }
@@ -368,16 +379,17 @@ public class InstrumentProfileCollector {
                 if (snapshotIterator.hasNext()) {
                     nextEntry = snapshotIterator.next();
                     return;
-                } else
+                } else {
                     snapshotIterator = null;
+                }
             }
             while (true) {
-                Entry entry = tailEntry.next;
-                if (entry == null)
+                Node node = tailNode.next;
+                if (node == null)
                     return; // nothing new -- return
-                tailEntry = entry; // move to next
-                if (!entry.old) {
-                    nextEntry = entry;
+                tailNode = node; // move to next
+                if (!node.entry.old) {
+                    nextEntry = node.entry;
                     return;
                 }
                 // loop to skip removed

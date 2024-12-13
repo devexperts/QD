@@ -1,2 +1,4 @@
-com.devexperts.qd.qtp.fieldreplacer.TimeFieldReplacer$Factory
-com.devexperts.qd.qtp.fieldreplacer.SetFieldReplacer$Factory
+com.devexperts.qd.qtp.fieldreplacer.TimeFieldReplacerFactory
+com.devexperts.qd.qtp.fieldreplacer.DateFieldReplacerFactory
+com.devexperts.qd.qtp.fieldreplacer.ValueFieldReplacerFactory
+com.devexperts.qd.qtp.fieldreplacer.SetFieldReplacerFactory
