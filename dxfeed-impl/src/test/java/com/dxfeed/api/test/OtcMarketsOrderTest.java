@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,9 +16,9 @@ import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.api.DXPublisher;
+import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.OtcMarketsOrder;
 import com.dxfeed.event.market.OtcMarketsPriceType;
-import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.Scope;
 import com.dxfeed.event.market.Side;
 import org.junit.After;
@@ -125,7 +125,7 @@ public class OtcMarketsOrderTest {
         order.setIndex(1);
         publisher.publishEvents(Collections.singleton(order));
 
-        Order received = queue.poll(2, TimeUnit.SECONDS);
+        Order received = queue.poll(1, TimeUnit.SECONDS);
         assertNull(received);
     }
 

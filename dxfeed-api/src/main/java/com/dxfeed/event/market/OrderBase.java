@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -30,7 +30,7 @@ import javax.xml.bind.annotation.XmlType;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 /**
- * Base class for common fields of {@link Order}, {@link AnalyticOrder}, {@link OtcMarketsOrder}
+ * Base class for common fields of {@link Order}, {@link AnalyticOrder}, {@link OtcMarketsOrder}, {@link NuamOrder}
  * and {@link SpreadOrder} events.
  * Order events represent a snapshot for a full available market depth for a symbol.
  * The collection of order events of a symbol represents the most recent information that is
@@ -44,6 +44,11 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  * <p>{@link OtcMarketsOrder} event represents market depth for a <b>specific symbol</b> traded on the OTC Markets.
  * The event is extended with the additional OTC Markets quote data, such as Quote Access Payment (QAP) value,
  * Quote Price Type, Open/Closed status, and Unsolicited state indication, when applicable.
+ *
+ * <p>{@link NuamOrder} represents market depth for a <b>specific symbol</b>
+ * extended with an additional broker information about internal ids, customer additional info,
+ * extended matching options, info about triggers, the structure of quantity, etc. specified for the Nuam Exchange,
+ * the new Regional Holding that integrates the Santiago, Lima, and Colombia Stock Exchanges into a single market.
  *
  * <p>{@link SpreadOrder} event represents market depth for
  *    <b>all spreads on a given underlying symbol</b>.

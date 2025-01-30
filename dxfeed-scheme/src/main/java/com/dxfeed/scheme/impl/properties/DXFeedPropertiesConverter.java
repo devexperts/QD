@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -127,6 +127,7 @@ public final class DXFeedPropertiesConverter {
         enableOrderField(file, "Order", "Count");
         enableOrderField(file, "AnalyticOrder", "Count");
         enableOrderField(file, "OtcMarketsOrder", "Count");
+        enableOrderField(file, "NuamOrder", "Count");
         enableOrderField(file, "SpreadOrder", "Count");
         // Enable MMID
         enableOrderField(file, "Order", "MarketMaker");
@@ -135,10 +136,12 @@ public final class DXFeedPropertiesConverter {
         // Global FOB flag, default to false
         if (SystemProperties.getBooleanProperty("dxscheme.fob", false)) {
             // List of suffixes to enable FOB for
-            String suffixes = SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV");
+            String suffixes = SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes",
+                "|#NTV|#NUAM");
             enableFOB(file, suffixes, "Order");
             enableFOB(file, suffixes, "AnalyticOrder");
             enableFOB(file, suffixes, "OtcMarketsOrder");
+            enableFOB(file, suffixes, "NuamOrder");
             enableFOB(file, suffixes, "SpreadOrder");
         }
     }
@@ -184,6 +187,7 @@ public final class DXFeedPropertiesConverter {
         loadGenerator(file, "market.impl.Order", "Order", "#");
         loadGenerator(file, "market.impl.AnalyticOrder", "AnalyticOrder", "#");
         loadGenerator(file, "market.impl.OtcMarketsOrder", "OtcMarketsOrder", "#");
+        loadGenerator(file, "market.impl.NuamOrder", "NuamOrder", "#");
         loadGenerator(file, "market.impl.SpreadOrder", "SpreadOrder", "#");
         loadGenerator(file, "candle.impl.Candle", "Candle", "");
         loadGenerator(file, "candle.impl.Trade", "OldStyleCandle", "");

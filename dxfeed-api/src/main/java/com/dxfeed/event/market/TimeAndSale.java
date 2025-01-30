@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -618,27 +618,50 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
      */
     @Override
     public String toString() {
-        return "TimeAndSale{" + getEventSymbol() +
-            ", eventTime=" + TimeFormat.DEFAULT.withMillis().format(getEventTime()) +
-            ", eventFlags=0x" + Integer.toHexString(getEventFlags()) +
-            ", time=" + TimeFormat.DEFAULT.withMillis().format(getTime()) +
-            ", timeNanoPart=" + timeNanoPart +
-            ", sequence=" + getSequence() +
-            ", exchange=" + Util.encodeChar(exchangeCode) +
-            ", price=" + price +
-            ", size=" + size +
-            ", bid=" + bidPrice +
-            ", ask=" + askPrice +
-            ", ESC='" + exchangeSaleConditions + "'" +
-            ", TTE=" + Util.encodeChar(getTradeThroughExempt()) +
-            ", side=" + getAggressorSide() +
-            ", spread=" + isSpreadLeg() +
-            ", ETH=" + isExtendedTradingHours() +
-            ", validTick=" + isValidTick() +
-            ", type=" + getType() +
-            (buyer == null ? "" : ", buyer='" + buyer + "'") +
-            (seller == null ? "" : ", seller='" + seller + "'") +
-            "}";
+        StringBuilder sb = new StringBuilder(getClass().getSimpleName());
+        sb.append('{');
+        fieldsToString(sb);
+        sb.append('}');
+        return sb.toString();
+    }
+
+    // ========================= package private access for other subclasses =========================
+
+    /**
+     * Appends the field values of this event to a provided {@link StringBuilder}.
+     * This method is responsible for converting each field to a string representation and appending it
+     * to the {@link StringBuilder} passed as a parameter.
+     * <p> Inheritor classes are encouraged to override this method to add additional fields specific
+     * to their implementations. When overriding, the subclass should first call
+     * {@code super.fieldsToString(sb)} before appending its own fields to maintain the
+     * structure of the data representation.
+     * @param sb instance to which field values are appended.
+     * @return instance passed in, after field values have been appended.
+     */
+    StringBuilder fieldsToString(StringBuilder sb) {
+        sb.append(getEventSymbol())
+            .append(", eventTime=").append(TimeFormat.DEFAULT.withMillis().format(getEventTime()))
+            .append(", eventFlags=0x").append(Integer.toHexString(getEventFlags()))
+            .append(", time=").append(TimeFormat.DEFAULT.withMillis().format(getTime()))
+            .append(", timeNanoPart=").append(timeNanoPart)
+            .append(", sequence=").append(getSequence())
+            .append(", exchange=").append(Util.encodeChar(exchangeCode))
+            .append(", price=").append(price)
+            .append(", size=").append(size)
+            .append(", bid=").append(bidPrice)
+            .append(", ask=").append(askPrice)
+            .append(", ESC='").append(exchangeSaleConditions).append("'")
+            .append(", TTE=").append(Util.encodeChar(getTradeThroughExempt()))
+            .append(", side=").append(getAggressorSide())
+            .append(", spread=").append(isSpreadLeg())
+            .append(", ETH=").append(isExtendedTradingHours())
+            .append(", validTick=").append(isValidTick())
+            .append(", type=").append(getType());
+        if (buyer != null)
+            sb.append(", buyer='").append(buyer).append("'");
+        if (seller != null)
+            sb.append(", seller='").append(seller).append("'");
+        return sb;
     }
 
     // ========================= package private access for delegate =========================

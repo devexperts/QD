@@ -3,7 +3,7 @@
   !++
   QDS - Quick Data Signalling Library
   !-
-  Copyright (C) 2002 - 2024 Devexperts LLC
+  Copyright (C) 2002 - 2025 Devexperts LLC
   !-
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
   If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -69,6 +69,25 @@
             <value name="UNPRICED" ord="0"/>
             <value name="ACTUAL" ord="1"/>
             <value name="WANTED" ord="2"/>
+        </enum>
+
+        <enum name="NuamOrderType">
+            <value name="UNDEFINED" ord="0"/>
+            <value name="LIMIT" ord="1"/>
+            <value name="MARKET" ord="2"/>
+            <value name="MARKET_TO_LIMIT" ord="3"/>
+            <value name="BEST_ORDER" ord="4"/>
+            <value name="IMBALANCE" ord="5"/>
+        </enum>
+
+        <enum name="NuamTimeInForceType">
+            <value name="UNDEFINED" ord="0"/>
+            <value name="REST_OF_DAY" ord="1"/>
+            <value name="GTC" ord="2"/>
+            <value name="IMMEDIATE_OR_CANCEL" ord="3"/>
+            <value name="FILL_OR_KILL" ord="4"/>
+            <value name="GOOD_TIL_SESSION" ord="5"/>
+            <value name="NUMBER_OF_DAYS" ord="6"/>
         </enum>
     </enums>
 
@@ -286,6 +305,8 @@
                 <value>cedx</value>
                 <value>IGC</value>
                 <value>igc</value>
+                <value>NUAM</value>
+                <value>nuam</value>
             </iterator>
             <!-- Simple copy from "OrderBase" -->
             <record name="Order" copyFrom="OrderIcebergBase"/>
@@ -317,6 +338,40 @@
                         <field name="Saturated" offset="4" size="1"/>
                         <field name="AutoExecution" offset="5" size="1"/>
                         <field name="NmsConditional" offset="6" size="1"/>
+                    </bitfields>
+                </field>
+            </record>
+        </generator>
+
+        <!-- MarketFactoryImpl -->
+        <generator name="NuamOrder" type="suffix" delimiter="#">
+            <iterator>
+                <value/>
+                <value>NUAM</value>
+                <value>nuam</value>
+            </iterator>
+            <record name="NuamOrder" copyFrom="OrderBase">
+                <field name="ActorId" type="compact_int"/>
+                <field name="ParticipantId" type="compact_int"/>
+                <field name="SubmitterId" type="compact_int"/>
+                <field name="OnBehalfOfSubmitterId" type="compact_int"/>
+                <field name="ClientOrderId" type="utf_char_array"/>
+                <field name="CustomerAccount" type="utf_char_array"/>
+                <field name="CustomerInfo" type="utf_char_array"/>
+                <field name="ExchangeInfo" type="utf_char_array"/>
+                <field name="TimeInForceData" type="compact_int"/>
+                <field name="TriggerOrderBookId" type="compact_int"/>
+                <field name="TriggerPrice" type="price"/>
+                <field name="TriggerSessionType" type="compact_int"/>
+                <field name="OrderQuantity" type="size"/>
+                <field name="DisplayQuantity" type="size"/>
+                <field name="RefreshQuantity" type="size"/>
+                <field name="LeavesQuantity" type="size"/>
+                <field name="MatchedQuantity" type="size"/>
+                <field name="NuamFlags" type="flags">
+                    <bitfields>
+                        <field name="NuamOrderType" offset="0" size="4"/>
+                        <field name="TimeInForce" offset="4" size="4"/>
                     </bitfields>
                 </field>
             </record>
@@ -373,6 +428,17 @@
             </field>
             <field name="Buyer" type="string" disabled="true"/>
             <field name="Seller" type="string" disabled="true"/>
+        </record>
+
+        <!-- MarketFactoryImpl -->
+        <record name="NuamTimeAndSale" regionals="true" copyFrom="TimeAndSale">
+            <field name="ActorId" type="compact_int"/>
+            <field name="ParticipantId" type="compact_int"/>
+            <field name="OrderId" type="long"/>
+            <field name="ClientOrderId" type="utf_char_array"/>
+            <field name="TradeId" type="long"/>
+            <field name="CustomerAccount" type="utf_char_array"/>
+            <field name="CustomerInfo" type="utf_char_array"/>
         </record>
 
         <!-- MarketFactoryImpl -->

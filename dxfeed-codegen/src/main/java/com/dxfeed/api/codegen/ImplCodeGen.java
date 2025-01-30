@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -19,6 +19,8 @@ import com.dxfeed.event.candle.impl.CandleEventMapping;
 import com.dxfeed.event.market.AnalyticOrder;
 import com.dxfeed.event.market.MarketEventDelegateImpl;
 import com.dxfeed.event.market.MarketMaker;
+import com.dxfeed.event.market.NuamOrder;
+import com.dxfeed.event.market.NuamTimeAndSale;
 import com.dxfeed.event.market.OptionSale;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.OrderBase;
@@ -353,6 +355,60 @@ public class ImplCodeGen {
             ).
             publishable();
 
+        ctx.delegate("NuamOrder", NuamOrder.class, "NuamOrder").
+            suffixes(getOrderSuffixes(NuamOrder.class)).
+            inheritDelegateFrom(ORDER_BASE_DELEGATE).
+            inheritMappingFrom(ORDER_BASE_MAPPING).
+            source("m.getRecordSource()").
+            withPlainEventFlags().
+            map("Void", "Void", FieldType.VOID).time(0).internal().
+            map("Index", "Index", FieldType.INDEX).time(1).internal().
+            assign("Index", "((long) getSource().id() << 32) | (#Index# & 0xFFFFFFFFL)").
+            injectPutEventCode(
+                "int index = (int) event.getIndex();",
+                "#Index=index#;"
+            ).
+            mapTimeAndSequence().
+            map("TimeNanoPart", "TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
+            map("ActionTime", "ActionTime", FieldType.TIME_MILLIS).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("OrderId", "OrderId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("AuxOrderId", "AuxOrderId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("Price", "Price", FieldType.PRICE).
+            map("Size", "Size", FieldType.SIZE).
+            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes("com.dxfeed.event.order.impl.NuamOrder.suffixes.count", "").
+            map("Flags", "Flags", FieldType.FLAGS).
+            map("TradeId", "TradeId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("TradePrice", "TradePrice", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("TradeSize", "TradeSize", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("ActorId", "ActorId", FieldType.INT).
+            map("ParticipantId", "ParticipantId", FieldType.INT).
+            map("SubmitterId", "SubmitterId", FieldType.INT).
+            map("OnBehalfOfSubmitterId", "OnBehalfOfSubmitterId", FieldType.INT).
+            map("ClientOrderId", "ClientOrderId", FieldType.STRING).
+            map("CustomerAccount", "CustomerAccount", FieldType.STRING).
+            map("CustomerInfo", "CustomerInfo", FieldType.STRING).
+            map("ExchangeInfo", "ExchangeInfo", FieldType.STRING).
+            map("TimeInForceData", "TimeInForceData", FieldType.INT).
+            map("TriggerOrderBookId", "TriggerOrderBookId", FieldType.INT).
+            map("TriggerPrice", "TriggerPrice", FieldType.PRICE).
+            map("TriggerSessionType", "TriggerSessionType", FieldType.INT).
+            map("OrderQuantity", "OrderQuantity", FieldType.SIZE).
+            map("DisplayQuantity", "DisplayQuantity", FieldType.SIZE).
+            map("RefreshQuantity", "RefreshQuantity", FieldType.SIZE).
+            map("LeavesQuantity", "LeavesQuantity", FieldType.SIZE).
+            map("MatchedQuantity", "MatchedQuantity", FieldType.SIZE).
+            map("NuamFlags", "NuamFlags", FieldType.FLAGS).
+            injectPutEventCode(
+                "if (index < 0)",
+                "    throw new IllegalArgumentException(\"Invalid index to publish\");",
+                "if ((event.getEventFlags() & (OrderBase.SNAPSHOT_END | OrderBase.SNAPSHOT_SNIP)) != 0 && index != 0)",
+                "    throw new IllegalArgumentException(\"SNAPSHOT_END and SNAPSHOT_SNIP orders must have index == 0\");",
+                "if (event.getOrderSide() == Side.UNDEFINED && event.hasSize())",
+                "    throw new IllegalArgumentException(\"only empty orders can have side == UNDEFINED\");"
+            ).
+            publishable();
+
         ctx.delegate("SpreadOrder", SpreadOrder.class, "SpreadOrder").
             suffixes(getOrderSuffixes(SpreadOrder.class)).
             inheritDelegateFrom(ORDER_BASE_DELEGATE).
@@ -572,6 +628,31 @@ public class ImplCodeGen {
             map("Flags", "Flags", FieldType.FLAGS).
             map("Buyer", "Buyer", FieldType.STRING).optional().disabledByDefault().
             map("Seller", "Seller", FieldType.STRING).optional().disabledByDefault().
+            publishable();
+
+        ctx.delegate("NuamTimeAndSale", NuamTimeAndSale.class, "NuamTimeAndSale&").
+            inheritDelegateFrom(MARKET_EVENT_DELEGATE).
+            inheritMappingFrom(MARKET_EVENT_MAPPING).
+            subContract(QDContract.STREAM).
+            withPlainEventFlags().
+            mapTimeAndSequenceToIndex().
+            map("TimeNanoPart", "TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
+            map("ExchangeCode", "Exchange", FieldType.CHAR).
+            map("Price", "Price", FieldType.PRICE).
+            map("Size", "Size", FieldType.SIZE).
+            map("BidPrice", "Bid.Price", FieldType.PRICE).
+            map("AskPrice", "Ask.Price", FieldType.PRICE).
+            map("ExchangeSaleConditions", "SaleConditions", "ExchangeSaleConditions", FieldType.SHORT_STRING).
+            map("Flags", "Flags", FieldType.FLAGS).
+            map("Buyer", "Buyer", FieldType.STRING).optional().disabledByDefault().
+            map("Seller", "Seller", FieldType.STRING).optional().disabledByDefault().
+            map("ActorId", "ActorId", FieldType.INT).
+            map("ParticipantId", "ParticipantId", FieldType.INT).
+            map("OrderId", "OrderId", FieldType.LONG).
+            map("ClientOrderId", "ClientOrderId", FieldType.STRING).
+            map("TradeId", "TradeId", FieldType.LONG).
+            map("CustomerAccount", "CustomerAccount", FieldType.STRING).
+            map("CustomerInfo", "CustomerInfo", FieldType.STRING).
             publishable();
 
         ctx.delegate("OptionSale", OptionSale.class, "OptionSale").

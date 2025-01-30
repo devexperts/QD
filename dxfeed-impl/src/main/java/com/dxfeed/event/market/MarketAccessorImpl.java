@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -201,6 +201,45 @@ public class MarketAccessorImpl {
 
     public static int setOtcMarketsNmsConditional(int flags, boolean nmsConditional) {
         return nmsConditional ? flags | OtcMarketsOrder.NMS_CONDITIONAL : flags & ~OtcMarketsOrder.NMS_CONDITIONAL;
+    }
+
+
+    // ========== NuamOrder accessor methods ==========
+
+    public static int getNuamFlags(NuamOrder order) {
+        return order.getNuamFlags();
+    }
+
+    public static void setNuamFlags(NuamOrder order, int flags) {
+        order.setNuamFlags(flags);
+    }
+
+    public static int nuamOrderType(NuamOrderType orderType) {
+        return orderType.getCode() << NuamOrder.NUAM_ORDER_TYPE_SHIFT;
+    }
+
+    public static NuamOrderType getNuamOrderType(int flags) {
+        return NuamOrderType.valueOf(
+            Util.getBits(flags, NuamOrder.NUAM_ORDER_TYPE_MASK, NuamOrder.NUAM_ORDER_TYPE_SHIFT));
+    }
+
+    public static int setNuamOrderType(int flags, NuamOrderType orderType) {
+        return Util.setBits(
+            flags, NuamOrder.NUAM_ORDER_TYPE_MASK, NuamOrder.NUAM_ORDER_TYPE_SHIFT, orderType.getCode());
+    }
+
+    public static int nuamTimeInForceType(NuamTimeInForceType timeInForceType) {
+        return timeInForceType.getCode() << NuamOrder.NUAM_TIME_IN_FORCE_TYPE_SHIFT;
+    }
+
+    public static NuamTimeInForceType getNuamTimeInForceType(int flags) {
+        return NuamTimeInForceType.valueOf(
+            Util.getBits(flags, NuamOrder.NUAM_TIME_IN_FORCE_TYPE_MASK, NuamOrder.NUAM_TIME_IN_FORCE_TYPE_SHIFT));
+    }
+
+    public static int setNuamTimeInForceType(int flags, NuamTimeInForceType tifType) {
+        return Util.setBits(
+            flags, NuamOrder.NUAM_TIME_IN_FORCE_TYPE_MASK, NuamOrder.NUAM_TIME_IN_FORCE_TYPE_SHIFT, tifType.getCode());
     }
 
 

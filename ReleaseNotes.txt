@@ -1,3 +1,9 @@
+QDS 3.339:
+
+* [QD-1456] dxFeed API: Implement IndexedEventTxModel
+* [QD-1589] dxFeed API: Add NuamOrder and NuamTimeAndSale events
+* [QD-1604] [Schedule] Add 20250109 as US holiday
+
 QDS 3.338:
 
 * [QD-1573] Add Value and Date field replacers

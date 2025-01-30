@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.dxfeed.api;
 
+import com.devexperts.annotation.Experimental;
 import com.devexperts.io.IOUtil;
 import com.devexperts.logging.Logging;
 import com.devexperts.util.IndexedSet;
@@ -261,6 +262,8 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
     private transient volatile TimePeriod aggregationPeriod;
     private transient volatile int eventsBatchLimit = OPTIMAL_BATCH_LIMIT;
 
+    private final SubscriptionController subscriptionController = new DXFeedSubscriptionController();
+
     /**
      * Creates <i>detached</i> subscription for a single event type.
      *
@@ -281,6 +284,16 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
     @SafeVarargs
     public DXFeedSubscription(Class<? extends E>... eventTypes) {
         init(eventTypes);
+    }
+
+    /**
+     * Returns the subscription controller for this subscription.
+     *
+     * @return the subscription controller for this subscription.
+     */
+    @Experimental
+    public SubscriptionController getSubscriptionController() {
+        return subscriptionController;
     }
 
     /**
@@ -1114,6 +1127,48 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
         if (error != null) {
             log.error("Unexpected exception in listener", error);
             throw new RuntimeException(error);
+        }
+    }
+
+    private class DXFeedSubscriptionController implements SubscriptionController {
+        @Override
+        public void attach(DXFeed feed) {
+            DXFeedSubscription.this.attach(feed);
+        }
+
+        @Override
+        public void detach(DXFeed feed) {
+            DXFeedSubscription.this.detach(feed);
+        }
+
+        @Override
+        public int getEventsBatchLimit() {
+            return DXFeedSubscription.this.getEventsBatchLimit();
+        }
+
+        @Override
+        public void setEventsBatchLimit(int eventsBatchLimit) {
+            DXFeedSubscription.this.setEventsBatchLimit(eventsBatchLimit);
+        }
+
+        @Override
+        public TimePeriod getAggregationPeriod() {
+            return DXFeedSubscription.this.getAggregationPeriod();
+        }
+
+        @Override
+        public void setAggregationPeriod(TimePeriod aggregationPeriod) {
+            DXFeedSubscription.this.setAggregationPeriod(aggregationPeriod);
+        }
+
+        @Override
+        public Executor getExecutor() {
+            return DXFeedSubscription.this.getExecutor();
+        }
+
+        @Override
+        public void setExecutor(Executor executor) {
+            DXFeedSubscription.this.setExecutor(executor);
         }
     }
 }
