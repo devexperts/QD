@@ -305,6 +305,8 @@
                 <value>cedx</value>
                 <value>IGC</value>
                 <value>igc</value>
+                <value>EDX</value>
+                <value>edx</value>
                 <value>NUAM</value>
                 <value>nuam</value>
             </iterator>
@@ -567,6 +569,14 @@
         <record name="Configuration">
             <field name="Version" type="compact_int"/>
             <field name="Configuration" type="serial_object"/>
+        </record>
+
+        <!-- MiscFactoryImpl -->
+        <record name="TextConfiguration">
+            <field name="Time" type="time"/>
+            <field name="Sequence" type="sequence"/>
+            <field name="Version" type="compact_int"/>
+            <field name="Text" type="utf_char_array"/>
         </record>
 
         <!-- OptionFactoryImpl -->

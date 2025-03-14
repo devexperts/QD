@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -23,6 +23,7 @@ import com.dxfeed.api.impl.EventDelegateFlags;
 import com.dxfeed.api.impl.SchemeBuilder;
 import com.dxfeed.event.misc.impl.ConfigurationMapping;
 import com.dxfeed.event.misc.impl.MessageMapping;
+import com.dxfeed.event.misc.impl.TextConfigurationMapping;
 import com.dxfeed.event.misc.impl.TextMessageMapping;
 
 import java.util.ArrayList;
@@ -42,6 +43,11 @@ public final class MiscFactoryImpl extends EventDelegateFactory implements Recor
 
         builder.addOptionalField("Configuration", "Version", SerialFieldType.COMPACT_INT, "Configuration", "Version", true);
         builder.addRequiredField("Configuration", "Configuration", SerialFieldType.SERIAL_OBJECT);
+
+        builder.addOptionalField("TextConfiguration", "Time", SerialFieldType.TIME_SECONDS, "TextConfiguration", "Time", true);
+        builder.addOptionalField("TextConfiguration", "Sequence", SerialFieldType.SEQUENCE, "TextConfiguration", "Sequence", true);
+        builder.addOptionalField("TextConfiguration", "Version", SerialFieldType.COMPACT_INT, "TextConfiguration", "Version", true);
+        builder.addRequiredField("TextConfiguration", "Text", SerialFieldType.UTF_CHAR_ARRAY);
     }
 
     @Override
@@ -54,6 +60,9 @@ public final class MiscFactoryImpl extends EventDelegateFactory implements Recor
         } else if (record.getMapping(ConfigurationMapping.class) != null) {
             result.add(new ConfigurationDelegate(record, QDContract.TICKER, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB)));
             result.add(new ConfigurationDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
+        } else if (record.getMapping(TextConfigurationMapping.class) != null) {
+            result.add(new TextConfigurationDelegate(record, QDContract.TICKER, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB)));
+            result.add(new TextConfigurationDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
         }
         return result;
     }
@@ -67,6 +76,8 @@ public final class MiscFactoryImpl extends EventDelegateFactory implements Recor
             result.add(new TextMessageDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
         } else if (record.getMapping(ConfigurationMapping.class) != null) {
             result.add(new ConfigurationDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
+        } else if (record.getMapping(TextConfigurationMapping.class) != null) {
+            result.add(new TextConfigurationDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
         }
         return result;
     }
@@ -80,6 +91,8 @@ public final class MiscFactoryImpl extends EventDelegateFactory implements Recor
             return new TextMessageMapping(record);
         if (baseRecordName.equals("Configuration"))
             return new ConfigurationMapping(record);
+        if (baseRecordName.equals("TextConfiguration"))
+            return new TextConfigurationMapping(record);
         return null;
     }
 // END: CODE AUTOMATICALLY GENERATED

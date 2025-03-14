@@ -476,6 +476,20 @@ public final class OrderSource extends IndexedEventSource {
     public static final OrderSource igc = new OrderSource("igc", PUB_ORDER);
 
     /**
+     * EDX Exchange.
+     * {@link Order} and {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource EDX = new OrderSource("EDX", PUB_ORDER);
+
+    /**
+     * EDX Exchange. Record for price level book.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource edx = new OrderSource("edx", PUB_ORDER);
+
+    /**
      * Nuam Exchange Gate.
      * {@link Order} and {@link NuamOrder} events are {@link #isPublishable(Class) publishable} on this
      * source and the corresponding subscription can be observed via {@link DXPublisher}.

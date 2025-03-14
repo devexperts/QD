@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -36,6 +36,13 @@ import javax.xml.bind.annotation.XmlType;
  * <li>{@link #getVersion() version} - version;
  * <li>{@link #getAttachment() attachment} - attachment.
  * </ul>
+ *
+ * <h3><a name="versioningSection">Versioning</a></h3>
+ *
+ * <p>The {@link #getVersion() version} field is used to track changes to the event data.
+ * When the version field is enabled (by default), events with a lower version number than the last received
+ * will be dropped. This is useful for conflating events, where only the latest version of an event is processed.
+ * This is only true when transferring under a <b>TICKER</b> contract and the version field is enabled.
  *
  * <h3>Implementation details</h3>
  *
@@ -120,15 +127,20 @@ public class Configuration implements LastingEvent<String>, Serializable {
     }
 
     /**
-     * Returns version.
+     * Returns the version of this event.
+     *
+     * @return the version of this event. A higher value indicates a more recent update.
+     * @see <a href="#versioningSection">Versioning section</a>
      */
     public int getVersion() {
         return version;
     }
 
     /**
-     * Changes version.
-     * @param version version.
+     * Changes the version of this event.
+     *
+     * @param version the version of this event. A higher value indicates a more recent update.
+     * @see <a href="#versioningSection">Versioning section</a>
      */
     public void setVersion(int version) {
         this.version = version;

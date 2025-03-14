@@ -38,6 +38,7 @@ import com.dxfeed.event.market.impl.MarketEventMapping;
 import com.dxfeed.event.market.impl.OrderBaseMapping;
 import com.dxfeed.event.misc.Configuration;
 import com.dxfeed.event.misc.Message;
+import com.dxfeed.event.misc.TextConfiguration;
 import com.dxfeed.event.misc.TextMessage;
 import com.dxfeed.event.option.Greeks;
 import com.dxfeed.event.option.Series;
@@ -764,6 +765,12 @@ public class ImplCodeGen {
         ctx.delegate("Configuration", Configuration.class, "Configuration").
             map("Version", "Version", FieldType.INDEX).optional().
             map("MarshalledAttachment", "Configuration", "Configuration", FieldType.MARSHALLED).
+            publishable();
+
+        ctx.delegate("TextConfiguration", TextConfiguration.class, "TextConfiguration").
+            mapTimeAndSequence().optional().prevOptional().
+            map("Version", "Version", FieldType.INDEX).optional().
+            map("Text", "Text", FieldType.STRING).
             publishable();
 
         ctx.delegate("Greeks", Greeks.class, "Greeks").

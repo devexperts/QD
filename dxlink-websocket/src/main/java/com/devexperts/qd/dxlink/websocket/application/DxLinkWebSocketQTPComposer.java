@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -25,9 +25,7 @@ import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.qtp.ProtocolDescriptor;
 import com.devexperts.qd.qtp.QTPConstants;
 import com.devexperts.qd.qtp.RuntimeQTPException;
-import com.devexperts.qd.util.TimeSequenceUtil;
 import com.devexperts.util.SystemProperties;
-import com.dxfeed.event.market.MarketEventSymbols;
 import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
@@ -125,8 +123,7 @@ class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
     @Override
     public void visitRecord(DataRecord record, int cipher, String symbol, long time) {
         try {
-            currentSubscriptionProcessor.add(record.getName(), record.getScheme().getCodec().decode(cipher, symbol),
-                TimeSequenceUtil.getTimeMillisFromTimeSequence(time));
+            currentSubscriptionProcessor.add(record, cipher, symbol, time);
         } catch (IOException e) {
             throw new RuntimeQTPException(e);
         }
@@ -212,9 +209,9 @@ class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
         private final QDContract contract;
         private final int channel;
         private final Map<String, List<String>> fieldsByType;
-        private final List<Subscription> subscriptions = new ArrayList<>();
+        private final List<DxLinkSubscription> subscriptions = new ArrayList<>();
         private final Map<String, Collection<String>> fieldsByTypeToSend = new HashMap<>();
-        private final SubscriptionFactory subscriptionFactory;
+        private final DxLinkSubscriptionFactory subscriptionFactory = new DxLinkSubscriptionFactory();
         private boolean isRemove;
         private boolean channelIsOpened = false;
         private ByteBuf channelRequest;
@@ -227,15 +224,12 @@ class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
             switch (contract) {
                 case TICKER:
                     channel = TICKER_CHANNEL_NUMBER;
-                    subscriptionFactory = new TickerAndStreamSubscriptionFactory();
                     break;
                 case STREAM:
                     channel = STREAM_CHANNEL_NUMBER;
-                    subscriptionFactory = new TickerAndStreamSubscriptionFactory();
                     break;
                 case HISTORY:
                     channel = HISTORY_CHANNEL_NUMBER;
-                    subscriptionFactory = new HistorySubscriptionFactory();
                     break;
                 default:
                     throw new IllegalStateException();
@@ -251,8 +245,9 @@ class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
             feedSubscription = null;
         }
 
-        public void add(String eventType, String symbol, long fromTime) throws IOException {
-            Subscription subscription = subscriptionFactory.createSubscription(eventType, symbol, fromTime);
+        public void add(DataRecord record, int cipher, String symbol, long time) throws IOException {
+            DxLinkSubscription subscription =
+                subscriptionFactory.createSubscription(contract, record, cipher, symbol, time);
             if (subscription != null) {
                 if (!channelIsOpened) {
                     channelRequest =
@@ -299,60 +294,6 @@ class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
             if (feedSubscription != null)
                 size += feedSubscription.readableBytes();
             return size;
-        }
-    }
-
-    private static interface SubscriptionFactory {
-        public Subscription createSubscription(String eventTypeWithSource, String symbol, long fromTime);
-    }
-
-    private static class TickerAndStreamSubscriptionFactory implements SubscriptionFactory {
-        @Override
-        public Subscription createSubscription(String eventTypeWithRegionOrSource, String symbol, long fromTime) {
-            int indexSource = eventTypeWithRegionOrSource.indexOf('#');
-            int indexRegion = eventTypeWithRegionOrSource.indexOf('&');
-            final String eventType;
-            final String eventSymbol;
-            final String eventSource;
-            if (indexSource > 0) {
-                eventType = eventTypeWithRegionOrSource.substring(0, indexSource);
-                eventSource = eventTypeWithRegionOrSource.substring(indexSource + 1);
-                eventSymbol = symbol;
-            } else if (indexRegion > 0) {
-                eventType = eventTypeWithRegionOrSource.substring(0, indexRegion);
-                if (symbol.equals("*")) {
-                    return null;
-                } else {
-                    eventSymbol = MarketEventSymbols.changeExchangeCode(symbol,
-                        MarketEventSymbols.getExchangeCode(eventTypeWithRegionOrSource));
-                }
-                eventSource = null;
-            } else {
-                eventType = eventTypeWithRegionOrSource;
-                eventSymbol = symbol;
-                eventSource = null;
-            }
-            return new Subscription(eventType, eventSymbol, eventSource, null);
-        }
-    }
-
-    private static class HistorySubscriptionFactory implements SubscriptionFactory {
-        @Override
-        public Subscription createSubscription(String eventTypeWithSource, String symbol, long fromTime) {
-            int indexSource = eventTypeWithSource.indexOf('#');
-            final String eventType;
-            final String source;
-            if (indexSource > 0) {
-                eventType = eventTypeWithSource.substring(0, indexSource);
-                source = eventTypeWithSource.substring(indexSource + 1);
-            } else if (eventTypeWithSource.contains("Order")) {
-                eventType = eventTypeWithSource;
-                source = "DEFAULT";
-            } else {
-                eventType = eventTypeWithSource;
-                source = null;
-            }
-            return new Subscription(eventType, symbol, source, fromTime);
         }
     }
 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,13 +20,16 @@ import com.devexperts.qd.util.MappingUtil;
 public class VersionedRecord extends DefaultRecord {
     private final int iVersion;
 
-    public VersionedRecord(int id, String recordName, boolean hasTime, DataIntField[] intFields, DataObjField[] objFields, String versionFieldName) {
+    public VersionedRecord(int id, String recordName, boolean hasTime, DataIntField[] intFields,
+        DataObjField[] objFields, String versionFieldName)
+    {
         super(id, recordName, hasTime, intFields, objFields);
-        iVersion = MappingUtil.findIntField(this, versionFieldName, true);
+        iVersion = MappingUtil.findIntField(this, versionFieldName, false);
     }
 
+    @Override
     public boolean update(RecordCursor from, RecordCursor to) {
-        if (from.getInt(iVersion) >= to.getInt(iVersion))
+        if (iVersion < 0 || from.getInt(iVersion) >= to.getInt(iVersion))
             return to.updateDataFrom(from);
         return false;
     }

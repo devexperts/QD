@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -114,8 +114,8 @@ class DxLinkJsonMessageFactory {
         return getStringFromBufferAndClear();
     }
 
-    ByteBuf createFeedSubscription(int channel, List<Subscription> add, List<Subscription> remove, Boolean reset)
-        throws IOException
+    ByteBuf createFeedSubscription(int channel, List<DxLinkSubscription> add, List<DxLinkSubscription> remove,
+        Boolean reset) throws IOException
     {
         generator.writeStartObject();
         generator.writeStringField(FIELD_NAME_TYPE, "FEED_SUBSCRIPTION");
@@ -128,9 +128,9 @@ class DxLinkJsonMessageFactory {
         return getStringFromBufferAndClear();
     }
 
-    private void writeSubscriptions(String nameField, List<Subscription> add) throws IOException {
+    private void writeSubscriptions(String nameField, List<DxLinkSubscription> add) throws IOException {
         generator.writeArrayFieldStart(nameField);
-        for (Subscription subscription : add) {
+        for (DxLinkSubscription subscription : add) {
             generator.writeStartObject();
             generator.writeStringField(FIELD_NAME_TYPE, subscription.type);
             generator.writeStringField("symbol", subscription.symbol);

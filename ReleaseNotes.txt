@@ -1,3 +1,10 @@
+QDS 3.340:
+
+* [QD-1610] QD Core: Introduce internal symbol cache for Collectors
+* [QD-1611] Create TextConfiguration record
+* [QD-1612] Order subscriptions with AGGREGATE source do not work when connected to dxLink
+* [QD-1623] New Order source for EDX Gate: EDX
+
 QDS 3.339:
 
 * [QD-1456] dxFeed API: Implement IndexedEventTxModel

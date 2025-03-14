@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -224,7 +224,7 @@ public class DXScheme extends DefaultScheme implements ConfigurableDataScheme {
 
         DefaultRecord rec;
         // Very special hack
-        if (actualRecordName.equals("Configuration")) {
+        if (actualRecordName.equals("Configuration") || actualRecordName.equals("TextConfiguration")) {
             rec = new VersionedRecord(idx, actualRecordName, hasTime, intFields.toArray(new DataIntField[0]),
                 objFields.toArray(new DataObjField[0]), "Version");
         } else {
