@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -28,7 +28,7 @@ import com.devexperts.util.SystemProperties;
  */
 class Ticker extends Collector implements QDTicker {
 
-    private static final int RETRIEVE_BATCH_SIZE = SystemProperties.getIntProperty(
+    protected static final int RETRIEVE_BATCH_SIZE = SystemProperties.getIntProperty(
         Ticker.class, "retrieveBatchSize", 100, 1, Integer.MAX_VALUE);
 
     private final TickerStorage storage; // SYNC: global
@@ -132,9 +132,6 @@ class Ticker extends Collector implements QDTicker {
         int snapshot = asub.getInt(aindex + SNAPSHOT_QUEUE);
         if ((snapshot & QUEUE_BIT) != 0)
             return; // it is already in snapshot queue or waiting for data to arrive
-        if ((asub.getInt(aindex + UPDATE_QUEUE) & QUEUE_BIT) != 0) {
-            snapshot = 0; // clear mark, we are going to send snapshot
-        }
         // set QUEUE_BIT to indicate waiting for data to arrive/retrieve
         // it may be already in snapshot queue
         asub.setInt(aindex + SNAPSHOT_QUEUE, snapshot | QUEUE_BIT);
@@ -151,12 +148,10 @@ class Ticker extends Collector implements QDTicker {
 
     @Override
     void dequeueRemovedRecord(Agent agent, SubMatrix asub, int aindex) {
+        // clear time mark
+        asub.setInt(aindex + TICKER_AGENT_TIME_MARK, 0);
+
         // drop bit from SNAPSHOT_QUEUE and UPDATE_QUEUE to indicate that no more data update needed
-        if ((asub.getInt(aindex + SNAPSHOT_QUEUE) & QUEUE_BIT) == 0 &&
-            (asub.getInt(aindex + UPDATE_QUEUE) & QUEUE_BIT) != 0)
-        {
-            asub.setInt(aindex + SNAPSHOT_QUEUE, 0); // clear time mark
-        }
         agent.snapshotQueue.resetQueueBit(agent, aindex, SNAPSHOT_QUEUE);
         agent.updateQueue.resetQueueBit(agent, aindex, UPDATE_QUEUE);
         agent.snapshotQueue.cleanupEmptyHeadForTicker(agent, aindex, SNAPSHOT_QUEUE);
@@ -222,21 +217,19 @@ class Ticker extends Collector implements QDTicker {
                 if (asub.getInt(aindex + PREV_AGENT) == 0)
                     continue;
             }
-            int mark = dist.getPayload2(i);
-            // snapshot queue / mark
-            int snapshot = asub.getInt(aindex + SNAPSHOT_QUEUE);
-            if (snapshot == QUEUE_BIT) {
-                // waiting for snapshot
-                agent.snapshotQueue.linkToQueue(agent, aindex, SNAPSHOT_QUEUE, true);
-            } else if (snapshot == 0) {
-                // has no snapshot queue bit and is not in snapshot queue, so can record mark there
-                asub.setInt(aindex + SNAPSHOT_QUEUE, mark & ~QUEUE_BIT);
-            } else if ((asub.getInt(aindex + UPDATE_QUEUE) & QUEUE_BIT) == 0) {
-                // was in snapshot queue, set QUEUE_BIT to remain in snapshot queue
-                // WARNING: may cause spurious appear in snapshot queue of already processed (via update queue) event
-                asub.setInt(aindex + SNAPSHOT_QUEUE, snapshot | QUEUE_BIT); // already linked
+
+            // set mark if not set before
+            if (asub.getInt(aindex + TICKER_AGENT_TIME_MARK) == 0) {
+                int mark = dist.getPayload2(i);
+                asub.setInt(aindex + TICKER_AGENT_TIME_MARK, mark);
             }
-            // update queue
+
+            // if were waiting for snapshot
+            if (asub.getInt(aindex + SNAPSHOT_QUEUE) == QUEUE_BIT) {
+                // add to snapshot queue
+                agent.snapshotQueue.linkToQueue(agent, aindex, SNAPSHOT_QUEUE, true);
+            }
+            // add to update queue
             agent.updateQueue.linkToQueue(agent, aindex, UPDATE_QUEUE, true);
         }
         return 0;

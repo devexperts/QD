@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,6 +16,7 @@ import com.devexperts.qd.QDContract;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordSink;
 
+import static com.devexperts.qd.impl.matrix.Collector.TICKER_AGENT_TIME_MARK;
 import static com.devexperts.qd.impl.matrix.History.ATTACHMENT;
 import static com.devexperts.qd.impl.matrix.History.KEY;
 import static com.devexperts.qd.impl.matrix.History.LAST_RECORD;
@@ -91,8 +92,9 @@ final class AgentQueue {
         if (tail == EOL) {
             head = aindex;
             first = true;
-        } else
+        } else {
             asub.setInt(tail + queueOfs, aindex | (asub.getInt(tail + queueOfs) & QUEUE_BIT));
+        }
         asub.setInt(aindex + queueOfs, QUEUE_BIT | EOL); // at the tail now with QUEUE_BIT set
         this.tail = aindex;
         return first;
@@ -128,18 +130,16 @@ final class AgentQueue {
                     return nRetrieved | RETRIEVE_NO_CAPACITY_BIT; // no more capacity
                 int key = asub.getInt(aindex + KEY);
                 int rid = asub.getInt(aindex + RID);
-                // SNAPSHOT_QUEUE in ticker stores mark when QUEUE_BIT is not set and QUEUE_BIT in UPDATE_QUEUE is set
-                int mark = asub.getInt(aindex + SNAPSHOT_QUEUE);
-                if ((mark & QUEUE_BIT) != 0) {
-                    // tag item as retrieved-at-least-once, but retain pointer in SNAPSHOT_QUEUE
-                    asub.setInt(aindex + SNAPSHOT_QUEUE, mark & ~QUEUE_BIT);
-                    mark = 0; // not a mark -- snapshot queue next is/will be stored here
-                }
-                // Attachment (if needed)
+                int mark = asub.getInt(aindex + TICKER_AGENT_TIME_MARK);
                 Object attachment = agent.hasAttachmentStrategy() ? asub.getObj(aindex, ATTACHMENT) : null;
-                // reset queue bit first (this marks item as retrieved)
+                int snapshot = asub.getInt(aindex + SNAPSHOT_QUEUE);
+
+                // tag item as retrieved-at-least-once, but retain pointer in SNAPSHOT_QUEUE
+                asub.setInt(aindex + SNAPSHOT_QUEUE, snapshot & ~QUEUE_BIT);
+                // reset queue bit first (this marks item as retrieved) and clear mark
                 asub.setInt(aindex + UPDATE_QUEUE, update & ~QUEUE_BIT);
-                // ... because the following line may throw exception and we don't want to retry it next time
+                asub.setInt(aindex + TICKER_AGENT_TIME_MARK, 0);
+                // ... because the following line may throw exception, and we don't want to retry it next time
                 if (ticker.getRecordData(agent, sink, key, rid, mark, attachment))
                     nRetrieved++;
             }

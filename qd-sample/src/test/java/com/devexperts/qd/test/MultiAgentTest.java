@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -24,7 +24,6 @@ import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDErrorHandler;
 import com.devexperts.qd.QDStream;
 import com.devexperts.qd.QDTicker;
-import com.devexperts.qd.SubscriptionProvider;
 import com.devexperts.qd.kit.CompactIntField;
 import com.devexperts.qd.kit.DefaultRecord;
 import com.devexperts.qd.kit.DefaultScheme;
@@ -147,15 +146,7 @@ public class MultiAgentTest extends QDTestBase {
     }
 
     private void runTest(QDCollector collector, boolean useWildcard, boolean withVoidListeners) {
-        collector.setErrorHandler(new QDErrorHandler() {
-            public void handleDataError(DataProvider provider, Throwable t) {
-                throw new RuntimeException(t);
-            }
-
-            public void handleSubscriptionError(SubscriptionProvider provider, Throwable t) {
-                throw new RuntimeException(t);
-            }
-        });
+        collector.setErrorHandler(QDErrorHandler.THROW);
         Random r = new Random(20081111);
 
         // Generate keys

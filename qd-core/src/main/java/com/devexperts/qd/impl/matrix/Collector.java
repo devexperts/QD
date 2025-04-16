@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -100,8 +100,11 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
     // For ticker agents -- update queue
     static final int UPDATE_QUEUE = 6;
 
+    // For ticker agents -- time mark
+    static final int TICKER_AGENT_TIME_MARK = 7;
+
     // That's it for Ticker agents
-    static final int TICKER_AGENT_STEP = 7;
+    static final int TICKER_AGENT_STEP = 8;
 
     // For history agents -- cleared in addSubInternal
     static final int HISTORY_SUB_FLAGS = 6;
@@ -126,7 +129,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
      *  4  [TIME_TOTAL  ]  PREV_AGENT      PREV_AGENT  PREV_AGENT      <-- Payload indicator for agent sub (!=0 for sub item)
      *  5  [TIME_TOTAL_X]  SNAPSHOT_QUEUE              SNAPSHOT_QUEUE
      *  6                  UPDATE_QUEUE                HISTORY_SUB_FLAGS <- SNIP_TIME_SUB_FLAG, pending count, process version, sync(global OR local)
-     *  7                                              TIME_SUB       \ time_sub = Long.MAX_VALUE when not sub-d
+     *  7                  TIME_MARK                   TIME_SUB       \ time_sub = Long.MAX_VALUE when not sub-d
      *  8                                              TIME_SUB_X     /
      *  9                                              TIME_KNOWN     \ time_known > time_sub for snapshot-queued
      * 10                                              TIME_KNOWN_X   / time_known := Long.MAX_VALUE on enqueue
@@ -174,25 +177,20 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
      * TICKER [SNAPSHOT_QUEUE]  ,       [UPDATE_QUEUE] combinations:
      *               0 | 0      ,            0 | 0       empty
      *       QUEUE_BIT | 0      ,            0 | 0       just subscribed to the item, no data yet
-     *       QUEUE_BIT | <next> ,    QUEUE_BIT | <next>  data arrived, added to both snapshot & update queues (see NB)
+     *       QUEUE_BIT | <next> ,    QUEUE_BIT | <next>  data arrived, added to both snapshot & update queues
      *               0 | <next> ,            0 | 0       data retrieved via update queue, still in snapshot queue
      *               0 | 0      ,            0 | <next>  data retrieved via snapshot queue, still in update queue
-     *               0 | <mark> ,    QUEUE_BIT | <next>  more data arrived, queue mark recorded
+     *               0 | 0      ,    QUEUE_BIT | <next>  more data arrived
      *               0 | <next> ,            0 | <next>  data removed via unsubscribe
      *       QUEUE_BIT | *      ,            0 | *       resubscribe before queues where fully retrieved
      *
-     * NB:   QUEUE_BIT | <next> ,    QUEUE_BIT | <next>  this state may be entered spuriously
-     *                                                   when new event arrives while <next> in snapshot queue is set
-     *                                                   and event is already retrieved via update queue
+     * Other combinations are also possible due to unsubscribe and following resubscribe,
+     * or different order of updates and retrieves.
      *
      * <next> == EOL (special non-zero value) when the item is last in the queue
      *
-     * The only possible state, which contains <mark> is *NO* QUEUE_BIT in SNAPSHOT_QUEUE and QUEUE_BIT in UPDATE_QUEUE
-     *
-     * QUEUE_BIT in SNAPSHOT_QUEUE means -- this item waits for/has snapshot
-     *                                      sometimes this bit can be set even if event is already processed
-     *                absence of the bit -- queue mark              if QUEUE_BIT in UPDATE_QUEUE
-     *                                      next in snapshot queue  otherwise
+     * QUEUE_BIT in SNAPSHOT_QUEUE means -- this item waits for snapshot which is not available yet
+     *                                      this item must be added to snapshot queue when data arrives
      * QUEUE_BIT in UPDATE_QUEUE means   -- this item has data to be sent
      *                absence of the bit -- this item has no data to be sent
      *--------------------------------------------------------------------------------------------------------------*/

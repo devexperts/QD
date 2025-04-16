@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,7 +13,6 @@ package com.devexperts.qd.impl.matrix;
 
 import com.devexperts.qd.DataIntField;
 import com.devexperts.qd.DataObjField;
-import com.devexperts.qd.DataProvider;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.HistorySubscriptionFilter;
@@ -22,7 +21,6 @@ import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDErrorHandler;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDHistory;
-import com.devexperts.qd.SubscriptionProvider;
 import com.devexperts.qd.kit.CompactIntField;
 import com.devexperts.qd.kit.DefaultRecord;
 import com.devexperts.qd.kit.DefaultScheme;
@@ -119,18 +117,7 @@ public class HistoryTxTest {
             .withStats(QDStats.VOID)
             .withHistoryFilter(new HSF()));
         distributor = history.distributorBuilder().build();
-
-        history.setErrorHandler(new QDErrorHandler() {
-            @Override
-            public void handleDataError(DataProvider provider, Throwable t) {
-                throw new AssertionError(t);
-            }
-
-            @Override
-            public void handleSubscriptionError(SubscriptionProvider provider, Throwable t) {
-                throw new AssertionError(t);
-            }
-        });
+        history.setErrorHandler(QDErrorHandler.THROW);
     }
 
     @Test

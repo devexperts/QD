@@ -1,3 +1,15 @@
+QDS 3.341:
+
+* [QD-1477] TimeMark for Ticker does not work
+  - lag statistics in the logs have grown and correctly reflect the accumulated latency
+  - CAUTION: Observed latency might seem alarming at first glance. The increased values are expected due to the new
+    tracking mechanism and do not necessarily indicate a critical performance issue.
+  - memory footprint is increased by 5-10%
+* [QD-1561] Optimization of history buffer
+    - The buffer now handles insertions in the middle more efficiently, improving performance without compromising sequential insert.
+* [QD-1624] [Schedule] Update schedule for XGAT
+    - XGAT schedules were updated: Market now opens at 0730.
+
 QDS 3.340:
 
 * [QD-1610] QD Core: Introduce internal symbol cache for Collectors

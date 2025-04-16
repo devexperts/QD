@@ -11,7 +11,6 @@
  */
 package com.devexperts.qd.impl.matrix;
 
-import com.devexperts.annotation.Internal;
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.QDAgent;
@@ -22,8 +21,6 @@ import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.stats.QDStats;
 
-import java.util.Arrays;
-
 import static com.devexperts.qd.impl.matrix.History.REMOVE_EVENT;
 import static com.devexperts.qd.impl.matrix.History.SNAPSHOT_BEGIN;
 import static com.devexperts.qd.impl.matrix.History.SNAPSHOT_END;
@@ -31,19 +28,11 @@ import static com.devexperts.qd.impl.matrix.History.SNAPSHOT_SNIP;
 import static com.devexperts.qd.impl.matrix.History.TX_PENDING;
 
 /**
- * The <code>HistoryBuffer</code> stores historic values for certain data record and symbol.
+ * The <code>HistoryBufferOld</code> stores historic values for certain data record and symbol.
+ * Previous implementation used only to compare test results.
  */
-public final class HistoryBuffer {
-    private static final Logging log = Logging.getLogging(HistoryBuffer.class);
-
-    private static final int INIT_CAPACITY = 16;
-    private static final int MAX_LINEAR_SCAN = 32;
-    private static final double NEED_COMPACT_DENSITY = 0.5;
-    private static final double AFTER_COMPACT_DENSITY = 0.75;
-    private static final double NEW_GAP_PROPORTION = 0.01;
-
-    private static final int PAYLOAD_MARKER = 1; // payload slot contains data
-    private static final int EMPTY_MARKER = 0;   // empty slot has no data and can be either within a gap or outside working range
+public final class HistoryBufferOld {
+    private static final Logging log = Logging.getLogging(HistoryBufferOld.class);
 
     // HistoryBuffer data storage
 
@@ -59,7 +48,6 @@ public final class HistoryBuffer {
 
     private int min;
     private int max;
-    private int payloadSize;
 
     // HistorySnapshot protocol state
 
@@ -153,12 +141,12 @@ public final class HistoryBuffer {
 
     // ========== constructor ==========
 
-    HistoryBuffer(DataRecord record, boolean withEventTimeSequence) {
+    HistoryBufferOld(DataRecord record, boolean withEventTimeSequence) {
         if (!record.hasTime() || record.getIntFieldCount() < 2)
             throw new IllegalArgumentException("Record does not contain time.");
 
         this.withEventTimeSequence = withEventTimeSequence;
-        intOffset = withEventTimeSequence ? 3 : 1;
+        intOffset = withEventTimeSequence ? 2 : 0;
         objOffset = 0;
         intStep = record.getIntFieldCount() + intOffset;
         objStep = record.getObjFieldCount() + objOffset;
@@ -167,12 +155,9 @@ public final class HistoryBuffer {
     }
 
     private void allocInitial() {
-        min = 0;
-        max = 0;
-        payloadSize = 0;
-        mask = INIT_CAPACITY - 1;
-        intValues = new int[intStep * INIT_CAPACITY];
-        objValues = objStep == 0 ? null : new Object[objStep * INIT_CAPACITY];
+        mask = 15;
+        intValues = intStep == 0 ? null : new int[intStep * (mask + 1)];
+        objValues = objStep == 0 ? null : new Object[objStep * (mask + 1)];
     }
 
     // ========== Internal ==========
@@ -188,14 +173,6 @@ public final class HistoryBuffer {
         return (((long) intValues[place]) << 32) | (intValues[place + 1] & 0xffffffffL);
     }
 
-    private boolean isPayload(int index) {
-        return intValues[index * intStep] == PAYLOAD_MARKER;
-    }
-
-    private void setMarker(int index, int marker) {
-        intValues[index * intStep] = marker;
-    }
-
     private void setTime(int index, long time) {
         int place = index * intStep + intOffset;
         intValues[place] = (int) (time >>> 32);
@@ -206,15 +183,15 @@ public final class HistoryBuffer {
         if (!withEventTimeSequence)
             return 0;
         int place = index * intStep;
-        return (((long) intValues[place + 1]) << 32) | (intValues[place + 2] & 0xffffffffL);
+        return (((long) intValues[place]) << 32) | (intValues[place + 1] & 0xffffffffL);
     }
 
     private void setEventTimeSequence(int index, long eventTimeSequence) {
         if (!withEventTimeSequence)
             return;
         int place = index * intStep;
-        intValues[place + 1] = (int) (eventTimeSequence >> 32);
-        intValues[place + 2] = (int) eventTimeSequence;
+        intValues[place] = (int) (eventTimeSequence >> 32);
+        intValues[place + 1] = (int) eventTimeSequence;
     }
 
     /**
@@ -225,30 +202,23 @@ public final class HistoryBuffer {
     private int getIndexInclusive(long time) {
         assert min != max;
         long lTime = time(min);
-        if (time < lTime) {
+        if (time < lTime)
             return (min - 1) & mask;
-        }
-        int r = max - 1;
-        int rIndex = r & mask;
-        long rTime = time(rIndex);
-        if (time >= rTime) {
-            return rIndex;
-        }
+        long rTime = time((max - 1) & mask);
+        if (time >= rTime)
+            return (max - 1) & mask;
         int l = min;
-        if (r < l) {
+        int r = max - 1;
+        if (r < l)
             r += mask + 1;
-        }
         while (true) {
             // Invariant: time(l & mask) == lTime <= time < rTime == time(r & mask)
             assert l < r;
             int n = r - l;
-            if (n == 1) {
+            if (n == 1)
                 return l & mask;
-            }
-            if (n == rTime - lTime) { // (rTime - lTime) might overflow but cannot be equal to n in that case
-                // optimization for 1-spaced times (like a big order book)
+            if (n == rTime - lTime) // optimization for 1-spaced times (like a big order book)
                 return (l + (int) (time - lTime)) & mask;
-            }
             // Binary search
             int i = (l + r) >> 1;
             // Invariant: l < i < r
@@ -271,30 +241,23 @@ public final class HistoryBuffer {
     private int getIndexExclusive(long time) {
         assert min != max;
         long lTime = time(min);
-        if (time <= lTime) {
+        if (time <= lTime)
             return (min - 1) & mask;
-        }
-        int r = max - 1;
-        int rIndex = r & mask;
-        long rTime = time(rIndex);
-        if (time > rTime) {
-            return rIndex;
-        }
+        long rTime = time((max - 1) & mask);
+        if (time > rTime)
+            return (max - 1) & mask;
         int l = min;
-        if (r < l) {
+        int r = max - 1;
+        if (r < l)
             r += mask + 1;
-        }
         while (true) {
             // Invariant: time(l & mask) == lTime < time <= rTime == time(r & mask)
             assert l < r;
             int n = r - l;
-            if (n == 1) {
+            if (n == 1)
                 return l & mask;
-            }
-            if (n == rTime - lTime) {  // (rTime - lTime) might overflow but cannot be equal to n in that case
-                // optimization for 1-spaced times (like a big order book)
+            if (n == rTime - lTime) // optimization for 1-spaced times (like a big order book)
                 return (l + (int) (time - lTime) - 1) & mask;
-            }
             // Binary search
             int i = (l + r) >> 1;
             // Invariant: l < i < r
@@ -318,102 +281,23 @@ public final class HistoryBuffer {
         if (tail < head) {
             System.arraycopy(src, head, dst, 0, length - head);
             System.arraycopy(src, 0, dst, length - head, tail);
-        } else {
+        } else
             System.arraycopy(src, head, dst, 0, tail - head);
-        }
     }
 
     // This method can try to allocate memory and die due to OutOfMemoryError.
-    private void ensureFreeSpace(int space) {
-        assert space <= mask;
-        int overallSize = overallSize();
-        if (mask - overallSize < space) {
+    private void ensureCapacity() {
+        int size = (max - min) & mask;
+        if (mask - size <= 2) {
             int length = mask + 1;
             int newLength = length << 1;
-            int[] intValuesNew = new int[newLength * intStep];
-            copy(intValues, intValuesNew, min * intStep, max * intStep, length * intStep);
-            intValues = intValuesNew;
-            if (objStep != 0) {
-                Object[] objValuesNew = new Object[newLength * objStep];
-                copy(objValues, objValuesNew, min * objStep, max * objStep, length * objStep);
-                objValues = objValuesNew;
-            }
+            copy(intValues, intValues = new int[newLength * intStep], min * intStep, max * intStep, length * intStep);
+            if (objStep != 0)
+                copy(objValues, objValues = new Object[newLength * objStep], min * objStep, max * objStep, length * objStep);
             mask = newLength - 1;
             min = 0;
-            max = overallSize;
+            max = size;
         }
-    }
-
-    /**
-     * Checks if buffer needs compaction based on density threshold and array length.
-     * Triggers compaction if density falls below a threshold for large enough arrays.
-     */
-    private void compactIfNeeded() {
-        double density = (double) payloadSize / overallSize();
-        if (density < NEED_COMPACT_DENSITY) {
-            compact(AFTER_COMPACT_DENSITY);
-        }
-    }
-
-    /**
-     * Compacts the buffer by removing inactive records while maintaining relative order.
-     * Moves active records closer together to reduce fragmentation.
-     *
-     * @param targetDensity The maximum gap size to maintain between records after compaction
-     */
-    private void compact(double targetDensity) {
-        int currentGapSize = overallSize() - payloadSize;
-        if (currentGapSize <= 0) {
-            // no gaps to compact
-            return;
-        }
-        if (targetDensity * Integer.MAX_VALUE < payloadSize) {
-            // arithmetic overflow protection - targetDensity is too low anyway
-            return;
-        }
-        // the formula below is protected from overflow by the check above
-        int targetGapSize = (int) (payloadSize / targetDensity) - payloadSize;
-        if (currentGapSize <= targetGapSize) {
-            // targetDensity is already met - nothing to do
-            return;
-        }
-        // if (targetDensity > 1), then (targetGapSize < 0) - treat it as 0 (no gaps)
-        double gapShrinkRatio = (double) Math.max(targetGapSize, 0) / currentGapSize;
-        int dest = min;
-        for (int index = min; index != max; ) {
-            // index points to start of payload section
-            int i = index;
-            while (i != max && isPayload(i)) {
-                i = (i + 1) & mask;
-            }
-            int size = (i - index) & mask;
-            // now: section [index, i) with length [size] is continuous payload section
-            if (index != dest) {
-                moveLeft(index, size, (index - dest) & mask);
-            }
-            dest = (dest + size) & mask;
-            index = i;
-            if (index == max)
-                break;
-            // index points to start of gap section followed by at least 1 payload at [max-1]
-            while (i != max && !isPayload(i)) {
-                i = (i + 1) & mask;
-            }
-            size = (i - index) & mask;
-            // now: section [index, i) with length [size] is continuous gap section followed by payload
-            int newGapSize = (int) Math.floor(size * gapShrinkRatio);
-            if (newGapSize > 0) {
-                long preGapTime = time((index - 1) & mask);
-                long afterGapTime = time(i);
-                // pass any "valid" search time because we do not need result
-                fillGap(dest, newGapSize, preGapTime, afterGapTime, preGapTime + 1);
-                dest += newGapSize;
-            }
-            index = i;
-            // index points to start of payload section
-        }
-        clear(dest, max);
-        max = dest;
     }
 
     /**
@@ -421,9 +305,8 @@ public final class HistoryBuffer {
      */
     private void moveData(int index, int dest, int len) {
         System.arraycopy(intValues, index * intStep, intValues, dest * intStep, len * intStep);
-        if (objStep != 0) {
+        if (objStep != 0)
             System.arraycopy(objValues, index * objStep, objValues, dest * objStep, len * objStep);
-        }
     }
 
     private void moveLeft(int index, int size, int dist) {
@@ -480,237 +363,81 @@ public final class HistoryBuffer {
     }
 
     /**
-     * Finds nearest inactive slot around given index by scanning MAX_LINEAR_SCAN positions
-     * in both directions. Moves data to fill the gap if found.
-     *
-     * @param lIndex Starting index to scan from
-     * @return Found gap index or -1 if no gap found within scan range or not enough space to move
+     * Inserts empty record at [index] and returns possibly adjusted index.
      */
-    private int insertAtNearestEmptySlot(int lIndex) {
-        if (mask - overallSize() < 1) {
-            return -1;
-        }
-        int rIndex = (lIndex + 1) & mask;
-        int l = lIndex;
-        int r = rIndex;
-        for (int i = 0; i < MAX_LINEAR_SCAN; i++) {
-            int prev = l;
-            l = (l - 1) & mask;
-            if (!isPayload(l)) {
-                moveLeft(prev, i + 1, 1);
-                if (prev == min) {
-                    min = (min - 1) & mask;
-                }
-                clearAt(lIndex);
-                return lIndex;
-            }
-            r = (r + 1) & mask;
-            if (!isPayload(r)) {
-                moveRight(rIndex, i + 1, 1);
-                if (r == max) {
-                    max = (max + 1) & mask;
-                }
-                clearAt(rIndex);
-                return rIndex;
-            }
-        }
-        return -1;
-    }
-
-    /**
-     * Prepares empty slots at or near specified index by moving existing data.
-     * The allocated space will be placed with timestamps.
-     * Choose an optimal direction (left/right) based on distance to buffer edges.
-     *
-     * @param index Target index to prepare size at
-     * @param size Number of empty slots needed
-     * @param lTime Timestamp of the left border
-     * @param rTime Timestamp of the right border
-     * @param time Timestamp for which it is necessary to find a suitable index
-     * @return a suitable index for a time
-     */
-    private int insertGap(int index, int size, long lTime, long rTime, long time) {
+    // This method can try to allocate memory and die due to OutOfMemoryError.
+    private int insertAt(int index) {
         int l = (index + 1 - min) & mask;
         int r = (max - index - 1) & mask;
-        int start;
+        ensureCapacity();
+        index = (min + l - 1) & mask; // Adjust index if enlarged.
         if (l < r || l == r && min < index) {
-            moveLeft(min, l, size);
-            min = (min - size) & mask;
-            start = (index - size + 1) & mask;
+            moveLeft(min, l, 1);
+            min = (min - 1) & mask;
         } else {
             index = (index + 1) & mask;
-            moveRight(index, r, size);
-            max = (max + size) & mask;
-            start = index;
+            moveRight(index, r, 1);
+            max = (max + 1) & mask;
         }
-        return fillGap(start, size, lTime, rTime, time);
-    }
-
-    /**
-     * Determines the appropriate index for inserting a record with given timestamp.
-     * Analyzes surrounding records and buffer structure to find optimal position.
-     * May create or locate gaps between existing records while maintaining time ordering.
-     * For dense regions, redistributes timestamps to ensure even spacing.
-     *
-     * @param index Initial target index to analyze
-     * @param time Timestamp to find position for
-     * @return Optimal index where record can be inserted while preserving time ordering
-     */
-    private int insertAt(int index, long time) {
-        int lIndex = index;
-        int rIndex = (index + 1) & mask;
-
-        if (!isPayload(lIndex)) {
-            return lIndex;
-        }
-        if (!isPayload(rIndex)) {
-            return rIndex;
-        }
-        int emptyIndex = insertAtNearestEmptySlot(index);
-        if (emptyIndex > -1) {
-            setTime(emptyIndex, time);
-            return emptyIndex;
-        }
-
-        // no space, need expanding
-        long lTime = time(lIndex);
-        long rTime = time(rIndex);
-
-        long range = rTime - lTime;
-        int gapSize = (int) (overallSize() * NEW_GAP_PROPORTION);
-        if (gapSize <= 0) {
-            gapSize = 1;
-        }
-        // note: range can arithmetically overflow around (MAX_VALUE - MIN_VALUE)
-        // code below ignores overflow case because true range would be too large anyway
-        if (gapSize > range - 1 && range > 1) {
-            gapSize = Math.toIntExact(range - 1);
-        }
-        int offset = (index - min) & mask;
-        ensureFreeSpace(gapSize);
-        index = (min + offset) & mask; // recalculate actual index after resizing
-        return insertGap(index, gapSize, lTime, rTime, time);
-    }
-
-    /**
-     * Fills a gap in the history buffer with interpolated timestamps.
-     * This method populates empty slots in the circular buffer between two existing records,
-     * creating a smooth progression of timestamps while maintaining proper time ordering.
-     * The method distributes timestamps evenly across the gap by calculating a step size
-     * based on the time range divided by the number of gaps.
-     *
-     * @param index Starting index of the gap in the circular buffer
-     * @param gapSize Number of empty slots to be filled with interpolated timestamps
-     * @param lTime Timestamp of the element to the left of the gap
-     * @param rTime Timestamp of the element to the right of the gap
-     * @param time the target timestamp of the element expected to be placed into the gap ({@code lTime < time < rTime})
-     * @return Index where the target element with {@code time} timestamp to be placed (the last element in the filled
-     *         gap whose timestamp does not exceed the given timestamp value {@code time} or the first index in the gap).
-     */
-    private int fillGap(int index, int gapSize, long lTime, long rTime, long time) {
-        int end = (index + gapSize) & mask;
-        clear(index, end);
-        long range = rTime - lTime;
-        // note: range can arithmetically overflow around (MAX_VALUE - MIN_VALUE)
-        // the below code circumvents it by dividing overflowed range by 2 via shift and then multiplying back later
-        long step = range > 0 ? range / (gapSize + 1) : (range >>> 1) / (gapSize + 1) * 2;
-        long fillTime = lTime + step;
-        int result = index;
-        for (int i = index; i != end; i = (i + 1) & mask, fillTime += step) {
-            setTime(i, fillTime);
-            if (fillTime <= time) {
-                result = i;
-            }
-        }
-        return result;
+        clearAt(index);
+        return index;
     }
 
     private void clearAt(int index) {
         int place = index * intStep;
-        for (int i = 0; i < intStep; i++) {
+        for (int i = 0; i < intStep; i++)
             intValues[place + i] = 0;
-        }
         if (objStep != 0) {
             place = index * objStep;
-            for (int i = 0; i < objStep; i++) {
+            for (int i = 0; i < objStep; i++)
                 objValues[place + i] = null;
-            }
         }
     }
 
-    /**
-     * Clears ranges of elements in both integer and object arrays.
-     * Handles cyclic buffer wraparound when clearing spans array boundaries.
-     * Sets all cleared elements to 0/null.
-     *
-     * @param start Starting index to clear from
-     * @param end the ending index (exclusive)
-     */
-    private void clear(int start, int end) {
-        if (end >= start) {
-            Arrays.fill(intValues, start * intStep, end * intStep, 0);
-            if (objStep != 0) {
-                Arrays.fill(objValues, start * objStep, end * objStep, null);
-            }
+    // removes record at index and returns index of the next record to the left (lover time)
+    private int removeAt(int index) {
+        int l = (index - min) & mask; // # of items remaining to the left
+        int r = (max - 1 - index) & mask; // # of items remaining to the right
+        if (l <= r) {
+            if (l != 0)
+                moveRight(min, l, 1);
+            clearAt(min);
+            min = (min + 1) & mask;
+            return index;
         } else {
-            Arrays.fill(intValues, start * intStep, intValues.length, 0);
-            Arrays.fill(intValues, 0, end * intStep, 0);
-            if (objStep != 0) {
-                Arrays.fill(objValues, start * objStep, objValues.length, null);
-                Arrays.fill(objValues, 0, end * objStep, null);
-            }
+            if (r != 0)
+                moveLeft((index + 1) & mask, r, 1);
+            max = (max - 1) & mask;
+            clearAt(max);
+            return (index - 1) & mask;
         }
     }
 
-    /**
-     * Removes record at specified index and updates buffer structure.
-     * For edge records (at min/max), removes continuous inactive records.
-     * For middle records, marks as inactive and sets given timestamp.
-     * Updates available count.
-     *
-     * @param index Index of record to remove
-     * @param time Timestamp to set for inactive middle records
-     */
-    private void removeAt(int index, long time) {
-        if (index == min) {
-            int i = findLargerPayload((index + 1) & mask);
-            clear(index, i);
-            min = i;
-        } else if (index == ((max - 1) & mask)) {
-            int i = (findSmallerPayload((index - 1) & mask) + 1) & mask;
-            clear(i, max);
-            max = i;
-        } else {
-            clearAt(index);
-            setMarker(index, EMPTY_MARKER);
-            setTime(index, time);
-        }
-        payloadSize--;
-        compactIfNeeded();
+    private void copy(int index, RecordCursor cursor) {
+        cursor.getIntsTo(0, intValues, index * intStep + intOffset, intStep - intOffset);
+        if (objStep != 0)
+            cursor.getObjsTo(0, objValues, index * objStep + objOffset, objStep - objOffset);
+        setEventTimeSequence(index, cursor.getEventTimeSequence());
     }
 
-    private int removeSnapshotFromSnipTime(
-        long time, DataRecord record, int cipher, String symbol, RecordBuffer removeBuffer)
+    private int removeSnapshotFromSnipTime(long time,
+        DataRecord record, int cipher, String symbol, RecordBuffer removeBuffer)
     {
         assert max != min;
         int startIndex = getIndexExclusive(time);
         int stopIndex = (min - 1) & mask;
-        int removeCount = 0;
-        for (int index = startIndex; index != stopIndex; index = (index - 1) & mask) {
-            if (isPayload(index)) {
-                removeBuffer.add(record, cipher, symbol).setTime(time(index));
-                removeCount++;
-            }
+        int index = startIndex;
+        while (index != stopIndex) {
+            removeBuffer.add(record, cipher, symbol).setTime(time(index));
+            clearAt(index);
+            index = (index - 1) & mask;
         }
-        int prevMin = min;
-        min = findLargerPayload((startIndex + 1) & mask);
-        clear(prevMin, min);
-        payloadSize -= removeCount;
-        return removeCount;
+        min = (startIndex + 1) & mask;
+        return (startIndex - stopIndex) & mask;
     }
 
-    private int removeSnapshotSweepBetween(
-        long snapshotTime, long toTime, DataRecord record, int cipher, String symbol, RecordBuffer removeBuffer)
+    private int removeSnapshotSweepBetween(long snapshotTime, long toTime,
+        DataRecord record, int cipher, String symbol, RecordBuffer removeBuffer)
     {
         assert max != min;
         assert toTime <= snapshotTime;
@@ -718,77 +445,37 @@ public final class HistoryBuffer {
         int startIndex = getIndexExclusive(snapshotTime);
         int stopIndex = (min - 1) & mask;
         // buffer for removal until toTime
-        int removeCount = 0;
+        long time;
         int index = startIndex;
-        while (index != stopIndex) {
-            long time = time(index);
-            boolean payload = isPayload(index);
-            if (time <= toTime && payload) {
-                break;
-            }
-            if (payload) {
-                removeBuffer.add(record, cipher, symbol).setTime(time);
-                removeCount++;
-            }
+        while (index != stopIndex && (time = time(index)) > toTime) {
+            removeBuffer.add(record, cipher, symbol).setTime(time);
             index = (index - 1) & mask;
         }
-        if (removeCount == 0) {
+        // now removed from index (exclusive) to startIndex (inclusive)
+        int count = (startIndex - index) & mask;
+        if (count == 0)
             return 0; // nothing was removed
-        }
-        startIndex = findLargerPayload((startIndex + 1) & mask);
-        // now removed from index (exclusive) to adjusted startIndex (exclusive)
-        int count = (startIndex - index - 1) & mask;
+        int removeCount = 0;
         int l = (index + 1 - min) & mask;
-        int r = (max - startIndex) & mask;
+        int r = (max - startIndex - 1) & mask;
         if (l < r) {
-            if (l != 0) {
+            if (l != 0)
                 moveRight(min, l, count);
+            for (int i = 0; i < count; i++) {
+                clearAt(min);
+                min = (min + 1) & mask;
+                removeCount++;
             }
-            int prevMin = min;
-            min = (min + count) & mask;
-            clear(prevMin, min);
         } else {
-            if (r != 0) {
-                moveLeft(startIndex, r, count);
+            if (r != 0)
+                moveLeft((startIndex + 1) & mask, r, count);
+            for (int i = 0; i < count; i++) {
+                max = (max - 1) & mask;
+                clearAt(max);
+                removeCount++;
             }
-            int prevMax = max;
-            max = (max - count) & mask;
-            clear(max, prevMax);
         }
-        payloadSize -= removeCount;
         return removeCount;
-    }
-
-    private int findLargerPayload(int startIndex) {
-        if (checkIndexOutOfRange(startIndex)) {
-            // just return input index
-            return startIndex;
-        }
-        int index = startIndex;
-        if (index != max) {
-            while (!isPayload(index)) {
-                index = (index + 1) & mask;
-            }
-        }
-        return index;
-    }
-
-    private int findSmallerPayload(int startIndex) {
-        if (checkIndexOutOfRange(startIndex)) {
-            // just return input index
-            return startIndex;
-        }
-        int index = startIndex;
-        if (index != min) {
-            while (!isPayload(index)) {
-                index = (index - 1) & mask;
-            }
-        }
-        return index;
-    }
-
-    private boolean checkIndexOutOfRange(int index) {
-        return ((index - min) & mask) >= overallSize();
     }
 
     // ========== Transaction and snapshot support getters ==========
@@ -971,22 +658,20 @@ public final class HistoryBuffer {
     // This method can try to allocate memory and die due to OutOfMemoryError.
     // (5) is invoked from processRecordSource
     boolean putRecord(long time, RecordCursor cursor, boolean removeEvent, QDStats stats, int rid) {
-        if (max == min || time > time((max - 1) & mask)) {
-            // empty HB or new record with time > max
+        // empty HB or new record with time > max ?
+        if (max == min || time > time((max - 1) & mask))
             return !removeEvent && putNewRecordAboveMax(cursor, stats, rid);
-        }
-        if (time < time(min)) {
-            // new record with time < min
+        // new record with time < min ?
+        if (time < time(min))
             return !removeEvent && putNewRecordBelowMin(cursor, stats, rid);
-        }
         int index = getIndexInclusive(time);
-        if (time(index) != time || !isPayload(index)) {
-            // new record in the middle
-            return !removeEvent && putNewRecordInTheMiddle(time, cursor, index, stats, rid);
+        // new record in the middle ?
+        if (time(index) != time) {
+            return !removeEvent && putNewRecordInTheMiddle(cursor, index, stats, rid);
         }
+        // remove existing record
         if (removeEvent) {
-            // remove existing record
-            removeAt(index, time);
+            removeAt(index);
             stats.updateRemoved(rid);
             return true;
         }
@@ -1002,77 +687,35 @@ public final class HistoryBuffer {
     }
 
     private boolean putNewRecordAboveMax(RecordCursor cursor, QDStats stats, int rid) {
-        ensureFreeSpace(1);
-        putAt(max, cursor);
-        payloadSize++;
+        ensureCapacity();
+        copy(max, cursor);
         max = (max + 1) & mask;
         stats.updateAdded(rid);
         return true;
     }
 
     private boolean putNewRecordBelowMin(RecordCursor cursor, QDStats stats, int rid) {
-        ensureFreeSpace(1);
+        ensureCapacity();
         min = (min - 1) & mask;
-        putAt(min, cursor);
-        payloadSize++;
+        copy(min, cursor);
         stats.updateAdded(rid);
         return true;
     }
 
-    private boolean putNewRecordInTheMiddle(long time, RecordCursor cursor, int index, QDStats stats, int rid) {
-        index = insertAt(index, time);
-        putAt(index, cursor);
-        payloadSize++;
+    private boolean putNewRecordInTheMiddle(RecordCursor cursor, int index, QDStats stats, int rid) {
+        index = insertAt(index);
+        copy(index, cursor);
         stats.updateAdded(rid);
-        compactIfNeeded();
         return true;
-    }
-
-    /**
-     * Copies data from the given cursor to the specified index in the history buffer.
-     *
-     * @param index The index to copy data to
-     * @param cursor The source cursor containing data to copy
-     */
-    private void putAt(int index, RecordCursor cursor) {
-        setMarker(index, PAYLOAD_MARKER);
-        cursor.getIntsTo(0, intValues, index * intStep + intOffset, intStep - intOffset);
-        if (objStep != 0) {
-            cursor.getObjsTo(0, objValues, index * objStep + objOffset, objStep - objOffset);
-        }
-        setEventTimeSequence(index, cursor.getEventTimeSequence());
     }
 
     // (9) is invoked from processRecordSource
     void enforceMaxRecordCount(int maxRecordCount, QDStats stats, int rid) {
-        if (payloadSize <= maxRecordCount) {
-            return;
-        }
-        // too many records
-        if (maxRecordCount > 0) {
-            int removeCount = payloadSize - maxRecordCount;
-            int index = min;
-            int count = removeCount;
-            while (index != max) {
-                boolean payload = isPayload(index);
-                if (count <= 0 && payload) {
-                    break;
-                }
-                if (payload) {
-                    count--;
-                }
-                index = (index + 1) & mask;
-            }
-            clear(min, index);
+        int size = (max - min) & mask;
+        if (size > maxRecordCount) { // too many records
+            int removeCount = maxRecordCount > 0 ? (size - maxRecordCount) : size;
+            removeToIndex((min + removeCount) & mask);
             stats.updateRemoved(rid, removeCount);
-            min = index;
-            payloadSize -= removeCount;
-        } else {
-            clear(min, max);
-            stats.updateRemoved(rid, payloadSize);
-            min = 0;
-            max = 0;
-            payloadSize = 0;
         }
     }
 
@@ -1080,12 +723,14 @@ public final class HistoryBuffer {
      * Clears all records, trims memory and trims snapshot times to Long.MAX_VALUE.
      * Effect is similar to {@link #removeOldRecords removeOldRecords(Long.MAX_VALUE, QDStats, int)}
      * except memory footprint is trimmed.
-     * <p>
+     *
      * Used when all subscription is removed and we need to keep state of HistoryBuffer without any data.
      * So we trim subscription time as if subscribed to "empty range" for proper state transition.
      */
     void clearAllRecords(QDStats stats, int rid) {
         int removeCount = size();
+        min = 0;
+        max = 0;
         allocInitial();
         trimSnapshotTimes(Long.MAX_VALUE);
         stats.updateRemoved(rid, removeCount);
@@ -1098,21 +743,12 @@ public final class HistoryBuffer {
      * Removes old records with time less than specified.
      */
     void removeOldRecords(long time, QDStats stats, int rid) {
-        int index = min;
         int removeCount = 0;
-        while (index != max) {
-            boolean payload = isPayload(index);
-            if (time(index) >= time && payload) {
-                break;
-            }
-            if (payload) {
-                removeCount++;
-            }
-            index = (index + 1) & mask;
+        while (min != max && time(min) < time) {
+            clearAt(min);
+            min = (min + 1) & mask;
+            removeCount++;
         }
-        clear(min, index);
-        min = index;
-        payloadSize -= removeCount;
         trimSnapshotTimes(time);
         stats.updateRemoved(rid, removeCount);
         assert validTimes();
@@ -1125,40 +761,38 @@ public final class HistoryBuffer {
         everSnapshotTime = Math.max(everSnapshotTime, time);
     }
 
-    private int overallSize() {
-        return (max - min) & mask;
+    private void removeToIndex(int newMin) {
+        while (min != newMin) {
+            clearAt(min);
+            min = (min + 1) & mask;
+        }
     }
 
     int size() {
-        return payloadSize;
+        return (max - min) & mask;
     }
 
     long getMinAvailableTime() {
-        return min == max ? 0 : time(min);
+        if (min == max)
+            return 0;
+        return time(min);
     }
 
     long getMaxAvailableTime() {
-        return min == max ? 0 : time((max - 1) & mask);
+        if (min == max)
+            return 0;
+        return time((max - 1) & mask);
     }
 
     int getAvailableCount(long startTime, long endTime) {
-        if (min == max) {
+        if (min == max)
             return 0;
-        }
         if (startTime > endTime) {
             long t = startTime;
             startTime = endTime;
             endTime = t;
         }
-        int count = 0;
-        int start = (getIndexExclusive(startTime) + 1) & mask;
-        int end = (getIndexInclusive(endTime) + 1) & mask;
-        for (int i = start; i != end; i = (i + 1) & mask) {
-            if (isPayload(i)) {
-                count++;
-            }
-        }
-        return count;
+        return (getIndexInclusive(endTime) - getIndexExclusive(startTime)) & mask;
     }
 
     /**
@@ -1171,7 +805,7 @@ public final class HistoryBuffer {
      * @return true when sink has no more capacity.
      */
     boolean examineDataRangeRTL(DataRecord record, int cipher, String symbol,
-        long startTime, long endTime, RecordSink sink, RecordCursorKeeper keeper, Object attachment)
+        long startTime, long endTime, RecordSink sink, RecordCursorKeeperOld keeper, Object attachment)
     {
         assert startTime >= endTime;
         long inSnapshotTime = Math.max(endTime, everSnapshotTime);
@@ -1179,15 +813,12 @@ public final class HistoryBuffer {
         RecordCursor.Owner owner = keeper.getForHistoryBufferReadOnly(this, record, cipher, symbol);
         if (min != max) {
             // there is some actual data in buffer -- see if there any data in range
-            int startIndex = findSmallerPayload(getIndexInclusive(startTime));
-            int endIndex = findSmallerPayload(getIndexExclusive(endTime));
+            int startIndex = getIndexInclusive(startTime);
+            int endIndex = getIndexExclusive(endTime);
             if (startIndex != endIndex) {
                 // there's some data in range -- let's produce proper events
                 long lastTime = Long.MAX_VALUE;
                 for (int index = startIndex; index != endIndex; index = (index - 1) & mask) {
-                    if (!isPayload(index)) {
-                        continue;
-                    }
                     lastTime = time(index);
                     if (examineOne(sink, attachment, owner, index, isTx() ? TX_PENDING : 0))
                         return true;
@@ -1217,7 +848,7 @@ public final class HistoryBuffer {
      * @return true when sink has no more capacity.
      */
     boolean examineDataRangeLTR(DataRecord record, int cipher, String symbol,
-        long startTime, long endTime, RecordSink sink, RecordCursorKeeper keeper, Object attachment)
+        long startTime, long endTime, RecordSink sink, RecordCursorKeeperOld keeper, Object attachment)
     {
         assert startTime <= endTime;
         long inSnapshotTime = Math.max(startTime, everSnapshotTime);
@@ -1225,23 +856,18 @@ public final class HistoryBuffer {
         RecordCursor.Owner owner = keeper.getForHistoryBufferReadOnly(this, record, cipher, symbol);
         if (min != max) {
             // there is some actual data in buffer -- see if there any data in range
-            int startIndex = findLargerPayload((getIndexExclusive(startTime) + 1) & mask);
-            int endIndex = findLargerPayload((getIndexInclusive(endTime) + 1) & mask);
+            int startIndex = (getIndexExclusive(startTime) + 1) & mask;
+            int endIndex = (getIndexInclusive(endTime) + 1) & mask;
             if (startIndex != endIndex) {
                 // there's some data in range -- let's produce proper events
                 if (inSnapshot && time(startIndex) > inSnapshotTime) {
                     // generate separate virtual snapshot time event before data if needed
-                    if (examineSnapshotTime(sink, attachment, inSnapshotTime, owner)) {
+                    if (examineSnapshotTime(sink, attachment, inSnapshotTime, owner))
                         return true;
-                    }
                 }
                 for (int index = startIndex; index != endIndex; index = (index + 1) & mask) {
-                    if (!isPayload(index)) {
-                        continue;
-                    }
-                    if (examineOne(sink, attachment, owner, index, isTx() ? TX_PENDING : 0)) {
+                    if (examineOne(sink, attachment, owner, index, isTx() ? TX_PENDING : 0))
                         return true;
-                    }
                 }
                 return false;
             }
@@ -1273,7 +899,7 @@ public final class HistoryBuffer {
      * @return true when sink has no more capacity
      */
     boolean examineDataSnapshot(DataRecord record, int cipher, String symbol, long toTime, RecordSink sink,
-        RecordCursorKeeper keeper, Object attachment)
+        RecordCursorKeeperOld keeper, Object attachment)
     {
         return examineDataRetrieve(record, cipher, symbol, Long.MAX_VALUE, Math.max(toTime, everSnapshotTime),
             sink, keeper, attachment, Integer.MAX_VALUE, SNAPSHOT_BEGIN,
@@ -1298,7 +924,7 @@ public final class HistoryBuffer {
      * @return true when sink has no more capacity or examined up to nLimit.
      */
     boolean examineDataRetrieve(DataRecord record, int cipher, String symbol, long timeKnown, long toTime,
-        RecordSink sink, RecordCursorKeeper keeper, Object attachment, int nLimit,
+        RecordSink sink, RecordCursorKeeperOld keeper, Object attachment, int nLimit,
         int eventFlags, int snapshotEndFlag, boolean txEnd, boolean useFlags)
     {
         nExamined = 0;
@@ -1314,9 +940,6 @@ public final class HistoryBuffer {
             int index = getIndexExclusive(timeKnown);
             int stopIndex = (min - 1) & mask;
             for (; index != stopIndex; index = (index - 1) & mask) {
-                if (!isPayload(index)) {
-                    continue;
-                }
                 long time = time(index);
                 if (time < toTime)
                     break;
@@ -1375,7 +998,7 @@ public final class HistoryBuffer {
     // for debug
     @Override
     public String toString() {
-        return "HistoryBuffer{size=" + payloadSize +
+        return "HistoryBuffer{size=" + ((max - min) & mask) +
             ", snapshotTime=" + snapshotTime +
             ", everSnapshotTime=" + everSnapshotTime +
             ", snipSnapshotTime=" + snipSnapshotTime +
@@ -1385,48 +1008,5 @@ public final class HistoryBuffer {
             ((flags & SWEEP_TX_FLAG) != 0 ? ", SWEEP_TX" : "") +
             ((flags & EXPLICIT_TX_FLAG) != 0 ? ", EXPLICIT_TX" : "") +
             '}';
-    }
-
-    /**
-     * Buffer self-validation for tests.
-     */
-    @Internal
-    void selfValidate() {
-        assert intValues.length == (mask + 1) * intStep;
-        assert objStep == 0 || objValues.length == (mask + 1) * objStep;
-        assert min >= 0 && min <= mask;
-        assert max >= 0 && max <= mask;
-        int payload = 0;
-        if (min != max) {
-            assert isPayload(min);
-            assert isPayload((max - 1) & mask);
-            long prevTime = time(min);
-            payload++;
-            for (int i = (min + 1) & mask; i != max; i = (i + 1) & mask) {
-                long time = time(i);
-                assert prevTime < time;
-                prevTime = time;
-                if (isPayload(i))
-                    payload++;
-            }
-        }
-        int i = max;
-        do {
-            assert !isPayload(i);
-            // do not check assert time(i) == 0; because of sometimes method `examineSnapshotTime`
-            // can write time outside range [min, max)
-            for (int j = 3; j < intStep; j++) {
-                assert intValues[i * intStep + j] == 0;
-            }
-
-            if (objStep != 0) {
-                for (int j = 0; j < objStep; j++) {
-                    assert objValues[i * objStep + j] == null;
-                }
-            }
-            i = (i + 1) & mask;
-        } while (i != min);
-        assert payloadSize == payload;
-        //assert available == mask + 1 - payload;
     }
 }

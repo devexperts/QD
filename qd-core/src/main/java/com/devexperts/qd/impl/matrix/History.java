@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -352,10 +352,10 @@ public class History extends Collector implements QDHistory {
         if (hb == null)
             return; // nothing here yet
         // Only records above snapshot time are visible to the agents
-        int nAvailable = hb.getAvailableCount(Math.max(timeSub, hb.getSnapshotTime()), Long.MAX_VALUE);
+        boolean hasAvailable = hb.size() > 0 && hb.getMaxAvailableTime() >= Math.max(timeSub, hb.getSnapshotTime());
         // When no records are available, then agent that uses history snapshot needs to generate
         // virtual "end snapshot" event when HB snapshot time is already below its sub time.
-        if (nAvailable > 0 || agent.useHistorySnapshot() && hb.getSnapshotTime() <= timeSub) {
+        if (hasAvailable || agent.useHistorySnapshot() && hb.getSnapshotTime() <= timeSub) {
             // link to snapshot queue
             if (agent.snapshotQueue.linkToQueue(agent, aindex, SNAPSHOT_QUEUE, false)) {
                 // added first entry -- notify listeners when done

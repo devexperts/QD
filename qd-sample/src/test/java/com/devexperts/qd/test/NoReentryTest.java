@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -29,7 +29,6 @@ import com.devexperts.qd.ng.RecordBuffer;
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class NoReentryTest {
     private static final DataScheme SCHEME = new TestDataScheme(20091005);
@@ -42,14 +41,15 @@ public class NoReentryTest {
         final boolean[] seenException = new boolean[1];
         ticker.setErrorHandler(new QDErrorHandler() {
             public void handleDataError(DataProvider provider, Throwable t) {
-                if (t instanceof IllegalStateException)
+                if (t instanceof IllegalStateException) {
                     seenException[0] = true;
-                else
-                    fail(t.toString());
+                } else {
+                    throw new RuntimeException(t);
+                }
             }
 
             public void handleSubscriptionError(SubscriptionProvider provider, Throwable t) {
-                fail(t.toString());
+                throw new RuntimeException(t);
             }
         });
         final QDAgent agent = ticker.agentBuilder().build();

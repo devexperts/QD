@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.340</version>
+    <version>3.341</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -270,6 +270,7 @@
                                 <exclude>**/jquery/</exclude>
                                 <exclude>**/mootools/</exclude>
                                 <!-- mute some popular unknown files -->
+                                <exclude>**/*.csv</exclude>
                                 <exclude>**/*.form</exclude>
                                 <exclude>**/*.log</exclude>
                                 <exclude>**/*.install4j</exclude>
