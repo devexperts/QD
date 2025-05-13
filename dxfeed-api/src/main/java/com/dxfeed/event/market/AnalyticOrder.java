@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,6 +13,7 @@ package com.dxfeed.event.market;
 
 import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.DXPublisher;
+import com.dxfeed.event.impl.EventUtil;
 import com.dxfeed.model.AbstractIndexedEventModel;
 import com.dxfeed.model.IndexedEventModel;
 
@@ -223,7 +224,7 @@ public class AnalyticOrder extends Order {
      * @return iceberg type of this analytic order.
      */
     public IcebergType getIcebergType() {
-        return IcebergType.valueOf(Util.getBits(icebergFlags, ICEBERG_TYPE_MASK, ICEBERG_TYPE_SHIFT));
+        return IcebergType.valueOf(EventUtil.getBits(icebergFlags, ICEBERG_TYPE_MASK, ICEBERG_TYPE_SHIFT));
     }
 
     /**
@@ -232,14 +233,14 @@ public class AnalyticOrder extends Order {
      * @param icebergType iceberg type of this analytic order.
      */
     public void setIcebergType(IcebergType icebergType) {
-        icebergFlags = Util.setBits(icebergFlags, ICEBERG_TYPE_MASK, ICEBERG_TYPE_SHIFT, icebergType.getCode());
+        icebergFlags = EventUtil.setBits(icebergFlags, ICEBERG_TYPE_MASK, ICEBERG_TYPE_SHIFT, icebergType.getCode());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    StringBuilder fieldsToString(StringBuilder sb) {
+    protected StringBuilder fieldsToString(StringBuilder sb) {
         return super.fieldsToString(sb)
             .append(", icebergPeakSize=").append(icebergPeakSize)
             .append(", icebergHiddenSize=").append(icebergHiddenSize)

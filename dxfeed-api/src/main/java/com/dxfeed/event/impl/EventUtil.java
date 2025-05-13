@@ -2,34 +2,41 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
  * http://mozilla.org/MPL/2.0/.
  * !__
  */
-package com.dxfeed.event.market;
+package com.dxfeed.event.impl;
+
+import com.devexperts.annotation.Internal;
 
 import java.util.Arrays;
 
-class Util {
-    private Util() {}
+/**
+ * Internal utility class for market events implementation support.
+ */
+@Internal
+public class EventUtil {
+    private EventUtil() {}
 
-    @SuppressWarnings("unchecked")
-    static <T extends Enum> T[] buildEnumArrayByOrdinal(T def, int length) {
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static <T extends Enum> T[] buildEnumArrayByOrdinal(T def, int length) {
         // enums over bit mask shall cover the whole range
         if (Integer.bitCount(length) != 1)
             throw new IllegalArgumentException("length must be power of 2");
         T[] values = (T[]) def.getClass().getEnumConstants();
         T[] result = Arrays.copyOf(values, length); // just new instance with same class and specified length
         Arrays.fill(result, def);
-        for (T v : values)
+        for (T v : values) {
             result[v.ordinal()] = v;
+        }
         return result;
     }
 
-    static String encodeChar(char c) {
+    public static String encodeChar(char c) {
         // For logging via toString() methods. The encoding is similar to QD QTP TextCoding class.
         // Probably shall be moved somewhere else.
         if (c >= 32 && c <= 126)
@@ -39,7 +46,7 @@ class Util {
         return "\\u" + Integer.toHexString(c + 65536).substring(1);
     }
 
-    static void checkChar(char c, int mask, String name) {
+    public static void checkChar(char c, int mask, String name) {
         if ((c & ~mask) != 0)
             throwInvalidChar(c, name);
     }
@@ -48,24 +55,24 @@ class Util {
         throw new IllegalArgumentException("Invalid " + name + ": " + encodeChar(c));
     }
 
-    static int getBits(int flags, int mask, int shift) {
+    public static int getBits(int flags, int mask, int shift) {
         return (flags >> shift) & mask;
     }
 
-    static int setBits(int flags, int mask, int shift, int bits) {
+    public static int setBits(int flags, int mask, int shift, int bits) {
         return (flags & ~(mask << shift)) | ((bits & mask) << shift);
     }
 
-    static long getBits(long flags, long mask, int shift) {
+    public static long getBits(long flags, long mask, int shift) {
         return (flags >> shift) & mask;
     }
 
-    static long setBits(long flags, long mask, int shift, long bits) {
+    public static long setBits(long flags, long mask, int shift, long bits) {
         return (flags & ~(mask << shift)) | ((bits & mask) << shift);
     }
 
     // This code was copied from com.devexperts.qd.util.ShortString.encode to avoid unnecessary dependency.
-    static long encodeShortString(String str) {
+    public static long encodeShortString(String str) {
         if (str == null)
             return 0;
         int length = str.length();
@@ -84,7 +91,7 @@ class Util {
 
     // This code was copied from com.devexperts.qd.util.ShortString.decode to avoid unnecessary dependency,
     // and does not implement caching.
-    static String decodeShortString(long code) {
+    public static String decodeShortString(long code) {
         if (code == 0)
             return null;
         long reverse = 0; // normalized code in reverse order with zero bytes removed
@@ -97,8 +104,9 @@ class Util {
             }
         } while ((code >>>= 8) != 0);
         char[] c = new char[length];
-        for (int i = 0; i < length; i++)
+        for (int i = 0; i < length; i++) {
             c[i] = (char) ((int) (reverse >>> (i << 3)) & 0xFF);
+        }
         return new String(c, 0, length);
     }
 }

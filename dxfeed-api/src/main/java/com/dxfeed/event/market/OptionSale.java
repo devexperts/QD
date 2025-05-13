@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,6 +15,7 @@ import com.devexperts.util.TimeFormat;
 import com.devexperts.util.TimeUtil;
 import com.dxfeed.event.IndexedEvent;
 import com.dxfeed.event.IndexedEventSource;
+import com.dxfeed.event.impl.EventUtil;
 import com.dxfeed.event.impl.TimeNanosUtil;
 import com.dxfeed.impl.XmlTimeAdapter;
 import com.dxfeed.model.AbstractIndexedEventModel;
@@ -397,7 +398,7 @@ public class OptionSale extends MarketEvent implements IndexedEvent<String> {
      * @return TradeThroughExempt flag of this option sale event.
      */
     public char getTradeThroughExempt() {
-        return (char) Util.getBits(flags, TTE_MASK, TTE_SHIFT);
+        return (char) EventUtil.getBits(flags, TTE_MASK, TTE_SHIFT);
     }
 
     /**
@@ -405,8 +406,8 @@ public class OptionSale extends MarketEvent implements IndexedEvent<String> {
      * @param tradeThroughExempt TradeThroughExempt flag of this option sale event.
      */
     public void setTradeThroughExempt(char tradeThroughExempt) {
-        Util.checkChar(tradeThroughExempt, TTE_MASK, "tradeThroughExempt");
-        flags = Util.setBits(flags, TTE_MASK, TTE_SHIFT, tradeThroughExempt);
+        EventUtil.checkChar(tradeThroughExempt, TTE_MASK, "tradeThroughExempt");
+        flags = EventUtil.setBits(flags, TTE_MASK, TTE_SHIFT, tradeThroughExempt);
     }
 
     /**
@@ -414,7 +415,7 @@ public class OptionSale extends MarketEvent implements IndexedEvent<String> {
      * @return aggressor side of this option sale event.
      */
     public Side getAggressorSide() {
-        return Side.valueOf(Util.getBits(flags, SIDE_MASK, SIDE_SHIFT));
+        return Side.valueOf(EventUtil.getBits(flags, SIDE_MASK, SIDE_SHIFT));
     }
 
     /**
@@ -422,7 +423,7 @@ public class OptionSale extends MarketEvent implements IndexedEvent<String> {
      * @param side aggressor side of this option sale event.
      */
     public void setAggressorSide(Side side) {
-        flags = Util.setBits(flags, SIDE_MASK, SIDE_SHIFT, side.getCode());
+        flags = EventUtil.setBits(flags, SIDE_MASK, SIDE_SHIFT, side.getCode());
     }
 
     /**
@@ -480,7 +481,7 @@ public class OptionSale extends MarketEvent implements IndexedEvent<String> {
      * @return type of this option sale event.
      */
     public TimeAndSaleType getType() {
-        return TimeAndSaleType.valueOf(Util.getBits(flags, TYPE_MASK, TYPE_SHIFT));
+        return TimeAndSaleType.valueOf(EventUtil.getBits(flags, TYPE_MASK, TYPE_SHIFT));
     }
 
     /**
@@ -488,7 +489,7 @@ public class OptionSale extends MarketEvent implements IndexedEvent<String> {
      * @param type type of this option sale event.
      */
     public void setType(TimeAndSaleType type) {
-        flags = Util.setBits(flags, TYPE_MASK, TYPE_SHIFT, type.getCode());
+        flags = EventUtil.setBits(flags, TYPE_MASK, TYPE_SHIFT, type.getCode());
     }
 
     /**
@@ -599,13 +600,13 @@ public class OptionSale extends MarketEvent implements IndexedEvent<String> {
             ", time=" + TimeFormat.DEFAULT.withMillis().format(getTime()) +
             ", timeNanoPart=" + timeNanoPart +
             ", sequence=" + getSequence() +
-            ", exchange=" + Util.encodeChar(exchangeCode) +
+            ", exchange=" + EventUtil.encodeChar(exchangeCode) +
             ", price=" + price +
             ", size=" + size +
             ", bid=" + bidPrice +
             ", ask=" + askPrice +
             ", ESC='" + exchangeSaleConditions + "'" +
-            ", TTE=" + Util.encodeChar(getTradeThroughExempt()) +
+            ", TTE=" + EventUtil.encodeChar(getTradeThroughExempt()) +
             ", side=" + getAggressorSide() +
             ", spread=" + isSpreadLeg() +
             ", ETH=" + isExtendedTradingHours() +

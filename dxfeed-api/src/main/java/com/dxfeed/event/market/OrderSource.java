@@ -16,6 +16,7 @@ import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.DXPublisher;
 import com.dxfeed.api.osub.IndexedEventSubscriptionSymbol;
 import com.dxfeed.event.IndexedEventSource;
+import com.dxfeed.event.custom.NuamOrder;
 
 import java.util.ArrayList;
 import java.util.Collections;

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -10,6 +10,8 @@
  * !__
  */
 package com.dxfeed.event.market;
+
+import com.dxfeed.event.impl.EventUtil;
 
 /**
  * Action enum for the Full Order Book (FOB) Orders. Action describes business meaning of the {@link Order} event:
@@ -131,7 +133,7 @@ public enum OrderAction {
      */
     BUST(8);
 
-    private static final OrderAction[] ACTIONS = Util.buildEnumArrayByOrdinal(UNDEFINED, 16);
+    private static final OrderAction[] ACTIONS = EventUtil.buildEnumArrayByOrdinal(UNDEFINED, 16);
 
     /**
      * Returns side by integer code bit pattern.

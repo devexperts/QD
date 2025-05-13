@@ -11,11 +11,14 @@
  */
 package com.dxfeed.event.market;
 
+import com.devexperts.annotation.Internal;
 import com.devexperts.util.TimeFormat;
 import com.devexperts.util.TimeUtil;
 import com.dxfeed.api.DXFeedEventListener;
 import com.dxfeed.event.IndexedEvent;
 import com.dxfeed.event.IndexedEventSource;
+import com.dxfeed.event.custom.NuamOrder;
+import com.dxfeed.event.impl.EventUtil;
 import com.dxfeed.event.impl.TimeNanosUtil;
 import com.dxfeed.impl.XmlSourceAdapter;
 import com.dxfeed.impl.XmlTimeAdapter;
@@ -416,7 +419,7 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
      */
     @XmlElement
     public OrderAction getAction() {
-        return OrderAction.valueOf(Util.getBits(flags, ACTION_MASK, ACTION_SHIFT));
+        return OrderAction.valueOf(EventUtil.getBits(flags, ACTION_MASK, ACTION_SHIFT));
     }
 
     /**
@@ -424,7 +427,7 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
      * @param action side of this order.
      */
     public void setAction(OrderAction action) {
-        flags = Util.setBits(flags, ACTION_MASK, ACTION_SHIFT, action.getCode());
+        flags = EventUtil.setBits(flags, ACTION_MASK, ACTION_SHIFT, action.getCode());
     }
 
     /**
@@ -634,7 +637,7 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
      * @return exchange code of this order.
      */
     public char getExchangeCode() {
-        return (char) Util.getBits(flags, EXCHANGE_MASK, EXCHANGE_SHIFT);
+        return (char) EventUtil.getBits(flags, EXCHANGE_MASK, EXCHANGE_SHIFT);
     }
 
     /**
@@ -643,8 +646,8 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
      * @throws IllegalArgumentException if exchange code is greater than 127
      */
     public void setExchangeCode(char exchangeCode) {
-        Util.checkChar(exchangeCode, EXCHANGE_MASK, "exchangeCode");
-        flags = Util.setBits(flags, EXCHANGE_MASK, EXCHANGE_SHIFT, exchangeCode);
+        EventUtil.checkChar(exchangeCode, EXCHANGE_MASK, "exchangeCode");
+        flags = EventUtil.setBits(flags, EXCHANGE_MASK, EXCHANGE_SHIFT, exchangeCode);
     }
 
     /**
@@ -653,7 +656,7 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
      */
     @XmlElement(name="side")
     public Side getOrderSide() {
-        return Side.valueOf(Util.getBits(flags, SIDE_MASK, SIDE_SHIFT));
+        return Side.valueOf(EventUtil.getBits(flags, SIDE_MASK, SIDE_SHIFT));
     }
 
     /**
@@ -661,7 +664,7 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
      * @param side side of this order.
      */
     public void setOrderSide(Side side) {
-        flags = Util.setBits(flags, SIDE_MASK, SIDE_SHIFT, side.getCode());
+        flags = EventUtil.setBits(flags, SIDE_MASK, SIDE_SHIFT, side.getCode());
     }
 
     /**
@@ -669,7 +672,7 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
      * @return scope of this order.
      */
     public Scope getScope() {
-        return Scope.valueOf(Util.getBits(flags, SCOPE_MASK, SCOPE_SHIFT));
+        return Scope.valueOf(EventUtil.getBits(flags, SCOPE_MASK, SCOPE_SHIFT));
     }
 
     /**
@@ -677,7 +680,7 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
      * @param scope scope of this order.
      */
     public void setScope(Scope scope) {
-        flags = Util.setBits(flags, SCOPE_MASK, SCOPE_SHIFT, scope.getCode());
+        flags = EventUtil.setBits(flags, SCOPE_MASK, SCOPE_SHIFT, scope.getCode());
     }
 
     /**
@@ -769,7 +772,7 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
             .append(", size=").append(size)
             .append(", executedSize=").append(executedSize)
             .append(", count=").append(count)
-            .append(", exchange=").append(Util.encodeChar(getExchangeCode()))
+            .append(", exchange=").append(EventUtil.encodeChar(getExchangeCode()))
             .append(", side=").append(getOrderSide())
             .append(", scope=").append(getScope())
             .append(", tradeId=").append(tradeId)
@@ -777,15 +780,17 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
             .append(", tradeSize=").append(tradeSize);
     }
 
-    // ========================= package private access for delegate =========================
+    // ========================= internal accessors for delegates =========================
 
     /**
      * Returns implementation-specific flags.
      * <b>Do not use this method directly.</b>
      * It may be removed or changed in the future versions.
+     *
      * @return flags.
      */
-    int getFlags() {
+    @Internal
+    protected int getFlags() {
         return flags;
     }
 
@@ -793,9 +798,11 @@ public class OrderBase extends MarketEvent implements IndexedEvent<String> {
      * Changes implementation-specific flags.
      * <b>Do not use this method directly.</b>
      * It may be removed or changed in the future versions.
+     *
      * @param flags flags.
      */
-    void setFlags(int flags) {
+    @Internal
+    protected void setFlags(int flags) {
         this.flags = flags;
     }
 }

@@ -16,11 +16,11 @@ import com.dxfeed.event.candle.Candle;
 import com.dxfeed.event.candle.CandleEventDelegateImpl;
 import com.dxfeed.event.candle.DailyCandle;
 import com.dxfeed.event.candle.impl.CandleEventMapping;
+import com.dxfeed.event.custom.NuamOrder;
+import com.dxfeed.event.custom.NuamTimeAndSale;
 import com.dxfeed.event.market.AnalyticOrder;
 import com.dxfeed.event.market.MarketEventDelegateImpl;
 import com.dxfeed.event.market.MarketMaker;
-import com.dxfeed.event.market.NuamOrder;
-import com.dxfeed.event.market.NuamTimeAndSale;
 import com.dxfeed.event.market.OptionSale;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.OrderBase;
@@ -647,13 +647,8 @@ public class ImplCodeGen {
             map("Flags", "Flags", FieldType.FLAGS).
             map("Buyer", "Buyer", FieldType.STRING).optional().disabledByDefault().
             map("Seller", "Seller", FieldType.STRING).optional().disabledByDefault().
-            map("ActorId", "ActorId", FieldType.INT).
-            map("ParticipantId", "ParticipantId", FieldType.INT).
-            map("OrderId", "OrderId", FieldType.LONG).
-            map("ClientOrderId", "ClientOrderId", FieldType.STRING).
+            map("MatchId", "MatchId", FieldType.LONG).
             map("TradeId", "TradeId", FieldType.LONG).
-            map("CustomerAccount", "CustomerAccount", FieldType.STRING).
-            map("CustomerInfo", "CustomerInfo", FieldType.STRING).
             publishable();
 
         ctx.delegate("OptionSale", OptionSale.class, "OptionSale").

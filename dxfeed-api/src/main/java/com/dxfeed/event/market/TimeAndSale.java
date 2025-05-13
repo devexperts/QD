@@ -11,6 +11,7 @@
  */
 package com.dxfeed.event.market;
 
+import com.devexperts.annotation.Internal;
 import com.devexperts.util.TimeFormat;
 import com.devexperts.util.TimeUtil;
 import com.dxfeed.api.DXFeedSubscription;
@@ -18,6 +19,7 @@ import com.dxfeed.api.DXFeedTimeSeriesSubscription;
 import com.dxfeed.event.IndexedEvent;
 import com.dxfeed.event.IndexedEventSource;
 import com.dxfeed.event.TimeSeriesEvent;
+import com.dxfeed.event.impl.EventUtil;
 import com.dxfeed.event.impl.TimeNanosUtil;
 import com.dxfeed.model.AbstractIndexedEventModel;
 import com.dxfeed.model.TimeSeriesEventModel;
@@ -425,7 +427,7 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
      * @return TradeThroughExempt flag of this time and sale event.
      */
     public char getTradeThroughExempt() {
-        return (char) Util.getBits(flags, TTE_MASK, TTE_SHIFT);
+        return (char) EventUtil.getBits(flags, TTE_MASK, TTE_SHIFT);
     }
 
     /**
@@ -433,8 +435,8 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
      * @param tradeThroughExempt TradeThroughExempt flag of this time and sale event.
      */
     public void setTradeThroughExempt(char tradeThroughExempt) {
-        Util.checkChar(tradeThroughExempt, TTE_MASK, "tradeThroughExempt");
-        flags = Util.setBits(flags, TTE_MASK, TTE_SHIFT, tradeThroughExempt);
+        EventUtil.checkChar(tradeThroughExempt, TTE_MASK, "tradeThroughExempt");
+        flags = EventUtil.setBits(flags, TTE_MASK, TTE_SHIFT, tradeThroughExempt);
     }
 
     /**
@@ -442,7 +444,7 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
      * @return aggressor side of this time and sale event.
      */
     public Side getAggressorSide() {
-        return Side.valueOf(Util.getBits(flags, SIDE_MASK, SIDE_SHIFT));
+        return Side.valueOf(EventUtil.getBits(flags, SIDE_MASK, SIDE_SHIFT));
     }
 
     /**
@@ -450,7 +452,7 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
      * @param side aggressor side of this time and sale event.
      */
     public void setAggressorSide(Side side) {
-        flags = Util.setBits(flags, SIDE_MASK, SIDE_SHIFT, side.getCode());
+        flags = EventUtil.setBits(flags, SIDE_MASK, SIDE_SHIFT, side.getCode());
     }
 
     /**
@@ -508,7 +510,7 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
      * @return type of this time and sale event.
      */
     public TimeAndSaleType getType() {
-        return TimeAndSaleType.valueOf(Util.getBits(flags, TYPE_MASK, TYPE_SHIFT));
+        return TimeAndSaleType.valueOf(EventUtil.getBits(flags, TYPE_MASK, TYPE_SHIFT));
     }
 
     /**
@@ -516,7 +518,7 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
      * @param type type of this time and sale event.
      */
     public void setType(TimeAndSaleType type) {
-        flags = Util.setBits(flags, TYPE_MASK, TYPE_SHIFT, type.getCode());
+        flags = EventUtil.setBits(flags, TYPE_MASK, TYPE_SHIFT, type.getCode());
     }
 
     /**
@@ -638,20 +640,20 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
      * @param sb instance to which field values are appended.
      * @return instance passed in, after field values have been appended.
      */
-    StringBuilder fieldsToString(StringBuilder sb) {
+    protected StringBuilder fieldsToString(StringBuilder sb) {
         sb.append(getEventSymbol())
             .append(", eventTime=").append(TimeFormat.DEFAULT.withMillis().format(getEventTime()))
             .append(", eventFlags=0x").append(Integer.toHexString(getEventFlags()))
             .append(", time=").append(TimeFormat.DEFAULT.withMillis().format(getTime()))
             .append(", timeNanoPart=").append(timeNanoPart)
             .append(", sequence=").append(getSequence())
-            .append(", exchange=").append(Util.encodeChar(exchangeCode))
+            .append(", exchange=").append(EventUtil.encodeChar(exchangeCode))
             .append(", price=").append(price)
             .append(", size=").append(size)
             .append(", bid=").append(bidPrice)
             .append(", ask=").append(askPrice)
             .append(", ESC='").append(exchangeSaleConditions).append("'")
-            .append(", TTE=").append(Util.encodeChar(getTradeThroughExempt()))
+            .append(", TTE=").append(EventUtil.encodeChar(getTradeThroughExempt()))
             .append(", side=").append(getAggressorSide())
             .append(", spread=").append(isSpreadLeg())
             .append(", ETH=").append(isExtendedTradingHours())
@@ -664,15 +666,17 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
         return sb;
     }
 
-    // ========================= package private access for delegate =========================
+    // ========================= internal accessors for delegates =========================
 
     /**
      * Returns implementation-specific flags.
      * <b>Do not use this method directly.</b>
      * It may be removed or changed in the future versions.
+     *
      * @return flags.
      */
-    int getFlags() {
+    @Internal
+    protected int getFlags() {
         return flags;
     }
 
@@ -680,9 +684,11 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
      * Changes implementation-specific flags.
      * <b>Do not use this method directly.</b>
      * It may be removed or changed in the future versions.
+     *
      * @param flags flags.
      */
-    void setFlags(int flags) {
+    @Internal
+    protected void setFlags(int flags) {
         this.flags = flags;
     }
 }

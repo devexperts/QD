@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,6 +15,7 @@ import com.devexperts.util.DayUtil;
 import com.devexperts.util.TimeFormat;
 import com.devexperts.util.WideDecimal;
 import com.dxfeed.event.LastingEvent;
+import com.dxfeed.event.impl.EventUtil;
 
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
@@ -138,7 +139,7 @@ public class Profile extends MarketEvent implements LastingEvent<String> {
      * @return short sale restriction of the security instrument.
      */
     public ShortSaleRestriction getShortSaleRestriction() {
-        return ShortSaleRestriction.valueOf(Util.getBits(flags, SSR_MASK, SSR_SHIFT));
+        return ShortSaleRestriction.valueOf(EventUtil.getBits(flags, SSR_MASK, SSR_SHIFT));
     }
 
     /**
@@ -146,7 +147,7 @@ public class Profile extends MarketEvent implements LastingEvent<String> {
      * @param restriction short sale restriction of the security instrument.
      */
     public void setShortSaleRestriction(ShortSaleRestriction restriction) {
-        flags = Util.setBits(flags, SSR_MASK, SSR_SHIFT, restriction.getCode());
+        flags = EventUtil.setBits(flags, SSR_MASK, SSR_SHIFT, restriction.getCode());
     }
 
     /**
@@ -173,7 +174,7 @@ public class Profile extends MarketEvent implements LastingEvent<String> {
      * @return trading status of the security instrument.
      */
     public TradingStatus getTradingStatus() {
-        return TradingStatus.valueOf(Util.getBits(flags, STATUS_MASK, STATUS_SHIFT));
+        return TradingStatus.valueOf(EventUtil.getBits(flags, STATUS_MASK, STATUS_SHIFT));
     }
 
     /**
@@ -181,7 +182,7 @@ public class Profile extends MarketEvent implements LastingEvent<String> {
      * @param status trading status of the security instrument.
      */
     public void setTradingStatus(TradingStatus status) {
-        flags = Util.setBits(flags, STATUS_MASK, STATUS_SHIFT, status.getCode());
+        flags = EventUtil.setBits(flags, STATUS_MASK, STATUS_SHIFT, status.getCode());
     }
 
     /**

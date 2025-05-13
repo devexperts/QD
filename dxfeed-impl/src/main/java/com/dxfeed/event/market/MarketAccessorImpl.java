@@ -11,6 +11,8 @@
  */
 package com.dxfeed.event.market;
 
+import com.dxfeed.event.impl.EventUtil;
+
 /**
  * Helper SPI-style class to provide middleware with public access to package-private constants and methods.
  */
@@ -44,25 +46,25 @@ public class MarketAccessorImpl {
     }
 
     public static OrderAction getOrderAction(int flags) {
-        return OrderAction.valueOf(Util.getBits(flags, OrderBase.ACTION_MASK, OrderBase.ACTION_SHIFT));
+        return OrderAction.valueOf(EventUtil.getBits(flags, OrderBase.ACTION_MASK, OrderBase.ACTION_SHIFT));
     }
 
     public static int setOrderAction(int flags, OrderAction action) {
-        return Util.setBits(flags, OrderBase.ACTION_MASK, OrderBase.ACTION_SHIFT, action.getCode());
+        return EventUtil.setBits(flags, OrderBase.ACTION_MASK, OrderBase.ACTION_SHIFT, action.getCode());
     }
 
     public static int orderExchange(char exchangeCode) {
-        Util.checkChar(exchangeCode, OrderBase.EXCHANGE_MASK, "exchangeCode");
+        EventUtil.checkChar(exchangeCode, OrderBase.EXCHANGE_MASK, "exchangeCode");
         return exchangeCode << OrderBase.EXCHANGE_SHIFT;
     }
 
     public static char getOrderExchange(int flags) {
-        return (char) Util.getBits(flags, OrderBase.EXCHANGE_MASK, OrderBase.EXCHANGE_SHIFT);
+        return (char) EventUtil.getBits(flags, OrderBase.EXCHANGE_MASK, OrderBase.EXCHANGE_SHIFT);
     }
 
     public static int setOrderExchange(int flags, char exchangeCode) {
-        Util.checkChar(exchangeCode, OrderBase.EXCHANGE_MASK, "exchangeCode");
-        return Util.setBits(flags, OrderBase.EXCHANGE_MASK, OrderBase.EXCHANGE_SHIFT, exchangeCode);
+        EventUtil.checkChar(exchangeCode, OrderBase.EXCHANGE_MASK, "exchangeCode");
+        return EventUtil.setBits(flags, OrderBase.EXCHANGE_MASK, OrderBase.EXCHANGE_SHIFT, exchangeCode);
     }
 
     public static int orderSide(Side side) {
@@ -70,11 +72,11 @@ public class MarketAccessorImpl {
     }
 
     public static Side getOrderSide(int flags) {
-        return Side.valueOf(Util.getBits(flags, OrderBase.SIDE_MASK, OrderBase.SIDE_SHIFT));
+        return Side.valueOf(EventUtil.getBits(flags, OrderBase.SIDE_MASK, OrderBase.SIDE_SHIFT));
     }
 
     public static int setOrderSide(int flags, Side side) {
-        return Util.setBits(flags, OrderBase.SIDE_MASK, OrderBase.SIDE_SHIFT, side.getCode());
+        return EventUtil.setBits(flags, OrderBase.SIDE_MASK, OrderBase.SIDE_SHIFT, side.getCode());
     }
 
     public static int orderScope(Scope scope) {
@@ -82,7 +84,7 @@ public class MarketAccessorImpl {
     }
 
     public static Scope getOrderScope(int flags) {
-        return Scope.valueOf(Util.getBits(flags, OrderBase.SCOPE_MASK, OrderBase.SCOPE_SHIFT));
+        return Scope.valueOf(EventUtil.getBits(flags, OrderBase.SCOPE_MASK, OrderBase.SCOPE_SHIFT));
     }
 
     /**
@@ -90,11 +92,11 @@ public class MarketAccessorImpl {
      */
     @Deprecated
     public static int setScope(int flags, Scope scope) {
-        return Util.setBits(flags, OrderBase.SCOPE_MASK, OrderBase.SCOPE_SHIFT, scope.getCode());
+        return EventUtil.setBits(flags, OrderBase.SCOPE_MASK, OrderBase.SCOPE_SHIFT, scope.getCode());
     }
 
     public static int setOrderScope(int flags, Scope scope) {
-        return Util.setBits(flags, OrderBase.SCOPE_MASK, OrderBase.SCOPE_SHIFT, scope.getCode());
+        return EventUtil.setBits(flags, OrderBase.SCOPE_MASK, OrderBase.SCOPE_SHIFT, scope.getCode());
     }
 
 
@@ -113,11 +115,11 @@ public class MarketAccessorImpl {
     }
 
     public static IcebergType getOrderIcebergType(int flags) {
-        return IcebergType.valueOf(Util.getBits(flags, AnalyticOrder.ICEBERG_TYPE_MASK, AnalyticOrder.ICEBERG_TYPE_SHIFT));
+        return IcebergType.valueOf(EventUtil.getBits(flags, AnalyticOrder.ICEBERG_TYPE_MASK, AnalyticOrder.ICEBERG_TYPE_SHIFT));
     }
 
     public static int setOrderIcebergType(int flags, IcebergType type) {
-        return Util.setBits(flags, AnalyticOrder.ICEBERG_TYPE_MASK, AnalyticOrder.ICEBERG_TYPE_SHIFT, type.getCode());
+        return EventUtil.setBits(flags, AnalyticOrder.ICEBERG_TYPE_MASK, AnalyticOrder.ICEBERG_TYPE_SHIFT, type.getCode());
     }
 
 
@@ -160,11 +162,11 @@ public class MarketAccessorImpl {
     }
 
     public static OtcMarketsPriceType getOtcMarketsPriceType(int flags) {
-        return OtcMarketsPriceType.valueOf(Util.getBits(flags, OtcMarketsOrder.OTC_PRICE_TYPE_MASK, OtcMarketsOrder.OTC_PRICE_TYPE_SHIFT));
+        return OtcMarketsPriceType.valueOf(EventUtil.getBits(flags, OtcMarketsOrder.OTC_PRICE_TYPE_MASK, OtcMarketsOrder.OTC_PRICE_TYPE_SHIFT));
     }
 
     public static int setOtcMarketsPriceType(int flags, OtcMarketsPriceType priceType) {
-        return Util.setBits(flags, OtcMarketsOrder.OTC_PRICE_TYPE_MASK, OtcMarketsOrder.OTC_PRICE_TYPE_SHIFT, priceType.getCode());
+        return EventUtil.setBits(flags, OtcMarketsOrder.OTC_PRICE_TYPE_MASK, OtcMarketsOrder.OTC_PRICE_TYPE_SHIFT, priceType.getCode());
     }
 
     public static int otcMarketsSaturated(boolean saturated) {
@@ -203,46 +205,6 @@ public class MarketAccessorImpl {
         return nmsConditional ? flags | OtcMarketsOrder.NMS_CONDITIONAL : flags & ~OtcMarketsOrder.NMS_CONDITIONAL;
     }
 
-
-    // ========== NuamOrder accessor methods ==========
-
-    public static int getNuamFlags(NuamOrder order) {
-        return order.getNuamFlags();
-    }
-
-    public static void setNuamFlags(NuamOrder order, int flags) {
-        order.setNuamFlags(flags);
-    }
-
-    public static int nuamOrderType(NuamOrderType orderType) {
-        return orderType.getCode() << NuamOrder.NUAM_ORDER_TYPE_SHIFT;
-    }
-
-    public static NuamOrderType getNuamOrderType(int flags) {
-        return NuamOrderType.valueOf(
-            Util.getBits(flags, NuamOrder.NUAM_ORDER_TYPE_MASK, NuamOrder.NUAM_ORDER_TYPE_SHIFT));
-    }
-
-    public static int setNuamOrderType(int flags, NuamOrderType orderType) {
-        return Util.setBits(
-            flags, NuamOrder.NUAM_ORDER_TYPE_MASK, NuamOrder.NUAM_ORDER_TYPE_SHIFT, orderType.getCode());
-    }
-
-    public static int nuamTimeInForceType(NuamTimeInForceType timeInForceType) {
-        return timeInForceType.getCode() << NuamOrder.NUAM_TIME_IN_FORCE_TYPE_SHIFT;
-    }
-
-    public static NuamTimeInForceType getNuamTimeInForceType(int flags) {
-        return NuamTimeInForceType.valueOf(
-            Util.getBits(flags, NuamOrder.NUAM_TIME_IN_FORCE_TYPE_MASK, NuamOrder.NUAM_TIME_IN_FORCE_TYPE_SHIFT));
-    }
-
-    public static int setNuamTimeInForceType(int flags, NuamTimeInForceType tifType) {
-        return Util.setBits(
-            flags, NuamOrder.NUAM_TIME_IN_FORCE_TYPE_MASK, NuamOrder.NUAM_TIME_IN_FORCE_TYPE_SHIFT, tifType.getCode());
-    }
-
-
     // ========== Profile accessor methods ==========
 
     public static int getProfileFlags(Profile profile) {
@@ -258,11 +220,11 @@ public class MarketAccessorImpl {
     }
 
     public static ShortSaleRestriction getProfileShortSaleRestriction(int flags) {
-        return ShortSaleRestriction.valueOf(Util.getBits(flags, Profile.SSR_MASK, Profile.SSR_SHIFT));
+        return ShortSaleRestriction.valueOf(EventUtil.getBits(flags, Profile.SSR_MASK, Profile.SSR_SHIFT));
     }
 
     public static int setProfileShortSaleRestriction(int flags, ShortSaleRestriction restriction) {
-        return Util.setBits(flags, Profile.SSR_MASK, Profile.SSR_SHIFT, restriction.getCode());
+        return EventUtil.setBits(flags, Profile.SSR_MASK, Profile.SSR_SHIFT, restriction.getCode());
     }
 
     public static int profileTradingStatus(TradingStatus status) {
@@ -270,11 +232,11 @@ public class MarketAccessorImpl {
     }
 
     public static TradingStatus getProfileTradingStatus(int flags) {
-        return TradingStatus.valueOf(Util.getBits(flags, Profile.STATUS_MASK, Profile.STATUS_SHIFT));
+        return TradingStatus.valueOf(EventUtil.getBits(flags, Profile.STATUS_MASK, Profile.STATUS_SHIFT));
     }
 
     public static int setProfileTradingStatus(int flags, TradingStatus status) {
-        return Util.setBits(flags, Profile.STATUS_MASK, Profile.STATUS_SHIFT, status.getCode());
+        return EventUtil.setBits(flags, Profile.STATUS_MASK, Profile.STATUS_SHIFT, status.getCode());
     }
 
 
@@ -293,11 +255,11 @@ public class MarketAccessorImpl {
     }
 
     public static PriceType getSummaryCloseType(int flags) {
-        return PriceType.valueOf(Util.getBits(flags, Summary.DAY_CLOSE_PRICE_TYPE_MASK, Summary.DAY_CLOSE_PRICE_TYPE_SHIFT));
+        return PriceType.valueOf(EventUtil.getBits(flags, Summary.DAY_CLOSE_PRICE_TYPE_MASK, Summary.DAY_CLOSE_PRICE_TYPE_SHIFT));
     }
 
     public static int setSummaryCloseType(int flags, PriceType type) {
-        return Util.setBits(flags, Summary.DAY_CLOSE_PRICE_TYPE_MASK, Summary.DAY_CLOSE_PRICE_TYPE_SHIFT, type.getCode());
+        return EventUtil.setBits(flags, Summary.DAY_CLOSE_PRICE_TYPE_MASK, Summary.DAY_CLOSE_PRICE_TYPE_SHIFT, type.getCode());
     }
 
     public static int summaryPrevCloseType(PriceType type) {
@@ -305,11 +267,11 @@ public class MarketAccessorImpl {
     }
 
     public static PriceType getSummaryPrevCloseType(int flags) {
-        return PriceType.valueOf(Util.getBits(flags, Summary.PREV_DAY_CLOSE_PRICE_TYPE_MASK, Summary.PREV_DAY_CLOSE_PRICE_TYPE_SHIFT));
+        return PriceType.valueOf(EventUtil.getBits(flags, Summary.PREV_DAY_CLOSE_PRICE_TYPE_MASK, Summary.PREV_DAY_CLOSE_PRICE_TYPE_SHIFT));
     }
 
     public static int setSummaryPrevCloseType(int flags, PriceType type) {
-        return Util.setBits(flags, Summary.PREV_DAY_CLOSE_PRICE_TYPE_MASK, Summary.PREV_DAY_CLOSE_PRICE_TYPE_SHIFT, type.getCode());
+        return EventUtil.setBits(flags, Summary.PREV_DAY_CLOSE_PRICE_TYPE_MASK, Summary.PREV_DAY_CLOSE_PRICE_TYPE_SHIFT, type.getCode());
     }
 
 
@@ -324,17 +286,17 @@ public class MarketAccessorImpl {
     }
 
     public static int tnsTradeThroughExempt(char tradeThroughExempt) {
-        Util.checkChar(tradeThroughExempt, TimeAndSale.TTE_MASK, "tradeThroughExempt");
+        EventUtil.checkChar(tradeThroughExempt, TimeAndSale.TTE_MASK, "tradeThroughExempt");
         return tradeThroughExempt << TimeAndSale.TTE_SHIFT;
     }
 
     public static char getTnsTradeThroughExempt(int flags) {
-        return (char) Util.getBits(flags, TimeAndSale.TTE_MASK, TimeAndSale.TTE_SHIFT);
+        return (char) EventUtil.getBits(flags, TimeAndSale.TTE_MASK, TimeAndSale.TTE_SHIFT);
     }
 
     public static int setTnsTradeThroughExempt(int flags, char tradeThroughExempt) {
-        Util.checkChar(tradeThroughExempt, TimeAndSale.TTE_MASK, "tradeThroughExempt");
-        return Util.setBits(flags, TimeAndSale.TTE_MASK, TimeAndSale.TTE_SHIFT, tradeThroughExempt);
+        EventUtil.checkChar(tradeThroughExempt, TimeAndSale.TTE_MASK, "tradeThroughExempt");
+        return EventUtil.setBits(flags, TimeAndSale.TTE_MASK, TimeAndSale.TTE_SHIFT, tradeThroughExempt);
     }
 
     public static int tnsAggressorSide(Side side) {
@@ -342,11 +304,11 @@ public class MarketAccessorImpl {
     }
 
     public static Side getTnsAggressorSide(int flags) {
-        return Side.valueOf(Util.getBits(flags, TimeAndSale.SIDE_MASK, TimeAndSale.SIDE_SHIFT));
+        return Side.valueOf(EventUtil.getBits(flags, TimeAndSale.SIDE_MASK, TimeAndSale.SIDE_SHIFT));
     }
 
     public static int setTnsAggressorSide(int flags, Side side) {
-        return Util.setBits(flags, TimeAndSale.SIDE_MASK, TimeAndSale.SIDE_SHIFT, side.getCode());
+        return EventUtil.setBits(flags, TimeAndSale.SIDE_MASK, TimeAndSale.SIDE_SHIFT, side.getCode());
     }
 
     public static int tnsSpreadLeg(boolean spreadLeg) {
@@ -390,11 +352,11 @@ public class MarketAccessorImpl {
     }
 
     public static TimeAndSaleType getTnsType(int flags) {
-        return TimeAndSaleType.valueOf(Util.getBits(flags, TimeAndSale.TYPE_MASK, TimeAndSale.TYPE_SHIFT));
+        return TimeAndSaleType.valueOf(EventUtil.getBits(flags, TimeAndSale.TYPE_MASK, TimeAndSale.TYPE_SHIFT));
     }
 
     public static int setTnsType(int flags, TimeAndSaleType type) {
-        return Util.setBits(flags, TimeAndSale.TYPE_MASK, TimeAndSale.TYPE_SHIFT, type.getCode());
+        return EventUtil.setBits(flags, TimeAndSale.TYPE_MASK, TimeAndSale.TYPE_SHIFT, type.getCode());
     }
 
     // ----- Auxiliary methods -----
@@ -470,11 +432,11 @@ public class MarketAccessorImpl {
     }
 
     public static Direction getTradeTickDirection(int flags) {
-        return Direction.valueOf(Util.getBits(flags, TradeBase.DIRECTION_MASK, TradeBase.DIRECTION_SHIFT));
+        return Direction.valueOf(EventUtil.getBits(flags, TradeBase.DIRECTION_MASK, TradeBase.DIRECTION_SHIFT));
     }
 
     public static int setTradeTickDirection(int flags, Direction direction) {
-        return Util.setBits(flags, TradeBase.DIRECTION_MASK, TradeBase.DIRECTION_SHIFT, direction.getCode());
+        return EventUtil.setBits(flags, TradeBase.DIRECTION_MASK, TradeBase.DIRECTION_SHIFT, direction.getCode());
     }
 
     public static int tradeExtendedTradingHours(boolean extendedTradingHours) {

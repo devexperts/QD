@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,13 +15,14 @@ import com.devexperts.util.TimeFormat;
 import com.dxfeed.api.DXPublisher;
 import com.dxfeed.event.IndexedEvent;
 import com.dxfeed.event.IndexedEventSource;
+import com.dxfeed.event.impl.EventUtil;
 import com.dxfeed.impl.XmlTimeAdapter;
 
+import java.util.Collection;
 import javax.xml.bind.annotation.XmlSchemaType;
 import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlType;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
-import java.util.Collection;
 
 /**
  * The Market Maker event captures a snapshot of aggregated top quotes from various market participants,
@@ -230,7 +231,7 @@ public class MarketMaker extends MarketEvent implements IndexedEvent<String> {
      * @return exchange code of this market maker event.
      */
     public char getExchangeCode() {
-        return (char) Util.getBits(index, EXCHANGE_MASK, EXCHANGE_SHIFT);
+        return (char) EventUtil.getBits(index, EXCHANGE_MASK, EXCHANGE_SHIFT);
     }
 
     /**
@@ -239,8 +240,8 @@ public class MarketMaker extends MarketEvent implements IndexedEvent<String> {
      * @param exchangeCode exchange code of this market maker event.
      */
     public void setExchangeCode(char exchangeCode) {
-        Util.checkChar(exchangeCode, EXCHANGE_MASK, "exchangeCode");
-        index = Util.setBits(index, EXCHANGE_MASK, EXCHANGE_SHIFT, exchangeCode);
+        EventUtil.checkChar(exchangeCode, EXCHANGE_MASK, "exchangeCode");
+        index = EventUtil.setBits(index, EXCHANGE_MASK, EXCHANGE_SHIFT, exchangeCode);
     }
 
     /**
@@ -248,7 +249,7 @@ public class MarketMaker extends MarketEvent implements IndexedEvent<String> {
      * @return market maker or other aggregate identifier of this market maker event.
      */
     public String getMarketMaker() {
-        return Util.decodeShortString(Util.getBits(index, MMID_MASK, MMID_SHIFT));
+        return EventUtil.decodeShortString(EventUtil.getBits(index, MMID_MASK, MMID_SHIFT));
     }
 
     /**
@@ -257,7 +258,7 @@ public class MarketMaker extends MarketEvent implements IndexedEvent<String> {
      * @param marketMaker market maker or other aggregate identifier of this market maker event.
      */
     public void setMarketMaker(String marketMaker) {
-        index = Util.setBits(index, MMID_MASK, MMID_SHIFT, Util.encodeShortString(marketMaker));
+        index = EventUtil.setBits(index, MMID_MASK, MMID_SHIFT, EventUtil.encodeShortString(marketMaker));
     }
 
     /**
@@ -424,7 +425,7 @@ public class MarketMaker extends MarketEvent implements IndexedEvent<String> {
             ", eventFlags=0x" + Integer.toHexString(getEventFlags()) +
             ", index=0x" + Long.toHexString(index) +
             ", time=" + TimeFormat.DEFAULT.withMillis().format(getTime()) +
-            ", exchange=" + Util.encodeChar(getExchangeCode()) +
+            ", exchange=" + EventUtil.encodeChar(getExchangeCode()) +
             ", marketMaker='" + getMarketMaker() + "'" +
             ", bidTime=" + TimeFormat.DEFAULT.withMillis().format(bidTime) +
             ", bidPrice=" + bidPrice +

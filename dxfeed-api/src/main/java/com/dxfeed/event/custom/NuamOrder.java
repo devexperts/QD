@@ -9,10 +9,16 @@
  * http://mozilla.org/MPL/2.0/.
  * !__
  */
-package com.dxfeed.event.market;
+package com.dxfeed.event.custom;
 
+import com.devexperts.annotation.Experimental;
 import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.DXPublisher;
+import com.dxfeed.event.impl.EventUtil;
+import com.dxfeed.event.market.Order;
+import com.dxfeed.event.market.OrderAction;
+import com.dxfeed.event.market.OrderBase;
+import com.dxfeed.event.market.OrderSource;
 import com.dxfeed.model.AbstractIndexedEventModel;
 import com.dxfeed.model.IndexedEventModel;
 
@@ -139,6 +145,7 @@ import javax.xml.bind.annotation.XmlType;
  * where {@code <source-id>} is up to 4 ASCII characters with a mnemonic for the source like "nuam" for PLB
  * and "NUAM" for the FOB/FOD.
  */
+@Experimental
 @XmlRootElement(name = "NuamOrder")
 @XmlType(propOrder = {
     "actorId", "participantId", "submitterId", "onBehalfOfSubmitterId", "clientOrderId",
@@ -361,7 +368,7 @@ public class NuamOrder extends Order {
      */
     public NuamTimeInForceType getTimeInForce() {
         return NuamTimeInForceType.valueOf(
-            Util.getBits(nuamFlags, NUAM_TIME_IN_FORCE_TYPE_MASK, NUAM_TIME_IN_FORCE_TYPE_SHIFT));
+            EventUtil.getBits(nuamFlags, NUAM_TIME_IN_FORCE_TYPE_MASK, NUAM_TIME_IN_FORCE_TYPE_SHIFT));
     }
 
     /**
@@ -370,7 +377,7 @@ public class NuamOrder extends Order {
      * @param timeInForceType of this Nuam order.
      */
     public void setTimeInForce(NuamTimeInForceType timeInForceType) {
-        nuamFlags = Util.setBits(
+        nuamFlags = EventUtil.setBits(
             nuamFlags, NUAM_TIME_IN_FORCE_TYPE_MASK, NUAM_TIME_IN_FORCE_TYPE_SHIFT, timeInForceType.getCode());
     }
 
@@ -463,7 +470,7 @@ public class NuamOrder extends Order {
      * @return orderType of this Nuam Order
      */
     public NuamOrderType getOrderType() {
-        return NuamOrderType.valueOf(Util.getBits(nuamFlags, NUAM_ORDER_TYPE_MASK, NUAM_ORDER_TYPE_SHIFT));
+        return NuamOrderType.valueOf(EventUtil.getBits(nuamFlags, NUAM_ORDER_TYPE_MASK, NUAM_ORDER_TYPE_SHIFT));
     }
 
     /**
@@ -472,7 +479,7 @@ public class NuamOrder extends Order {
      * @param orderType of this Nuam order.
      */
     public void setOrderType(NuamOrderType orderType) {
-        nuamFlags = Util.setBits(nuamFlags, NUAM_ORDER_TYPE_MASK, NUAM_ORDER_TYPE_SHIFT, orderType.getCode());
+        nuamFlags = EventUtil.setBits(nuamFlags, NUAM_ORDER_TYPE_MASK, NUAM_ORDER_TYPE_SHIFT, orderType.getCode());
     }
 
     /**
@@ -572,7 +579,7 @@ public class NuamOrder extends Order {
      * {@inheritDoc}
      */
     @Override
-    StringBuilder fieldsToString(StringBuilder sb) {
+    protected StringBuilder fieldsToString(StringBuilder sb) {
         return super.fieldsToString(sb)
             .append(", actorId=").append(actorId)
             .append(", participantId=").append(participantId)
@@ -616,5 +623,21 @@ public class NuamOrder extends Order {
      */
     void setNuamFlags(int nuamFlags) {
         this.nuamFlags = nuamFlags;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected int getFlags() {
+        return super.getFlags();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void setFlags(int flags) {
+        super.setFlags(flags);
     }
 }

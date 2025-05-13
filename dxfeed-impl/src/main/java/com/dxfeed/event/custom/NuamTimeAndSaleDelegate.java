@@ -9,14 +9,15 @@
  * http://mozilla.org/MPL/2.0/.
  * !__
  */
-package com.dxfeed.event.market;
+package com.dxfeed.event.custom;
 
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.QDContract;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.dxfeed.api.impl.EventDelegateFlags;
-import com.dxfeed.event.market.impl.NuamTimeAndSaleMapping;
+import com.dxfeed.event.custom.impl.NuamTimeAndSaleMapping;
+import com.dxfeed.event.market.MarketEventDelegateImpl;
 
 import java.util.EnumSet;
 
@@ -54,13 +55,8 @@ public final class NuamTimeAndSaleDelegate extends MarketEventDelegateImpl<NuamT
         event.setFlags(m.getFlags(cursor));
         event.setBuyer(m.getBuyer(cursor));
         event.setSeller(m.getSeller(cursor));
-        event.setActorId(m.getActorId(cursor));
-        event.setParticipantId(m.getParticipantId(cursor));
-        event.setOrderId(m.getOrderId(cursor));
-        event.setClientOrderId(m.getClientOrderId(cursor));
+        event.setMatchId(m.getMatchId(cursor));
         event.setTradeId(m.getTradeId(cursor));
-        event.setCustomerAccount(m.getCustomerAccount(cursor));
-        event.setCustomerInfo(m.getCustomerInfo(cursor));
         return event;
     }
 
@@ -80,13 +76,8 @@ public final class NuamTimeAndSaleDelegate extends MarketEventDelegateImpl<NuamT
         m.setFlags(cursor, event.getFlags());
         m.setBuyer(cursor, event.getBuyer());
         m.setSeller(cursor, event.getSeller());
-        m.setActorId(cursor, event.getActorId());
-        m.setParticipantId(cursor, event.getParticipantId());
-        m.setOrderId(cursor, event.getOrderId());
-        m.setClientOrderId(cursor, event.getClientOrderId());
+        m.setMatchId(cursor, event.getMatchId());
         m.setTradeId(cursor, event.getTradeId());
-        m.setCustomerAccount(cursor, event.getCustomerAccount());
-        m.setCustomerInfo(cursor, event.getCustomerInfo());
         return cursor;
     }
 // END: CODE AUTOMATICALLY GENERATED

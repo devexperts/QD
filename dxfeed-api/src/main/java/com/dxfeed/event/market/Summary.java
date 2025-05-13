@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,6 +14,7 @@ package com.dxfeed.event.market;
 import com.devexperts.util.DayUtil;
 import com.devexperts.util.TimeFormat;
 import com.dxfeed.event.LastingEvent;
+import com.dxfeed.event.impl.EventUtil;
 
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
@@ -186,7 +187,7 @@ public class Summary extends MarketEvent implements LastingEvent<String> {
      * @return the price type of the last (close) price for the day.
      */
     public PriceType getDayClosePriceType() {
-        return PriceType.valueOf(Util.getBits(flags, DAY_CLOSE_PRICE_TYPE_MASK, DAY_CLOSE_PRICE_TYPE_SHIFT));
+        return PriceType.valueOf(EventUtil.getBits(flags, DAY_CLOSE_PRICE_TYPE_MASK, DAY_CLOSE_PRICE_TYPE_SHIFT));
     }
 
     /**
@@ -194,7 +195,7 @@ public class Summary extends MarketEvent implements LastingEvent<String> {
      * @param type the price type of the last (close) price for the day.
      */
     public void setDayClosePriceType(PriceType type) {
-        flags = Util.setBits(flags, DAY_CLOSE_PRICE_TYPE_MASK, DAY_CLOSE_PRICE_TYPE_SHIFT, type.getCode());
+        flags = EventUtil.setBits(flags, DAY_CLOSE_PRICE_TYPE_MASK, DAY_CLOSE_PRICE_TYPE_SHIFT, type.getCode());
     }
 
     /**
@@ -236,7 +237,8 @@ public class Summary extends MarketEvent implements LastingEvent<String> {
      * @return the price type of the last (close) price for the previous day.
      */
     public PriceType getPrevDayClosePriceType() {
-        return PriceType.valueOf(Util.getBits(flags, PREV_DAY_CLOSE_PRICE_TYPE_MASK, PREV_DAY_CLOSE_PRICE_TYPE_SHIFT));
+        return PriceType.valueOf(
+            EventUtil.getBits(flags, PREV_DAY_CLOSE_PRICE_TYPE_MASK, PREV_DAY_CLOSE_PRICE_TYPE_SHIFT));
     }
 
     /**
@@ -244,7 +246,7 @@ public class Summary extends MarketEvent implements LastingEvent<String> {
      * @param type the price type of the last (close) price for the previous day.
      */
     public void setPrevDayClosePriceType(PriceType type) {
-        flags = Util.setBits(flags, PREV_DAY_CLOSE_PRICE_TYPE_MASK, PREV_DAY_CLOSE_PRICE_TYPE_SHIFT, type.getCode());
+        flags = EventUtil.setBits(flags, PREV_DAY_CLOSE_PRICE_TYPE_MASK, PREV_DAY_CLOSE_PRICE_TYPE_SHIFT, type.getCode());
     }
 
     /**

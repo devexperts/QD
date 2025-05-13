@@ -9,7 +9,7 @@
  * http://mozilla.org/MPL/2.0/.
  * !__
  */
-package com.dxfeed.event.market;
+package com.dxfeed.event.custom;
 
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.QDContract;
@@ -17,7 +17,10 @@ import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.dxfeed.api.impl.EventDelegateFlags;
 import com.dxfeed.event.IndexedEventSource;
-import com.dxfeed.event.market.impl.NuamOrderMapping;
+import com.dxfeed.event.custom.impl.NuamOrderMapping;
+import com.dxfeed.event.market.OrderBase;
+import com.dxfeed.event.market.OrderBaseDelegateImpl;
+import com.dxfeed.event.market.Side;
 
 import java.util.EnumSet;
 

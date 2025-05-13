@@ -9,11 +9,15 @@
  * http://mozilla.org/MPL/2.0/.
  * !__
  */
-package com.dxfeed.event.market;
+package com.dxfeed.event.custom;
+
+import com.devexperts.annotation.Experimental;
+import com.dxfeed.event.impl.EventUtil;
 
 /**
  * Type of orders on the Nuam Market.
  */
+@Experimental
 public enum NuamOrderType {
     /**
      * The order type is undefined, unknown or inapplicable.
@@ -48,7 +52,7 @@ public enum NuamOrderType {
      */
     IMBALANCE(5);
 
-    private static final NuamOrderType[] TYPES = Util.buildEnumArrayByOrdinal(UNDEFINED, 16);
+    private static final NuamOrderType[] TYPES = EventUtil.buildEnumArrayByOrdinal(UNDEFINED, 16);
 
     /**
      * Returns the order type by integer code bit pattern.

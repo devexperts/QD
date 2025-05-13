@@ -1,3 +1,8 @@
+QDS 3.342:
+
+* [QD-1660] [Nuam] Extend NuamTimeAndSale record
+  Note: Nuam-specific events marked as Experimental and moved to com.dxfeed.event.custom package.
+
 QDS 3.341:
 
 * [QD-1477] TimeMark for Ticker does not work

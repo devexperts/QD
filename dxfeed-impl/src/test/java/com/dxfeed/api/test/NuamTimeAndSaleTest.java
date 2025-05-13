@@ -17,7 +17,7 @@ import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.api.DXPublisher;
-import com.dxfeed.event.market.NuamTimeAndSale;
+import com.dxfeed.event.custom.NuamTimeAndSale;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -60,13 +60,8 @@ public class NuamTimeAndSaleTest {
         NuamTimeAndSale tns = new NuamTimeAndSale(SYMBOL);
         tns.setTime(1000L);
         tns.setPrice(100D);
-        tns.setActorId(1);
-        tns.setParticipantId(2);
-        tns.setOrderId(3L);
-        tns.setClientOrderId("ClientOrderId0");
-        tns.setTradeId(4L);
-        tns.setCustomerAccount("CustomerAccount0");
-        tns.setCustomerInfo("CustomerInfo0");
+        tns.setMatchId(1L);
+        tns.setTradeId(2L);
 
         publisher.publishEvents(Collections.singleton(tns));
 
@@ -74,24 +69,14 @@ public class NuamTimeAndSaleTest {
         assertEquals(SYMBOL, received.getEventSymbol());
         assertEquals(1000L, received.getTime());
         assertEquals(100.0, received.getPrice(), 0.0);
-        assertEquals(1, received.getActorId());
-        assertEquals(2, received.getParticipantId());
-        assertEquals(3L, received.getOrderId());
-        assertEquals("ClientOrderId0", received.getClientOrderId());
-        assertEquals(4L, received.getTradeId());
-        assertEquals("CustomerAccount0", received.getCustomerAccount());
-        assertEquals("CustomerInfo0", received.getCustomerInfo());
+        assertEquals(1L, received.getMatchId());
+        assertEquals(2L, received.getTradeId());
         assertEquals(tns.toString(), received.toString());
 
         tns.setTime(2000L);
         tns.setPrice(200D);
-        tns.setActorId(1);
-        tns.setParticipantId(2);
-        tns.setOrderId(4L);
-        tns.setClientOrderId("ClientOrderId1");
-        tns.setTradeId(5L);
-        tns.setCustomerAccount("CustomerAccount1");
-        tns.setCustomerInfo("CustomerInfo1");
+        tns.setMatchId(1L);
+        tns.setTradeId(2L);
         publisher.publishEvents(Collections.singleton(tns));
 
         received = queue.take();
@@ -99,13 +84,8 @@ public class NuamTimeAndSaleTest {
         assertEquals(SYMBOL, received.getEventSymbol());
         assertEquals(2000L, received.getTime());
         assertEquals(200.0, received.getPrice(), 0.0);
-        assertEquals(1, received.getActorId());
-        assertEquals(2, received.getParticipantId());
-        assertEquals(4L, received.getOrderId());
-        assertEquals("ClientOrderId1", received.getClientOrderId());
-        assertEquals(5L, received.getTradeId());
-        assertEquals("CustomerAccount1", received.getCustomerAccount());
-        assertEquals("CustomerInfo1", received.getCustomerInfo());
+        assertEquals(1L, received.getMatchId());
+        assertEquals(2L, received.getTradeId());
         assertEquals(tns.toString(), received.toString());
     }
 
@@ -114,12 +94,7 @@ public class NuamTimeAndSaleTest {
         NuamTimeAndSale tns = new NuamTimeAndSale();
 
         assertNull(tns.getEventSymbol());
-        assertEquals(0, tns.getActorId());
-        assertEquals(0, tns.getParticipantId());
-        assertEquals(0, tns.getOrderId());
-        assertNull(tns.getClientOrderId());
+        assertEquals(0, tns.getMatchId());
         assertEquals(0, tns.getTradeId());
-        assertNull(tns.getCustomerAccount());
-        assertNull(tns.getCustomerInfo());
     }
 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -10,6 +10,8 @@
  * !__
  */
 package com.dxfeed.event.market;
+
+import com.dxfeed.event.impl.EventUtil;
 
 /**
  * Direction of the price movement. For example tick direction for last trade price.
@@ -49,7 +51,7 @@ public enum Direction {
      */
     UP(5);
 
-    private static final Direction[] DIRECTIONS = Util.buildEnumArrayByOrdinal(UNDEFINED, 8);
+    private static final Direction[] DIRECTIONS = EventUtil.buildEnumArrayByOrdinal(UNDEFINED, 8);
 
     /**
      * Returns direction by integer code bit pattern.

@@ -9,11 +9,15 @@
  * http://mozilla.org/MPL/2.0/.
  * !__
  */
-package com.dxfeed.event.market;
+package com.dxfeed.event.custom;
+
+import com.devexperts.annotation.Experimental;
+import com.dxfeed.event.impl.EventUtil;
 
 /**
  * Type of Time in Force for the orders on the Nuam Market.
  */
+@Experimental
 public enum NuamTimeInForceType {
     /**
      * The time in force type is undefined, unknown or inapplicable.
@@ -55,7 +59,7 @@ public enum NuamTimeInForceType {
      */
     NUMBER_OF_DAYS(6);
 
-    private static final NuamTimeInForceType[] TYPES = Util.buildEnumArrayByOrdinal(UNDEFINED, 16);
+    private static final NuamTimeInForceType[] TYPES = EventUtil.buildEnumArrayByOrdinal(UNDEFINED, 16);
 
     /**
      * Returns the time in force type by integer code bit pattern.

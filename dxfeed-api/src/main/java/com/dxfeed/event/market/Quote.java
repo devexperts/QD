@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,6 +14,7 @@ package com.dxfeed.event.market;
 import com.devexperts.util.TimeFormat;
 import com.devexperts.util.TimeUtil;
 import com.dxfeed.event.LastingEvent;
+import com.dxfeed.event.impl.EventUtil;
 import com.dxfeed.event.impl.TimeNanosUtil;
 import com.dxfeed.impl.XmlTimeAdapter;
 
@@ -381,11 +382,11 @@ public class Quote extends MarketEvent implements LastingEvent<String> {
             ", timeNanoPart=" + timeNanoPart +
             ", sequence=" + getSequence() +
             ", bidTime=" + TimeFormat.DEFAULT.withMillis().format(bidTime) +
-            ", bidExchange=" + Util.encodeChar(bidExchangeCode) +
+            ", bidExchange=" + EventUtil.encodeChar(bidExchangeCode) +
             ", bidPrice=" + bidPrice +
             ", bidSize=" + bidSize +
             ", askTime=" + TimeFormat.DEFAULT.withMillis().format(askTime) +
-            ", askExchange=" + Util.encodeChar(askExchangeCode) +
+            ", askExchange=" + EventUtil.encodeChar(askExchangeCode) +
             ", askPrice=" + askPrice +
             ", askSize=" + askSize +
             '}';

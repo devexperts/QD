@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,6 +15,7 @@ import com.devexperts.util.DayUtil;
 import com.devexperts.util.TimeFormat;
 import com.devexperts.util.TimeUtil;
 import com.dxfeed.event.LastingEvent;
+import com.dxfeed.event.impl.EventUtil;
 import com.dxfeed.event.impl.TimeNanosUtil;
 import com.dxfeed.impl.XmlTimeAdapter;
 
@@ -332,7 +333,7 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
      * @return tick direction of the last trade.
      */
     public Direction getTickDirection() {
-        return Direction.valueOf(Util.getBits(flags, DIRECTION_MASK, DIRECTION_SHIFT));
+        return Direction.valueOf(EventUtil.getBits(flags, DIRECTION_MASK, DIRECTION_SHIFT));
     }
 
     /**
@@ -340,7 +341,7 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
      * @param direction tick direction of the last trade.
      */
     public void setTickDirection(Direction direction) {
-        flags = Util.setBits(flags, DIRECTION_MASK, DIRECTION_SHIFT, direction.getCode());
+        flags = EventUtil.setBits(flags, DIRECTION_MASK, DIRECTION_SHIFT, direction.getCode());
     }
 
     /**
@@ -396,7 +397,7 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
             ", time=" + TimeFormat.DEFAULT.withMillis().format(getTime()) +
             ", timeNanoPart=" + timeNanoPart +
             ", sequence=" + getSequence() +
-            ", exchange=" + Util.encodeChar(exchangeCode) +
+            ", exchange=" + EventUtil.encodeChar(exchangeCode) +
             ", price=" + price +
             ", change=" + change +
             ", size=" + size +

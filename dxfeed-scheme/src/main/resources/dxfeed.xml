@@ -346,40 +346,6 @@
         </generator>
 
         <!-- MarketFactoryImpl -->
-        <generator name="NuamOrder" type="suffix" delimiter="#">
-            <iterator>
-                <value/>
-                <value>NUAM</value>
-                <value>nuam</value>
-            </iterator>
-            <record name="NuamOrder" copyFrom="OrderBase">
-                <field name="ActorId" type="compact_int"/>
-                <field name="ParticipantId" type="compact_int"/>
-                <field name="SubmitterId" type="compact_int"/>
-                <field name="OnBehalfOfSubmitterId" type="compact_int"/>
-                <field name="ClientOrderId" type="utf_char_array"/>
-                <field name="CustomerAccount" type="utf_char_array"/>
-                <field name="CustomerInfo" type="utf_char_array"/>
-                <field name="ExchangeInfo" type="utf_char_array"/>
-                <field name="TimeInForceData" type="compact_int"/>
-                <field name="TriggerOrderBookId" type="compact_int"/>
-                <field name="TriggerPrice" type="price"/>
-                <field name="TriggerSessionType" type="compact_int"/>
-                <field name="OrderQuantity" type="size"/>
-                <field name="DisplayQuantity" type="size"/>
-                <field name="RefreshQuantity" type="size"/>
-                <field name="LeavesQuantity" type="size"/>
-                <field name="MatchedQuantity" type="size"/>
-                <field name="NuamFlags" type="flags">
-                    <bitfields>
-                        <field name="NuamOrderType" offset="0" size="4"/>
-                        <field name="TimeInForce" offset="4" size="4"/>
-                    </bitfields>
-                </field>
-            </record>
-        </generator>
-
-        <!-- MarketFactoryImpl -->
         <generator name="SpreadOrder" type="suffix" delimiter="#">
             <iterator>
                 <value/>
@@ -430,17 +396,6 @@
             </field>
             <field name="Buyer" type="string" disabled="true"/>
             <field name="Seller" type="string" disabled="true"/>
-        </record>
-
-        <!-- MarketFactoryImpl -->
-        <record name="NuamTimeAndSale" regionals="true" copyFrom="TimeAndSale">
-            <field name="ActorId" type="compact_int"/>
-            <field name="ParticipantId" type="compact_int"/>
-            <field name="OrderId" type="long"/>
-            <field name="ClientOrderId" type="utf_char_array"/>
-            <field name="TradeId" type="long"/>
-            <field name="CustomerAccount" type="utf_char_array"/>
-            <field name="CustomerInfo" type="utf_char_array"/>
         </record>
 
         <!-- MarketFactoryImpl -->
@@ -634,5 +589,47 @@
             <field name="Dividend" type="decimal"/>
             <field name="Interest" type="decimal"/>
         </record>
+
+        <!-- CustomFactoryImpl -->
+        <generator name="NuamOrder" type="suffix" delimiter="#">
+            <iterator>
+                <value/>
+                <value>NUAM</value>
+                <value>nuam</value>
+            </iterator>
+            <record name="NuamOrder" copyFrom="OrderBase">
+                <field name="ActorId" type="compact_int"/>
+                <field name="ParticipantId" type="compact_int"/>
+                <field name="SubmitterId" type="compact_int"/>
+                <field name="OnBehalfOfSubmitterId" type="compact_int"/>
+                <field name="ClientOrderId" type="utf_char_array"/>
+                <field name="CustomerAccount" type="utf_char_array"/>
+                <field name="CustomerInfo" type="utf_char_array"/>
+                <field name="ExchangeInfo" type="utf_char_array"/>
+                <field name="TimeInForceData" type="compact_int"/>
+                <field name="TriggerOrderBookId" type="compact_int"/>
+                <field name="TriggerPrice" type="price"/>
+                <field name="TriggerSessionType" type="compact_int"/>
+                <field name="OrderQuantity" type="size"/>
+                <field name="DisplayQuantity" type="size"/>
+                <field name="RefreshQuantity" type="size"/>
+                <field name="LeavesQuantity" type="size"/>
+                <field name="MatchedQuantity" type="size"/>
+                <field name="NuamFlags" type="flags">
+                    <bitfields>
+                        <field name="NuamOrderType" offset="0" size="4"/>
+                        <field name="TimeInForce" offset="4" size="4"/>
+                    </bitfields>
+                </field>
+            </record>
+        </generator>
+
+        <!-- CustomFactoryImpl -->
+        <record name="NuamTimeAndSale" regionals="true" copyFrom="TimeAndSale">
+            <field name="MatchId" type="long"/>
+            <field name="TradeId" type="long"/>
+        </record>
+
+
     </records>
 </dxfeed>
