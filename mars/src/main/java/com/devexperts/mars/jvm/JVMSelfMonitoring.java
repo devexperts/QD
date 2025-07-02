@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -30,8 +30,11 @@ import java.lang.management.MemoryUsage;
 import java.lang.management.RuntimeMXBean;
 import java.lang.management.ThreadMXBean;
 import java.net.InetAddress;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 
 /**
@@ -59,6 +62,14 @@ public class JVMSelfMonitoring implements MARSPlugin, Runnable, JVMSelfMonitorin
     private static final int STATE_NEW = 0;
     private static final int STATE_STARTED = 1;
     private static final int STATE_STOPPED = 2;
+
+    private static final Set<String> CONCURRENT_GCS = new HashSet<>(Arrays.asList(
+        "G1 Concurrent GC",
+        "Shenandoah Cycles",
+        "ZGC Cycles",
+        "ZGC Minor Cycles",
+        "ZGC Major Cycles"
+    ));
 
     private int state = STATE_NEW;
     private Management.Registration registration;
@@ -98,9 +109,9 @@ public class JVMSelfMonitoring implements MARSPlugin, Runnable, JVMSelfMonitorin
         private long lastCollectionTime;
 
         GCBean(GarbageCollectorMXBean gc, MARSNode root) {
-            countNode = root.subNode("jvm.GC." + gc.getName() + ".count", "Total number of garbage collections that have occurred.");
-            timeNode = root.subNode("jvm.GC." + gc.getName() + ".time", "Approximate accumulated garbage collection elapsed time.");
-            ratioNode = root.subNode("jvm.GC." + gc.getName() + ".ratio", "Ratio of time spent in garbage collection, %.");
+            countNode = root.subNode("jvm.GC." + gc.getName() + ".count", "Total number of GCs that have occurred.");
+            timeNode = root.subNode("jvm.GC." + gc.getName() + ".time", "Approximate accumulated GC elapsed time.");
+            ratioNode = root.subNode("jvm.GC." + gc.getName() + ".ratio", "Ratio of time spent in GC, %.");
         }
 
         long update(GarbageCollectorMXBean gc, long interval) {
@@ -155,9 +166,9 @@ public class JVMSelfMonitoring implements MARSPlugin, Runnable, JVMSelfMonitorin
         threadsCurrentNode = root.subNode("jvm.threads.current", "The current number of live threads.");
         threadsPeakNode = root.subNode("jvm.threads.peak", "The peak live thread count since the JVM started or peak was reset.");
         threadsDeadlockedNode = root.subNode("jvm.threads.deadlocked", "The current number of deadlocked threads.");
-        gcTimeNode = root.subNode("jvm.GC.time", "Net accumulated garbage collection elapsed time.");
-        gcRatioNode = root.subNode("jvm.GC.ratio", "Net ratio of time spent in garbage collections of all types, %.");
-        gcAverageNode = root.subNode("jvm.GC.average_5min", "Net ratio of time spent in garbage collections of all types during last 5 minutes, %.");
+        gcTimeNode = root.subNode("jvm.GC.time", "Net accumulated paused GC time.");
+        gcRatioNode = root.subNode("jvm.GC.ratio", "Net ratio of time spent in paused GCs, %.");
+        gcAverageNode = root.subNode("jvm.GC.average_5min", "Net ratio of time spent in paused GCs during last 5 minutes, %.");
     }
 
     public synchronized void start() {
@@ -241,9 +252,12 @@ public class JVMSelfMonitoring implements MARSPlugin, Runnable, JVMSelfMonitorin
         long delta = 0;
         long interval = currentTime - lastReportingTime;
         for (GarbageCollectorMXBean gc : ManagementFactory.getGarbageCollectorMXBeans()) {
-            GCBean bean = gcBeans.get(gc.getName());
-            if (bean == null)
-                gcBeans.put(gc.getName(), bean = new GCBean(gc, root));
+            String gcName = gc.getName();
+            if (CONCURRENT_GCS.contains(gcName)) {
+                // Exclude concurrent GCs from contributing
+                continue;
+            }
+            GCBean bean = gcBeans.computeIfAbsent(gcName, k -> new GCBean(gc, root));
             delta += bean.update(gc, interval);
         }
         lastCollectionTime += delta;

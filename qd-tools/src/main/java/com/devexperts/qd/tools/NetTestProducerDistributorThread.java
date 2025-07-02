@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -51,7 +51,7 @@ class NetTestProducerDistributorThread extends NetTestWorkingThread {
     public void run() {
         RecordBuffer buf = new RecordBuffer();
         RandomRecordsProvider provider = new RandomRecordsProvider(new DataRecord[] {NetTestSide.RECORD},
-            side.symbols.generateRandomSublist(side.config.symbolsPerEntity), RECORDS_PER_ITERATION, RECORDS_PER_ITERATION);
+            side.createSublist(), RECORDS_PER_ITERATION, RECORDS_PER_ITERATION);
         while (true) {
             provider.retrieve(buf);
             int num = buf.size();

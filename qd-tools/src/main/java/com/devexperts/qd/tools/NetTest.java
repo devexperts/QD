@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,6 +13,9 @@ package com.devexperts.qd.tools;
 
 import com.devexperts.services.ServiceProvider;
 import com.devexperts.util.TimePeriod;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Tool that is used to test network throughput. It works either in
@@ -66,6 +69,10 @@ public class NetTest extends AbstractTool {
         if (symbols.isSet()) {
             config.totalSymbols = symbols.getTotal();
             config.symbolsPerEntity = symbols.getPerEntity();
+            config.sliceSelection = symbols.isSliceSelection();
+            config.minLength = symbols.getMinLength();
+            config.maxLength = symbols.getMaxLength();
+            config.ipfPath = symbols.getIpfPath();
         }
         config.wildcard = wildcard.isSet();
         config.optionStat = stat;
@@ -82,14 +89,38 @@ public class NetTest extends AbstractTool {
     }
 
     static class OptionSymbols extends OptionString {
-        private int total;
-        private int perEntity;
+        private static final Pattern PATTERN = Pattern.compile(
+            "^(?<total>\\d+)" +
+                "(?:/(?:(?<mode>r|random|s|slice))?(?<perEntity>\\d+))" +
+                "?(?:(?:\\{(?<length>\\d+)(?:,(?<maxLength>\\d+))?\\})" +
+                     "|(?:@(?<filePath>.+)))" +
+                "?$");
+        private int total = 100000;
+        private int perEntity = total;
+        private boolean sliceSelection = false;
+        private int minLength = -1;
+        private int maxLength = -1;
+        private String ipfPath = null;
 
         OptionSymbols() {
-            super('S', "symbols", "<total>[/per-entity>]",
-                "Number of symbols. (<total> is total number of used symbols and " +
-                "<per-entity> is average number of symbols interesting for one entity " +
-                "connection (distributor or agent), same as <total> by default)."
+            super('S', "symbols",
+                "<total>[/<split>][<source>]",
+                "set of symbols to use (examples: 1000, 1000{8}, 1000/s10@ipf.ipf, 1000/r10{10,15}).\n" +
+                    "<total>: total number of symbols in the pool (default: 100,000)\n" +
+                    "<split> (opt): Controls pooled symbols distribution per distributor/agent\n" +
+                    "  Format: [random|r|slice|s]<per-entity>\n" +
+                    "  - random|r: randomly selects <per-entity> symbols (default),\n" +
+                    "  - slice|s: sequentially assigns <per-entity> symbols.\n" +
+                    "  If the pool's size is insufficient, the symbols will be reused cyclically.\n" +
+                    "<source> (opt): Defines symbol source:\n" +
+                    "  Format: {<length>}|{<min>,<max>}|@<path-to-ipf-file>\n" +
+                    "  - {<length>}: Generate symbols of fixed length\n" +
+                    "  - {<min>,<max>}: Generates symbols with lengths in given range\n" +
+                    "  - @<path-to-ipf-file>: loads at most <total> first symbols from specified IPF file.\n" +
+                    "When <source> is not specified, the symbol pool is filled with random symbols with lengths " +
+                    "in range [1,6] characters, with peak probability (50%) at lengths 3 and 4.\n" +
+                    "Note: Random generation uses fixed seeds, ensuring identical configurations produce " +
+                    "the same symbol sets.\n"
             );
         }
 
@@ -101,39 +132,70 @@ public class NetTest extends AbstractTool {
             return perEntity;
         }
 
+        public boolean isSliceSelection() {
+            return sliceSelection;
+        }
+
+        public int getMinLength() {
+            return minLength;
+        }
+
+        public int getMaxLength() {
+            return maxLength;
+        }
+
+        public String getIpfPath() {
+            return ipfPath;
+        }
+
         @Override
         public int parse(int i, String[] args) throws OptionParseException {
             i = super.parse(i, args);
-            int slashPos = value.indexOf('/');
-            String totalStr;
-            String entityStr;
-            if (slashPos == -1) {
-                totalStr = value;
-                entityStr = null;
-            } else {
-                totalStr = value.substring(0, slashPos);
-                entityStr = value.substring(slashPos + 1);
-            }
-            try {
-                total = Integer.parseInt(totalStr);
-            } catch (NumberFormatException e) {
-                throw new OptionParseException("<total> must be a number");
-            }
-            if (entityStr != null) {
-                try {
-                    perEntity = Integer.parseInt(entityStr);
-                } catch (NumberFormatException e) {
-                    throw new OptionParseException("<per-entity> must be a number");
-                }
-            } else {
-                perEntity = total;
-            }
-            if ((total < 0) || (perEntity < 0)) {
-                throw new OptionParseException("<total> and <per-entity> must be non-negative");
-            }
-            if (perEntity > total)
-                throw new OptionParseException("<per-entity> must not be greater than <total>");
+            parseValue(value);
             return i;
+        }
+
+        void parseValue(String spec) throws OptionParseException {
+            if (spec.isEmpty())
+                return;
+            Matcher matcher = PATTERN.matcher(spec);
+            if (matcher.matches()) {
+                total = Integer.parseInt(matcher.group("total"));
+                if (total <= 0) {
+                    throw new OptionParseException("Total number of symbols must be greater than 0");
+                }
+                if (matcher.group("mode") != null) {
+                    sliceSelection = matcher.group("mode").equals("slice") || matcher.group("mode").equals("s");
+                }
+                if (matcher.group("perEntity") != null) {
+                    perEntity = Integer.parseInt(matcher.group("perEntity"));
+                    if (perEntity > total) {
+                        throw new OptionParseException(
+                            "Number of symbols per entity must not be greater than total number of symbols");
+                    }
+                    if (perEntity <= 0) {
+                        throw new OptionParseException("Number of symbols per entity must be greater than 0");
+                    }
+                } else {
+                    perEntity = total;
+                }
+                if (matcher.group("length") != null) {
+                    minLength = Integer.parseInt(matcher.group("length"));
+                    maxLength = minLength;
+                    if (minLength <= 0) {
+                        throw new OptionParseException("Minimum length must be greater than 0");
+                    }
+                }
+                if (matcher.group("maxLength") != null) {
+                    maxLength = Integer.parseInt(matcher.group("maxLength"));
+                    if (minLength > maxLength) {
+                        throw new OptionParseException("Minimum length must not be greater than maximum length");
+                    }
+                }
+                ipfPath = matcher.group("filePath");
+            } else {
+                throw new OptionParseException("Invalid symbols specification: " + spec);
+            }
         }
     }
 

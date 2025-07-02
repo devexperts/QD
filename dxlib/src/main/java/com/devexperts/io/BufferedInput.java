@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -21,6 +21,8 @@ import java.io.ObjectInput;
 import java.io.OutputStream;
 import java.io.UTFDataFormatException;
 import java.nio.ByteBuffer;
+import java.util.Map;
+import javax.annotation.Nonnull;
 
 /**
  * An efficient buffered implementation of data input API.
@@ -547,6 +549,28 @@ public abstract class BufferedInput extends InputStream implements ObjectInput {
         byte[] bytes = new byte[(int) length];
         readFully(bytes);
         return bytes;
+    }
+
+    /**
+     * Read properties to a provided property map. If the provided map is not empty, parsed properties will override
+     * existing elements.
+     *
+     * <p>Encoding: {@code mapSize:compactInt (key:UTFString, value:UTFString)* }
+     *
+     * @param properties map to collect parsed properties
+     * @return provided properties map.
+     * @throws IOException if an I/O error occurs
+     * @see BufferedOutput#writeProperties
+     */
+    public final Map<String, String> readProperties(@Nonnull Map<String, String> properties) throws IOException {
+        long size = readCompactLong();
+        checkEncapsulatedLength(size, 0, Integer.MAX_VALUE);
+        for (int i = 0; i < size; i++) {
+            String key = readUTFString();
+            String value = readUTFString();
+            properties.put(key, value);
+        }
+        return properties;
     }
 
     // ========== UTF API ==========

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -32,7 +32,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.GuardedBy;
 
 /**
- * This strategy implements consistent hashing algorithm.
+ * This strategy implements a consistent hashing algorithm.
  */
 public class ConsistentLoadBalancer implements RMILoadBalancer {
 
@@ -66,10 +66,11 @@ public class ConsistentLoadBalancer implements RMILoadBalancer {
 
     @Override
     public synchronized void updateServiceDescriptor(@Nonnull RMIServiceDescriptor descriptor) {
-        if (descriptor.isAvailable())
+        if (descriptor.isAvailable()) {
             processAvailableDescriptor(descriptor);
-        else
+        } else {
             processUnavailableDescriptor(descriptor);
+        }
     }
 
     @Override
@@ -161,7 +162,7 @@ public class ConsistentLoadBalancer implements RMILoadBalancer {
      * @param descriptor1 the first service descriptor to be compared
      * @param descriptor2 the second service descriptor to be compared
      * @return a negative integer, zero, or a positive integer as the first argument is less than, equal to,
-     * or greater than the second.
+     *     or greater than the second.
      */
     public int compareInShard(RMIServiceDescriptor descriptor1, RMIServiceDescriptor descriptor2) {
         int pr1 = getPriority(descriptor1);
@@ -187,10 +188,14 @@ public class ConsistentLoadBalancer implements RMILoadBalancer {
     private void addInRing(RMIServiceDescriptor descriptor) {
         SecureRandom random;
         try {
+            // Load balancer requires a stable consistent random generator defined by seed.
+            // It is verified that SecureRandom.getInstance("SHA1PRNG") returns the same sequence of numbers for
+            // the same seed across different JVMs and different OSes (checked MacOS and Linux).
             random = SecureRandom.getInstance("SHA1PRNG");
         } catch (NoSuchAlgorithmException e) {
             throw new AssertionError(e);
         }
+        // NOTE: SHA1PRNG instance cannot be reused because only the first setSeed defines a deterministic sequence
         random.setSeed(getServiceSeed(descriptor));
         int pos;
         for (int i = 0; i < getCapacity(descriptor); i++) {

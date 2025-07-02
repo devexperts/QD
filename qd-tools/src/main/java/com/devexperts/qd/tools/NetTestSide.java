@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,18 +15,19 @@ import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDFactory;
-import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.SymbolList;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.qtp.QDEndpoint;
+import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
+import com.dxfeed.ipf.InstrumentProfile;
+import com.dxfeed.ipf.InstrumentProfileReader;
 
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * This class represents either producer or consumer side of NetTest tool.
@@ -42,8 +43,6 @@ import java.util.Set;
 abstract class NetTestSide {
 
     private static final Logging log = Logging.getLogging(NetTestSide.class);
-    
-    private static final long GENERATOR_SEED = 1416948710541751L;
 
     private static final String RECORD_NAME =
         SystemProperties.getProperty(NetTest.class, "record", "TimeAndSale");
@@ -59,36 +58,29 @@ abstract class NetTestSide {
 
     NetTestSide(NetTestConfig config) {
         this.config = config;
-        this.symbols = generateSymbols(config);
         this.statisticsCollector = new NetTestStatisticsCollector(this);
         this.connectors = new ArrayList<>();
         this.threads = new ArrayList<>();
-    }
-
-    private static SymbolList generateSymbols(NetTestConfig config) {
-        SymbolCodec codec = SCHEME.getCodec();
-        Random rnd = new Random(GENERATOR_SEED);
-        int n = config.totalSymbols;
-        Set<String> symbolSet = new HashSet<String>(n + (n >> 1));
-        while (symbolSet.size() < n) {
-            symbolSet.add(generateSymbol(rnd));
+        List<String> generateSymbols;
+        if (config.ipfPath != null) {
+            try {
+                List<InstrumentProfile> readProfiles = new InstrumentProfileReader().readFromFile(config.ipfPath);
+                log.info("Read " + readProfiles.size() + " profiles from " + LogUtil.hideCredentials(config.ipfPath));
+                generateSymbols = readProfiles.stream().map(InstrumentProfile::getSymbol).limit(config.totalSymbols)
+                    .collect(Collectors.toList());
+            } catch (IOException e) {
+                log.error("Error reading source " + LogUtil.hideCredentials(config.ipfPath), e);
+                throw new IllegalArgumentException(e);
+            }
+        } else if (config.minLength > 0 && config.minLength == config.maxLength) {
+            generateSymbols = SymbolGenerator.generateSymbols(config.totalSymbols, config.minLength);
+        } else if (config.minLength > 0) {
+            generateSymbols = SymbolGenerator.generateSymbols(config.totalSymbols, config.minLength, config.maxLength);
+        } else {
+            generateSymbols = SymbolGenerator.generateSymbols(config.totalSymbols);
         }
-        String[] s = symbolSet.toArray(new String[n]);
-        SymbolList res = new SymbolList(s, codec);
-        log.info(res.size() + " random symbols were generated (including " + res.getUncodedCount() + " not coded)");
-        return res;
-    }
-
-    private static String generateSymbol(Random r) {
-        int len = r.nextInt(3) + r.nextInt(4) + 1;
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < len; i++) {
-            if (r.nextInt(50) == 0)
-                sb.append((char) ('0' + r.nextInt(10)));
-            else
-                sb.append((char) ('A' + r.nextInt(26)));
-        }
-        return sb.toString();
+        this.symbols = new SymbolList(generateSymbols.toArray(new String[0]), SCHEME.getCodec());
+        log.info(this.symbols.size() + " symbols were loaded (including " + this.symbols.getUncodedCount() + " not coded)");
     }
 
     protected abstract void createDistributor(QDEndpoint endpoint, int index);
@@ -107,5 +99,13 @@ abstract class NetTestSide {
         }
         firstEndpoint.registerMonitoringTask(statisticsCollector);
         MessageConnectors.startMessageConnectors(connectors);
+    }
+
+    public SymbolList createSublist() {
+        if (config.sliceSelection) {
+            return symbols.selectNextSequenceSublist(config.symbolsPerEntity);
+        } else {
+            return symbols.selectRandomSublist(config.symbolsPerEntity);
+        }
     }
 }

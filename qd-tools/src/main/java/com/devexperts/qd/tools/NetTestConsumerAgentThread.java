@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -96,9 +96,9 @@ class NetTestConsumerAgentThread extends NetTestWorkingThread {
         if (side.config.wildcard) {
             sub.add(NetTestSide.RECORD, NetTestSide.SCHEME.getCodec().getWildcardCipher(), null);
         } else {
-            SymbolList subList = side.symbols.generateRandomSublist(side.config.symbolsPerEntity);
+            SymbolList subList = side.createSublist();
             for (int i = 0; i < subList.size(); i++) {
-                sub.add(NetTestSide.RECORD, side.symbols.getCipher(i), side.symbols.getSymbol(i));
+                sub.add(NetTestSide.RECORD, subList.getCipher(i), subList.getSymbol(i));
             }
             num = subList.size();
         }

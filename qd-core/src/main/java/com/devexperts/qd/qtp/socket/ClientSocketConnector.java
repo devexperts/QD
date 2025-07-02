@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -607,31 +607,43 @@ public class ClientSocketConnector extends AbstractMessageConnector
         return (handlers != null && handlers.length == 1) ? handlers[0] : null;
     }
 
+    //FIXME Scheme will not be needed when we remove Codec from DataScheme
     private DataScheme findDataScheme() {
-        //noinspection resource
-        return lookupQDEndpoint().getScheme();
+        MessageAdapter.Factory factory = MessageConnectors.retrieveMessageAdapterFactory(getFactory());
+
+        if (factory instanceof MessageAdapter.AbstractFactory) {
+            return ((MessageAdapter.AbstractFactory) factory).getScheme();
+        }
+        if (factory instanceof MessageAdapter.ConfigurableFactory) {
+            QDEndpoint endpoint = ((MessageAdapter.ConfigurableFactory) factory).getEndpoint(QDEndpoint.class);
+            if (endpoint != null)
+                return endpoint.getScheme();
+        }
+        throw new IllegalArgumentException("Unsupported application connection class: " + factory);
     }
 
+    //FIXME API is needed to access collectors from connector
     private SymbolStriper findCollectorSymbolStriper() {
-        //noinspection resource
-        for (QDCollector collector : lookupQDEndpoint().getCollectors()) {
-            if (collector != null) {
-                return collector.getStriper();
+        MessageAdapter.Factory factory = MessageConnectors.retrieveMessageAdapterFactory(getFactory());
+
+        QDCollector[] collectors = null;
+        if (factory instanceof MessageAdapter.AbstractFactory) {
+            collectors = ((MessageAdapter.AbstractFactory) factory).getCollectors();
+        } else if (factory instanceof MessageAdapter.ConfigurableFactory) {
+            QDEndpoint endpoint = ((MessageAdapter.ConfigurableFactory) factory).getEndpoint(QDEndpoint.class);
+            if (endpoint != null)
+                collectors = endpoint.getCollectors().toArray(new QDCollector[0]);
+        }
+        if (collectors != null) {
+            for (QDCollector collector : collectors) {
+                // Assume same striper for all contracts
+                if (collector != null) {
+                    return collector.getStriper();
+                }
             }
         }
+        log.warn("Unsupported application connection class: use striper " + MonoStriper.INSTANCE);
         return MonoStriper.INSTANCE;
-    }
-
-    private QDEndpoint lookupQDEndpoint() {
-        MessageAdapter.Factory factory = MessageConnectors.retrieveMessageAdapterFactory(getFactory());
-        if (!(factory instanceof MessageAdapter.ConfigurableFactory))
-            throw new IllegalArgumentException("Unsupported application connection class: " + factory);
-
-        QDEndpoint endpoint = ((MessageAdapter.ConfigurableFactory) factory).getEndpoint(QDEndpoint.class);
-        if (endpoint == null)
-            throw new IllegalArgumentException("Application connection created without QDEndpoint: " + factory);
-
-        return endpoint;
     }
 
     /**

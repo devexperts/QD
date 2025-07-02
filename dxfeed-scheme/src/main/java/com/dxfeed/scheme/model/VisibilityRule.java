@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -201,15 +201,13 @@ public final class VisibilityRule extends SchemeEntity {
             return false;
         }
         SchemeRecord r = f.getParent();
-        String recordNameToUse = useEventName ? r.getEventName() : actualRecordName;
-        // Fast skip
-        if (!record.matcher(recordNameToUse).matches()) {
-            return false;
-        }
 
-        String fieldNameToUse = useEventName ? f.getEventName() : f.getName();
+        boolean isRecordNameMatched = useEventName ?
+            record.matcher(r.getEventName()).matches() || record.matcher(f.getEventName()).matches() :
+            record.matcher(actualRecordName).matches();
+
         // Fast skip
-        if (field != null && !field.matcher(fieldNameToUse).matches()) {
+        if (!isRecordNameMatched || (field != null && !field.matcher(f.getName()).matches())) {
             return false;
         }
 

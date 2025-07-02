@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -166,20 +166,22 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
         protected final QDStream stream;
         protected final QDHistory history;
 
-        // Result filter === rawFilter & initialFilter & stripe
-        @Nonnull
-        @GuardedBy("this")
-        protected QDFilter filter;
-
-        @Nonnull
-        @GuardedBy("this")
-        protected QDFilter stripe;
-
         @Nonnull
         private final QDFilter initialFilter;
 
         // Filter provided via setFilter
+        @Nonnull
+        @GuardedBy("this")
         private QDFilter rawFilter;
+
+        @Nonnull
+        @GuardedBy("this")
+        private QDFilter stripe;
+
+        // Result filter === initialFilter & rawFilter & stripe
+        @Nonnull
+        @GuardedBy("this")
+        protected QDFilter filter;
 
         /**
          * Creates new factory. Accepts <code>null</code> parameters.
@@ -195,6 +197,8 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
             this.stream = stream;
             this.history = history;
             this.initialFilter = QDFilter.fromFilter(filter, getCommonScheme(ticker, stream, history));
+
+            this.rawFilter = QDFilter.ANYTHING;
             this.stripe = QDFilter.ANYTHING;
             this.filter = calculateResultFilter();
         }
@@ -206,6 +210,8 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
             this.stream = endpoint.getStream();
             this.history = endpoint.getHistory();
             this.initialFilter = QDFilter.fromFilter(filter, scheme);
+
+            this.rawFilter = QDFilter.ANYTHING;
             this.stripe = QDFilter.ANYTHING;
             this.filter = calculateResultFilter();
             setEndpoint(QDEndpoint.class, endpoint);
@@ -238,7 +244,7 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
         @Configurable(description = "default filter for all channels")
         public synchronized void setFilter(String filterString) throws FilterSyntaxException {
             rawFilter = (filterString == null || filterString.isEmpty()) ?
-                null : CompositeFilters.valueOf(filterString, scheme);
+                QDFilter.ANYTHING : CompositeFilters.valueOf(filterString, scheme);
             filter = calculateResultFilter();
         }
 
@@ -266,7 +272,8 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
 
         private QDFilter calculateResultFilter() {
             // Method makeAnd efficiently handles nulls and QDFilter.ANYTHING
-            return CompositeFilters.makeAnd(CompositeFilters.makeAnd(rawFilter, initialFilter), stripe);
+            return CompositeFilters.makeAnd(CompositeFilters.makeAnd(
+                initialFilter.getUpdatedFilter(), rawFilter.getUpdatedFilter()), stripe);
         }
 
         @Override

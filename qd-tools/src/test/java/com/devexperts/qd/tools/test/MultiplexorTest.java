@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,6 +17,8 @@ import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.RMIException;
 import com.devexperts.rmi.RMIOperation;
 import com.devexperts.rmi.RMIRequest;
+import com.devexperts.rmi.message.RMIRequestMessage;
+import com.devexperts.rmi.message.RMIRequestType;
 import com.devexperts.rmi.task.RMIService;
 import com.devexperts.rmi.task.RMIServiceDescriptor;
 import com.devexperts.rmi.task.RMITask;
@@ -37,6 +39,7 @@ import org.junit.runner.RunWith;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -81,6 +84,7 @@ public class MultiplexorTest {
     private volatile boolean closing = false;
     private volatile boolean fail = false;
     private DXEndpoint dxServerEndpoint;
+    private CalculatorImpl calculator;
 
     @Test
     public void testForwarding() throws InterruptedException {
@@ -91,7 +95,7 @@ public class MultiplexorTest {
                 muxUp.countDown();
                 toolOk = Tools.invoke("multiplexor",
                     ":" + randomPortDistributor, ":" + randomPortAgent,
-                    "-s", "10","-R", "-F",  SERVICE_NAME, ":" + randomPortForward);
+                    "-s", "10", "-R", "-F",  SERVICE_NAME, ":" + randomPortForward);
             }
         };
         toolThread.start();
@@ -109,15 +113,33 @@ public class MultiplexorTest {
             Thread.sleep(10);
             if (System.currentTimeMillis() - startTime > 10000) {
                 log.info("requestCount = " + requestCount + ", requestCompletedCount = " + requestCompletedCount);
-                for (RMIRequest<Integer> request : requestList)
+                for (RMIRequest<Integer> request : requestList) {
                     log.info("fail: requestState" + request.getState());
+                }
                 fail();
             }
         }
-        log.info(" --- Last two requests --- ");
+        log.info(" --- Calculator requests --- ");
         Calculator calc = client.getClient().getProxy(Calculator.class);
         assertEquals(server.getName() + ":" + 200, calc.mult(10, 20));
         assertEquals(server.getName() + ":" + 16, calc.plus(-1, 17));
+        log.info(" --- Custom properties --- ");
+        String serviceName = RMIService.getServiceName(Calculator.class);
+        Map<String, String> requestProps = Collections.singletonMap("k", "v");
+        RMIRequestMessage<String> message = new RMIRequestMessage<>(
+            RMIRequestType.DEFAULT,
+            RMIOperation.valueOf(serviceName, String.class, "plus", int.class, int.class),
+            1, 2
+        ).changeProperties(requestProps);
+        RMIRequest<String> request = client.getClient().createRequest(message);
+        request.send();
+        try {
+            String res = request.getBlocking();
+            assertEquals(server.getName() + ":" + 3, res);
+            assertEquals(requestProps, calculator.lastProps);
+        } catch (RMIException e) {
+            fail(e.getMessage());
+        }
         closing = true;
         assertFalse(fail);
     }
@@ -144,14 +166,14 @@ public class MultiplexorTest {
 
     @After
     public void tearDown() throws Exception {
-        toolThread.interrupt();
-        toolThread.join();
-        assertTrue(toolOk);
         client.close();
         server.close();
         remoteServer.close();
         dxClientEndpoint.close();
         dxServerEndpoint.close();
+        toolThread.interrupt();
+        toolThread.join();
+        assertTrue(toolOk);
         ThreadCleanCheck.after();
     }
 
@@ -228,14 +250,16 @@ public class MultiplexorTest {
     private void waitConnected(RMIEndpoint rmiEndpoint) {
         Thread currentThread = Thread.currentThread();
         rmiEndpoint.addEndpointListener(e -> LockSupport.unpark(currentThread));
-        while (!rmiEndpoint.isConnected())
+        while (!rmiEndpoint.isConnected()) {
             LockSupport.park();
+        }
     }
 
     private void initServer() {
         log.info(" --- init server --- ");
-        server.getServer().export(new CalculatorImpl(server.getName()), Calculator.class);
-        server.connect("localhost:"+randomPortDistributor);
+        calculator = new CalculatorImpl(server.getName());
+        server.getServer().export(calculator, Calculator.class);
+        server.connect("localhost:" + randomPortDistributor);
         waitConnected(server);
         dxServerEndpoint = server.getDXEndpoint();
         publisher = dxServerEndpoint.getPublisher();
@@ -306,12 +330,14 @@ public class MultiplexorTest {
 
     private interface Calculator {
         String plus(int a, int b);
+
         String mult(int a, int b);
     }
 
-    private static class CalculatorImpl implements Calculator {
+    static class CalculatorImpl implements Calculator {
 
         private final String endpointName;
+        volatile Map<String, String> lastProps;
 
         CalculatorImpl(String endpointName) {
             this.endpointName = endpointName;
@@ -319,7 +345,9 @@ public class MultiplexorTest {
 
         @Override
         public String plus(int a, int b) {
-            log.info("PLUS");
+            Map<String, String> props = RMITask.current().getRequestMessage().getProperties();
+            log.info("PLUS(" + a + ", " + b + "), props=" + props);
+            lastProps = props;
             return endpointName  + ":" + (a + b);
         }
 

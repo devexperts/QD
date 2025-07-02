@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,7 +12,14 @@
 package com.devexperts.qd.qtp.test;
 
 import com.devexperts.connector.proto.AbstractTransportConnection;
+import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDFilter;
+import com.devexperts.qd.QDTicker;
+import com.devexperts.qd.SymbolStriper;
+import com.devexperts.qd.qtp.AgentAdapter;
+import com.devexperts.qd.qtp.DistributorAdapter;
+import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.qtp.socket.ClientSocketConnector;
 import com.dxfeed.event.misc.Message;
@@ -20,6 +27,7 @@ import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -132,6 +140,50 @@ public class ClientSocketConnectorStripingTest extends AbstractConnectorTest<Mes
 
         // Should receive only one message
         assertNull(messages.poll(200, TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    public void testFactoryStriping() throws Exception {
+        DataScheme scheme = QDFactory.getDefaultScheme();
+        QDTicker ticker = QDFactory.getDefaultFactory().tickerBuilder()
+            .withScheme(scheme)
+            .build();
+
+        // AgentAdapter.Factory behaves the same way
+        DistributorAdapter.Factory factory = new DistributorAdapter.Factory(ticker, null, null, null);
+
+        // Create connector from factory without starting it
+        List<MessageConnector> connectors = MessageConnectors.createMessageConnectors(
+            MessageConnectors.applicationConnectionFactory(factory),
+            "localhost:19999[stripe=byhash4]");
+
+        ClientSocketConnector connector = (ClientSocketConnector) connectors.get(0);
+        assertEquals("byhash4", connector.getStripe());
+    }
+
+    @Test
+    public void testFactoryAutoStriping() throws Exception {
+        DataScheme scheme = QDFactory.getDefaultScheme();
+        QDTicker ticker = QDFactory.getDefaultFactory().tickerBuilder()
+            .withScheme(scheme)
+            .withStriper(SymbolStriper.valueOf(scheme, "byhash4"))
+            .build();
+
+        AgentAdapter.Factory factory = new AgentAdapter.Factory(ticker, null, null, null);
+
+        // Create connector from factory to fictional address
+        List<MessageConnector> connectors = MessageConnectors.createMessageConnectors(
+            MessageConnectors.applicationConnectionFactory(factory),
+            "localhost:19999[stripe=auto]");
+
+        // Ignore connection problems
+        ClientSocketConnector connector = (ClientSocketConnector) connectors.get(0);
+        connector.start();
+        QDFilter[] filters = getStripeFilters(connector);
+        connector.stop();
+
+        assertNotNull(filters);
+        assertEquals(4, filters.length);
     }
 
     private QDFilter[] getStripeFilters(ClientSocketConnector connector) throws Exception {

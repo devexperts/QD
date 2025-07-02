@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,12 +11,15 @@
  */
 package com.devexperts.rmi.message;
 
-
 import com.devexperts.io.Marshalled;
 import com.devexperts.io.Marshaller;
 import com.devexperts.rmi.RMIOperation;
 import com.devexperts.rmi.impl.RMIRequestImpl;
 import com.devexperts.rmi.task.RMIServiceId;
+
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * This immutable class encapsulates the basic fields of the request
@@ -30,6 +33,7 @@ public final class RMIRequestMessage<T> extends RMIMessage {
     private final RMIOperation<T> operation;
     private final Marshalled<Object[]> parameters;
     private final RMIServiceId target; // May be null, null means "any target"
+    private final Map<String, String> properties; // Not null, unmodifiable map
 
     // ==================== public methods ====================
 
@@ -47,7 +51,7 @@ public final class RMIRequestMessage<T> extends RMIMessage {
     }
 
     /**
-     * Creates a request message with the target.
+     * Creates a request message with route and target.
      * @param type type of request
      * @param operation operation (not null)
      * @param parameters marshalled parameters (not null)
@@ -62,6 +66,26 @@ public final class RMIRequestMessage<T> extends RMIMessage {
     public RMIRequestMessage(RMIRequestType type, RMIOperation<T> operation,
         Marshalled<Object[]> parameters, RMIRoute route, RMIServiceId target)
     {
+        this(type, operation, parameters, null, route, target);
+    }
+
+    /**
+     * Creates a request message with all details.
+     *
+     * @param type type of request (not null)
+     * @param operation operation (not null)
+     * @param parameters marshalled parameters (not null)
+     * @param properties custom properties for the request
+     * @param route route message
+     * @param target target of the request
+     * @throws NullPointerException when any of the required arguments (type, operation, parameters) is null.
+     * @throws IllegalArgumentException when parameter's {@link Marshalled#getMarshaller() marshaller} is
+     *     different from operation's {@link RMIOperation#getParametersMarshaller() parameters marshaller}
+     *     or subject's marshalled is not {@link Marshaller#SERIALIZATION}.
+     */
+    public RMIRequestMessage(RMIRequestType type, RMIOperation<T> operation,
+        Marshalled<Object[]> parameters, Map<String, String> properties, RMIRoute route, RMIServiceId target)
+    {
         super(route);
         if (operation == null)
             throw new NullPointerException("operation");
@@ -73,23 +97,27 @@ public final class RMIRequestMessage<T> extends RMIMessage {
         this.operation = operation;
         this.parameters = parameters;
         this.target = target;
+        this.properties = getUnmodifiableMap(properties);
     }
 
     /**
-     * Creates a request message with the target.
-     * @param requestType type of request
-     * @param operation operation (not null)
-     * @param subject marshalled subject (not null)
-     * @param parameters marshalled parameters (not null)
-     * @param route route message
-     * @param target target of the request
+     * Creates copy of {@link RMIRequestMessage} with provided custom properties.
      *
-     * @throws NullPointerException when any of arguments is null.
-     * @throws IllegalArgumentException when parameter's {@link Marshalled#getMarshaller() marshaller} is
-     *            different from operation's {@link RMIOperation#getParametersMarshaller() parameters marshaller}
-     *            or subject's marshalled is not {@link Marshaller#SERIALIZATION}.
+     * @param properties the custom properties for the request
+     * @return a new {@link RMIRequestMessage} with the specified properties
      */
+    public RMIRequestMessage<T> changeProperties(Map<String, String> properties) {
+        return new RMIRequestMessage<>(requestType, operation, parameters, properties, route, target);
+    }
 
+    /**
+     * Returns the custom properties of the request.
+     *
+     * @return an unmodifiable map of custom properties
+     */
+    public Map<String, String> getProperties() {
+        return properties;
+    }
 
     /**
      * Creates {@link RMIRequestMessage} with changes in the route and target.
@@ -98,7 +126,7 @@ public final class RMIRequestMessage<T> extends RMIMessage {
      * @return new {@link RMIRequestMessage} with changes in the route and target
      */
     public RMIRequestMessage<T> changeTargetRoute(RMIServiceId newTarget, RMIRoute route) {
-        return new RMIRequestMessage<>(requestType, operation, parameters, route, newTarget);
+        return new RMIRequestMessage<>(requestType, operation, parameters, properties, route, newTarget);
     }
 
     /**
@@ -160,12 +188,24 @@ public final class RMIRequestMessage<T> extends RMIMessage {
 
     @Override
     public String toString() {
-        // Note: It is use as a part of RMIExecutionTaskImpl.toString() method on processing failures
+        // Note: It is used as a part of RMIExecutionTaskImpl.toString() method on processing failures
         return "{" +
             "operation=" + operation +
             ", target=" + target +
             ", parameters=" + parameters +
+            ", properties=" + properties +
             ", route=" + route +
             '}';
+    }
+
+    // FIXME: RMIServiceDescriptor requires the same algorithm. Maybe should be placed in some utility class?
+    private static <K, V> Map<K, V> getUnmodifiableMap(Map<K, V> properties) {
+        if (properties == null || properties.isEmpty())
+            return Collections.emptyMap();
+        if (properties.size() == 1) {
+            Map.Entry<K, V> entry = properties.entrySet().iterator().next();
+            return Collections.singletonMap(entry.getKey(), entry.getValue());
+        }
+        return Collections.unmodifiableMap(new LinkedHashMap<>(properties));
     }
 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,6 +17,7 @@ public class SymbolList {
     protected final int[] ciphers;
     protected final String[] symbols;
     protected final int n;
+    private int sequence = 0;
 
     public SymbolList(String[] symbols, SymbolCodec codec) {
         this(symbols.length);
@@ -61,19 +62,36 @@ public class SymbolList {
         return n;
     }
 
-    public SymbolList generateRandomSublist(int expectedSize) {
-        Random rnd = new Random();
-        int[] a = new int[n];
-        int k = 0;
-        for (int i = 0; i < n; i++) {
-            if (rnd.nextInt(n) < expectedSize) {
-                a[k++] = i;
-            }
+    public SymbolList selectRandomSublist(int size) {
+        if (size >= n) {
+            return new SymbolList(this);
         }
-        SymbolList res = new SymbolList(k);
-        for (int i = 0; i < k; i++) {
-            res.ciphers[i] = ciphers[a[i]];
-            res.symbols[i] = symbols[a[i]];
+        Random rnd = new Random();
+        int[] indices = new int[n];
+        for (int i = 0; i < n; i++) {
+            indices[i] = i;
+        }
+        for (int i = n - 1; i >= n - size; i--) {
+            int randomIndex = rnd.nextInt(i + 1);
+            int temp = indices[randomIndex];
+            indices[randomIndex] = indices[i];
+            indices[i] = temp;
+        }
+        SymbolList res = new SymbolList(size);
+        for (int i = 0; i < size; i++) {
+            int idx = indices[n - size + i];
+            res.ciphers[i] = ciphers[idx];
+            res.symbols[i] = symbols[idx];
+        }
+        return res;
+    }
+
+    public synchronized SymbolList selectNextSequenceSublist(int size) {
+        SymbolList res = new SymbolList(size);
+        for (int i = 0; i < size; i++) {
+            sequence = (sequence + 1) % n;
+            res.ciphers[i] = ciphers[sequence];
+            res.symbols[i] = symbols[sequence];
         }
         return res;
     }

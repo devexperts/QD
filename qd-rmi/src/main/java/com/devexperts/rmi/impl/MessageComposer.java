@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -159,10 +159,11 @@ class MessageComposer {
         if (sendRetrievedMessage(visitor, message, queue))
             return MessageQueueState.VISITOR_FULL;
 
-        if (message.isEmpty())
+        if (message.isEmpty()) {
             messageSentCompletely(message);
-        else
+        } else {
             queue.addLast(message);
+        }
         return MessageQueueState.NOT_ALL_SENT;
     }
 
@@ -274,6 +275,7 @@ class MessageComposer {
             message.output().writeCompactInt(subjectId);
             message.output().writeCompactInt(operationId);
             message.output().writeMarshalled(requestMessage.getParameters());
+            message.output().writeProperties(requestMessage.getProperties());
             completeMessageImpl(queues.get(RMIQueueType.REQUEST), message);
         } catch (IOException e) {
             throw new AssertionError("Unexpected IOException"); // should never happen
@@ -314,11 +316,7 @@ class MessageComposer {
                 for (EndpointId endpointId : serviceDescriptor.getIntermediateNodes()) {
                     EndpointId.writeEndpointId(message.output(), endpointId, ctx);
                 }
-                message.output().writeCompactInt(serviceDescriptor.getProperties().size());
-                for (Map.Entry<String, String> propEntry : serviceDescriptor.getProperties().entrySet()) {
-                    message.output().writeUTFString(propEntry.getKey());
-                    message.output().writeUTFString(propEntry.getValue());
-                }
+                message.output().writeProperties(serviceDescriptor.getProperties());
             }
             completeMessageImpl(queues.get(RMIQueueType.ADVERTISE), message);
         } catch (IOException e) {
@@ -438,10 +436,11 @@ class MessageComposer {
         if (subjectId == null)
             return;
         Integer operationId = operations.getOrComposeOperation(request.getOperation());
-        if (supportsComboResponse)
+        if (supportsComboResponse) {
             composeComboRequest(request, subjectId, operationId);
-        else
+        } else {
             composeOldRequest(request, subjectId, operationId);
+        }
     }
 
     private void enqueueResponse() {

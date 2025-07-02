@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -50,6 +50,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -71,6 +74,15 @@ public class Instruments extends AbstractTool {
         "Business date for filtering of active options, format YYYY-MM-DD, applicable only to OCC.xml file.");
     private final Option osi = new Option('o', "osi",
         "Use OSI symbology, implicit after OSI conversion, applicable only to OCC.xml file.");
+    private final OptionMultiString generate = new OptionMultiString('g', "generate",
+        "[<total>][{<min>,<max>}|{<length>}]",
+        "Generates instruments with specified parameters. " +
+        "Parameters: " +
+        "<total> - number of symbols to generate (default: 100000); " +
+        "<min>,<max>|<length> - either a fixed length for all symbols (e.g., 4) or a range (e.g., 1,6). " +
+        "If length is omitted, symbols will have random length that follows a discrete triangular distribution " +
+        "with values from 1 to 6, with the highest probabilities (25% each) at values 3 and 4." +
+        "This option can be specified multiple times to use several generators with different parameters.");
     private final OptionMultiString read = new OptionMultiString('r', "read", "<source>",
         "Source of instruments - network address, IPF file, or OCC FIXML file. " +
         "Option can be specified several times to concatenate several sources.");
@@ -104,40 +116,46 @@ public class Instruments extends AbstractTool {
     @Override
     protected Option[] getOptions() {
         return new Option[] { bizdate, osi, read, products, transform, merge, exclude, check, sort, write, script,
-            performance, OptionLog.getInstance()
+            performance, generate, OptionLog.getInstance()
         };
     }
 
-    @SuppressWarnings("ConstantConditions")
     @Override
     protected void executeImpl(String[] args) {
         if (args.length != 0)
             wrongNumberOfArguments();
-        if (!read.isSet() && !transform.isSet() && !script.isSet())
+        if (!generate.isSet() && !read.isSet() && !transform.isSet() && !script.isSet())
             noArguments();
         if (write.isSet() && write.getValue().startsWith(":")) {
             executeServerImpl();
             return;
         }
         List<InstrumentProfile> profiles = new ArrayList<>();
-        for (String source : read.getValues())
+        for (String source : generate.getValues()) {
+            profiles = generate(profiles, source);
+        }
+        for (String source : read.getValues()) {
             profiles = read(profiles, source);
+        }
         if (products.isSet())
             profiles = products(profiles);
-        for (String source : transform.getValues())
+        for (String source : transform.getValues()) {
             profiles = transform(profiles, null, source, null);
+        }
         if (merge.isSet())
             profiles = merge(profiles);
-        for (String source : exclude.getValues())
+        for (String source : exclude.getValues()) {
             profiles = exclude(profiles, source);
+        }
         if (check.isSet())
             profiles = check(profiles);
         if (sort.isSet())
             profiles = sort(profiles);
         if (write.isSet())
             profiles = write(profiles, write.getValue());
-        for (String source : script.getValues())
+        for (String source : script.getValues()) {
             profiles = script(profiles, source);
+        }
     }
 
     private void executeServerImpl() {
@@ -191,6 +209,9 @@ public class Instruments extends AbstractTool {
                 String cmd = command.split(" ")[0];
                 String arg = command.substring(cmd.length()).trim();
                 switch (cmd) {
+                    case "generate":
+                        profiles = generate(profiles, arg);
+                        break;
                     case "read":
                         profiles = read(profiles, arg);
                         break;
@@ -235,6 +256,80 @@ public class Instruments extends AbstractTool {
             throw new IllegalArgumentException(e);
         }
         return profiles;
+    }
+
+    private List<InstrumentProfile> generate(List<InstrumentProfile> profiles, String params) {
+        GeneratorConfig config = new GeneratorConfig(params);
+        long time = System.currentTimeMillis();
+        List<String> symbols;
+        if (config.total == -1 && config.min == -1 && config.max == -1) {
+            symbols = SymbolGenerator.generateSymbols();
+        } else if (config.min == -1 && config.max == -1) {
+            symbols = SymbolGenerator.generateSymbols(config.total);
+        } else if (config.max == -1) {
+            symbols = SymbolGenerator.generateSymbols(config.total, config.min);
+        } else {
+            symbols = SymbolGenerator.generateSymbols(config.total, config.min, config.max);
+        }
+        List<InstrumentProfile> generated = symbols.stream().map(s -> {
+            InstrumentProfile profile = new InstrumentProfile();
+            profile.setSymbol(s);
+            profile.setType("GENERATED");
+            return profile;
+        }).collect(Collectors.toList());
+        log.info("Generated " + generated.size() + " profiles in " + secondsSince(time) + "s");
+        profiles.addAll(generated);
+        return profiles;
+    }
+
+    static class GeneratorConfig {
+        private static final Pattern PATTERN = Pattern.compile("^(\\d+)?(?:\\{(\\d+),(\\d+)\\}|\\{(\\d+)\\})?$");
+
+        final int total;
+        final int min;
+        final int max;
+
+        GeneratorConfig(String params) {
+            //[<total>][{<min>,<max>}|{<length>}]
+            int total = -1;
+            int min = -1;
+            int max = -1;
+            Matcher matcher = PATTERN.matcher(params);
+            if (matcher.matches()) {
+                String totalGroup = matcher.group(1);
+                String minGroup = matcher.group(2);
+                String maxGroup = matcher.group(3);
+                String lengthGroup = matcher.group(4);
+
+                if (totalGroup != null) {
+                    total = Integer.parseInt(totalGroup);
+                    if (total <= 0) {
+                        throw new IllegalArgumentException("Total number of symbols must be positive");
+                    }
+                }
+                if (lengthGroup != null) {
+                    min = Integer.parseInt(lengthGroup);
+                    if (min <= 0) {
+                        throw new IllegalArgumentException("Symbol length parameters must be positive");
+                    }
+                }
+                if (minGroup != null && maxGroup != null) {
+                    min = Integer.parseInt(minGroup);
+                    max = Integer.parseInt(maxGroup);
+                    if (min <= 0) {
+                        throw new IllegalArgumentException("Symbol length parameters must be positive");
+                    }
+                    if (min > max) {
+                        throw new IllegalArgumentException("Symbol length parameters must be positive and min <= max");
+                    }
+                }
+            } else if (!params.isEmpty()) {
+                throw new IllegalArgumentException("Invalid generator parameters: " + params);
+            }
+            this.total = total;
+            this.min = min;
+            this.max = max;
+        }
     }
 
     private List<InstrumentProfile> read(List<InstrumentProfile> profiles, String source) {

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -37,8 +37,8 @@ import com.dxfeed.promise.Promise;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -82,14 +82,21 @@ class MessageProcessor {
             RMIServiceId target = RMIServiceId.readRMIServiceId(data, ctx);
             int subjectId = data.readCompactInt();
             int operationId = data.readCompactInt();
-            Marshalled<Object[]> parametersRequest = null;
+            Marshalled<Object[]> parameters = null;
             RMIOperation<?> operation = operations.getOperation(operationId);
-            if (operation != null)
-                parametersRequest = data.readMarshalled(operation.getParametersMarshaller(), connection.endpoint.getSerialClassContext());
-
-            makeTask(channelId, requestId, subjectId, operationId, kind, parametersRequest, requestType, route, target);
+            Map<String, String> requestProperties = null;
+            if (operation != null) {
+                parameters = data.readMarshalled(operation.getParametersMarshaller(),
+                    connection.endpoint.getSerialClassContext());
+                // parse optional properties (operation == null is illegal anyway)
+                if (data.hasAvailable(1))
+                    requestProperties = data.readProperties(new LinkedHashMap<>());
+            }
+            makeTask(channelId, requestId, subjectId, operationId, kind, parameters, requestProperties,
+                requestType, route, target);
         } catch (IOException e) {
-            signalFailure(RMIExceptionType.FAILED_TO_READ_REQUEST, "Failed read request", kind, requestType, channelId, requestId);
+            signalFailure(RMIExceptionType.FAILED_TO_READ_REQUEST, "Failed read request",
+                kind, requestType, channelId, requestId);
         }
     }
 
@@ -127,7 +134,6 @@ class MessageProcessor {
     void processAdvertiseServicesMessage(BufferedInput data) throws IOException {
         RMIServiceId serviceId;
         int distance;
-        Map<String, String> props;
         JVMId.ReadContext ctx = new JVMId.ReadContext();
         RMIServiceDescriptor descriptor;
         List<RMIServiceDescriptor> descriptors = new ArrayList<>();
@@ -136,18 +142,18 @@ class MessageProcessor {
             distance = data.readCompactInt();
             int nIntermediateNodes = data.readCompactInt();
             Set<EndpointId> intermediateNodes = new HashSet<>(nIntermediateNodes + 1);
-            for (int j = 0; j < nIntermediateNodes; j++)
+            for (int j = 0; j < nIntermediateNodes; j++) {
                 intermediateNodes.add(EndpointId.readEndpointId(data, ctx));
+            }
             intermediateNodes.add(connection.endpoint.getEndpointId());
-            int nProps = data.readCompactInt();
-            props = new HashMap<>();
-            for (int j = 0; j < nProps; j++)
-                props.put(data.readUTFString(), data.readUTFString());
+            Map<String, String> properties = data.readProperties(new LinkedHashMap<>());
             if (connection.configuredServices.accept(serviceId.getName())) {
-                if (distance == RMIService.UNAVAILABLE_METRIC)
-                    descriptor = RMIServiceDescriptor.createUnavailableDescriptor(serviceId, props);
-                else
-                    descriptor = RMIServiceDescriptor.createDescriptor(serviceId, distance + connection.weight, intermediateNodes, props);
+                if (distance == RMIService.UNAVAILABLE_METRIC) {
+                    descriptor = RMIServiceDescriptor.createUnavailableDescriptor(serviceId, properties);
+                } else {
+                    descriptor = RMIServiceDescriptor.createDescriptor(
+                        serviceId, distance + connection.weight, intermediateNodes, properties);
+                }
                 descriptors.add(descriptor);
             }
         }
@@ -189,15 +195,17 @@ class MessageProcessor {
             int subjectId = data.readCompactInt();
             int operationId = data.readCompactInt();
 
-            Marshalled<Object[]> parametersRequest = null;
+            Marshalled<Object[]> parameters = null;
             RMIOperation<?> operation = operations.getOperation(operationId);
-            if (operation != null)
-                parametersRequest = data.readMarshalled(operation.getParametersMarshaller(), connection.endpoint.getSerialClassContext());
+            if (operation != null) {
+                parameters = data.readMarshalled(operation.getParametersMarshaller(),
+                    connection.endpoint.getSerialClassContext());
+            }
 
-            makeTask(channelId, requestId, subjectId, operationId, RMIMessageKind.REQUEST, parametersRequest,
-                requestType, route, target);
+            makeTask(channelId, requestId, subjectId, operationId, RMIMessageKind.REQUEST, parameters,
+                null, requestType, route, target);
         } catch (IOException e) {
-            signalFailure(RMIExceptionType.FAILED_TO_READ_REQUEST,"Failed to read a request", RMIMessageKind.REQUEST,
+            signalFailure(RMIExceptionType.FAILED_TO_READ_REQUEST, "Failed to read a request", RMIMessageKind.REQUEST,
                 requestType, channelId, requestId);
         }
     }
@@ -305,8 +313,8 @@ class MessageProcessor {
     @SuppressWarnings("unchecked")
     //if channelId = 0 => top-level request
     private void makeTask(long channelId, long curReqId, int subjectId, int operationId,
-        RMIMessageKind kind, Marshalled<Object[]> parametersRequest, RMIRequestType requestType, RMIRoute route,
-        RMIServiceId target)
+        RMIMessageKind kind, Marshalled<Object[]> parameters, Map<String, String> properties,
+        RMIRequestType requestType, RMIRoute route, RMIServiceId target)
     {
         Marshalled<?> marshalledSubject = subjects.getSubject(subjectId);
         if (marshalledSubject == null) {
@@ -334,11 +342,13 @@ class MessageProcessor {
             }
         }
 
-        if (processCancel(channelId, parametersRequest, operation, kind))
+        if (processCancel(channelId, parameters, operation, kind))
             return;
 
-        RMIRequestMessage<?> requestMessage = new RMIRequestMessage<>(requestType, operation, parametersRequest, route, target);
-        ServerRequestInfo requestInfo = new ServerRequestInfo(kind, curReqId, channelId, requestMessage, marshalledSubject);
+        RMIRequestMessage<?> requestMessage =
+            new RMIRequestMessage<>(requestType, operation, parameters, properties, route, target);
+        ServerRequestInfo requestInfo =
+            new ServerRequestInfo(kind, curReqId, channelId, requestMessage, marshalledSubject);
 
         if (target == null && !nestedTask) {
             Promise<BalanceResult> balanceResult = connection.endpoint.getServer().balance(requestMessage);
@@ -404,12 +414,12 @@ class MessageProcessor {
         }
     }
 
-    private boolean processCancel(long channelId, Marshalled<Object[]> parametersRequest, RMIOperation<?> operation,
+    private boolean processCancel(long channelId, Marshalled<Object[]> parameters, RMIOperation<?> operation,
         RMIMessageKind kind)
     {
         if (!RMIRequestImpl.isCancelOperation(operation))
             return false;
-        Object[] params = parametersRequest.getObject();
+        Object[] params = parameters.getObject();
         RMIChannelType channelType = kind.hasClient() ? RMIChannelType.CLIENT_CHANNEL : RMIChannelType.SERVER_CHANNEL;
         // params[0] is the request id. If it is 0, this is the channel-related cancel
         long requestId = (long) params[0];

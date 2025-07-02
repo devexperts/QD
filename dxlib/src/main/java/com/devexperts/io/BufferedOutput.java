@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -19,6 +19,8 @@ import java.io.ObjectOutput;
 import java.io.OutputStream;
 import java.io.UTFDataFormatException;
 import java.nio.ByteBuffer;
+import java.util.Map;
+import javax.annotation.Nonnull;
 
 /**
  * An efficient buffered implementation of data output API.
@@ -251,6 +253,23 @@ public abstract class BufferedOutput extends OutputStream implements ObjectOutpu
                 writeUTF2Unchecked(c);
             else
                 writeUTF3Unchecked(c);
+        }
+    }
+
+    /**
+     * Write provided properties in compact format.
+     *
+     * <p>Encoding: {@code mapSize:compactInt (key:UTFString, value:UTFString)* }
+     *
+     * @param properties properties to be written
+     * @throws IOException if an I/O error occurs
+     * @see BufferedInput#readProperties
+     */
+    public final void writeProperties(@Nonnull Map<String, String> properties) throws IOException {
+        writeCompactInt(properties.size());
+        for (Map.Entry<String, String> entry : properties.entrySet()) {
+            writeUTFString(entry.getKey());
+            writeUTFString(entry.getValue());
         }
     }
 

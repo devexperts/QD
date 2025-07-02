@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -30,7 +30,7 @@ public final class MessageDescriptor {
     private String name;
     private final ProtocolDescriptor parent;
 
-    final Map<String,String> properties = new LinkedHashMap<>();
+    final Map<String, String> properties = new LinkedHashMap<>();
 
     MessageDescriptor(ProtocolDescriptor parent) {
         this.parent = parent;
@@ -64,8 +64,8 @@ public final class MessageDescriptor {
         this.name = name;
     }
 
-    public Map<String,String> getProperties() {
-        Map<String,String> result = new LinkedHashMap<>(parent.getProperties());
+    public Map<String, String> getProperties() {
+        Map<String, String> result = new LinkedHashMap<>(parent.getProperties());
         result.putAll(properties);
         return Collections.unmodifiableMap(result);
     }
@@ -82,7 +82,7 @@ public final class MessageDescriptor {
     void composeTo(BufferedOutput out) throws IOException {
         out.writeCompactInt(id);
         out.writeUTFString(name);
-        ProtocolDescriptor.composePropertiesTo(out, properties);
+        out.writeProperties(properties);
     }
 
     void parseFrom(BufferedInput in) throws IOException {
@@ -93,7 +93,7 @@ public final class MessageDescriptor {
             if (messageType != null)
                 id = messageType.getId();
         }
-        ProtocolDescriptor.parsePropertiesFrom(in, properties);
+        in.readProperties(properties);
     }
 
     void convertToTextTokens(List<String> tokens, String prefix) {

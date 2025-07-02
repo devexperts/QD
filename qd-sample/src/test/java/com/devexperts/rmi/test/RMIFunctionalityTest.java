@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -37,9 +37,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.X509TrustManager;
-import javax.security.auth.Subject;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.security.AccessController;
@@ -47,9 +44,12 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Queue;
 import java.util.Random;
@@ -60,7 +60,11 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.X509TrustManager;
+import javax.security.auth.Subject;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -887,5 +891,40 @@ public class RMIFunctionalityTest {
         } catch (RMIException e) {
             fail();
         }
+    }
+
+    @Test
+    public void testRequestProperties() throws RMIException {
+        final AtomicReference<Map<String, String>> propertiesHolder = new AtomicReference<>();
+        DifferentServices.CalculatorService service = new DifferentServices.CalculatorService() {
+            @Override
+            public void processTask(RMITask<Double> task) {
+                propertiesHolder.set(task.getRequestMessage().getProperties());
+                super.processTask(task);
+            }
+        };
+        NTU.exportServices(server.getServer(), service, channelLogic);
+        connectDefault();
+
+        doTestRequestWithProperties(propertiesHolder, Collections.emptyMap());
+        doTestRequestWithProperties(propertiesHolder, Collections.singletonMap("k", "v"));
+        HashMap<String, String> props = new HashMap<>();
+        props.put("k", "v");
+        props.put("k2", "v2");
+        doTestRequestWithProperties(propertiesHolder, props);
+    }
+
+    private void doTestRequestWithProperties(
+        AtomicReference<Map<String, String>> propertiesHolder,
+        Map<String, String> requestProps) throws RMIException
+    {
+        RMIRequestMessage<Double> message =
+            new RMIRequestMessage<>(RMIRequestType.DEFAULT, DifferentServices.CalculatorService.PLUS, 1.0, 2.0)
+                .changeProperties(requestProps);
+        RMIRequest<Double> request = channelLogic.clientPort.createRequest(message);
+        request.send();
+        assertEquals((Double) 3.0, request.getBlocking());
+        Map<String, String> receivedProps = propertiesHolder.get();
+        assertEquals(requestProps, receivedProps);
     }
 }

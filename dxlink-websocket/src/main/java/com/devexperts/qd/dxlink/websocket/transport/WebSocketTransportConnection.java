@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -35,6 +35,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -49,10 +50,12 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
+import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketScheme;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
@@ -60,6 +63,7 @@ import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketCl
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.util.AttributeKey;
 import io.netty.util.CharsetUtil;
 
 import java.io.EOFException;
@@ -104,6 +108,7 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
         SystemProperties.getProperty("com.devexperts.qd.dxlink.websocket.connectTimeout", "5m")).getTime();
     public static final long HANDSHAKE_TIMEOUT = TimePeriod.valueOf(
         SystemProperties.getProperty("com.devexperts.qd.dxlink.websocket.handshakeTimeout", "10s")).getTime();
+    private static final String WS_EXTENSIONS = "ws_extensions";
 
     /**
      * The <code>CloseListener</code> interface allows tracking of handler death.
@@ -282,11 +287,32 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
                     ChannelPipeline pipeline = ch.pipeline();
                     if (adr.sslCtx != null)
                         pipeline.addLast(adr.sslCtx.newHandler(ch.alloc(), adr.host, adr.port));
+                    // Create HTTP headers for WebSocket handshake
+                    DefaultHttpHeaders headers = new DefaultHttpHeaders();
+                    headers.set(HttpHeaderNames.USER_AGENT, QDFactory.getVersion().replace('-', '/').replace('+', ' '));
+
+                    // Create WebSocket handshaker
+                    WebSocketClientHandshaker handshaker = WebSocketClientHandshakerFactory.newHandshaker(
+                            adr.uri, WebSocketVersion.V13, null, true, headers, MAX_FRAME_PAYLOAD_LENGTH);
+
                     pipeline.addLast(
                         new HttpClientCodec(),
                         new HttpObjectAggregator(MAX_TEXT_MESSAGE_BUFFER_SIZE),
                         WebSocketClientCompressionHandler.INSTANCE,
-                        new WebSocketChannelInboundHandler(handshakeFuture, session, adr.uri)
+                        new ChannelInboundHandlerAdapter() {
+                            @Override
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                if (msg instanceof FullHttpResponse) {
+                                    HttpResponse response = (FullHttpResponse) msg;
+                                    String extensions =
+                                        response.headers().get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
+                                    ctx.channel().attr(AttributeKey.valueOf(WS_EXTENSIONS)).set(extensions);
+                                }
+                                super.channelRead(ctx, msg);
+                            }
+                        },
+                        new WebSocketClientProtocolHandler(handshaker, false),
+                        new WebSocketChannelInboundHandler(handshakeFuture, session)
                     );
                 }
             };
@@ -469,29 +495,17 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
     }
 
     private class WebSocketChannelInboundHandler extends SimpleChannelInboundHandler<Object> {
-        final WebSocketClientHandshaker handshaker;
         private final ChannelPromise[] handshakeFuture;
         private final Session session;
 
-        private WebSocketChannelInboundHandler(ChannelPromise[] handshakeFuture, Session session, URI webSocketURL) {
+        private WebSocketChannelInboundHandler(ChannelPromise[] handshakeFuture, Session session) {
             this.handshakeFuture = handshakeFuture;
             this.session = session;
-            DefaultHttpHeaders headers = new DefaultHttpHeaders();
-            // TODO Map<String, String> agent = ((DxLinkWebSocketApplicationConnectionFactory)
-            //  connector.getFactory()).getAgentInfo();
-            headers.set(HttpHeaderNames.USER_AGENT, QDFactory.getVersion().replace('-', '/').replace('+', ' '));
-            handshaker = WebSocketClientHandshakerFactory.newHandshaker(webSocketURL, WebSocketVersion.V13, null,
-                true, headers, MAX_FRAME_PAYLOAD_LENGTH);
         }
 
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) {
             handshakeFuture[0] = ctx.newPromise();
-        }
-
-        @Override
-        public void channelActive(ChannelHandlerContext ctx) {
-            handshaker.handshake(ctx.channel());
         }
 
         @Override
@@ -501,18 +515,16 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
         }
 
         @Override
-        public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
-            Channel ch = ctx.channel();
-            if (!handshaker.isHandshakeComplete()) {
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            if (evt == WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
                 try {
                     // WebSocket Client connected
-                    FullHttpResponse response = (FullHttpResponse) msg;
-                    String secWebSocketExtensions = response.headers().get(HttpHeaderNames.SEC_WEBSOCKET_EXTENSIONS);
-                    handshaker.finishHandshake(ch, response);
+                    Channel ch = ctx.channel();
                     session.stats = createStats();
                     variables().set(MessageConnectors.STATS_KEY, session.stats);
                     session.application = createApplicationConnection(session.stats);
                     handshakeFuture[0].setSuccess();
+                    String secWebSocketExtensions = ctx.channel().attr(AttributeKey.<String>valueOf(WS_EXTENSIONS)).get();
                     log.info("Connected to " + LogUtil.hideCredentials(address) +
                         ", host=" + ch.remoteAddress().toString() + ", sec extensions=" + secWebSocketExtensions);
                 } catch (Throwable e) {
@@ -520,9 +532,12 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
                     handshakeFuture[0].setFailure(e);
                     throw new IOException(e);
                 }
-                return;
             }
+            super.userEventTriggered(ctx, evt);
+        }
 
+        @Override
+        public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof FullHttpResponse) {
                 FullHttpResponse response = (FullHttpResponse) msg;
                 throw new IllegalStateException(
@@ -539,7 +554,7 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
                 session.application.processMessage(textFrame.text());
             } else if (frame instanceof CloseWebSocketFrame) {
                 // WebSocket Client received closing
-                ch.close();
+                ctx.channel().close();
                 WebSocketTransportConnection.this.exitSocket(new EOFException());
             }
         }

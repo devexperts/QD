@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -33,7 +33,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
@@ -457,5 +460,29 @@ public class IOTest {
         assertEquals(a1.length, a2.length);
         for (int i = 0; i < a1.length; i++)
             assertEquals(a1[i], a2[i]);
+    }
+
+    @Test
+    public void testPropertiesIO() throws IOException {
+        ByteArrayOutput out = new ByteArrayOutput();
+        LinkedHashMap<String, String> source = new LinkedHashMap<>();
+        source.put("k1", "v1");
+        source.put("k2", "v2");
+        out.writeProperties(source);
+        out.writeCompactInt(42); // check-mark after
+        BufferedInput in = new ByteArrayInput(out.toByteArray());
+        LinkedHashMap<String, String> props = new LinkedHashMap<>();
+        props.put("xxx", "yyy"); // existing property shall be preserved
+        in.readProperties(props);
+        assertEquals(source.size() + 1, props.size());
+        // check returned map order wisely
+        Iterator<Map.Entry<String, String>> it = props.entrySet().iterator();
+        // ... first entry
+        Map.Entry<String, String> entry = it.next();
+        assertEquals("xxx", entry.getKey());
+        assertEquals("yyy", entry.getValue());
+        // ... other entries
+        source.entrySet().forEach(e -> assertEquals(e, it.next()));
+        assertEquals(42, in.readCompactInt()); // verify check-mark
     }
 }

@@ -1,3 +1,33 @@
+QDS 3.343:
+
+* [QD-1621] Improvements to QD Tools
+  - Instruments Tool. Added a new generate option (-g, --generate) which allows generating instruments with specified
+    parameters:
+    - <total>                     - number of symbols to generate (default: 100000)
+    - {<min>,<max>} or {<length>} - range of symbol lengths or fixed length, if length parameters are omitted,
+      symbol lengths will follow a discrete triangular distribution from 1 to 6 characters with highest
+      probabilities (25% each) at lengths 3 and 4
+    - This option can be specified multiple times to use several generators with different parameters
+  - NetTest Tool
+    - Enhanced functionality of the symbols option (-S, --symbols):
+      - Added two new methods for selecting symbols from the symbol pool for specific connections:
+        - random or r - selects symbols randomly from the pool (default behavior)
+        - slice or s  - selects symbols sequentially from the pool with cyclic repetition if needed
+      - Added the ability to specify a range of symbol lengths {<min>,<max>} or a fixed length {length}
+      - Added support for selecting symbols from an IPF file via @<path-to-ipf-file> parameter
+    - Extended option syntax for more flexible configuration:
+           <total>[/[random|r|slice|s]<per-entity>][{<min>,<max>}|{<length>}|@<path-to-ipf-file>]
+* [QD-1634] Endpoint property "dxscheme.nanoTime" doesn't work with the external scheme
+* [QD-1666] dxLink: allow ping/pong frames
+  - Added support for sending Pong frame in response to Ping frame.
+* [QD-1667] Usage of connection striping causes java.lang.IllegalArgumentException
+* [QD-1668] [RMI] Support custom properties in RMIRequestMessage
+* [QD-1671] [RMI] Verify ConsistentLoadBalancer stability
+* [QD-1681] [QDStats] Report only blocking pauses for GC
+  - MARS nodes "jvm.GC.time", "jvm.GC.ratio", and "jvm.GC.average_5min" now
+    report only times and ratios for paused garbage collections (GC).
+* [QD-1687] IPF filter re-read for striped uplink leads to infinite reconnect cycle
+
 QDS 3.342:
 
 * [QD-1660] [Nuam] Extend NuamTimeAndSale record

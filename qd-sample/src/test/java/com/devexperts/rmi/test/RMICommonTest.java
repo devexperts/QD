@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -78,6 +78,7 @@ public class RMICommonTest {
 
     @After
     public void tearDown() {
+        log.warn("======== tearDown ========");
         finish = true;
         if (client != null)
             client.close();
@@ -92,13 +93,13 @@ public class RMICommonTest {
 
     protected RMIEndpoint server() {
         if (server == null)
-            server = RMIEndpoint.createEndpoint();
+            server = RMIEndpoint.newBuilder().withName("server").build();
         return server;
     }
 
     protected RMIEndpoint client() {
         if (client == null) {
-            client = RMIEndpoint.createEndpoint();
+            client = RMIEndpoint.newBuilder().withName("client").build();
             client.getClient().setRequestRunningTimeout(20000); // to make sure tests don't run forever
         }
         return client;

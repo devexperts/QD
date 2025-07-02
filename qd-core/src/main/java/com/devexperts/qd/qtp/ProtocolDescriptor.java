@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -215,7 +215,7 @@ public final class ProtocolDescriptor {
      */
     public void composeTo(BufferedOutput out) throws IOException {
         out.write(MAGIC_BYTES);
-        composePropertiesTo(out, properties);
+        out.writeProperties(properties);
         composeMessageListTo(out, send);
         composeMessageListTo(out, receive);
         if (endpointId != null)
@@ -228,10 +228,11 @@ public final class ProtocolDescriptor {
      * @throws IOException when descriptor cannot be read due to wrong magic or other reasons.
      */
     public void parseFrom(BufferedInput in) throws IOException {
-        for (byte b : MAGIC_BYTES)
+        for (byte b : MAGIC_BYTES) {
             if (in.read() != b)
                 throw new IOException("Invalid protocol descriptor magic. Wrong protocol.");
-        parsePropertiesFrom(in, properties);
+        }
+        in.readProperties(properties);
         parseMessageListFrom(in, send);
         parseMessageListFrom(in, receive);
         if (in.hasAvailable())
@@ -259,25 +260,6 @@ public final class ProtocolDescriptor {
         i = appendMessageListFromTextTokens(tokens, "+", send, i);
         i = appendMessageListFromTextTokens(tokens, "-", receive, i);
         return i;
-    }
-
-    static void composePropertiesTo(BufferedOutput out, Map<String,String> properties) throws IOException {
-        out.writeCompactInt(properties.size());
-        for (Map.Entry<String,String> entry: properties.entrySet()) {
-            out.writeUTFString(entry.getKey());
-            out.writeUTFString(entry.getValue());
-        }
-    }
-
-    static void parsePropertiesFrom(BufferedInput in, Map<String,String> properties) throws IOException {
-        int size = in.readCompactInt();
-        if (size < 0)
-            throw new IOException("Invalid size: " + size);
-        for (int i = 0; i < size; i++) {
-            String key = in.readUTFString();
-            String value = in.readUTFString();
-            properties.put(key, value);
-        }
     }
 
     private void composeMessageListTo(BufferedOutput out, Collection<MessageDescriptor> messages) throws IOException {
