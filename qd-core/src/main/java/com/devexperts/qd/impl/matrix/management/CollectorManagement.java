@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -34,6 +34,10 @@ public class CollectorManagement {
     public static final int DEFAULT_MAX_DISTRIBUTION_SPINS = 8;
     public static final String DEFAULT_BUFFER_OVERFLOW_LOG_INTERVAL = "10s";
     public static final String DEFAULT_LOCK_WAIT_LOG_INTERVAL = "10s";
+    public static final String DEFAULT_STICKY_SUBSCRIPTION_LOG_INTERVAL =
+        SystemProperties.getProperty("com.devexperts.qd.impl.StickySubscriptionLogInterval", "30s");
+    public static final int DEFAULT_STICKY_SCHEDULE_MIN_DELAY =
+        SystemProperties.getIntProperty("com.devexperts.qd.impl.StickyScheduleMinDelay", 10);
     public static final String DEFAULT_USE_LOCK_PRIORITY = ".*Data";
 
     // Note: It has different default in sever-side implementation with monitoring.
@@ -60,9 +64,12 @@ public class CollectorManagement {
     protected int maxDistributionSpins = DEFAULT_MAX_DISTRIBUTION_SPINS; // max number of tryLock spins in retrieveData
     protected TimePeriod bufferOverflowLogInterval = TimePeriod.valueOf(DEFAULT_BUFFER_OVERFLOW_LOG_INTERVAL); // interval between logs about dropped records
     protected TimePeriod lockWaitLogInterval = TimePeriod.valueOf(DEFAULT_LOCK_WAIT_LOG_INTERVAL); // interval to wait before logging that wait takes too long
+    protected TimePeriod stickyLogInterval = TimePeriod.valueOf(DEFAULT_STICKY_SUBSCRIPTION_LOG_INTERVAL); // interval of a sticky log message
 
     protected OperationSet useLockPriority = new OperationSet(DEFAULT_USE_LOCK_PRIORITY);
     protected OperationSet useLockCounters = new OperationSet(DEFAULT_USE_LOCK_COUNTERS); // don't do lock counters by default
+
+    protected long stickyScheduleMinDelay = DEFAULT_STICKY_SCHEDULE_MIN_DELAY;
 
     // --- instance constructor & methods ---
 
@@ -105,6 +112,14 @@ public class CollectorManagement {
 
     public long getLockWaitLogIntervalNanos() {
         return TimeUnit.MILLISECONDS.toNanos(lockWaitLogInterval.getTime());
+    }
+
+    public long getStickyLogIntervalNanos() {
+        return TimeUnit.MILLISECONDS.toNanos(stickyLogInterval.getTime());
+    }
+
+    public long getStickyScheduleMinDelay() {
+        return stickyScheduleMinDelay;
     }
 
     public boolean useLockPriority(CollectorOperation op) {

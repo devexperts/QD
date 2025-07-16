@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -49,6 +49,7 @@ public class Connect extends AbstractTool {
     private final OptionLog logfile = OptionLog.getInstance();
     private final OptionCollector collector = new OptionCollector("ticker");
     private final OptionStripe stripe = new OptionStripe();
+    private final OptionSticky sticky = new OptionSticky();
     private final OptionString tape = new OptionString('t', "tape", "<file>[<opts>]",
         "Tape incoming data into the specified file. See @link{tape} for more details."
     );
@@ -68,7 +69,7 @@ public class Connect extends AbstractTool {
     @Override
     protected Option[] getOptions() {
         return new Option[] {
-            logfile, collector, stripe, tape, fields, quiet, stamp, topSymbols, name, stat, html, rmi
+            logfile, collector, stripe, sticky, tape, fields, quiet, stamp, topSymbols, name, stat, html, rmi
         };
     }
 

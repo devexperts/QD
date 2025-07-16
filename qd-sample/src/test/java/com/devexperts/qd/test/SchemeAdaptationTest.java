@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -374,7 +374,7 @@ public class SchemeAdaptationTest {
 
             String rep = monitoring.report();
             assertTrue(rep, rep.matches(
-                "Subscription: 8; Storage: 0; Buffer: 0; Dropped: 0; Read: ([^;]+); Write: ([^;]+); (.*); CPU: \\d+\\.\\d\\d%\n" +
+                "Subscription: 8; Sticky: 0; Storage: 0; Buffer: 0; Dropped: 0; Read: ([^;]+); Write: ([^;]+); (.*); CPU: \\d+\\.\\d\\d%\n" +
                 "    ClientSocket-Distributor localhost:\\d+ \\[1\\] Read: \\1; Write: \\2; \\3"));
         }
 

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -35,9 +35,11 @@ import com.devexperts.services.Service;
 import com.devexperts.services.Services;
 import com.devexperts.util.InvalidFormatException;
 import com.devexperts.util.TimeFormat;
+import com.devexperts.util.TimePeriod;
 
 import java.io.Closeable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -75,6 +77,11 @@ public class QDEndpoint implements Closeable {
      * @see SymbolStriper
      */
     public static final String DXFEED_STRIPE_PROPERTY = "dxfeed.stripe";
+
+    /**
+     * Defines a sticky subscription period in format of {@link TimePeriod}
+     */
+    public static final String DXFEED_STICKY_SUBSCRIPTION_PROPERTY = "dxfeed.stickySubscriptionPeriod";
 
     /**
      * Creates new {@link Builder} instance.
@@ -119,6 +126,7 @@ public class QDEndpoint implements Closeable {
     private final boolean withEventTimeSequence;
     private final boolean storeEverything;
     private final SymbolStriper striper;
+    private final TimePeriod stickySubscriptionPeriod;
 
     private volatile boolean closed;
 
@@ -150,6 +158,7 @@ public class QDEndpoint implements Closeable {
         this.withEventTimeSequence = builder.withEventTimeSequence;
         this.storeEverything = builder.storeEverything;
         this.striper = builder.getStriperOrDefault();
+        this.stickySubscriptionPeriod = builder.getStickySubscriptionPeriod();
 
         checkSchemes(scheme, rootStats.getScheme(), "rootStats");
         checkSchemes(scheme, striper.getScheme(), "striper");
@@ -178,6 +187,7 @@ public class QDEndpoint implements Closeable {
                 .withStats(rootStats.create(factory.getStatsType()))
                 .withEventTimeSequence(withEventTimeSequence)
                 .withStoreEverything(storeEverything)
+                .withStickySubscriptionPeriod(stickySubscriptionPeriod)
                 .withStriper(striper);
             QDCollector collector = factory.createCollector(defaultFactory, builder);
             if (this.collectors.containsKey(collector.getContract())) {
@@ -610,6 +620,8 @@ public class QDEndpoint implements Closeable {
     @Service
     public static class Builder implements Cloneable {
         private static final AtomicInteger INSTANCES_NUMERATOR = new AtomicInteger();
+        private static final List<String> SUPPORTED_PROPERTIES =
+            Arrays.asList(NAME_PROPERTY, DXFEED_STRIPE_PROPERTY, DXFEED_STICKY_SUBSCRIPTION_PROPERTY);
 
         protected DataScheme scheme;
         protected List<QDCollector.Factory> collectors = new ArrayList<>(3);
@@ -695,8 +707,14 @@ public class QDEndpoint implements Closeable {
 
         public final Builder withStriper(SymbolStriper striper) {
             // Remove previous stripe property, if any
-            this.props.remove(QDEndpoint.DXFEED_STRIPE_PROPERTY);
             this.striper = Objects.requireNonNull(striper, "striper");
+            this.props.remove(QDEndpoint.DXFEED_STRIPE_PROPERTY);
+            return this;
+        }
+
+        public final Builder withStickySubscriptionPeriod(TimePeriod stickySubscriptionPeriod) {
+            Objects.requireNonNull(stickySubscriptionPeriod, "stickySubscriptionPeriod");
+            props.setProperty(QDEndpoint.DXFEED_STICKY_SUBSCRIPTION_PROPERTY, stickySubscriptionPeriod.toString());
             return this;
         }
 
@@ -740,7 +758,7 @@ public class QDEndpoint implements Closeable {
          * @see #withProperty(String, String)
          */
         public boolean supportsProperty(String key) {
-            return NAME_PROPERTY.equals(key) || DXFEED_STRIPE_PROPERTY.equals(key) ||
+            return SUPPORTED_PROPERTIES.contains(key) ||
                 (subscribeSupportPrefix != null && key.startsWith(subscribeSupportPrefix));
         }
 
@@ -763,6 +781,10 @@ public class QDEndpoint implements Closeable {
                 return SymbolStriper.definedValueOf(getSchemeOrDefault(), stripe);
             }
             return striper == null ? MonoStriper.INSTANCE : striper;
+        }
+
+        protected final TimePeriod getStickySubscriptionPeriod() {
+            return TimePeriod.valueOf(props.getProperty(DXFEED_STICKY_SUBSCRIPTION_PROPERTY), null);
         }
 
         public QDEndpoint build() {

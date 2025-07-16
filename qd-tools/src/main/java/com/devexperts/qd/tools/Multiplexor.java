@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -42,9 +42,11 @@ public class Multiplexor extends AbstractTool {
     private final OptionLog logfile = OptionLog.getInstance();
     private final OptionCollector collector = new OptionCollector("all");
     private final OptionStripe stripe = new OptionStripe();
+    private final OptionSticky sticky = new OptionSticky();
     private final OptionFile file = new OptionFile();
     private final OptionWrite write = new OptionWrite(file);
-    private final OptionTimePeriod delay = new OptionTimePeriod('d', "delay", "<n>", "Delay data by specified period (in seconds by default).");
+    private final OptionTimePeriod delay =
+        new OptionTimePeriod('d', "delay", "<n>", "Delay data by specified period (in seconds by default).");
     private final OptionDouble drop = new OptionDouble('P', "drop", "<n>", "Drop <n> % of data.", 1, 100);
     private final OptionName name = new OptionName("multiplexor");
     private final OptionForward forward = new OptionForward();
@@ -61,7 +63,7 @@ public class Multiplexor extends AbstractTool {
     @Override
     protected Option[] getOptions() {
         return new Option[] {
-            logfile, collector, stripe, file, write, delay, drop, name, forward, route, stat, html, rmi
+            logfile, collector, stripe, sticky, file, write, delay, drop, name, forward, route, stat, html, rmi
         };
     }
 

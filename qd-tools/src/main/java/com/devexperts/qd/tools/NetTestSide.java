@@ -90,8 +90,8 @@ abstract class NetTestSide {
     public void start() {
         log.info("Using record " + RECORD_NAME);
         QDEndpoint firstEndpoint = null;
-        for (int i = 1; i <= config.connectionsNum; i++) {
-            QDEndpoint endpoint = config.optionCollector.createEndpoint("nettest." + i);
+        for (int i = 1; i <= config.instanceCount; i++) {
+            QDEndpoint endpoint = config.optionCollector.createEndpoint(config.name + "." + i);
             createDistributor(endpoint, i);
             createAgent(endpoint, i);
             if (firstEndpoint == null)

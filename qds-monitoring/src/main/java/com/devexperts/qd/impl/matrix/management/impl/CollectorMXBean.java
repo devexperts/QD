@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -161,4 +161,38 @@ public interface CollectorMXBean {
      * @param format     html (default), csv, or text
      */
     public String reportSubscription(String recordName, String symbol, String format);
+
+    /**
+     * Sticky subscription period
+     */
+    public String getStickySubscriptionPeriod();
+
+    /**
+     * Set sticky subscription period
+     * @param regexp apply a sticky period if the regexp matches the name of the collector
+     * @param period in {@link com.devexperts.util.TimePeriod } format
+     */
+    public String applyStickySubscriptionPeriod(String regexp, String period);
+
+    /**
+     * Get a log interval for sticky subscription processing
+     */
+    public String getStickySubscriptionLogInterval();
+
+    /**
+     * Set a log interval for sticky subscription processing
+     * @param interval in {@link com.devexperts.util.TimePeriod } format
+     */
+    public void setStickySubscriptionLogInterval(String interval);
+
+    /**
+     * Get the minimum delay between scheduler calls to clear subscriptions
+     */
+    public long getStickyScheduleMinDelay();
+
+    /**
+     * Set the minimum delay between scheduler calls to clear subscriptions
+     * @param delay im milliseconds
+     */
+    public void setStickyScheduleMinDelay(long delay);
 }

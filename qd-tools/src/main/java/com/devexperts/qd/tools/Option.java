@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,6 +12,9 @@
 package com.devexperts.qd.tools;
 
 public class Option {
+
+    protected static final char EMPTY_SHORT_NAME = '\0';
+
     private final char shortName;
     private final String fullName;
     private final String description;
@@ -19,7 +22,7 @@ public class Option {
     private String deprecated;
 
     public Option(char shortName, String fullName, String description) {
-        if (shortName == '\0' && fullName == null)
+        if (shortName == EMPTY_SHORT_NAME && fullName == null)
             throw new IllegalArgumentException("Either short or full name must be specified!");
         this.shortName = shortName;
         if (shortName == 'D')
@@ -33,7 +36,7 @@ public class Option {
     }
 
     public boolean hasShortName(char name) {
-        return shortName != '\0' && shortName == name;
+        return shortName != EMPTY_SHORT_NAME && shortName == name;
     }
 
     public String getFullName() {
@@ -68,7 +71,7 @@ public class Option {
     }
 
     public String toString() {
-        boolean hasShort = shortName != '\0';
+        boolean hasShort = shortName != EMPTY_SHORT_NAME;
         boolean hasFull = fullName != null;
         return (hasShort ? "-" + shortName : "  ") + "|" + (hasFull ? "--" + fullName : "");
     }

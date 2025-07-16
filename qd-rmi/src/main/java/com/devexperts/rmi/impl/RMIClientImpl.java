@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -37,8 +37,6 @@ import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.GuardedBy;
-
-import static com.devexperts.rmi.task.RMIServiceDescriptor.createUnavailableDescriptor;
 
 public class RMIClientImpl extends RMIClient {
     private static final Logging log = Logging.getLogging(RMIClientImpl.class);
@@ -226,8 +224,9 @@ public class RMIClientImpl extends RMIClient {
             }
             // now clear descriptors of this connection
             List<RMIServiceDescriptor> result = new ArrayList<>();
-            for (RMIServiceDescriptor descriptor : connection.clientDescriptorsManager.clearDescriptors())
-                result.add(createUnavailableDescriptor(descriptor.getServiceId(), descriptor.getProperties()));
+            for (RMIServiceDescriptor descriptor : connection.clientDescriptorsManager.clearDescriptors()) {
+                result.add(descriptor.toUnavailableDescriptor());
+            }
             // will also rebalance all pending requests
             updateServiceDescriptors(result, connection);
         }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -26,8 +26,13 @@ import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.qtp.BuiltinFields;
 import com.devexperts.qd.qtp.MessageType;
+import com.devexperts.qd.stats.QDStats;
+import com.devexperts.util.TimePeriod;
 
 import java.util.List;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public abstract class CollectorManagementImplBase extends CollectorManagement implements CollectorMXBean {
     private static final int REPORT_ROWS_LIMIT = 10_000; // to avoid accidental OOM
@@ -357,5 +362,36 @@ public abstract class CollectorManagementImplBase extends CollectorManagement im
     public void resetCounters() {
         for (Collector collector : getCollectors())
             collector.snapshotCounters();
+    }
+
+    @Override
+    public String applyStickySubscriptionPeriod(String regexp, String period) {
+        long stickySubscriptionPeriod = TimePeriod.valueOf(period, TimePeriod.ZERO).getTime();
+        Stream<Collector> stream = getCollectors().stream();
+        if (regexp != null && !regexp.isEmpty()) {
+            Pattern pattern = Pattern.compile(regexp);
+            stream = stream.filter(collector -> pattern.matcher(prepareCollectorName(collector)).find());
+        }
+        String appliedCollectors = stream.map(collector -> {
+            collector.setStickySubscriptionPeriod(stickySubscriptionPeriod);
+            return prepareCollectorName(collector);
+        }).collect(Collectors.joining("; "));
+
+        return "Apply sticky subscription period: " + period + " to collectors: " + appliedCollectors;
+    }
+
+    @Override
+    public String getStickySubscriptionPeriod() {
+        return getCollectors().stream()
+            .map(Collector::getStickySubscriptionPeriod)
+            .distinct()
+            .map(TimePeriod::valueOf)
+            .map(TimePeriod::toString)
+            .collect(Collectors.joining(", "));
+    }
+
+    private String prepareCollectorName(Collector collector) {
+        QDStats qdStats = collector.getStats();
+        return qdStats.getFullKeyProperties() + ",c=" + qdStats.getType();
     }
 }

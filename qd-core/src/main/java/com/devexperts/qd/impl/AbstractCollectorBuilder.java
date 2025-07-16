@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,8 +20,16 @@ import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.SymbolStriper;
 import com.devexperts.qd.kit.MonoStriper;
 import com.devexperts.qd.stats.QDStats;
+import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimePeriod;
 
 public abstract class AbstractCollectorBuilder<T extends QDCollector> implements QDCollector.Builder<T> {
+
+    /**
+     * Defines a default sticky subscription period from system properties
+     */
+    private static final TimePeriod DEFAULT_STICKY_SUBSCRIPTION_PERIOD = TimePeriod.valueOf(
+        SystemProperties.getProperty("com.devexperts.qd.impl.StickySubscriptionPeriod", null), TimePeriod.ZERO);
 
     private final QDContract contract;
     private DataScheme scheme;
@@ -31,6 +39,7 @@ public abstract class AbstractCollectorBuilder<T extends QDCollector> implements
     private boolean storeEverything;
     private SubscriptionFilter storeEverythingFilter;
     private SymbolStriper striper;
+    private TimePeriod stickySubscriptionPeriod;
 
     protected AbstractCollectorBuilder(QDContract contract) {
         this.contract = contract;
@@ -47,6 +56,7 @@ public abstract class AbstractCollectorBuilder<T extends QDCollector> implements
         withEventTimeSequence = other.hasEventTimeSequence();
         storeEverything = other.isStoreEverything();
         storeEverythingFilter = other.getStoreEverythingFilter();
+        stickySubscriptionPeriod = other.getStickySubscriptionPeriod();
         striper = other.getStriper();
         return this;
     }
@@ -137,5 +147,16 @@ public abstract class AbstractCollectorBuilder<T extends QDCollector> implements
         if (striper == null)
             striper = MonoStriper.INSTANCE;
         return striper;
+    }
+
+    @Override
+    public QDCollector.Builder<T> withStickySubscriptionPeriod(TimePeriod stickySubscriptionPeriod) {
+        this.stickySubscriptionPeriod = stickySubscriptionPeriod;
+        return this;
+    }
+
+    @Override
+    public TimePeriod getStickySubscriptionPeriod() {
+        return stickySubscriptionPeriod == null ? DEFAULT_STICKY_SUBSCRIPTION_PERIOD : stickySubscriptionPeriod;
     }
 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -63,6 +63,19 @@ public class TimePeriod implements Serializable {
      */
     public static TimePeriod valueOf(String value) throws InvalidFormatException {
         return valueOf(parse(value));
+    }
+
+    /**
+     * Returns <code>TimePeriod</code> represented with a given string.
+     * If string is null or empty the default value will be return.
+     *
+     * @param value string representation
+     * @param defaultValue TimePeriod default
+     * @return <code>TimePeriod</code> represented with a given string.
+     * @throws InvalidFormatException if cannot parse <code>value</code>
+     */
+    public static TimePeriod valueOf(String value, TimePeriod defaultValue) {
+        return value == null || value.isEmpty() ? defaultValue : TimePeriod.valueOf(value);
     }
 
     // value in milliseconds

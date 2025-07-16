@@ -19,12 +19,14 @@ import com.dxfeed.event.candle.impl.CandleEventMapping;
 import com.dxfeed.event.custom.NuamOrder;
 import com.dxfeed.event.custom.NuamTimeAndSale;
 import com.dxfeed.event.market.AnalyticOrder;
+import com.dxfeed.event.market.MarketEvent;
 import com.dxfeed.event.market.MarketEventDelegateImpl;
 import com.dxfeed.event.market.MarketMaker;
 import com.dxfeed.event.market.OptionSale;
 import com.dxfeed.event.market.Order;
-import com.dxfeed.event.market.OrderBase;
 import com.dxfeed.event.market.OrderBaseDelegateImpl;
+import com.dxfeed.event.market.OrderImbalance;
+import com.dxfeed.event.market.OrderImbalanceDelegateImpl;
 import com.dxfeed.event.market.OrderSource;
 import com.dxfeed.event.market.OtcMarketsOrder;
 import com.dxfeed.event.market.Profile;
@@ -62,6 +64,7 @@ public class ImplCodeGen {
     private static final ClassName MARKET_EVENT_DELEGATE = new ClassName(MarketEventDelegateImpl.class);
     private static final ClassName CANDLE_EVENT_DELEGATE = new ClassName(CandleEventDelegateImpl.class);
     private static final ClassName ORDER_BASE_DELEGATE = new ClassName(OrderBaseDelegateImpl.class);
+    private static final ClassName ORDER_IMBALANCE_DELEGATE = new ClassName(OrderImbalanceDelegateImpl.class);
 
     private static final ClassName MARKET_EVENT_MAPPING = new ClassName(MarketEventMapping.class);
     private static final ClassName CANDLE_EVENT_MAPPING = new ClassName(CandleEventMapping.class);
@@ -677,6 +680,22 @@ public class ImplCodeGen {
             map("OptionSymbol", FieldType.STRING).
             publishable();
 
+        ctx.delegate("OrderImbalance", OrderImbalance.class, "OrderImbalance").
+            suffixes(getOrderSuffixes(OrderImbalance.class)).
+            inheritDelegateFrom(ORDER_IMBALANCE_DELEGATE).
+            inheritMappingFrom(MARKET_EVENT_MAPPING).
+            subContract(QDContract.TICKER).
+            source("m.getRecordSource()").
+            injectGetEventCode("event.setSource(m.getRecordSource());").
+            mapTimeAndSequence().optional().prevOptional().
+            map("RefPrice", "RefPrice", FieldType.PRICE).
+            map("PairedSize", "PairedSize", FieldType.SIZE).
+            map("ImbalanceSize", "ImbalanceSize", FieldType.SIZE).
+            map("NearPrice", "NearPrice", FieldType.PRICE).optional().
+            map("FarPrice", "FarPrice", FieldType.PRICE).optional().
+            map("Flags", "Flags", FieldType.FLAGS).
+            publishable();
+
         // This is just a temporary implementation over legacy TradeHistory record. Separate new TimeAndSale record will be used later.
         ctx.delegate("CandleByTradeHistory", Candle.class, "TradeHistory").
             inheritDelegateFrom(CANDLE_EVENT_DELEGATE).
@@ -830,11 +849,12 @@ public class ImplCodeGen {
      *
      * @param eventType eventType with possible values <code>{@link Order}.<b>class</b></code>,
      *     <code>{@link AnalyticOrder}.<b>class</b></code>, <code>{@link OtcMarketsOrder}.<b>class</b></code>
-     *     or <code>{@link SpreadOrder}.<b>class</b></code>.
+     *     <code>{@link SpreadOrder}.<b>class</b></code>, <code>{@link NuamOrder}.<b>class</b></code> or
+     *     <code>{@link OrderImbalance}.<b>class</b></code>.
      * @return a list of publishable record suffixes delimited by '|' symbol.
      * @see OrderSource#publishable(Class)
      */
-    private String getOrderSuffixes(Class<? extends OrderBase> eventType) {
+    private String getOrderSuffixes(Class<? extends MarketEvent> eventType) {
         return OrderSource.publishable(eventType).stream().
             filter(os -> !OrderSource.DEFAULT.equals(os) && !OrderSource.isSpecialSourceId(os.id())).
             map(orderSource -> "|#" + orderSource.name()).

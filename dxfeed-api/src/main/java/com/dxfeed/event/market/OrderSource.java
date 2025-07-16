@@ -24,8 +24,8 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Identifies source of {@link Order}, {@link AnalyticOrder}, {@link OtcMarketsOrder}, {@link NuamOrder}
- * and {@link SpreadOrder} events.
+ * Identifies source of {@link Order}, {@link AnalyticOrder}, {@link OtcMarketsOrder}, {@link NuamOrder},
+ * {@link SpreadOrder} and {@link OrderImbalance} events.
  * There are the following kinds of order sources:
  * <ul>
  * <li><em>Synthetic</em> sources {@link #COMPOSITE}, {@link #COMPOSITE_BID}, {@link #COMPOSITE_ASK},
@@ -55,7 +55,8 @@ public final class OrderSource extends IndexedEventSource {
     private static final int PUB_SPREAD_ORDER = 0x0008;
     private static final int FULL_ORDER_BOOK = 0x0010;
     private static final int PUB_NUAM_ORDER = 0x0020;
-    private static final int FLAGS_SIZE = 6;
+    private static final int PUB_ORDER_IMBALANCE = 0x0040;
+    private static final int FLAGS_SIZE = 7;
 
     @SuppressWarnings("unchecked")
     private static final List<OrderSource>[] PUBLISHABLE_LISTS = new List[FLAGS_SIZE];
@@ -168,12 +169,13 @@ public final class OrderSource extends IndexedEventSource {
 
     /**
      * Default source for publishing custom order books.
-     * {@link Order}, {@link AnalyticOrder}, {@link OtcMarketsOrder}, {@link NuamOrder} and {@link SpreadOrder}
-     * events are {@link #isPublishable(Class) publishable} on this source and the corresponding subscription
-     * can be observed via {@link DXPublisher}.
+     * {@link Order}, {@link AnalyticOrder}, {@link OtcMarketsOrder}, {@link NuamOrder}, {@link SpreadOrder} and
+     * {@link OrderImbalance} events are {@link #isPublishable(Class) publishable} on this source
+     * and the corresponding subscription can be observed via {@link DXPublisher}.
      */
     public static final OrderSource DEFAULT = new OrderSource(0, "DEFAULT",
-        PUB_ORDER | PUB_ANALYTIC_ORDER | PUB_OTC_MARKETS_ORDER | PUB_SPREAD_ORDER | FULL_ORDER_BOOK | PUB_NUAM_ORDER);
+        PUB_ORDER | PUB_ANALYTIC_ORDER | PUB_OTC_MARKETS_ORDER | PUB_SPREAD_ORDER | FULL_ORDER_BOOK | PUB_NUAM_ORDER |
+        PUB_ORDER_IMBALANCE);
 
     // ======== BEGIN: Custom OrderSource definitions ========
 
@@ -492,10 +494,11 @@ public final class OrderSource extends IndexedEventSource {
 
     /**
      * Nuam Exchange Gate.
-     * {@link Order} and {@link NuamOrder} events are {@link #isPublishable(Class) publishable} on this
-     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     * {@link Order}, {@link NuamOrder} and {@link OrderImbalance} events are {@link #isPublishable(Class) publishable}
+     * on this source and the corresponding subscription can be observed via {@link DXPublisher}.
      */
-    public static final OrderSource NUAM = new OrderSource("NUAM", PUB_ORDER | FULL_ORDER_BOOK | PUB_NUAM_ORDER);
+    public static final OrderSource NUAM = new OrderSource("NUAM",
+        PUB_ORDER | FULL_ORDER_BOOK | PUB_NUAM_ORDER | PUB_ORDER_IMBALANCE);
 
     /**
      * Nuam Exchange Gate. Record for price level book.
@@ -555,14 +558,15 @@ public final class OrderSource extends IndexedEventSource {
      * Subscription on such sources is observed via instances of {@link IndexedEventSubscriptionSymbol} class.
      *
      * @param eventType <code>{@link Order}.<b>class</b></code>, <code>{@link AnalyticOrder}.<b>class</b></code>,
-     *     <code>{@link OtcMarketsOrder}.<b>class</b></code>, <code>{@link NuamOrder}.<b>class</b></code>
-     *     or <code>{@link SpreadOrder}.<b>class</b></code>.
+     *     <code>{@link OtcMarketsOrder}.<b>class</b></code>, <code>{@link NuamOrder}.<b>class</b></code>,
+     *     <code>{@link SpreadOrder}.<b>class</b></code> or <code>{@link OrderImbalance}.<b>class</b></code>.
      * @return a list of publishable order sources.
      * @throws IllegalArgumentException if eventType is not in <code>{@link Order}.<b>class</b></code>,
      *     <code>{@link AnalyticOrder}.<b>class</b></code>, <code>{@link OtcMarketsOrder}.<b>class</b></code>,
-     *     <code>{@link NuamOrder}.<b>class</b></code> or <code>{@link SpreadOrder}.<b>class</b></code>.
+     *     <code>{@link NuamOrder}.<b>class</b></code>, <code>{@link SpreadOrder}.<b>class</b></code> or
+     *     <code>{@link OrderImbalance}.<b>class</b></code>.
      */
-    public static List<OrderSource> publishable(Class<? extends OrderBase> eventType) {
+    public static List<OrderSource> publishable(Class<? extends MarketEvent> eventType) {
         return PUBLISHABLE_VIEWS[31 - Integer.numberOfLeadingZeros(getEventTypeMask(eventType))];
     }
 
@@ -633,14 +637,15 @@ public final class OrderSource extends IndexedEventSource {
      *
      * @param eventType <code>{@link Order}.<b>class</b></code>, <code>{@link AnalyticOrder}.<b>class</b></code>,
      *     <code>{@link OtcMarketsOrder}.<b>class</b></code>, <code>{@link NuamOrder}.<b>class</b></code>
-     *     or <code>{@link SpreadOrder}.<b>class</b></code>.
+     *     <code>{@link SpreadOrder}.<b>class</b></code> or <code>{@link OrderImbalance}.<b>class</b></code>.
      * @return {@code true} if {@link Order}, {@link AnalyticOrder}, {@link OtcMarketsOrder}, {@link NuamOrder}
      *     and {@link SpreadOrder} events can be directly published with this source.
      * @throws IllegalArgumentException if eventType differs from <code>{@link Order}.<b>class</b></code>,
      *     <code>{@link AnalyticOrder}.<b>class</b></code>, <code>{@link OtcMarketsOrder}.<b>class</b></code>,
-     *     <code>{@link NuamOrder}.<b>class</b></code> or <code>{@link SpreadOrder}.<b>class</b></code>.
+     *     <code>{@link NuamOrder}.<b>class</b></code>, <code>{@link SpreadOrder}.<b>class</b></code> or
+     *     <code>{@link OrderImbalance}.<b>class</b></code>
      */
-    public boolean isPublishable(Class<? extends OrderBase> eventType) {
+    public boolean isPublishable(Class<? extends MarketEvent> eventType) {
         return (pubFlags & getEventTypeMask(eventType)) != 0;
     }
 
@@ -698,7 +703,7 @@ public final class OrderSource extends IndexedEventSource {
         return new String(name, 0, n);
     }
 
-    private static int getEventTypeMask(Class<? extends OrderBase> eventType) {
+    private static int getEventTypeMask(Class<? extends MarketEvent> eventType) {
         if (eventType == Order.class)
             return PUB_ORDER;
         if (eventType == AnalyticOrder.class)
@@ -709,7 +714,9 @@ public final class OrderSource extends IndexedEventSource {
             return PUB_SPREAD_ORDER;
         if (eventType == NuamOrder.class)
             return PUB_NUAM_ORDER;
-        throw new IllegalArgumentException("Invalid order event type: " + eventType);
+        if (eventType == OrderImbalance.class)
+            return PUB_ORDER_IMBALANCE;
+        throw new IllegalArgumentException("Invalid event type: " + eventType);
     }
 
     private static OrderSource createAndCacheOrderSource(SynchronizedIndexedSet<?, OrderSource> cache, int sourceId, String name) {

@@ -156,9 +156,13 @@ public class ConsistentLoadBalancer implements RMILoadBalancer {
     }
 
     // can be overridden
-
     /**
-     * Compares the shard names these service descriptors.
+     * Defines the order of preference for service descriptors competing for the same shard.
+     *
+     * <p>Default implementation compares descriptor {@link #getPriority priorities} first
+     * (descriptor with less priority value wins)
+     * and then compares {@link RMIServiceDescriptor#getServiceId service IDs} if the priorities are equal.
+     *
      * @param descriptor1 the first service descriptor to be compared
      * @param descriptor2 the second service descriptor to be compared
      * @return a negative integer, zero, or a positive integer as the first argument is less than, equal to,

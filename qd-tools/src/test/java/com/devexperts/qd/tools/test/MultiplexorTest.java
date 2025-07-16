@@ -12,6 +12,7 @@
 package com.devexperts.qd.tools.test;
 
 import com.devexperts.logging.Logging;
+import com.devexperts.qd.qtp.socket.ServerSocketTestHelper;
 import com.devexperts.qd.tools.Tools;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.RMIException;
@@ -21,6 +22,7 @@ import com.devexperts.rmi.message.RMIRequestMessage;
 import com.devexperts.rmi.message.RMIRequestType;
 import com.devexperts.rmi.task.RMIService;
 import com.devexperts.rmi.task.RMIServiceDescriptor;
+import com.devexperts.rmi.task.RMIServiceImplementation;
 import com.devexperts.rmi.task.RMITask;
 import com.devexperts.test.ThreadCleanCheck;
 import com.devexperts.test.TraceRunner;
@@ -31,6 +33,7 @@ import com.dxfeed.api.DXPublisher;
 import com.dxfeed.event.market.MarketEvent;
 import com.dxfeed.event.market.Quote;
 import com.dxfeed.event.market.Trade;
+import com.dxfeed.promise.Promise;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,7 +44,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
@@ -54,9 +59,10 @@ import static org.junit.Assert.fail;
 public class MultiplexorTest {
     private static final Logging log = Logging.getLogging(MultiplexorTest.class);
 
-    private final int randomPortDistributor = 10000 + (new Random().nextInt(1000) * 10) + 6; // port randomization
-    private final int randomPortAgent = 10000 + (new Random().nextInt(1000) * 10) + 3; // port randomization
-    private final int randomPortForward = 10000 + (new Random().nextInt(1000) * 10) + 9; // port randomization
+    // MUX connector ports assigned automatically by OS during initialization;
+    private int distributorPort;
+    private int agentPort;
+    private int forwardPort;
 
     private Thread toolThread;
     private RMIEndpoint client;
@@ -80,27 +86,15 @@ public class MultiplexorTest {
     private CountDownLatch readyToChange = new CountDownLatch(2);
     private CountDownLatch receivedCalculatorAdvert = new CountDownLatch(1);
     private CountDownLatch receivedAccountManagerAdvert = new CountDownLatch(1);
-    private CountDownLatch muxUp = new CountDownLatch(1);
     private volatile boolean closing = false;
     private volatile boolean fail = false;
     private DXEndpoint dxServerEndpoint;
-    private CalculatorImpl calculator;
+    private RMIServiceImplementation<Calculator> calcServiceOnServer; // Calculator service server side
+    volatile Map<String, String> calculatorLastRequestProps; // captured calculator request properties
 
     @Test
     public void testForwarding() throws InterruptedException {
-        log.info(" --- init mux --- ");
-        toolThread = new Thread() {
-            @Override
-            public void run() {
-                muxUp.countDown();
-                toolOk = Tools.invoke("multiplexor",
-                    ":" + randomPortDistributor, ":" + randomPortAgent,
-                    "-s", "10", "-R", "-F",  SERVICE_NAME, ":" + randomPortForward);
-            }
-        };
-        toolThread.start();
-        assertTrue(muxUp.await(10, TimeUnit.SECONDS));
-        Thread.sleep(1000);
+        initMux();
         initRemoteServer();
         initServer();
         initClient();
@@ -111,7 +105,7 @@ public class MultiplexorTest {
         long startTime = System.currentTimeMillis();
         while (toolOk && (requestCompletedCount != requestCount || requestCompletedCount != count + 1)) {
             Thread.sleep(10);
-            if (System.currentTimeMillis() - startTime > 10000) {
+            if (System.currentTimeMillis() - startTime > 10_000) {
                 log.info("requestCount = " + requestCount + ", requestCompletedCount = " + requestCompletedCount);
                 for (RMIRequest<Integer> request : requestList) {
                     log.info("fail: requestState" + request.getState());
@@ -123,12 +117,13 @@ public class MultiplexorTest {
         Calculator calc = client.getClient().getProxy(Calculator.class);
         assertEquals(server.getName() + ":" + 200, calc.mult(10, 20));
         assertEquals(server.getName() + ":" + 16, calc.plus(-1, 17));
+
         log.info(" --- Custom properties --- ");
-        String serviceName = RMIService.getServiceName(Calculator.class);
+        String calcServiceName = RMIService.getServiceName(Calculator.class);
         Map<String, String> requestProps = Collections.singletonMap("k", "v");
         RMIRequestMessage<String> message = new RMIRequestMessage<>(
             RMIRequestType.DEFAULT,
-            RMIOperation.valueOf(serviceName, String.class, "plus", int.class, int.class),
+            RMIOperation.valueOf(calcServiceName, String.class, "plus", int.class, int.class),
             1, 2
         ).changeProperties(requestProps);
         RMIRequest<String> request = client.getClient().createRequest(message);
@@ -136,10 +131,22 @@ public class MultiplexorTest {
         try {
             String res = request.getBlocking();
             assertEquals(server.getName() + ":" + 3, res);
-            assertEquals(requestProps, calculator.lastProps);
+            assertEquals(requestProps, calculatorLastRequestProps);
         } catch (RMIException e) {
             fail(e.getMessage());
         }
+
+        log.info(" --- Test service properties update --- ");
+        RMIService<?> calcService = client.getClient().getService(calcServiceName);
+        assertEquals(1, calcService.getDescriptors().size());
+        Semaphore notifies = new Semaphore(-1);
+        calcService.addServiceDescriptorsListener(listener -> notifies.release());
+        assertEquals(0, notifies.availablePermits());
+        Map<String, String> props = Collections.singletonMap("k", "v");
+        calcServiceOnServer.changeProperties(props);
+        assertTrue("Must be notified", notifies.tryAcquire(10, TimeUnit.SECONDS));
+        assertEquals(props, calcService.getDescriptors().get(0).getProperties());
+
         closing = true;
         assertFalse(fail);
     }
@@ -175,6 +182,31 @@ public class MultiplexorTest {
         toolThread.join();
         assertTrue(toolOk);
         ThreadCleanCheck.after();
+    }
+
+    @SuppressWarnings("deprecation")
+    private void initMux() throws InterruptedException {
+        log.info(" --- init mux --- ");
+        String testId = UUID.randomUUID().toString();
+        String distributorName = testId + "-distributor";
+        String agentName = testId + "-agent";
+        String forwardName = testId + "-forward";
+        Promise<Integer> distributorPortPromise = ServerSocketTestHelper.createPortPromise(distributorName);
+        Promise<Integer> agentPortPromise = ServerSocketTestHelper.createPortPromise(agentName);
+        Promise<Integer> forwardPortPromise = ServerSocketTestHelper.createPortPromise(forwardName);
+
+        toolThread = new Thread(() -> {
+            toolOk = Tools.invoke("multiplexor",
+                ":0[name=" + distributorName + "]",
+                ":0[name=" + agentName + "]",
+                "-s", "10",
+                "-R", "-F",  SERVICE_NAME, ":0[name=" + forwardName + "]");
+        });
+        toolThread.start();
+        distributorPort = distributorPortPromise.await(10, TimeUnit.SECONDS);
+        agentPort = agentPortPromise.await(10, TimeUnit.SECONDS);
+        forwardPort = forwardPortPromise.await(10, TimeUnit.SECONDS);
+        Thread.sleep(100);
     }
 
     private void initClient() {
@@ -243,7 +275,7 @@ public class MultiplexorTest {
         });
         sub.addSymbols("IBM");
 
-        client.connect("localhost:" + randomPortAgent);
+        client.connect("localhost:" + agentPort);
         waitConnected(client);
     }
 
@@ -257,9 +289,10 @@ public class MultiplexorTest {
 
     private void initServer() {
         log.info(" --- init server --- ");
-        calculator = new CalculatorImpl(server.getName());
-        server.getServer().export(calculator, Calculator.class);
-        server.connect("localhost:" + randomPortDistributor);
+        calcServiceOnServer = new RMIServiceImplementation<>(new CalculatorImpl(server.getName()), Calculator.class);
+        server.getServer().export(calcServiceOnServer);
+
+        server.connect("localhost:" + distributorPort);
         waitConnected(server);
         dxServerEndpoint = server.getDXEndpoint();
         publisher = dxServerEndpoint.getPublisher();
@@ -272,7 +305,7 @@ public class MultiplexorTest {
             if (sub.contains(quote.getEventSymbol()))
                 subReceived.countDown();
         });
-        subReceived.await(5, TimeUnit.SECONDS);
+        assertTrue(subReceived.await(5, TimeUnit.SECONDS));
         quote.setBidPrice(100);
         log.info("Publishing " + quote);
         publisher.publishEvents(Collections.singletonList(quote));
@@ -301,7 +334,7 @@ public class MultiplexorTest {
     private void initRemoteServer() {
         log.info(" --- init remote server --- ");
         remoteServer.getServer().export(new ManagementAccountService());
-        remoteServer.connect("localhost:"  + randomPortForward);
+        remoteServer.connect("localhost:"  + forwardPort);
         waitConnected(remoteServer);
     }
 
@@ -334,10 +367,9 @@ public class MultiplexorTest {
         String mult(int a, int b);
     }
 
-    static class CalculatorImpl implements Calculator {
+    class CalculatorImpl implements Calculator {
 
         private final String endpointName;
-        volatile Map<String, String> lastProps;
 
         CalculatorImpl(String endpointName) {
             this.endpointName = endpointName;
@@ -347,7 +379,7 @@ public class MultiplexorTest {
         public String plus(int a, int b) {
             Map<String, String> props = RMITask.current().getRequestMessage().getProperties();
             log.info("PLUS(" + a + ", " + b + "), props=" + props);
-            lastProps = props;
+            calculatorLastRequestProps = props;
             return endpointName  + ":" + (a + b);
         }
 

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -59,6 +59,7 @@ public class ConnectorsMonitoringTask implements Runnable {
     private final MARSNode bufferNode;
     private final MARSNode droppedNode;
     private final MARSNode droppedLogNode;
+    private final MARSNode stickySubNode;
     private final Queue<String> queueDroppedLog = new ConcurrentLinkedQueue<>();
     private long prevDropped;
     private boolean closed;
@@ -140,6 +141,7 @@ public class ConnectorsMonitoringTask implements Runnable {
 
         this.connectorsNode = node.subNode("connectors", "All connectors");
         this.subscriptionNode = node.subNode("subscription", "Total subscription size");
+        this.stickySubNode = node.subNode("sticky_subscription", "Total sticky subscription size");
         this.storageNode = node.subNode("storage", "Total storage size");
         this.bufferNode = node.subNode("buffer", "Total outgoing buffer size");
         this.droppedNode = node.subNode("dropped", "Total dropped records");
@@ -224,12 +226,14 @@ public class ConnectorsMonitoringTask implements Runnable {
         long elapsedTime = elapsedTime();
 
         long subscription = 0;
+        long stickySub = 0;
         long storage = 0;
         long buffer = 0;
         long totalDroppedRecords = 0;
 
         for (QDStats stats : rootStats) {
             subscription += stats.getOrVoid(QDStats.SType.UNIQUE_SUB).getValue(QDStats.SValue.RID_SIZE);
+            stickySub += stats.getOrVoid(QDStats.SType.STICKY_SUB).getValue(QDStats.SValue.RID_SIZE);
             storage += stats.getOrVoid(QDStats.SType.STORAGE_DATA).getValue(QDStats.SValue.RID_SIZE);
             buffer += stats.getOrVoid(QDStats.SType.AGENT_DATA).getValue(QDStats.SValue.RID_SIZE);
             totalDroppedRecords += stats.getOrVoid(QDStats.SType.DROPPED_DATA).getValue(QDStats.SValue.RID_SIZE);
@@ -238,6 +242,7 @@ public class ConnectorsMonitoringTask implements Runnable {
         prevDropped = totalDroppedRecords;
 
         subscriptionNode.setDoubleValue(subscription);
+        stickySubNode.setDoubleValue(stickySub);
         storageNode.setDoubleValue(storage);
         bufferNode.setDoubleValue(buffer);
         droppedNode.setDoubleValue(droppedByPeriod);
@@ -309,6 +314,7 @@ public class ConnectorsMonitoringTask implements Runnable {
             buff.append("{").append(name).append("} ");
 
         buff.append("Subscription: ").append(integerFormat.format(subscription))
+            .append("; Sticky: ").append(integerFormat.format(stickySub))
             .append("; Storage: ").append(integerFormat.format(storage))
             .append("; Buffer: ").append(integerFormat.format(buffer))
             .append("; Dropped: ").append(integerFormat.format(droppedByPeriod))

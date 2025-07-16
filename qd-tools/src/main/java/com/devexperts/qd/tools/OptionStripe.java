@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,7 +15,7 @@ import com.devexperts.qd.qtp.QDEndpoint;
 
 public class OptionStripe extends OptionString implements EndpointOption {
     public OptionStripe() {
-        super('\0', "stripe", "<stripe>", "Specify symbol striping strategy, e.g. \"byhash4\"");
+        super(EMPTY_SHORT_NAME, "stripe", "<stripe>", "Specify symbol striping strategy, e.g. \"byhash4\"");
     }
 
     @Override

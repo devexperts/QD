@@ -15,8 +15,9 @@ package com.devexperts.qd.tools;
  * Stores information about {@link NetTestSide} configuration.
  */
 class NetTestConfig {
+    String name;
     String address;
-    int connectionsNum = 1;
+    int instanceCount = 1;
     int totalSymbols = 100000;
     int symbolsPerEntity = totalSymbols;
     boolean sliceSelection = false;

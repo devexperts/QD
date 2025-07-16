@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,13 +17,13 @@ import com.devexperts.qd.QDContract;
 import com.devexperts.qd.impl.matrix.Collector;
 import com.devexperts.util.JMXNameBuilder;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
 public class CollectorManagementImplAnyContract extends CollectorManagementImplBase {
     private static final Map<DataScheme, String> SCHEMES = new HashMap<DataScheme, String>();
@@ -183,25 +183,36 @@ public class CollectorManagementImplAnyContract extends CollectorManagementImplB
         throw new UnsupportedOperationException();
     }
 
+    public String getStickySubscriptionLogInterval() {
+        throw new UnsupportedOperationException();
+    }
+
+    public void setStickySubscriptionLogInterval(String interval) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long getStickyScheduleMinDelay() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setStickyScheduleMinDelay(long delay) {
+        throw new UnsupportedOperationException();
+    }
+
     @Override
     protected List<Collector> getCollectors() {
-        List<Collector> result = new ArrayList<Collector>();
-        for (CollectorManagementImplOneContract impl : impls)
-            result.addAll(impl.getCollectors());
-        return result;
+        return impls.stream()
+            .flatMap(contract -> contract.getCollectors().stream())
+            .collect(Collectors.toList());
     }
 
     public String getFatalError() {
-        StringBuilder sb = new StringBuilder();
-        for (CollectorManagementImplOneContract impl : impls) {
-            String s = impl.getFatalError();
-            if (s.length() > 0) {
-                if (sb.length() > 0)
-                    sb.append("\r\n\r\n");
-                sb.append(s);
-            }
-        }
-        return sb.toString();
+        return impls.stream()
+            .map(CollectorManagementImplOneContract::getFatalError)
+            .filter(str -> !str.isEmpty())
+            .collect(Collectors.joining("\r\n\r\n"));
     }
 }
 

@@ -28,7 +28,9 @@ import com.devexperts.rmi.security.SecurityController;
 import com.devexperts.rmi.task.RMIChannel;
 import com.devexperts.rmi.task.RMIChannelState;
 import com.devexperts.rmi.task.RMIChannelSupport;
+import com.devexperts.rmi.task.RMILocalService;
 import com.devexperts.rmi.task.RMIService;
+import com.devexperts.rmi.task.RMIServiceDescriptor;
 import com.devexperts.rmi.task.RMIServiceImplementation;
 import com.devexperts.rmi.task.RMITask;
 import com.devexperts.test.ThreadCleanCheck;
@@ -41,7 +43,10 @@ import org.junit.runner.RunWith;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.CountDownLatch;
@@ -49,8 +54,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nonnull;
 
 import static org.junit.Assert.assertEquals;
@@ -135,7 +142,7 @@ public class RMICommonTest {
         }
     }
 
-    //only RMIClient
+    // only RMIClient
     @Test
     public void testNullSubject() {
         connectDefault();
@@ -153,7 +160,7 @@ public class RMICommonTest {
 
     // --------------------------------------------------
 
-    //only for RMIClient
+    // only for RMIClient
     @Test
     public void testReexporting() throws InterruptedException {
         final CountDownLatch exportLatch = new CountDownLatch(2);
@@ -228,7 +235,7 @@ public class RMICommonTest {
         }
     }
 
-    //only for RMIClient
+    // only for RMIClient
     @Test
     public void testRequestRunningTimeout() {
         client().getClient().setRequestRunningTimeout(0);
@@ -369,7 +376,7 @@ public class RMICommonTest {
 
     // --------------------------------------------------
 
-    //only for RMIClient
+    // only for RMIClient
     @Test
     public void testConnectionAfterSendingRequest() {
         initPorts();
@@ -392,7 +399,7 @@ public class RMICommonTest {
 
     // --------------------------------------------------
 
-    //only RMIClient
+    // only RMIClient
     @Test
     public void testSubject() {
         initPorts();
@@ -590,14 +597,17 @@ public class RMICommonTest {
         client.close();
     }
 
-    //region Aux ChannelService
+    // region Aux ChannelService
     @SuppressWarnings("unused")
     interface ChannelService {
         void startChannel();
+
         int getValue();
+
         void finishChannel();
 
     }
+
     private static class ChannelServiceImpl implements ChannelService, RMIChannelSupport<Object> {
         RMITask<?> task;
         final int value;
@@ -642,7 +652,7 @@ public class RMICommonTest {
         RMIOperation.valueOf(ChannelService.class, int.class, "getValue");
     private static final RMIOperation<Void> FINISH_CHANNEL_OP =
         RMIOperation.valueOf(ChannelService.class, void.class, "finishChannel");
-    //endregion
+    // endregion
 
     /**
      * Check that a new channel (not sent yet) with nested requests correctly handled after reconnect (see QD-1283)
@@ -762,5 +772,51 @@ public class RMICommonTest {
             }));
         }
         return reqs;
+    }
+
+    public interface Counter {
+        public int increment();
+    }
+
+    @Test
+    public void testServiceDescriptorUpdates() throws InterruptedException {
+        String serviceName = RMIService.getServiceName(Counter.class);
+        Map<String, String> originProps = Collections.singletonMap("x", "y");
+        RMILocalService<?> serviceImpl = new RMILocalService<Integer>(serviceName, originProps) {
+            final AtomicInteger counter = new AtomicInteger();
+            @Override
+            public Integer invoke(RMITask<Integer> task) {
+                return counter.incrementAndGet();
+            }
+        };
+        server().getServer().export(serviceImpl);
+        connectDefault();
+        // chek service is working (also await for the first advertisement)
+        assertEquals(1, client().getClient().getProxy(Counter.class).increment());
+        RMIService<?> remoteCounterService = client.getClient().getService(serviceName);
+        List<RMIServiceDescriptor> descriptors = remoteCounterService.getDescriptors();
+        assertEquals(1, descriptors.size());
+        assertEquals(originProps, descriptors.get(0).getProperties());
+
+        Semaphore notifies = new Semaphore(-1); // first notify will happen immediately
+        remoteCounterService.addServiceDescriptorsListener(descriptor -> notifies.release());
+        doTestServiceDescriptorUpdate(serviceImpl, notifies, remoteCounterService, Collections.singletonMap("x", "z"));
+        doTestServiceDescriptorUpdate(serviceImpl, notifies, remoteCounterService, Collections.emptyMap());
+        Map<String, String> props = new HashMap<>();
+        props.put("x1", "a");
+        props.put("x2", "b");
+        doTestServiceDescriptorUpdate(serviceImpl, notifies, remoteCounterService, props);
+    }
+
+    private static void doTestServiceDescriptorUpdate(RMILocalService<?> serverSideService, Semaphore notifies,
+        RMIService<?> clientSideService, Map<String, String> newProps) throws InterruptedException
+    {
+        notifies.drainPermits();
+        serverSideService.changeProperties(newProps);
+        assertTrue(notifies.tryAcquire(10, TimeUnit.SECONDS));
+        // expect an updated descriptor with new property values
+        List<RMIServiceDescriptor> descriptors = clientSideService.getDescriptors();
+        assertEquals(1, descriptors.size());
+        assertEquals(newProps, descriptors.get(0).getProperties());
     }
 }

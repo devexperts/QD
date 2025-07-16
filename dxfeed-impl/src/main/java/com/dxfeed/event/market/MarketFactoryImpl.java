@@ -29,6 +29,7 @@ import com.dxfeed.event.market.impl.FundamentalMapping;
 import com.dxfeed.event.market.impl.MarketMakerMapping;
 import com.dxfeed.event.market.impl.OptionSaleMapping;
 import com.dxfeed.event.market.impl.OrderBaseMapping;
+import com.dxfeed.event.market.impl.OrderImbalanceMapping;
 import com.dxfeed.event.market.impl.OrderMapping;
 import com.dxfeed.event.market.impl.OtcMarketsOrderMapping;
 import com.dxfeed.event.market.impl.ProfileMapping;
@@ -349,6 +350,18 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         builder.addRequiredField("OptionSale", "Volatility", selectDecimal(SerialFieldType.DECIMAL));
         builder.addRequiredField("OptionSale", "Delta", selectDecimal(SerialFieldType.DECIMAL));
         builder.addRequiredField("OptionSale", "OptionSymbol", SerialFieldType.UTF_CHAR_ARRAY);
+
+        for (String suffix : SystemProperties.getProperty("com.dxfeed.event.market.impl.OrderImbalance.suffixes", "|#NUAM").split("\\|")) {
+            String recordName = "OrderImbalance" + suffix;
+            builder.addOptionalField(recordName, "Time", SerialFieldType.TIME_SECONDS, "OrderImbalance", "Time", true);
+            builder.addOptionalField(recordName, "Sequence", SerialFieldType.SEQUENCE, "OrderImbalance", "Sequence", true);
+            builder.addRequiredField(recordName, "RefPrice", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "PairedSize", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addRequiredField(recordName, "ImbalanceSize", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addOptionalField(recordName, "NearPrice", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "OrderImbalance", "NearPrice", true);
+            builder.addOptionalField(recordName, "FarPrice", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "OrderImbalance", "FarPrice", true);
+            builder.addRequiredField(recordName, "Flags", SerialFieldType.COMPACT_INT);
+        }
     }
 
     @Override
@@ -406,6 +419,9 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         } else if (record.getMapping(OptionSaleMapping.class) != null) {
             result.add(new OptionSaleDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
             result.add(new OptionSaleDelegate(record, QDContract.HISTORY, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB)));
+        } else if (record.getMapping(OrderImbalanceMapping.class) != null) {
+            result.add(new OrderImbalanceDelegate(record, QDContract.TICKER, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB)));
+            result.add(new OrderImbalanceDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
         }
         return result;
     }
@@ -445,6 +461,8 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             result.add(new TimeAndSaleDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
         } else if (record.getMapping(OptionSaleMapping.class) != null) {
             result.add(new OptionSaleDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
+        } else if (record.getMapping(OrderImbalanceMapping.class) != null) {
+            result.add(new OrderImbalanceDelegate(record, QDContract.STREAM, EnumSet.of(EventDelegateFlags.SUB, EventDelegateFlags.PUB, EventDelegateFlags.WILDCARD)));
         }
         return result;
     }
@@ -480,6 +498,8 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
             return new TimeAndSaleMapping(record);
         if (baseRecordName.equals("OptionSale"))
             return new OptionSaleMapping(record);
+        if (baseRecordName.equals("OrderImbalance"))
+            return new OrderImbalanceMapping(record);
         return null;
     }
 // END: CODE AUTOMATICALLY GENERATED

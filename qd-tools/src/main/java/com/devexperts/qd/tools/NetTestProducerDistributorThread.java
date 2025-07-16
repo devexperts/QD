@@ -15,6 +15,7 @@ import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.ng.RecordBuffer;
+import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.qtp.QDEndpoint;
 
 import java.util.ArrayList;
@@ -49,16 +50,17 @@ class NetTestProducerDistributorThread extends NetTestWorkingThread {
 
     @Override
     public void run() {
-        RecordBuffer buf = new RecordBuffer();
+        RecordBuffer buf = new RecordBuffer(RecordMode.DATA.withTimeMark());
         RandomRecordsProvider provider = new RandomRecordsProvider(new DataRecord[] {NetTestSide.RECORD},
             side.createSublist(), RECORDS_PER_ITERATION, RECORDS_PER_ITERATION);
         while (true) {
+            long startTime = System.currentTimeMillis();
             provider.retrieve(buf);
             int num = buf.size();
             for (QDDistributor distributor : distributors) {
                 buf.rewind();
                 distributor.processData(buf);
-                processedRecords += num;
+                addStats(num * (System.currentTimeMillis() - startTime), num);
             }
             buf.clear();
         }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -29,6 +29,7 @@ import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.qtp.AgentAdapter;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.MessageConnectors;
+import com.devexperts.qd.qtp.socket.ServerSocketTestHelper;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.Decimal;
 import com.devexperts.test.ThreadCleanCheck;
@@ -37,13 +38,14 @@ import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.event.market.MarketEvent;
 import com.dxfeed.event.market.Quote;
 import com.dxfeed.event.market.Trade;
+import com.dxfeed.promise.Promise;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -66,8 +68,7 @@ public class SchemeRemapTest {
         }, new DataObjField[0]);
     private static final DataScheme SOURCE_SCHEME = new DefaultScheme(PentaCodec.INSTANCE, TRADE_RECORD);
 
-    private static final int PORT = (100 + new Random().nextInt(300)) * 100 + 74;
-
+    private int port;
     private DXEndpoint endpoint;
     private List<MessageConnector> connectors = Collections.emptyList();
 
@@ -91,7 +92,7 @@ public class SchemeRemapTest {
     }
 
     private void runDataProvider() {
-        QDTicker ticker = QDFactory.getDefaultFactory().createTicker(SOURCE_SCHEME);
+        QDTicker ticker = QDFactory.getDefaultFactory().tickerBuilder().withScheme(SOURCE_SCHEME).build();
         final QDDistributor distributor = ticker.distributorBuilder().build();
         distributor.getAddedRecordProvider().setRecordListener(provider -> {
             RecordBuffer sub = RecordBuffer.getInstance(RecordMode.SUBSCRIPTION);
@@ -109,12 +110,17 @@ public class SchemeRemapTest {
             }
             sub.release();
         });
-        connectors = MessageConnectors.createMessageConnectors(new AgentAdapter.Factory(ticker), ":" + PORT, QDStats.VOID);
+        String testId = UUID.randomUUID().toString();
+        //noinspection deprecation
+        Promise<Integer> portPromise = ServerSocketTestHelper.createPortPromise(testId);
+        connectors = MessageConnectors.createMessageConnectors(
+            new AgentAdapter.Factory(ticker), ":0[name=" + testId + "]", QDStats.VOID);
         MessageConnectors.startMessageConnectors(connectors);
+        port = portPromise.await(10, TimeUnit.SECONDS);
     }
 
     private void runDataConsumer() throws InterruptedException {
-        endpoint.connect("localhost:" + PORT);
+        endpoint.connect("localhost:" + port);
         final BlockingQueue<MarketEvent> queue = new ArrayBlockingQueue<>(10);
         // subscribe to quote & trade
         DXFeedSubscription<MarketEvent> sub = endpoint.getFeed().createSubscription(Quote.class, Trade.class);
@@ -129,7 +135,3 @@ public class SchemeRemapTest {
         assertEquals(0, queue.size());
     }
 }
-
-
-
-

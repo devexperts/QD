@@ -450,4 +450,42 @@ public class MarketAccessorImpl {
     public static int setTradeExtendedTradingHours(int flags, boolean extendedTradingHours) {
         return extendedTradingHours ? flags | TradeBase.ETH : flags & ~TradeBase.ETH;
     }
+
+    // ========== OrderImbalance accessor methods ==========
+
+    public static int getOrderImbalanceFlags(OrderImbalance order) {
+        return order.getFlags();
+    }
+
+    public static void setOrderImbalanceFlags(OrderImbalance order, int flags) {
+        order.setFlags(flags);
+    }
+
+    public static int orderImbalanceSide(ImbalanceSide side) {
+        return side.getCode() << OrderImbalance.IMBALANCE_SIDE_SHIFT;
+    }
+
+    public static ImbalanceSide getOrderImbalanceSide(int flags) {
+        return ImbalanceSide.valueOf(
+            EventUtil.getBits(flags, OrderImbalance.IMBALANCE_SIDE_MASK, OrderImbalance.IMBALANCE_SIDE_SHIFT));
+    }
+
+    public static int setOrderImbalanceSide(int flags, ImbalanceSide side) {
+        return EventUtil.setBits(
+            flags, OrderImbalance.IMBALANCE_SIDE_MASK, OrderImbalance.IMBALANCE_SIDE_SHIFT, side.getCode());
+    }
+
+    public static int orderImbalanceAuctionType(AuctionType type) {
+        return type.getCode() << OrderImbalance.AUCTION_TYPE_SHIFT;
+    }
+
+    public static AuctionType getOrderImbalanceAuctionType(int flags) {
+        return AuctionType.valueOf(
+            EventUtil.getBits(flags, OrderImbalance.AUCTION_TYPE_MASK, OrderImbalance.AUCTION_TYPE_SHIFT));
+    }
+
+    public static int setOrderImbalanceAuctionType(int flags, AuctionType type) {
+        return EventUtil.setBits(
+            flags, OrderImbalance.AUCTION_TYPE_MASK, OrderImbalance.AUCTION_TYPE_SHIFT, type.getCode());
+    }
 }

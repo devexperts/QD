@@ -1,3 +1,37 @@
+QDS 3.344:
+
+* [QD-1258] Sticky subscription / delayed subscription removal
+  - The sticky subscription feature has been implemented to prevent subscription jitter by allowing a delay before
+    deleting a shared subscription after the last customer unsubscribes.
+    Main control parameter (sticky subscription period) which can be specified:
+    - Individually in the QDEndpoint using the builder method 'withStickySubscriptionPeriod' and
+      in the DXEndpoint with the property 'dxfeed.stickySubscriptionPeriod'.
+    - New option '--sticky <sticky>' can be used to configure a sticky subscription period for
+      certain QDS tools like multiplexor and connect.
+    - JVM parameter '-Ddxfeed.stickySubscriptionPeriod' can use to set sticky period (0 by default, disabled).
+  - Additional control parameters:
+    - Sticky Schedule Min Delay: Defined with the JVM parameter '-Dcom.devexperts.qd.impl.StickyScheduleMinDelay',
+      it sets the delay period (default 10 ms) between tasks that clear expired subscriptions.
+    - Log Interval: Configured with the JVM parameter '-Dcom.devexperts.qd.impl.StickySubscriptionLogInterval',
+      it determines how often (default 10 s) logs are printed during sticky subscription processing.
+  - Added JMX operation and parameters:
+    - 'applyStickySubscriptionPeriod': Alters the sticky subscription period or disables it if set to 0.
+       A regular expression parameter specifies which collectors it applies to.
+    - 'StickySubscriptionPeriod': A readonly property displaying the current sticky period.
+    - 'StickyScheduleMinDelay': Allows changes to the minimum delay between tasks for clearing subscriptions.
+    - 'StickySubscriptionLogInterval': Enables adjustment of the log interval for sticky subscription processing.
+* [QD-1590]  [Monitoring][QDStats] Introduce sticky subscription metrics to MARS
+* [QD-1659] NetTest Enhancements: E2E Latency Measurement and Data Precision Improvements
+  - added E2E latency measurement capability
+  - improved time fields to use millisecond precision without randomization for accurate delay estimation
+  - optimized random value generation for improved performance and more realistic test data
+* [QD-1662] NetTest Enhancements: Implement Per-Connection Publisher/Consumer Rate Metrics and E2E Latency Tracking in MARS
+* [QD-1670] [RMI] Support updating RMI service descriptor properties
+* [QD-1690] Create Order Imbalance record
+  - Records 'NuamTimeAndSale', 'NuamOrder*' and 'OrderImbalance*', has been added to filters 'feed' and 'compfeed'
+  - Use 'IndexedEventSubscriptionSymbol' for subscribing to 'OrderImbalance'
+* [QD-1691] Flaky test: com.dxfeed.api.test.SchemeRemapTest
+
 QDS 3.343:
 
 * [QD-1621] Improvements to QD Tools

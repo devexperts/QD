@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,8 +22,6 @@ import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.SymbolCodec;
-import com.devexperts.qd.SymbolStriper;
-import com.devexperts.qd.kit.MonoStriper;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.qtp.AgentAdapter;
 import com.devexperts.qd.qtp.DistributorAdapter;
@@ -564,6 +562,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
         DXFEED_PASSWORD_PROPERTY,
         DXFEED_WILDCARD_ENABLE_PROPERTY,
         DXFEED_STRIPE_PROPERTY,
+        DXFEED_STICKY_SUBSCRIPTION_PROPERTY,
         DXENDPOINT_EVENT_TIME_PROPERTY,
         DXENDPOINT_STORE_EVERYTHING_PROPERTY,
         DXSCHEME_NANO_TIME_PROPERTY,
@@ -578,8 +577,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
     ));
 
     private static boolean supportsProperty(String key) {
-        return SUPPORTED_PROPERTIES.contains(key)
-            || key.startsWith(DXSCHEME_ENABLED_PROPERTY_PREFIX);
+        return SUPPORTED_PROPERTIES.contains(key) || key.startsWith(DXSCHEME_ENABLED_PROPERTY_PREFIX);
     }
 
     @ServiceProvider
@@ -672,8 +670,6 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
                 scheme = ((ConfigurableDataScheme) scheme).withProperties(props);
             }
             // Resolve properties
-            SymbolStriper striper = SymbolStriper.definedValueOf(scheme,
-                props.getProperty(DXFEED_STRIPE_PROPERTY, MonoStriper.MONO_STRIPER_NAME));
             boolean isEventTime = Boolean.parseBoolean(
                 props.getProperty(DXENDPOINT_EVENT_TIME_PROPERTY, "false"));
             boolean isStoreEverything = Boolean.parseBoolean(
@@ -686,7 +682,6 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
                 .withScheme(scheme)
                 .withEventTimeSequence(isEventTime)
                 .withStoreEverything(isStoreEverything)
-                .withStriper(striper)
                 .build();
             
             // log DXEndpoint properties

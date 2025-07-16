@@ -189,6 +189,7 @@ public final class DXFeedPropertiesConverter {
         loadGenerator(file, "market.impl.OtcMarketsOrder", "OtcMarketsOrder", "#");
         loadGenerator(file, "custom.impl.NuamOrder", "NuamOrder", "#");
         loadGenerator(file, "market.impl.SpreadOrder", "SpreadOrder", "#");
+        loadGenerator(file, "market.impl.OrderImbalance", "OrderImbalance", "#");
         loadGenerator(file, "candle.impl.Candle", "Candle", "");
         loadGenerator(file, "candle.impl.Trade", "OldStyleCandle", "");
     }

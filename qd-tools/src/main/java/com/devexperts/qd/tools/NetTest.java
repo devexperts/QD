@@ -37,15 +37,17 @@ import java.util.regex.Pattern;
 public class NetTest extends AbstractTool {
     private final OptionCollector collector = new OptionCollector("ticker");
     private final OptionStripe stripe = new OptionStripe();
+    private final OptionSticky sticky = new OptionSticky();
     private final OptionSymbols symbols = new OptionSymbols();
-    private final OptionInteger connections = new OptionInteger('C', "connections", "<number>", "Number of connections to create.");
+    private final OptionInteger connections = new OptionInteger('C', "connections", "<number>", "Number of instances to create.");
     private final Option wildcard = new Option('w', "wildcard", "Enable wildcard subscription (for stream collector).");
     private final OptionLog logfile = OptionLog.getInstance();
     private final OptionStat stat = new OptionStat();
+    private final OptionName name = new OptionName("NetTest");
 
     @Override
     protected Option[] getOptions() {
-        return new Option[] { logfile, collector, stripe, symbols, connections, stat, wildcard };
+        return new Option[] { logfile, collector, stripe, sticky, symbols, connections, stat, wildcard, name };
     }
 
     @Override
@@ -62,9 +64,10 @@ public class NetTest extends AbstractTool {
             stat.init();
         }
         NetTestConfig config = new NetTestConfig();
+        config.name = name.getValue();
         config.address = args[1];
         if (connections.isSet())
-            config.connectionsNum = connections.getValue();
+            config.instanceCount = connections.getValue();
         config.optionCollector = collector;
         if (symbols.isSet()) {
             config.totalSymbols = symbols.getTotal();

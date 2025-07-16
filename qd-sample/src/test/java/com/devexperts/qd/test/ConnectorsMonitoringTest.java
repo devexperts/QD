@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -21,7 +21,9 @@ import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.stats.JMXStats;
 import com.devexperts.qd.stats.QDStats;
+import com.devexperts.util.TimePeriod;
 import org.junit.Test;
+
 
 import static org.junit.Assert.assertTrue;
 
@@ -35,7 +37,12 @@ public class ConnectorsMonitoringTest {
         ConnectorsMonitoringTask cmt = new ConnectorsMonitoringTask();
         QDStats stats = JMXStats.createRoot("test", SCHEME).getRootStats();
         cmt.addStats(stats);
-        QDStream stream = QDFactory.getDefaultFactory().createStream(SCHEME, stats.create(QDStats.SType.STREAM));
+
+        QDStream stream = QDFactory.getDefaultFactory().streamBuilder()
+            .withScheme(SCHEME)
+            .withStats(stats.create(QDStats.SType.STREAM))
+            .withStickySubscriptionPeriod(TimePeriod.valueOf("10m"))
+            .build();
 
         QDAgent agent = stream.agentBuilder().build();
         RecordBuffer sub = new RecordBuffer(RecordMode.SUBSCRIPTION);
@@ -48,6 +55,19 @@ public class ConnectorsMonitoringTest {
         dist.processData(buf);
 
         String report = cmt.report();
-        assertTrue(report, report.matches("^Subscription: 10; Storage: 0; Buffer: 10; Dropped: 0; Read: 0 Bps; Write: 0 Bps; CPU: .*"));
+        assertTrue(report,
+            report.matches("^Subscription: 10; Sticky: 0; Storage: 0; Buffer: 10; Dropped: 0; Read: 0 Bps; Write: 0 Bps; CPU: .*"));
+
+        sub.rewind();
+        agent.removeSubscription(sub);
+        report = cmt.report();
+        assertTrue(report,
+            report.matches("^Subscription: 10; Sticky: 10; Storage: 0; Buffer: 0; Dropped: 0; Read: 0 Bps; Write: 0 Bps; CPU: .*"));
+
+        sub.rewind();
+        agent.addSubscription(sub);
+        report = cmt.report();
+        assertTrue(report,
+            report.matches("^Subscription: 10; Sticky: 0; Storage: 0; Buffer: 0; Dropped: 0; Read: 0 Bps; Write: 0 Bps; CPU: .*"));
     }
 }

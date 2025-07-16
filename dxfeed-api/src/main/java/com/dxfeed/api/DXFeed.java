@@ -315,14 +315,14 @@ public abstract class DXFeed {
     /**
      * Requests the last event for the specified event type and symbol.
      * This method works only for event types that implement {@link LastingEvent} marker interface.
-     * This method requests the data from the the uplink data provider,
+     * This method requests the data from the uplink data provider,
      * creates new event of the specified {@code eventType},
      * and {@link Promise#complete(Object) completes} the resulting promise with this event.
      *
      * <p> This method is designed for retrieval of a snapshot only.
      * Use {@link DXFeedSubscription} if you need event updates in real time.
      *
-     * <p>The promise is {@link Promise#cancel() cancelled} when the the underlying {@link DXEndpoint} is
+     * <p>The promise is {@link Promise#cancel() cancelled} when the underlying {@link DXEndpoint} is
      * {@link DXEndpoint#close() closed}.
      * If the event is not available for any transient reason (no subscription, no connection to uplink, etc),
      * then the resulting promise completes when the issue is resolved, which may involve an arbitrarily long wait.
@@ -348,6 +348,10 @@ public abstract class DXFeed {
      *
      * <p>Note, that this method does not work when {@link DXEndpoint} was created with
      * {@link DXEndpoint.Role#STREAM_FEED STREAM_FEED} role (promise completes exceptionally).
+     *
+     * <p> For a request-response model with a high call frequency of the Promise method, it is strongly recommended
+     * to enable a {@link DXEndpoint#DXFEED_STICKY_SUBSCRIPTION_PROPERTY} with a period set to twice the call frequency.
+     * For example, if the Promise call frequency is once every 1000 ms, the sticky period should be at least 2000 ms.
      *
      * <h3>Threads</h3>
      *
@@ -395,13 +399,13 @@ public abstract class DXFeed {
     /**
      * Requests the last events for the specified event type and a collection of symbols.
      * This method works only for event types that implement {@link LastingEvent} marker interface.
-     * This method requests the data from the the uplink data provider,
+     * This method requests the data from the uplink data provider,
      * creates new events of the specified {@code eventType},
      * and {@link Promise#complete(Object) completes} the resulting promises with these events.
      *
      * <p>This is a bulk version of {@link #getLastEventPromise(Class, Object) getLastEventPromise(eventType, symbol)} method.
      *
-     * <p>The promise is {@link Promise#cancel() cancelled} when the the underlying {@link DXEndpoint} is
+     * <p>The promise is {@link Promise#cancel() cancelled} when the underlying {@link DXEndpoint} is
      * {@link DXEndpoint#close() closed}.
      * If the event is not available for any transient reason (no subscription, no connection to uplink, etc),
      * then the resulting promise completes when the issue is resolved, which may involve an arbitrarily long wait.
@@ -440,7 +444,7 @@ public abstract class DXFeed {
     /**
      * Requests a list of indexed events for the specified event type, symbol, and source.
      * This method works only for event types that implement {@link IndexedEvent} interface.
-     * This method requests the data from the the uplink data provider,
+     * This method requests the data from the uplink data provider,
      * creates a list of events of the specified {@code eventType},
      * and {@link Promise#complete(Object) completes} the resulting promise with this list.
      * The events are ordered by {@link IndexedEvent#getIndex() index} in the list.
@@ -448,7 +452,7 @@ public abstract class DXFeed {
      * <p> This method is designed for retrieval of a snapshot only.
      * Use {@link IndexedEventModel} if you need a list of indexed events that updates in real time.
      *
-     * <p>The promise is {@link Promise#cancel() cancelled} when the the underlying {@link DXEndpoint} is
+     * <p>The promise is {@link Promise#cancel() cancelled} when the underlying {@link DXEndpoint} is
      * {@link DXEndpoint#close() closed}.
      * If the events are not available for any transient reason (no subscription, no connection to uplink, etc),
      * then the resulting promise completes when the issue is resolved, which may involve an arbitrarily long wait.
@@ -482,6 +486,10 @@ public abstract class DXFeed {
      * {@link DXPublisher#publishEvents(Collection) DXPublisher.publishEvents} method, because the later expects
      * events in a different order and with an appropriate flags set. See documentation on a specific event class
      * for details on how they should be published.
+     *
+     * <p> For a request-response model with a high call frequency of the Promise method, it is strongly recommended
+     * to enable a {@link DXEndpoint#DXFEED_STICKY_SUBSCRIPTION_PROPERTY} with a period set to twice the call frequency.
+     * For example, if the Promise call frequency is once every 1000 ms, the sticky period should be at least 2000 ms.
      *
      * <h3>Threads</h3>
      *
@@ -561,7 +569,7 @@ public abstract class DXFeed {
     /**
      * Requests time series of events for the specified event type, symbol, and a range of time.
      * This method works only for event types that implement {@link TimeSeriesEvent} interface.
-     * This method requests the data from the the uplink data provider,
+     * This method requests the data from the uplink data provider,
      * creates a list of events of the specified {@code eventType},
      * and {@link Promise#complete(Object) completes} the resulting promise with this list.
      * The events are ordered by {@link TimeSeriesEvent#getTime() time} in the list.
@@ -572,7 +580,7 @@ public abstract class DXFeed {
      * <p>The range and depth of events that are available with this service is typically constrained by
      * upstream data provider.
      *
-     * <p>The promise is {@link Promise#cancel() cancelled} when the the underlying {@link DXEndpoint} is
+     * <p>The promise is {@link Promise#cancel() cancelled} when the underlying {@link DXEndpoint} is
      * {@link DXEndpoint#close() closed}.
      * If events are not available for any transient reason (no subscription, no connection to uplink, etc),
      * then the resulting promise completes when the issue is resolved, which may involve an arbitrarily long wait.
@@ -586,6 +594,10 @@ public abstract class DXFeed {
      * <p>This method does not accept an instance of {@link TimeSeriesSubscriptionSymbol} as a {@code symbol}.
      * The later class is designed for use with {@link DXFeedSubscription} and to observe time-series subscription
      * in {@link DXPublisher}.
+     *
+     * <p> For a request-response model with a high call frequency of the Promise method, it is strongly recommended
+     * to enable a {@link DXEndpoint#DXFEED_STICKY_SUBSCRIPTION_PROPERTY} with a period set to twice the call frequency.
+     * For example, if the Promise call frequency is once every 1000 ms, the sticky period should be at least 2000 ms.
      *
      * <h3>Event flags</h3>
      *

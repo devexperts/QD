@@ -12,20 +12,17 @@
 package com.devexperts.qd.tools;
 
 import com.devexperts.logging.Logging;
-import com.devexperts.qd.DataVisitor;
+import com.devexperts.qd.DataIntField;
 import com.devexperts.qd.QDAgent;
-import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.SymbolList;
 import com.devexperts.qd.ng.AbstractRecordSink;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordListener;
 import com.devexperts.qd.ng.RecordMode;
-import com.devexperts.qd.ng.RecordProvider;
 import com.devexperts.qd.qtp.QDEndpoint;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.concurrent.locks.LockSupport;
 
 /**
  * This thread connects to collector via {@link com.devexperts.qd.QDAgent agent}
@@ -37,56 +34,89 @@ import java.util.List;
 class NetTestConsumerAgentThread extends NetTestWorkingThread {
 
     private static final Logging log = Logging.getLogging(NetTestConsumerAgentThread.class);
+    private static final int MILLIS_SHIFT = 22;
 
-    private final List<QDAgent> agents;
-    private boolean signalled;
+    public interface LatencyFunction {
+        long getLatency(RecordCursor cursor, long currentTimeMillis);
+    }
+
+    private final QDAgent[] agents;
+    private final LatencyFunction latencyFunc;
+    private long currentTimeMillis;
+    private long currentRecords;
+    private long currentLatency;
 
     NetTestConsumerAgentThread(int index, NetTestConsumerSide side, QDEndpoint endpoint) {
         super("ConsumerAgentThread", index, side, endpoint);
-        agents = new ArrayList<QDAgent>();
-        createAgent(endpoint.getTicker());
-        createAgent(endpoint.getStream());
-        createAgent(endpoint.getHistory());
+        agents = endpoint.getCollectors().stream().map(c -> c.agentBuilder().build()).toArray(QDAgent[]::new);
+        latencyFunc = createLatencyFunction();
     }
+    
+    private LatencyFunction createLatencyFunction() {
+        int indexFieldTimeMillis = -1;
+        int indexFieldTimeSecond = -1;
+        int indexFieldSequence = -1;
+        for (int j = 0; j < NetTestSide.RECORD.getIntFieldCount(); j++) {
+            DataIntField intField = NetTestSide.RECORD.getIntField(j);
+            if (intField.getName().endsWith("Time")) {
+                if (intField.getSerialType().isLong() && indexFieldTimeMillis == -1) {
+                    indexFieldTimeMillis = intField.getIndex();
+                } else if (!intField.getSerialType().isLong() && indexFieldTimeSecond == -1) {
+                    indexFieldTimeSecond = intField.getIndex();
+                }
+            }
+            if (intField.getName().endsWith("Sequence") && indexFieldSequence == -1)
+                indexFieldSequence = intField.getIndex();
+            if (intField.getSerialType().isLong())
+                j++; // skip the next VoidIntField
+        }
+        final int finalIndexFieldTimeMillis = indexFieldTimeMillis;
+        final int finalIndexFieldTimeSecond = indexFieldTimeSecond;
+        final int finalIndexFieldSequence = indexFieldSequence;
 
-    private void createAgent(QDCollector collector) {
-        if (collector != null) {
-            agents.add(collector.agentBuilder().build());
+        if (finalIndexFieldTimeMillis != -1) {
+            return (cursor, currentTimeMillis) -> currentTimeMillis - cursor.getLong(finalIndexFieldTimeMillis);
+        } else if (finalIndexFieldTimeSecond != -1 && finalIndexFieldSequence != -1) {
+            return (cursor, currentTimeMillis) -> currentTimeMillis -
+                (cursor.getInt(finalIndexFieldTimeSecond) * 1000L +
+                (cursor.getInt(finalIndexFieldSequence) >>> MILLIS_SHIFT));
+        } else {
+            return (cursor, currentTimeMillis) -> 0;
         }
     }
-
+    
     @Override
     public void run() {
         subscribe();
-        DataVisitor countingVisitor = new AbstractRecordSink() {
+        AbstractRecordSink sink = new AbstractRecordSink() {
             @Override
             public void append(RecordCursor cursor) {
-                processedRecords++;
+                currentRecords++;
+                currentLatency += latencyFunc.getLatency(cursor, currentTimeMillis);
+            }
+
+            @Override
+            public boolean hasCapacity() {
+                return currentRecords < 100;
             }
         };
 
-        RecordListener listener = new RecordListener() {
-            public synchronized void recordsAvailable(RecordProvider provider) {
-                signalled = true;
-                notifyAll();
-            }
-        };
+        RecordListener listener = provider -> LockSupport.unpark(NetTestConsumerAgentThread.this);
         for (QDAgent agent : agents) {
             agent.setRecordListener(listener);
         }
-        try {
-            while (true) {
-                for (QDAgent agent : agents) {
-                    while (agent.retrieveData(countingVisitor)) {}
-                }
-                synchronized (listener) {
-                    while (!signalled)
-                        listener.wait();
-                    signalled = false;
-                }
+        while (true) {
+            for (QDAgent agent : agents) {
+                boolean hasMore;
+                do {
+                    currentTimeMillis = System.currentTimeMillis();
+                    currentRecords = 0;
+                    currentLatency = 0;
+                    hasMore = agent.retrieve(sink);
+                    addStats(currentLatency, currentRecords);
+                } while (hasMore);
             }
-        } catch (InterruptedException e) {
-            // do nothing
+            LockSupport.park();
         }
     }
 

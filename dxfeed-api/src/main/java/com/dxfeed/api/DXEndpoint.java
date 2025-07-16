@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,6 +13,7 @@ package com.dxfeed.api;
 
 import com.devexperts.services.Service;
 import com.devexperts.services.Services;
+import com.devexperts.util.TimePeriod;
 import com.dxfeed.api.osub.WildcardSymbol;
 import com.dxfeed.event.EventType;
 import com.dxfeed.event.market.Quote;
@@ -285,6 +286,11 @@ public abstract class DXEndpoint implements AutoCloseable {
      * Defines symbol striping strategy for an endpoint.
      */
     public static final String DXFEED_STRIPE_PROPERTY = "dxfeed.stripe";
+
+    /**
+     * Defines a sticky subscription period in format of {@link TimePeriod}
+     */
+    public static final String DXFEED_STICKY_SUBSCRIPTION_PROPERTY = "dxfeed.stickySubscriptionPeriod";
 
     /**
      * Defines path to a file with properties for an endpoint with role {@link Role#PUBLISHER PUBLISHER}.

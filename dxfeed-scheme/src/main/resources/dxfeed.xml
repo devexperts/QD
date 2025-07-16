@@ -89,6 +89,23 @@
             <value name="GOOD_TIL_SESSION" ord="5"/>
             <value name="NUMBER_OF_DAYS" ord="6"/>
         </enum>
+
+        <enum name="ImbalanceSide">
+            <value name="UNDEFINED" ord="0"/>
+            <value name="BUY" ord="1"/>
+            <value name="SELL" ord="2"/>
+            <value name="NO_IMBALANCE" ord="3"/>
+            <value name="INSUFFICIENT_ORDERS" ord="4"/>
+            <value name="PAUSED" ord="5"/>
+        </enum>
+
+        <enum name="AuctionType">
+            <value name="UNDEFINED" ord="0"/>
+            <value name="OPENING" ord="1"/>
+            <value name="CLOSING" ord="2"/>
+            <value name="REOPENING" ord="3"/>
+            <value name="OTHER" ord="4"/>
+        </enum>
     </enums>
 
     <records>
@@ -427,6 +444,29 @@
             <field name="Delta" type="decimal"/>
             <field name="OptionSymbol" type="utf_char_array"/>
         </record>
+
+        <!-- MarketFactoryImpl -->
+        <generator name="OrderImbalance" type="suffix" delimiter="#">
+            <iterator>
+                <value/>
+                <value>NUAM</value>
+            </iterator>
+            <record name="OrderImbalance">
+                <field name="Time" type="time"/>
+                <field name="Sequence" type="sequence"/>
+                <field name="RefPrice" type="price" />
+                <field name="PairedSize" type="size" />
+                <field name="ImbalanceSize" type="size" />
+                <field name="NearPrice" type="price" />
+                <field name="FarPrice" type="price" />
+                <field name="Flags" type="flags">
+                    <bitfields>
+                        <field name="ImbalanceSide" offset="0" size="3"/>
+                        <field name="AuctionType" offset="3" size="3"/>
+                    </bitfields>
+                </field>
+            </record>
+        </generator>
 
         <!-- CandleFactoryImpl -->
         <record name="TradeHistory">

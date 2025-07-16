@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -37,6 +37,7 @@ public class Feed extends AbstractTool {
     private final OptionLog logfile = OptionLog.getInstance();
     private final OptionCollector collector = new OptionCollector("all");
     private final OptionStripe stripe = new OptionStripe();
+    private final OptionSticky sticky = new OptionSticky();
     private final OptionFile file = new OptionFile();
     private final OptionWrite write = new OptionWrite(file);
     private final Option raw = new Option('R', "raw", "Use raw feed connection (do not subscribe to stream '*').");
@@ -56,7 +57,7 @@ public class Feed extends AbstractTool {
     @Override
     protected Option[] getOptions() {
         return new Option[] {
-            logfile, collector, stripe, file, write, raw, subscribe, delay, buffer, name, stat, html, rmi
+            logfile, collector, stripe, sticky, file, write, raw, subscribe, delay, buffer, name, stat, html, rmi
         };
     }
 

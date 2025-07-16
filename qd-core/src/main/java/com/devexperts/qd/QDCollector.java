@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,6 +16,7 @@ import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.stats.QDStatsContainer;
+import com.devexperts.util.TimePeriod;
 
 import java.util.concurrent.Executor;
 
@@ -327,6 +328,16 @@ public interface QDCollector extends SubscriptionContainer, QDStatsContainer {
          * Striper must be stable in the sense that all its filters must be {@link QDFilter#isStable() stable}.
          */
         public SymbolStriper getStriper();
+
+        /**
+         * Specifies sticky subscription a period
+         */
+        public Builder<T> withStickySubscriptionPeriod(TimePeriod stickySubscriptionPeriod);
+
+        /**
+         * Return sticky subscription a period
+         */
+        public TimePeriod getStickySubscriptionPeriod();
 
         /**
          * Copies properties from others.

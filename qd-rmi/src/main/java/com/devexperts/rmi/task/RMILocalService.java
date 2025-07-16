@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,6 +12,7 @@
 package com.devexperts.rmi.task;
 
 import com.devexperts.io.MarshallingException;
+import com.devexperts.logging.Logging;
 import com.devexperts.rmi.RMIExceptionType;
 import com.devexperts.rmi.RMIServer;
 import com.devexperts.rmi.impl.RMITaskImpl;
@@ -24,6 +25,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import javax.annotation.Nonnull;
 
 /**
@@ -39,9 +41,10 @@ import javax.annotation.Nonnull;
  * @param <T> type of the service's methods expected result or a super class of it.
  */
 public abstract class RMILocalService<T> extends RMIService<T> {
+    private static final Logging log = Logging.getLogging(RMILocalService.class);
 
-    private final List<RMIServiceDescriptor> descriptors;
-
+    private volatile List<RMIServiceDescriptor> descriptors;
+    private final List<RMIServiceDescriptorsListener> listeners = new CopyOnWriteArrayList<>();
 
     // ==================== public/protected methods ====================
     /**
@@ -139,6 +142,51 @@ public abstract class RMILocalService<T> extends RMIService<T> {
     // override this method to support channels
     protected RMIChannelSupport<T> channelSupport() {
         return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public synchronized void addServiceDescriptorsListener(RMIServiceDescriptorsListener listener) {
+        listeners.add(listener);
+        super.addServiceDescriptorsListener(listener);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public synchronized void removeServiceDescriptorsListener(RMIServiceDescriptorsListener listener) {
+        listeners.remove(listener);
+        super.removeServiceDescriptorsListener(listener);
+    }
+
+    /**
+     * Update the service descriptor with new properties.
+     * Attached ServiceDescriptorListeners will be notified immediately.
+     *
+     * <p><b>Note: notification happens while holding monitor on this {@code RMIService} object.</b>
+     *
+     * @implSpec method implementation shall be in sync with {@link #getDescriptors} implementation.
+     *
+     * @param properties updated service descriptor properties (may be null)
+     */
+    public synchronized void changeProperties(Map<String, String> properties) {
+        if (getDescriptors() != descriptors) {
+            throw new UnsupportedOperationException(
+                "changeProperties implementation shall be in sync with getDescriptors()");
+        }
+        RMIServiceDescriptor newDescriptor = descriptors.get(0).changeProperties(properties); // descriptors.size() == 1
+        List<RMIServiceDescriptor> newDescriptors = Collections.singletonList(newDescriptor);
+        descriptors = newDescriptors;
+        listeners.forEach(l -> {
+            try {
+                l.descriptorsUpdated(newDescriptors);
+            } catch (Throwable t) {
+                log.error("Failed to update service descriptors", t);
+            }
+        });
     }
 
     // ------------------- static helper stuff ----------------------------

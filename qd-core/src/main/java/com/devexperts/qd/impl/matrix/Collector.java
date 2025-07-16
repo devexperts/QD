@@ -78,15 +78,19 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
     static final int NEXT_AGENT = 2; // Offset of agent.number of next agent.
     static final int NEXT_INDEX = 3; // Offset of index in next agent.
 
-    // That's it for ticker & stream total agents
-    static final int TOTAL_AGENT_STEP = 4;
-
     // For 'total' agents:
-    static final int TIME_TOTAL = 4;
-    static final int TIME_TOTAL_X = 5;
+    static final int STICKY_STAMP = 4; // Time stamp in seconds when sticky was enabled
+    static final int STICKY_NEXT = 5;  // List of agent indexes related to the same sticky bucket
+    static final int STICKY_WATERMARK = 6; // The minimum value of the history subscription deep during the sticky was turn-on
+    static final int STICKY_WATERMARK_X = 7;
+    static final int TIME_TOTAL = 8;
+    static final int TIME_TOTAL_X = 9;
+
+    // That's it for ticker & stream total agents
+    static final int TOTAL_AGENT_STEP = 6;
 
     // That's it for history total agents
-    static final int TOTAL_HISTORY_AGENT_STEP = 6;
+    static final int TOTAL_HISTORY_AGENT_STEP = 10;
 
     // For clients' agents:
     static final int PREV_AGENT = 4; // Offset of agent.number of prev agent, see PREV_AGENT_xxx constants
@@ -120,21 +124,21 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
 
     /*--------------------------------------------------------------------------------------------------------------
      * FULL AGENT SUB MATRIX LAYOUT FOR DIFFERENT COLLECTORS:
-     *     Total[Hist]    Ticker          Stream      History
+     *     Total[Hist]          Ticker          Stream      History
      *     -------------- --------------- ----------- ----------------
-     *  0   KEY            KEY             KEY         KEY
-     *  1   RID            RID             RID         RID
-     *  2   NEXT_AGENT     NEXT_AGENT      NEXT_AGENT  NEXT_AGENT      <-- Payload indicator for total sub (!=0 for sub items), -1 to keep without actual sub
-     *  3   NEXT_INDEX     NEXT_INDEX      NEXT_INDEX  NEXT_INDEX
-     *  4  [TIME_TOTAL  ]  PREV_AGENT      PREV_AGENT  PREV_AGENT      <-- Payload indicator for agent sub (!=0 for sub item)
-     *  5  [TIME_TOTAL_X]  SNAPSHOT_QUEUE              SNAPSHOT_QUEUE
-     *  6                  UPDATE_QUEUE                HISTORY_SUB_FLAGS <- SNIP_TIME_SUB_FLAG, pending count, process version, sync(global OR local)
-     *  7                  TIME_MARK                   TIME_SUB       \ time_sub = Long.MAX_VALUE when not sub-d
-     *  8                                              TIME_SUB_X     /
-     *  9                                              TIME_KNOWN     \ time_known > time_sub for snapshot-queued
-     * 10                                              TIME_KNOWN_X   / time_known := Long.MAX_VALUE on enqueue
-     * 11                                              LAST_RECORD    \ 0 when not in buffer, or persistent position in
-     * 12                                              LAST_RECORD_X  / AgentBuffer, may have TX_DIRTY_LAST_RECORD_BIT
+     *  0   KEY                  KEY             KEY         KEY
+     *  1   RID                  RID             RID         RID
+     *  2   NEXT_AGENT           NEXT_AGENT      NEXT_AGENT  NEXT_AGENT      <-- Payload indicator for total sub (!=0 for sub items), -1 to keep without actual sub
+     *  3   NEXT_INDEX           NEXT_INDEX      NEXT_INDEX  NEXT_INDEX
+     *  4   STICKY_STAMP         PREV_AGENT      PREV_AGENT  PREV_AGENT      <-- Payload indicator for agent sub (!=0 for sub item)
+     *  5   STICKY_NEXT          SNAPSHOT_QUEUE              SNAPSHOT_QUEUE
+     *  6  [STICKY_WATERMARK]    UPDATE_QUEUE                HISTORY_SUB_FLAGS <- SNIP_TIME_SUB_FLAG, pending count, process version, sync(global OR local)
+     *  7  [STICKY_WATERMARK_X]  TIME_MARK                   TIME_SUB       \ time_sub = Long.MAX_VALUE when not sub-d
+     *  8  [TIME_TOTAL  ]                                    TIME_SUB_X     /
+     *  9  [TIME_TOTAL_X]                                    TIME_KNOWN     \ time_known > time_sub for snapshot-queued
+     * 10                                                    TIME_KNOWN_X   / time_known := Long.MAX_VALUE on enqueue
+     * 11                                                    LAST_RECORD    \ 0 when not in buffer, or persistent position in
+     * 12                                                    LAST_RECORD_X  / AgentBuffer, may have TX_DIRTY_LAST_RECORD_BIT
      *--------------------------------------------------------------------------------------------------------------*/
 
     // For objects in 'total' agents:
@@ -172,6 +176,9 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
 
     // SNAPSHOT_QUEUE & UPDATE_QUEUE state mark bits
     static final int QUEUE_BIT = 1 << 31; // highest bit
+
+    // A marker flag for delayed cleaning of sticky elements from the total matrix
+    static final int NO_NEXT_AGENT_STICKY_DELAY = -2;
 
     /*--------------------------------------------------------------------------------------------------------------
      * TICKER [SNAPSHOT_QUEUE]  ,       [UPDATE_QUEUE] combinations:
@@ -249,6 +256,8 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
      */
     int subStepsRemaining; // SYNC: r/w(global)
 
+    final StickySubscription stickySubscription;
+
     final LockBoundTaskQueue lockBoundTaskQueue = new LockBoundTaskQueue();
 
     //======================================= constructor =======================================
@@ -272,6 +281,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
         mapper.incMaxCounter(scheme.getRecordCount());
         QDStats unique_sub_stats = stats.create(QDStats.SType.UNIQUE_SUB);
         total = new Agent(this, TOTAL_AGENT_INDEX, agentBuilder(), unique_sub_stats);
+
         total.sub = new TotalSubMatrix(mapper,
             hasTime ? TOTAL_HISTORY_AGENT_STEP : TOTAL_AGENT_STEP,
             hasTime ? TOTAL_HISTORY_OBJ_STEP : TOTAL_OBJ_STEP,
@@ -283,6 +293,8 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
         errorHandler = scheme.getService(QDErrorHandler.class);
         if (errorHandler == null)
             errorHandler = QDErrorHandler.DEFAULT;
+
+        stickySubscription = new StickySubscription(builder.getStickySubscriptionPeriod().getTime(), this);
 
         management.addCollector(this);
     }
@@ -415,13 +427,13 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
     abstract boolean retrieveDataImpl(Agent agent, RecordSink sink, boolean snapshotOnly);
 
     // SYNC: global
-    private void startSubChangeBatch(int notify) {
+    void startSubChangeBatch(int notify) {
         subStepsRemaining = management.getSubscriptionBucket();
         subNotifyAccumulator = notify & ~NOTIFY_SUB_HAS_MORE;
     }
 
     // SYNC: global
-    private int doneSubChangeBatch() {
+    int doneSubChangeBatch() {
         if (subStepsRemaining == 0) // no more steps in a batch
             subNotifyAccumulator |= NOTIFY_SUB_HAS_MORE; // means we have to do more
         return subNotifyAccumulator;
@@ -429,17 +441,22 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
 
     // SYNC: global+local
     private void subscriptionChangeComplete(Agent agent) {
-        if (agent.reducedSub){
+        if (agent.reducedSub) {
             rehashAgentIfNeeded(agent);
-            rehashAgentIfNeeded(total);
             refilterStreamBuffersAfterSubscriptionChange(agent);
-            mapper.rehashIfNeeded();
+            totalChangeComplete();
             agent.reducedSub = false;
         }
     }
 
+    // SYNC: global
+    void totalChangeComplete() {
+        rehashAgentIfNeeded(total);
+        mapper.rehashIfNeeded();
+    }
+
     // SYNC: none
-    private void notifySubChange(int notify, Agent agent) {
+    void notifySubChange(int notify, Agent agent) {
         if (TRACE_LOG)
             log.trace("notifySubChange" +
                 ((notify & NOTIFY_SUB_TOTAL_ADDED) != 0 ? " TOTAL_ADDED" : "") +
@@ -692,6 +709,9 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
      */
     // SYNC: global
     private boolean helpClose() {
+        if (stickySubscription.isEnabled()) {
+            stickySubscription.doCleanupStickySubscription();
+        }
         while (subStepsRemaining > 0) {
             Agent agent = closingAgentsQueue.peek();
             if (agent == null)
@@ -773,6 +793,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
     @Override
     public void close() {
         management.removeCollector(this);
+        stickySubscription.close();
         stats.close();
     }
 
@@ -852,6 +873,9 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
             // total sub might contain expired items - let implementation to collect them and unmark payload flag
             prepareTotalSubForRehash();
             total.sub = total.sub.rehash(Hashing.MAX_SHIFT);
+            if (stickySubscription.isEnabled()) {
+                stickySubscription.rebuildStickySubscription();
+            }
             // nothing more to do for total agent
             return;
         }
@@ -930,6 +954,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
         boolean sameSub = false;
         boolean totalRecordAdded = false;
         boolean reduceTimeTotal = false;
+        long newTimeTotal = Long.MAX_VALUE;
         long timeTotal = 0;
 
         /*
@@ -943,6 +968,8 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
                     agent.updateAttachment( // combine with old otherwise
                         asub.getObj(aindex, ATTACHMENT), cur, false));
 
+        boolean wasStickySubscription = stickySubscription.isStickySubscription(tsub, tindex);
+
         if (newSub) { // add new sub entry to lists
             if (hasTime) {
                 // initialize History fields
@@ -954,25 +981,49 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
             // Insert 'agent' into proper double-list right after 'total'.
             int nagent = tsub.getInt(tindex + NEXT_AGENT);
             int nindex = tsub.getInt(tindex + NEXT_INDEX);
-            asub.setInt(aindex + NEXT_AGENT, nagent > 0 ? nagent : 0); // beware of negative nagent in tsub
+            asub.setInt(aindex + NEXT_AGENT, Math.max(nagent, 0)); // beware of negative nagent in tsub
             asub.setInt(aindex + NEXT_INDEX, nindex);
             asub.setInt(aindex + PREV_AGENT, total.number);
             tsub.setInt(tindex + NEXT_AGENT, agent.number);
             tsub.setInt(tindex + NEXT_INDEX, aindex);
+
+            if (wasStickySubscription && !hasTime) {
+                stickySubscription.dropStickySubscription(tsub, tindex);
+            }
             if (nagent > 0) {
                 SubMatrix nsub = agents[nagent].sub;
                 int nset = nsub.getInt(nindex + PREV_AGENT) & PREV_AGENT_SET;
                 nsub.setInt(nindex + PREV_AGENT, agent.number | nset);
-                if (hasTime && time < tsub.getLong(tindex + TIME_TOTAL)) {
-                    tsub.setLong(tindex + TIME_TOTAL, time);
-                    totalRecordAdded = true;
+                if (hasTime) {
+                    long totalTime = tsub.getLong(tindex + TIME_TOTAL);
+                    if (wasStickySubscription && time <= totalTime) {
+                        stickySubscription.dropStickySubscription(tsub, tindex);
+                    }
+                    if (time < totalTime) {
+                        tsub.setLong(tindex + TIME_TOTAL, time);
+                        totalRecordAdded = true;
+                    }
                 }
             } else {
-                if (hasTime)
-                    tsub.setLong(tindex + TIME_TOTAL, time);
-                if (nagent == 0) // only add the record that did not really exist (was not a payload)
-                    tsub.updateAddedPayload(rid);
-                totalRecordAdded = true;
+                if (hasTime) {
+                    if (wasStickySubscription) {
+                        long totalTime = tsub.getLong(tindex + TIME_TOTAL);
+                        if (time <= totalTime) {
+                            stickySubscription.dropStickySubscription(tsub, tindex);
+                            tsub.setLong(tindex + TIME_TOTAL, time);
+                            totalRecordAdded = true;
+                        }
+                    } else {
+                        tsub.setLong(tindex + TIME_TOTAL, time);
+                    }
+                }
+                if (!wasStickySubscription) {
+                    if (nagent == 0) {
+                        // only add the record that did not really exist (was not a payload)
+                        tsub.updateAddedPayload(rid);
+                    }
+                    totalRecordAdded = true;
+                }
             }
             if (!wasPayload)
                 asub.updateAddedPayload(rid);
@@ -986,11 +1037,28 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
                     // time or flags changed
                     asub.setLong(aindex + TIME_SUB, time);
                     timeTotal = tsub.getLong(tindex + TIME_TOTAL);
+                    if (wasStickySubscription && time <= timeTotal) {
+                        stickySubscription.dropStickySubscription(tsub, tindex);
+                    }
                     if (time < timeTotal) {
                         tsub.setLong(tindex + TIME_TOTAL, time);
                         totalRecordAdded = true;
-                    } else if (time > timePrev && timePrev == timeTotal) {
-                        reduceTimeTotal = true;
+                    } else if (time > timePrev) {
+                        if (timePrev == timeTotal) {
+                            newTimeTotal = minSubTimeFromAgents(tsub, tindex, timeTotal);
+                            if (newTimeTotal != timeTotal) {
+                                // no more agents with the same total subscription, we need to reduce time total
+                                if (stickySubscription.isEnabled()) {
+                                    // add sticky subscription to schedule reduce time total
+                                    enableStickyOrUpdateWatermark(tsub, tindex, timePrev, false);
+                                } else {
+                                    reduceTimeTotal = true;
+                                }
+                            }
+                        } else if (wasStickySubscription) {
+                            // check and update watermark if needed
+                            enableStickyOrUpdateWatermark(tsub, tindex, timePrev, true);
+                        }
                     }
                 }
             } else
@@ -1033,7 +1101,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
         if (totalRecordAdded)
             totalRecordAdded(key, rid, tsub, tindex, time);
         if (reduceTimeTotal) // Note: reduceTimeTotal will call totalRecordAdded after recomputing time
-            reduceTimeTotal(key, rid, tsub, tindex, timeTotal);
+            reduceTimeTotal(key, rid, tsub, tindex, newTimeTotal);
 
         // Should send all Ticker & History data on new or updated subscription item
         enqueueAddedRecord(agent, asub, aindex);
@@ -1132,6 +1200,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
     void removeSubInternalExisting(Agent agent, SubMatrix asub, int aindex, int pagent, int key, int rid) {
         // make the actual remove as a last step, since it may crash due to OOM
         boolean totalRecordRemoved = false;
+        boolean isStickyEnabled = stickySubscription.isEnabled();
         // Delete 'agent' from proper double-list.
         SubMatrix psub = agents[pagent].sub;
         int pindex = psub.getIndex(key, rid, 0);
@@ -1139,7 +1208,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
             throw new IllegalStateException("Previous agent misses entry");
         int nagent = asub.getInt(aindex + NEXT_AGENT);
         int nindex = asub.getInt(aindex + NEXT_INDEX);
-        psub.setInt(pindex + NEXT_AGENT, nagent);
+        psub.setInt(pindex + NEXT_AGENT, isStickyEnabled && nagent == 0 ? NO_NEXT_AGENT_STICKY_DELAY : nagent);
         psub.setInt(pindex + NEXT_INDEX, nindex);
         asub.setInt(aindex + NEXT_AGENT, 0);
         asub.setInt(aindex + NEXT_INDEX, 0);
@@ -1149,10 +1218,19 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
             int nset = nsub.getInt(nindex + PREV_AGENT) & PREV_AGENT_SET;
             nsub.setInt(nindex + PREV_AGENT, pagent | nset);
         } else if (pagent == total.number) {
-            totalRecordRemoved = true;
+            if (!isStickyEnabled) {
+                totalRecordRemoved = true;
+            } else if (!hasTime)  {
+                // for ticker and stream contracts only
+                stickySubscription.addStickySubscription(psub, pindex);
+            }
         }
-        if (hasTime) // Special handling for History subscription remove
-            removeSubInternalExistingTime(asub, aindex, key, rid, psub, pindex, nagent > 0 || pagent != total.number);
+        if (hasTime) {
+            // Special handling for History subscription remove
+            removeSubInternalExistingTime(
+                asub, aindex, key, rid, psub, pindex, nagent > 0 || pagent != total.number, isStickyEnabled);
+        }
+
         agent.reducedSub = true;
         // remove payload counter is not a payload anymore (history can be still payload it is being processed)
         if (!asub.isPayload(aindex))
@@ -1167,27 +1245,64 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
             if (totalRecordRemoved(key, rid, psub, pindex))
                 psub.updateRemovedPayload(rid);
         }
+
         // Now cleanup Ticker & History queues
         dequeueRemovedRecord(agent, asub, aindex);
     }
 
+    /**
+     * The method is used to delete sticky subscription after expiration time is coming
+     */
+    // SYNC: global
+    public void removeStickySubscription(int tindex) {
+        SubMatrix tsub = total.sub;
+
+        int key = tsub.getInt(tindex + KEY);
+        int rid = tsub.getInt(tindex + RID);
+
+        boolean removeTotal = !hasTime || !reduceTimeTotalOrWatermark(key, rid, tsub, tindex);
+        if (removeTotal && totalRecordRemoved(key, rid, tsub, tindex)) {
+            tsub.setInt(tindex + NEXT_AGENT, 0);
+            tsub.updateRemovedPayload(rid);
+        }
+    }
+
     // Used for History only
     private void removeSubInternalExistingTime(SubMatrix asub, int aindex, int key, int rid,
-        SubMatrix psub, int pindex, boolean moreAgents)
+        SubMatrix psub, int pindex, boolean moreAgents, boolean isStickyEnabled)
     {
+        int tindex = pindex;
+        SubMatrix tsub = total.sub;
+        boolean wasStickySubscription = isStickyEnabled && stickySubscription.isStickySubscription(tsub, tindex);
+        long timePrev = asub.getLong(aindex + TIME_SUB);
         if (moreAgents) {
             // Other agents are still subscribed -- check if time needs to be recomputed
-            SubMatrix tsub = total.sub;
-            int tindex = tsub.getIndex(key, rid, 0);
+            tindex = tsub.getIndex(key, rid, 0);
             if (tindex == 0 || tsub.getInt(tindex + NEXT_AGENT) <= 0)
                 throw new IllegalStateException("Total agent misses entry");
             long timeTotal = tsub.getLong(tindex + TIME_TOTAL);
-            long timePrev = asub.getLong(aindex + TIME_SUB);
-            if (timePrev == timeTotal) // recompute if it was minimal sub time
-                reduceTimeTotal(key, rid, tsub, tindex, timeTotal);
+            if (timePrev == timeTotal) {
+                long newTimeTotal = minSubTimeFromAgents(tsub, tindex, timeTotal);
+                if (newTimeTotal != timeTotal) {
+                    // no more agents with the same total subscription, we need to reduce time total
+                    if (isStickyEnabled) {
+                        // add sticky subscription to schedule reduce time total
+                        enableStickyOrUpdateWatermark(tsub, tindex, timePrev, false);
+                    } else {
+                        reduceTimeTotal(key, rid, tsub, tindex, newTimeTotal);
+                    }
+                }
+            } else if (wasStickySubscription) {
+                // check and update watermark if needed
+                enableStickyOrUpdateWatermark(tsub, tindex, timePrev, true);
+            }
+        } else if (isStickyEnabled) {
+            // the last agent is gone, perhaps we need to enable or update watermark
+            enableStickyOrUpdateWatermark(tsub, tindex, timePrev, wasStickySubscription);
         } else {
             psub.setLong(pindex + TIME_TOTAL, Long.MAX_VALUE); // no total subscription any more
         }
+
         // mark this agent as no longer subscribed and clear process version (to drop pending processing events)
         asub.setInt(aindex + HISTORY_SUB_FLAGS, 0);
         asub.setLong(aindex + TIME_SUB, Long.MAX_VALUE);
@@ -1195,27 +1310,69 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
         // Note: processing may be still in process while subscription is removed
     }
 
-    // SYNC: global
-    private void reduceTimeTotal(int key, int rid, SubMatrix tsub, int tindex, long timeTotal) {
-        // assert at least one subscribed agent
+    private long minSubTimeFromAgents(SubMatrix tsub, int tindex, long timeTotal) {
         int nagent = tsub.getInt(tindex + NEXT_AGENT);
         int nindex = tsub.getInt(tindex + NEXT_INDEX);
         long time = Long.MAX_VALUE;
         while (nagent > 0) {
             SubMatrix nsub = agents[nagent].sub;
-            long t = nsub.getLong(nindex + TIME_SUB);
-            if (t < time) {
-                if (t <= timeTotal)
-                    return; // agent with previous old time exists -- nothing to change
-                time = t;
+            long agentSubTime = nsub.getLong(nindex + TIME_SUB);
+            if (time > agentSubTime) {
+                if (agentSubTime <= timeTotal) {
+                    return timeTotal;
+                }
+                time = agentSubTime;
             }
             nagent = nsub.getInt(nindex + NEXT_AGENT);
             nindex = nsub.getInt(nindex + NEXT_INDEX);
         }
+        return time;
+    }
+
+    // SYNC: global
+    private void reduceTimeTotal(int key, int rid, SubMatrix tsub, int tindex, long time) {
         // set reduced time
         tsub.setLong(tindex + TIME_TOTAL, time);
         // the following call also trims extra records from HistoryBuffer
         totalRecordAdded(key, rid, tsub, tindex, time);
+    }
+
+    /**
+     * Reduce the subscription depth according to subscription watermark.
+     * @return true, if the subscription has been reduced, otherwise a complete deletion is required.
+     */
+    // SYNC: global
+    private boolean reduceTimeTotalOrWatermark(int key, int rid, SubMatrix tsub, int tindex) {
+        long time = minSubTimeFromAgents(tsub, tindex, Long.MIN_VALUE);
+        long watermark = tsub.getLong(tindex + STICKY_WATERMARK);
+
+        if (time > watermark) {
+            // schedule again to prevent infinity frieze on watermark level
+            stickySubscription.addStickySubscription(tsub, tindex);
+        }
+        // update watermark for future period
+        tsub.setLong(tindex + STICKY_WATERMARK, Long.MAX_VALUE);
+        // get new min total time
+        long timeTotal = Math.min(time, watermark);
+        // set reduced time
+        tsub.setLong(tindex + TIME_TOTAL, timeTotal);
+        if (timeTotal < Long.MAX_VALUE) {
+            // the following call also trims extra records from HistoryBuffer
+            totalRecordAdded(key, rid, tsub, tindex, timeTotal);
+        }
+        return timeTotal != Long.MAX_VALUE;
+    }
+
+    private void enableStickyOrUpdateWatermark(SubMatrix tsub, int tindex, long time, boolean wasStickySubscription) {
+        if (!wasStickySubscription) {
+            // set marker of full cleanup
+            tsub.setLong(tindex + STICKY_WATERMARK, Long.MAX_VALUE);
+            // add sticky subscription
+            stickySubscription.addStickySubscription(tsub, tindex);
+        } else if (time < tsub.getLong(tindex + STICKY_WATERMARK)) {
+            // update to minimal watermark
+            tsub.setLong(tindex + STICKY_WATERMARK, time);
+        }
     }
 
     // extension point, ticker and history override
@@ -1516,6 +1673,26 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
             sb.append(" of ").append(agent);
             log.info(sb.toString());
         }
+    }
+
+    public void setStickySubscriptionPeriod(long stickyPeriod) {
+        int notify = 0;
+        globalLock.lock(CollectorOperation.CONFIGURE_STICKY_SUBSCRIPTION);
+        try {
+            startSubChangeBatch(notify);
+            // move it to StickySubscription
+            stickySubscription.setStickyPeriodGLocked(stickyPeriod);
+            notify = doneSubChangeBatch();
+        } catch (Throwable e) {
+            log.info("Failed to set sticky subscription period", e);
+        } finally {
+            globalLock.unlock();
+        }
+        notifySubChange(notify, null);
+    }
+
+    public long getStickySubscriptionPeriod() {
+        return stickySubscription.getStickyPeriod();
     }
 
     public void analyzeSymbolRefs(CollectorDebug.Log log, String symbol, String record,

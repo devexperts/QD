@@ -106,10 +106,7 @@ public class ConsistentLoadBalancerTest {
 
         List<RMIServiceId> targets = balance(messages);
         // clear all
-        descriptors.forEach(d -> loadBalancer.updateServiceDescriptor(
-            // FIXME: use RMIServiceDescriptor.toUnavailableDescriptor when merged.
-            RMIServiceDescriptor.createUnavailableDescriptor(d.getServiceId(), d.getProperties()))
-        );
+        descriptors.forEach(d -> loadBalancer.updateServiceDescriptor(d.toUnavailableDescriptor()));
         // register again
         descriptors.forEach(loadBalancer::updateServiceDescriptor);
         List<RMIServiceId> newTargets = balance(messages);
