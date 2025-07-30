@@ -22,6 +22,7 @@ import com.dxfeed.event.market.AnalyticOrder;
 import com.dxfeed.event.market.MarketEvent;
 import com.dxfeed.event.market.MarketEventDelegateImpl;
 import com.dxfeed.event.market.MarketMaker;
+import com.dxfeed.event.custom.NuamTrade;
 import com.dxfeed.event.market.OptionSale;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.OrderBaseDelegateImpl;
@@ -161,6 +162,43 @@ public class ImplCodeGen {
             ).
             field("Date", "Date", FieldType.INT).compositeOnly().phantom("reuters.phantom"). // phantom field -- see QD-503
             field("Operation", "Operation", FieldType.INT).compositeOnly().phantom("reuters.phantom"). // phantom field -- see QD-503
+            publishable();
+
+        ctx.delegate("NuamTrade", NuamTrade.class, "NuamTrade&").
+            inheritDelegateFrom(MARKET_EVENT_DELEGATE).
+            inheritMappingFrom(MARKET_EVENT_MAPPING).
+            mapTimeAndSequence("Last.Time", "Last.Sequence").optional().prevOptional().
+            map("TimeNanoPart", "Last.TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
+            map("ExchangeCode", "Last.Exchange", FieldType.CHAR).alt("recordExchange").compositeOnly().optional().
+            map("Price", "Last.Price", FieldType.PRICE).
+            map("Size", "Last.Size", FieldType.SIZE).
+            field("Tick", "Last.Tick", FieldType.FLAGS).optional().
+            map("Change", "Last.Change", FieldType.PRICE).optional().
+            map("DayId", "DayId", FieldType.DATE).optional().
+            map("DayVolume", "Volume", FieldType.VOLUME).optional().
+            map("DayTurnover", "DayTurnover", FieldType.TURNOVER).optional().
+            map("Flags", "Last.Flags", FieldType.FLAGS).optional().
+            injectGetEventCode(
+                "if (event.getTickDirection() == Direction.UNDEFINED) {",
+                "    // if direction is not provided via flags field - compute it from tick field if provided",
+                "    int tick = m.getTick(cursor);",
+                "    if (tick == 1)",
+                "        event.setTickDirection(Direction.ZERO_UP);",
+                "    else if (tick == 2)",
+                "        event.setTickDirection(Direction.ZERO_DOWN);",
+                "}"
+            ).
+            injectPutEventCode(
+                "Direction d = event.getTickDirection();",
+                "m.setTick(cursor, d == Direction.UP || d == Direction.ZERO_UP ? 1 : d == Direction.DOWN || d == Direction.ZERO_DOWN ? 2 : 0);"
+            ).
+            field("Date", "Date", FieldType.INT).compositeOnly().phantom("reuters.phantom"). // phantom field -- see QD-503
+            field("Operation", "Operation", FieldType.INT).compositeOnly().phantom("reuters.phantom"). // phantom field -- see QD-503
+            map("TradeStatTime", "TradeStatTime", FieldType.TIME_MILLIS).
+            map("LastSignificantPrice", "LastSignificantPrice", FieldType.PRICE).
+            map("LastPriceForAll", "LastPriceForAll", FieldType.PRICE).
+            map("NumberOfTrades", "NumberOfTrades", FieldType.INT).
+            map("VWAP", "VWAP", FieldType.PRICE).
             publishable();
 
         ctx.delegate("TradeETH", TradeETH.class, "TradeETH&").

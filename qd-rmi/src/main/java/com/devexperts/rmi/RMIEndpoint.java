@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.rmi;
 
+import com.devexperts.annotation.Experimental;
 import com.devexperts.io.SerialClassContext;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.qtp.MessageAdapter;
@@ -36,6 +37,7 @@ import java.util.Properties;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.annotation.Nullable;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 
@@ -230,11 +232,9 @@ public abstract class RMIEndpoint implements Closeable {
     public abstract void close();
 
     /**
-     * Returns <tt>true</tt> if there exists at least one active connection
-     * for this endpoint.
+     * Returns <tt>true</tt> if there exists at least one active connection for this endpoint.
      *
-     * @return <tt>true</tt> if there exists at least one active connection
-     * for this endpoint.
+     * @return <tt>true</tt> if there exists at least one active connection for this endpoint.
      */
     public abstract boolean isConnected();
 
@@ -275,11 +275,9 @@ public abstract class RMIEndpoint implements Closeable {
     public abstract SerialClassContext getSerialClassContext();
 
     /**
-     * Returns the {@link SecurityController security controller} used
-     * by this endpoint.
+     * Returns the {@link SecurityController security controller} used by this endpoint.
      *
-     * @return the {@link SecurityController security controller} used
-     * by this endpoint.
+     * @return the {@link SecurityController security controller} used by this endpoint.
      */
     public abstract SecurityController getSecurityController();
 
@@ -303,8 +301,7 @@ public abstract class RMIEndpoint implements Closeable {
      * Returns {@link MessageAdapter.Factory factory} for message adapters
      * that will be used to handle non-rmi messages.
      *
-     * @return {@link MessageAdapter.Factory factory} for message adapters
-     * that will be used to handle non-rmi messages.
+     * @return {@link MessageAdapter.Factory factory} for message adapters that will be used to handle non-rmi messages.
      *
      * @deprecated Use {@link Builder#withRole(DXEndpoint.Role)} to combine RMI and QD connections.
      */
@@ -405,8 +402,8 @@ public abstract class RMIEndpoint implements Closeable {
      * @see #export(Object, Class, ExecutorService)
      * @see #export(Object, Class, String, ExecutorService)
      * @deprecated Use {@link RMIServer#export(RMIService)} and
-     * {@link RMIServiceImplementation#RMIServiceImplementation(Object, Class, String)
-     * RMIServiceImplementation(Object, Class, String)} or use {@link RMIServiceInterface} annotation.
+     *     {@link RMIServiceImplementation#RMIServiceImplementation(Object, Class, String)
+     *     RMIServiceImplementation(Object, Class, String)} or use {@link RMIServiceInterface} annotation.
      */
     public abstract <T> void export(T implementation, Class<T> serviceInterface, String serviceName);
 
@@ -437,8 +434,8 @@ public abstract class RMIEndpoint implements Closeable {
      *
      * <p>This method delegates to {@link RMIServer#getDefaultExecutor()}.
      *
-     * @return the default {@link ExecutorService} that is commonly used
-     * by this endpoint to execute the requests.
+     * @return the default {@link ExecutorService} that is commonly used by this endpoint to execute the requests.
+     *
      * @see #setDefaultExecutor(ExecutorService)
      * @deprecated use {@link RMIServer#getDefaultExecutor()}
      */
@@ -530,8 +527,8 @@ public abstract class RMIEndpoint implements Closeable {
      * @return created {@link RMIRequestImpl}.
      * @see #createRequest(Object, RMIOperation, Object[])
      * @deprecated Use {@link RMIClient#createRequest(RMIRequestMessage)} and
-     * {@link RMIRequestMessage#RMIRequestMessage(RMIRequestType, RMIOperation, Object...)
-     * RMIRequestMessage(RMIRequestType, RMIOperation, Object, Object...)}
+     *     {@link RMIRequestMessage#RMIRequestMessage(RMIRequestType, RMIOperation, Object...)
+     *     RMIRequestMessage(RMIRequestType, RMIOperation, Object, Object...)}
      */
     public abstract <T> RMIRequest<T> createOneWayRequest(Object subject, RMIOperation<T> operation, Object... parameters);
 
@@ -588,7 +585,7 @@ public abstract class RMIEndpoint implements Closeable {
      * <p> The default value of this timeout is taken from system property
      * <tt>"{@value RMIClientImpl#DEFAULT_REQUEST_RUNNING_TIMEOUT_PROPERTY}"</tt>.
      * If the property is not defined then it is equal to
-     * <tt>{@value RMIClientImpl#DEFAULT_REQUEST_RUNNING_TIMEOUT}<tt> ms.
+     * <tt>{@value RMIClientImpl#DEFAULT_REQUEST_RUNNING_TIMEOUT}</tt> ms.
      *
      * @return current request running timeout in milliseconds.
      * @deprecated Use {@link RMIClient#getRequestRunningTimeout()}
@@ -601,7 +598,7 @@ public abstract class RMIEndpoint implements Closeable {
      * <p> The default value of this limit is taken from system property
      * <tt>"{@value RMIClientImpl#DEFAULT_STORED_SUBJECTS_LIMIT_PROPERTY}"</tt>.
      * If the property is not defined then it is equal to
-     * <tt>{@value RMIClientImpl#DEFAULT_STORED_SUBJECTS_LIMIT}<tt>.
+     * <tt>{@value RMIClientImpl#DEFAULT_STORED_SUBJECTS_LIMIT}</tt>.
      *
      * @param limit new maximum number of cached subjects per connection.
      * @deprecated Use {@link RMIClient#setStoredSubjectsLimit(int)}
@@ -614,7 +611,7 @@ public abstract class RMIEndpoint implements Closeable {
      * <p> The default value of this limit is taken from system property
      * <tt>"{@value RMIClientImpl#DEFAULT_STORED_SUBJECTS_LIMIT_PROPERTY}"</tt>.
      * If the property is not defined then it is equal to
-     * <tt>{@value RMIClientImpl#DEFAULT_STORED_SUBJECTS_LIMIT}<tt>.
+     * <tt>{@value RMIClientImpl#DEFAULT_STORED_SUBJECTS_LIMIT}</tt>.
      *
      * @return current maximum number of cached subjects per connection.
      * @deprecated Use {@link RMIClient#getStoredSubjectsLimit()}
@@ -628,6 +625,30 @@ public abstract class RMIEndpoint implements Closeable {
      * @deprecated Use {@link RMIClient#getSendingRequestsQueueLength()}
      */
     public abstract int getSendingRequestsQueueLength();
+
+    /**
+     * Sets the default {@link RMIRequestTransformer} that will be applied to all requests
+     * unless a specific transformer is {@link RMIClient#getPort(Object, RMIRequestTransformer) explicitly provided}
+     * for a client port.
+     *
+     * <p>NOTE: initial default request transformer may be injected during RMIEndpoint initialization
+     * using a {@link RMIRequestTransformerFactory} registered as a {@link Services service}.
+     *
+     * @param transformer the default RMIRequestTransformer to set; {@code null} value removes the default transformer.
+     * @see RMIClient#getPort(Object, RMIRequestTransformer)
+     */
+    @Experimental
+    public abstract void setDefaultRequestTransformer(RMIRequestTransformer transformer);
+
+    /**
+     * Returns the default request transformer assigned to the RMIEndpoint.
+     *
+     * @return the default request transformer assigned to the RMIEndpoint.
+     */
+    @Experimental
+    @Nullable
+    public abstract RMIRequestTransformer getDefaultRequestTransformer();
+
 
     // ==================== Builder =======================
 
@@ -717,8 +738,9 @@ public abstract class RMIEndpoint implements Closeable {
          * Sets all supported properties from the provided properties object.
          */
         public final Builder withProperties(Properties props) {
-            for (Map.Entry<Object, Object> entry : props.entrySet())
+            for (Map.Entry<Object, Object> entry : props.entrySet()) {
                 withProperty((String) entry.getKey(), (String) entry.getValue());
+            }
             return this;
         }
 

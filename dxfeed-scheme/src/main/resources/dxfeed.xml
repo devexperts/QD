@@ -631,6 +631,15 @@
         </record>
 
         <!-- CustomFactoryImpl -->
+        <record name="NuamTrade" regionals="true" copyFrom="Trade">
+            <field name="TradeStatTime" type="time_millis"/>
+            <field name="LastSignificantPrice" type="price"/>
+            <field name="LastPriceForAll" type="price"/>
+            <field name="NumberOfTrades" type="compact_int"/>
+            <field name="VWAP" type="price"/>
+        </record>
+
+        <!-- CustomFactoryImpl -->
         <generator name="NuamOrder" type="suffix" delimiter="#">
             <iterator>
                 <value/>

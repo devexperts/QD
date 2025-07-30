@@ -40,7 +40,7 @@ import java.util.regex.Pattern;
 public class FilterFactoryImpl extends QDFilterFactory {
     private static final String COMPFEED_RECORDS =
         "Quote, Trade, TradeETH, Summary, Fundamental, Profile, Book, Order*, SpreadOrder*, OtcMarketsOrder*, " +
-            "MarketMaker, TimeAndSale, TradeHistory, NuamTimeAndSale, NuamOrder*, OrderImbalance*";
+            "MarketMaker, TimeAndSale, TradeHistory, NuamTrade, NuamTimeAndSale, NuamOrder*, OrderImbalance*";
     private static final String CHARTDATA_RECORDS =
         "TradeHistory, Trade.*, Candle, Candle[{]*, " +
         "DividendHistory, SplitHistory, EarningsHistory, ConferenceCallHistory, NewsHistory";

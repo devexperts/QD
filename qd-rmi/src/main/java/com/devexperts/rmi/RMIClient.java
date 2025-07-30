@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.rmi;
 
+import com.devexperts.annotation.Experimental;
 import com.devexperts.rmi.impl.RMIRequestImpl;
 import com.devexperts.rmi.message.RMIRequestMessage;
 import com.devexperts.rmi.message.RMIRequestType;
@@ -131,19 +132,42 @@ public abstract class RMIClient {
     public abstract RMIService<?> getService(String serviceName);
 
     /**
-     * Returns {@link RMIClientPort client port} with given subject.
+     * Returns {@link RMIClientPort client port} with given subject and default request transformer.
      *
      * <p>{@code getPort(null)} returns <b>default port</b> -- the same port that is used to implement various
      * operations on this {@code RMIClient} implementation.
      *
-     * @param subject an <code>Object</code> that will be used in the {@link SecurityController}
-     * on the server side to check security permissions for executing this requests which have been created this port.
-     * When {@code subject} is null, the the subject is taken from {@link SecurityController} at the thread that
-     * creates request.
+     * @param subject an <code>Object</code> that will be used in the {@link SecurityController} on
+     *     the server side to check security permissions for executing this requests which have been created this port.
+     *     When {@code subject} is null, the subject is taken from {@link SecurityController} at the thread that
+     *     creates request.
      *
-     * @return client port with given subject.
+     * @implSpec this method is a shortcut to {@link #getPort(Object, RMIRequestTransformer) getPort(subject, null)}
+     * @see #getPort(Object, RMIRequestTransformer)
+     *
+     * @return client port with the given subject.
      */
-    public abstract RMIClientPort getPort(Object subject);
+    public RMIClientPort getPort(Object subject) {
+        return getPort(subject, null);
+    }
+
+    /**
+     * Returns {@link RMIClientPort client port} with the given subject and request transformer.
+     *
+     * <p>{@code getPort(null, null)} returns <b>default port</b> -- the same port that is used to implement various
+     * operations on this {@code RMIClient} implementation.
+     *
+     * @param subject an <code>Object</code> that will be used in the {@link SecurityController} on the server side to
+     *     check security permissions for executing requests which have been created with this port.
+     *     When {@code subject} is null, the subject is taken from {@link SecurityController} at the thread that
+     *     creates request.
+     * @param requestTransformer an optional transformer for requests that will be created with this port.
+     *     {@code null} transformer denotes that a {@link RMIEndpoint#getDefaultRequestTransformer() default transformer}
+     *     (if any) will be used.
+     * @return client port with the given subject and transformer.
+     */
+    @Experimental
+    public abstract RMIClientPort getPort(Object subject, RMIRequestTransformer requestTransformer);
 
     /**
      * Creates a {@link RMIRequest request} for specified remote
@@ -154,7 +178,7 @@ public abstract class RMIClient {
      * createRequest(operation, parameters)}</code>.
      *
      * @param subject an <code>Object</code> that will be used in the {@link SecurityController}
-     * on the server side to check security permissions for executing this request.
+     *     on the server side to check security permissions for executing this request.
      * @param operation {@link RMIOperation} that will be executed by this request.
      * @param parameters parameters that will be passed to executing operation method.
      * @return created {@link RMIRequest}.
@@ -172,8 +196,8 @@ public abstract class RMIClient {
      * request.
      *
      * @param subject an <code>Object</code> that will be used in the
-     * {@link SecurityController} on the server side to check
-     * security permissions for executing this request.
+     *     {@link SecurityController} on the server side to check
+     *     security permissions for executing this request.
      * @param operation {@link RMIOperation} that will be executed by this request.
      * @param parameters parameters that will be passed to executing operation method.
      * @return created {@link RMIRequestImpl}.
@@ -217,7 +241,7 @@ public abstract class RMIClient {
      * <p><b>This method must not use any locks that are not terminal in the lock hierarchy to ensure deadlock-freedom.</b>
      *
      * @return Returns the default {@link Executor} that is used for perform notifications {@link RMIRequestListener}
-     * for {@link RMIRequest} that creates this client
+     *     for {@link RMIRequest} that creates this client
      */
     public abstract Executor getDefaultExecutor();
 
@@ -242,7 +266,7 @@ public abstract class RMIClient {
      * <p> The default value of this timeout is taken from system property
      * <tt>"{@value RMIClient#DEFAULT_REQUEST_SENDING_TIMEOUT_PROPERTY}"</tt>.
      * If the property is not defined then it is equal to
-     * <tt>{@value RMIClient#DEFAULT_REQUEST_SENDING_TIMEOUT}<tt> ms.
+     * <tt>{@value RMIClient#DEFAULT_REQUEST_SENDING_TIMEOUT}</tt> ms.
      * @return current request sending timeout in milliseconds.
      */
     public abstract long getRequestSendingTimeout();

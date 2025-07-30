@@ -22,6 +22,7 @@ import com.devexperts.rmi.RMIExceptionType;
 import com.devexperts.rmi.RMIOperation;
 import com.devexperts.rmi.RMIRequest;
 import com.devexperts.rmi.RMIRequestState;
+import com.devexperts.rmi.RMIRequestTransformer;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
 import com.devexperts.rmi.samples.DifferentServices;
 import com.devexperts.rmi.security.SecurityController;
@@ -45,6 +46,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -226,7 +228,6 @@ public class RMICommonTest {
             NTU.waitCondition(10_000, 10, () -> finish);
         }
     }
-
 
     public static class SimpleInfiniteLooper implements InfiniteLooper {
         @Override
@@ -448,10 +449,11 @@ public class RMICommonTest {
 
         @Override
         public void doAs(Object subject, Runnable action) throws SecurityException {
-            if (subject instanceof SomeSubject && ((SomeSubject) subject).getCode().equals(this.subject.getCode()))
+            if (subject instanceof SomeSubject && ((SomeSubject) subject).getCode().equals(this.subject.getCode())) {
                 action.run();
-            else
+            } else {
                 throw new SecurityException();
+            }
         }
     }
 
@@ -531,7 +533,6 @@ public class RMICommonTest {
                 fail(e.getMessage());
         }
     }
-
 
     // --------------------------------------------------
 
@@ -743,7 +744,6 @@ public class RMICommonTest {
         client.close();
     }
 
-
     private byte[] getRandomBytes(int size) {
         byte[] data = new byte[size];
         Random rnd = ThreadLocalRandom.current();
@@ -818,5 +818,43 @@ public class RMICommonTest {
         List<RMIServiceDescriptor> descriptors = clientSideService.getDescriptors();
         assertEquals(1, descriptors.size());
         assertEquals(newProps, descriptors.get(0).getProperties());
+    }
+
+    @SuppressWarnings({"unchecked", "resource"})
+    @Test
+    public void testRequestTransformer() {
+        // ==== test custom transformer on client port
+        Map<String, String> transformerProps = Collections.singletonMap("x", "y");
+        RMIRequestTransformer transformer = (request, port) -> request.changeProperties(transformerProps);
+
+        RMIClientPort rmiPort = client().getClient().getPort(null, transformer);
+        RMIRequest<Integer> request = rmiPort.createRequest(PROCESS_OP, "test", new byte[0]);
+        Map<String, String> properties = request.getRequestMessage().getProperties();
+        assertEquals(transformerProps, properties);
+
+        // ==== attaching subject-derived ids to messages for load-balancing
+        RMIRequestTransformer subjectSetter = (req, port) -> {
+            Object subj = client().getSecurityController().getSubject();
+            if (subj == null)
+                return req;
+            Map<String, String> newProps;
+            if (req.getProperties().isEmpty()) {
+                newProps = Collections.singletonMap("subject", subj.toString());
+            } else {
+                newProps = new LinkedHashMap<String, String>(req.getProperties());
+                newProps.put("subject", subj.toString());
+            }
+            return req.changeProperties(newProps);
+        };
+        client().setDefaultRequestTransformer(subjectSetter);
+
+        RMIClientPort defaultPort = client().getClient().getPort(null, null);
+        client().getSecurityController().doAs("test-subject", () -> {
+            RMIRequest<Integer> request2 = defaultPort.createRequest(PROCESS_OP, "test", new byte[0]);
+            Map<String, String> properties2 = request2.getRequestMessage().getProperties();
+            assertEquals(1, properties2.size());
+            assertEquals("test-subject", properties2.get("subject"));
+        });
+
     }
 }

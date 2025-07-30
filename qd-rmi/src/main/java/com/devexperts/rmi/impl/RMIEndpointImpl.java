@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -21,6 +21,8 @@ import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.RMIEndpointListener;
 import com.devexperts.rmi.RMIOperation;
 import com.devexperts.rmi.RMIRequest;
+import com.devexperts.rmi.RMIRequestTransformer;
+import com.devexperts.rmi.RMIRequestTransformerFactory;
 import com.devexperts.rmi.security.SecurityContext;
 import com.devexperts.rmi.security.SecurityController;
 import com.devexperts.rmi.task.RMILoadBalancerFactory;
@@ -39,6 +41,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.net.ssl.TrustManager;
 
@@ -49,6 +52,8 @@ public final class RMIEndpointImpl extends RMIEndpoint {
 
     private static final Logging log = Logging.getLogging(RMIEndpointImpl.class);
     private static final String THREAD_COUNT_SYSTEM_PROPERTY = "com.devexperts.rmi.ThreadCount";
+    private static final RMIRequestTransformerFactory defaultRequestTransformerFactory =
+        Services.createService(RMIRequestTransformerFactory.class, null, null);
 
     // ==================== private instance fields ====================
 
@@ -77,6 +82,7 @@ public final class RMIEndpointImpl extends RMIEndpoint {
     TrustManager trustManager;
 
     private volatile List<RMILoadBalancerFactory> loadBalancerFactories;
+    private volatile RMIRequestTransformer defaultRequestTransformer;
 
     @GuardedBy("this")
     private boolean closed;
@@ -121,6 +127,9 @@ public final class RMIEndpointImpl extends RMIEndpoint {
         this.dxEndpoint = (ExtensibleDXEndpoint) dxEndpoint; // must be ExtensibleDXEndpoint or ClassCastException
         if (attachedMessageAdapterFactory != null)
             setAttachedMessageAdapterFactoryImpl(attachedMessageAdapterFactory);
+
+        if (defaultRequestTransformerFactory != null)
+            defaultRequestTransformer = defaultRequestTransformerFactory.create();
 
         client = this.side.hasClient() ? new RMIClientImpl(this) : null;
         server = this.side.hasServer() ? new RMIServerImpl(this) : null;
@@ -336,6 +345,23 @@ public final class RMIEndpointImpl extends RMIEndpoint {
         getServer().setDefaultExecutor(executor);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setDefaultRequestTransformer(@Nullable RMIRequestTransformer transformer) {
+        defaultRequestTransformer = transformer;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public RMIRequestTransformer getDefaultRequestTransformer() {
+        return defaultRequestTransformer;
+    }
+
+
     // ==================== Client API ====================
 
     @Override
@@ -407,9 +433,7 @@ public final class RMIEndpointImpl extends RMIEndpoint {
 
     @Override
     public String toString() {
-        return "RMIEndpoint{side=" + side + ","
-            + "id=" + getEndpointId() +
-            "}";
+        return "RMIEndpoint{side=" + side + ", id=" + getEndpointId() + "}";
     }
 
     // ==================== private implementation ====================

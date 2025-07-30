@@ -12,11 +12,11 @@
 package com.devexperts.rmi.task;
 
 import com.devexperts.connector.proto.EndpointId;
+import com.devexperts.rmi.impl.PropertiesUtil;
 import com.devexperts.util.IndexerFunction;
 
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -101,18 +101,7 @@ public class RMIServiceDescriptor {
             Collections.<EndpointId>emptySet() : intermediateNodes.size() == 1 ?
             Collections.singleton(intermediateNodes.iterator().next()) :
             Collections.unmodifiableSet(new HashSet<>(intermediateNodes));
-        this.properties = getUnmodifiableMap(properties);
-    }
-
-    // FIXME: RMIRequestMessage require the same algorithm. Maybe should be placed in some utility class?
-    private static <K, V> Map<K, V> getUnmodifiableMap(Map<K, V> properties) {
-        if (properties == null || properties.isEmpty())
-            return Collections.emptyMap();
-        if (properties.size() == 1) {
-            Map.Entry<K, V> entry = properties.entrySet().iterator().next();
-            return Collections.singletonMap(entry.getKey(), entry.getValue());
-        }
-        return Collections.unmodifiableMap(new LinkedHashMap<>(properties));
+        this.properties = PropertiesUtil.getImmutableMap(properties);
     }
 
     /**

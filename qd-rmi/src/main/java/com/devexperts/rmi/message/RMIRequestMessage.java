@@ -14,11 +14,10 @@ package com.devexperts.rmi.message;
 import com.devexperts.io.Marshalled;
 import com.devexperts.io.Marshaller;
 import com.devexperts.rmi.RMIOperation;
+import com.devexperts.rmi.impl.PropertiesUtil;
 import com.devexperts.rmi.impl.RMIRequestImpl;
 import com.devexperts.rmi.task.RMIServiceId;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -97,7 +96,7 @@ public final class RMIRequestMessage<T> extends RMIMessage {
         this.operation = operation;
         this.parameters = parameters;
         this.target = target;
-        this.properties = getUnmodifiableMap(properties);
+        this.properties = PropertiesUtil.getImmutableMap(properties);
     }
 
     /**
@@ -196,16 +195,5 @@ public final class RMIRequestMessage<T> extends RMIMessage {
             ", properties=" + properties +
             ", route=" + route +
             '}';
-    }
-
-    // FIXME: RMIServiceDescriptor requires the same algorithm. Maybe should be placed in some utility class?
-    private static <K, V> Map<K, V> getUnmodifiableMap(Map<K, V> properties) {
-        if (properties == null || properties.isEmpty())
-            return Collections.emptyMap();
-        if (properties.size() == 1) {
-            Map.Entry<K, V> entry = properties.entrySet().iterator().next();
-            return Collections.singletonMap(entry.getKey(), entry.getValue());
-        }
-        return Collections.unmodifiableMap(new LinkedHashMap<>(properties));
     }
 }

@@ -18,6 +18,7 @@ import com.devexperts.rmi.RMIClientPort;
 import com.devexperts.rmi.RMIExceptionType;
 import com.devexperts.rmi.RMIOperation;
 import com.devexperts.rmi.RMIRequest;
+import com.devexperts.rmi.RMIRequestTransformer;
 import com.devexperts.rmi.message.RMIRequestMessage;
 import com.devexperts.rmi.message.RMIRequestType;
 import com.devexperts.rmi.message.RMIRoute;
@@ -74,7 +75,7 @@ public class RMIClientImpl extends RMIClient {
         this.services = new ClientSideServices(this, endpoint.getRMILoadBalancerFactories());
         timeoutRequestMonitoringThread = new RMITimeoutRequestMonitoringThread(endpoint);
         requestSender = new ClientRequestSender();
-        defaultPort = new PortImpl(null); // don't move to field, needs endpoint to be set first
+        defaultPort = new PortImpl(null, null); // don't move to field, needs endpoint to be set first
         ExecutorProvider.Reference sharedExecutorReference = getSharedExecutorReference();
         defaultExecutorReference = sharedExecutorReference != null ?
             sharedExecutorReference : endpoint.getDefaultExecutorProvider().newReference();
@@ -97,15 +98,16 @@ public class RMIClientImpl extends RMIClient {
     }
 
     @Override
-    public RMIClientPort getPort(Object subject) {
-        if (subject == null)
+    public RMIClientPort getPort(Object subject, RMIRequestTransformer requestTransformer) {
+        if (subject == null && requestTransformer == null)
             return defaultPort;
         Marshalled<?> marshalledSubject;
-        if (subject instanceof Marshalled)
+        if (subject instanceof Marshalled) {
             marshalledSubject = (Marshalled<?>) subject;
-        else
+        } else {
             marshalledSubject = Marshalled.forObject(subject);
-        return new PortImpl(marshalledSubject);
+        }
+        return new PortImpl(marshalledSubject, requestTransformer);
     }
 
     @Override
@@ -281,10 +283,11 @@ public class RMIClientImpl extends RMIClient {
         for (Iterator<RMIConnection> it = endpoint.concurrentConnectionsIterator(); it.hasNext(); ) {
             RMIConnection connection = it.next();
             List<RMIRequestImpl<?>> requests = connection.requestsManager.getByDescriptorsAndRemove(descriptors);
-            if (requests != null && !requests.isEmpty())
+            if (requests != null && !requests.isEmpty()) {
                 for (RMIRequestImpl<?> request : requests) {
                     pendingRequests.addPendingRequest(request);
                 }
+            }
         }
 
         // 2. Rebalance the pending queue to assign new connections (and return requests with unassigned connections
@@ -338,8 +341,8 @@ public class RMIClientImpl extends RMIClient {
     }
 
     private class PortImpl extends RMIClientPortImpl {
-        PortImpl(Marshalled<?> marshalledSubject) {
-            super(RMIClientImpl.this.endpoint, marshalledSubject);
+        PortImpl(Marshalled<?> marshalledSubject, RMIRequestTransformer requestHandler) {
+            super(RMIClientImpl.this.endpoint, marshalledSubject, requestHandler);
         }
 
         @Override

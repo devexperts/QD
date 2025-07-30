@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,6 +15,7 @@ import com.devexperts.io.Marshalled;
 import com.devexperts.rmi.RMIExceptionType;
 import com.devexperts.rmi.RMIOperation;
 import com.devexperts.rmi.RMIRequest;
+import com.devexperts.rmi.RMIRequestTransformer;
 import com.devexperts.rmi.message.RMICancelType;
 import com.devexperts.rmi.message.RMIRequestMessage;
 import com.devexperts.rmi.message.RMIRequestType;
@@ -47,10 +48,10 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
     private volatile RMIChannelState state = RMIChannelState.NEW;
 
     @GuardedBy("this")
-    private List<RMIRequestImpl<?>> preOpenOutgoingRequests; // initialized on first need, can be != null only when state = NEW
+    private List<RMIRequestImpl<?>> preOpenOutgoingRequests; // used only when state == NEW; lazy-initialized
 
     @GuardedBy("this")
-    private List<ServerRequestInfo> preOpenIncomingRequests; // initialized on first need, can be != null only when state = NEW
+    private List<ServerRequestInfo> preOpenIncomingRequests; // used only when state == NEW; lazy-initialized
 
     /**
      * Connection is set to non-null by {@link #registerChannel(RMIConnection)}.
@@ -70,7 +71,8 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
 
     @SuppressWarnings("unchecked")
     RMIChannelImpl(RMIEndpointImpl endpoint, Marshalled<?> subject, long channelId, RMIChannelOwner owner) {
-        super(endpoint, subject);
+        // FIXME: shall we define some transformer? Or should RMIChannel block any transformation?
+        super(endpoint, subject, null);
         assert subject != null; // always captured at the channel creation time
         this.owner = owner;
         type = owner.getChannelType();
@@ -113,7 +115,8 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
 
     @Override
     public <T> void addChannelHandler(T implementation, Class<T> handlerInterface) {
-        addChannelHandler(new RMIServiceImplementation<>(implementation, handlerInterface, RMIService.getServiceName(handlerInterface)));
+        addChannelHandler(new RMIServiceImplementation<>(implementation, handlerInterface,
+            RMIService.getServiceName(handlerInterface)));
     }
 
     @Override
@@ -129,6 +132,15 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
     @Override
     protected RequestSender getRequestSender() {
         return requestSender;
+    }
+
+    @Override
+    protected RMIRequestTransformer currentRequestTransformer() {
+        return null; // do not apply transformers in channels
+        // FIXME: Channels are in gray zone:
+        //     - channels may skip transforming completely
+        //     - channels could fix a port-derived transformer on creation.
+        //     - channels may allow to set own transformer for inner requests
     }
 
     long getChannelId() {
@@ -174,8 +186,9 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
             this.preOpenIncomingRequests = null;
         }
         if (preOpenIncomingRequests != null) {
-            for (ServerRequestInfo requestInfo : preOpenIncomingRequests)
+            for (ServerRequestInfo requestInfo : preOpenIncomingRequests) {
                 connection.messageProcessor.createAndSubmitTask(this, requestInfo);
+            }
         }
     }
 
@@ -218,22 +231,24 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
             return;
         }
         switch (state) {
-        case NEW:
-            if (preOpenOutgoingRequests == null)
-                preOpenOutgoingRequests = new ArrayList<>();
-            for (RMIRequestImpl<?> request : preOpenOutgoingRequests)
-                request.setFailedState(RMIExceptionType.CHANNEL_CLOSED, null);
-            preOpenOutgoingRequests.clear();
-            break;
-        case OPEN:
-            connection.tasksManager.cancelAllTasks(getChannelId(), cancel.getId(), type);
-            break;
-        default:
-            return;
+            case NEW:
+                if (preOpenOutgoingRequests == null)
+                    preOpenOutgoingRequests = new ArrayList<>();
+                for (RMIRequestImpl<?> request : preOpenOutgoingRequests) {
+                    request.setFailedState(RMIExceptionType.CHANNEL_CLOSED, null);
+                }
+                preOpenOutgoingRequests.clear();
+                break;
+            case OPEN:
+                connection.tasksManager.cancelAllTasks(getChannelId(), cancel.getId(), type);
+                break;
+            default:
+                return;
         }
-        //for top-level request
+        // for top-level request
         RMIRequest<Void> cancelChannel = createRequest(new RMIRequestMessage<>(RMIRequestType.ONE_WAY,
-            cancel == RMICancelType.ABORT_RUNNING ? RMIRequestImpl.ABORT_CANCEL : RMIRequestImpl.CANCEL_WITH_CONFIRMATION,
+            cancel == RMICancelType.ABORT_RUNNING ? RMIRequestImpl.ABORT_CANCEL :
+                RMIRequestImpl.CANCEL_WITH_CONFIRMATION,
             0L));
         cancelChannel.setListener(request -> this.close());
         state = RMIChannelState.CANCELLING;
@@ -244,15 +259,15 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
     boolean addIncomingRequest(ServerRequestInfo request) {
         synchronized (this) {
             switch (state) {
-            case NEW:
-                if (preOpenIncomingRequests == null)
-                    preOpenIncomingRequests = new ArrayList<>();
-                preOpenIncomingRequests.add(request);
-                return true; // wait until open
-            case CLOSED:
-                return false; // don't do anything -- too late (channel already closed)
-            default:
-                break; // try to submit outside of lock
+                case NEW:
+                    if (preOpenIncomingRequests == null)
+                        preOpenIncomingRequests = new ArrayList<>();
+                    preOpenIncomingRequests.add(request);
+                    return true; // wait until open
+                case CLOSED:
+                    return false; // don't do anything -- too late (channel already closed)
+                default:
+                    break; // try to submit outside of lock
             }
         }
         connection.messageProcessor.createAndSubmitTask(this, request);
@@ -262,20 +277,20 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
     private void addOutgoingRequestImpl(RMIRequestImpl<?> request) {
         synchronized (this) {
             switch (state) {
-            case NEW:
-                if (preOpenOutgoingRequests == null)
-                    preOpenOutgoingRequests = new ArrayList<>();
-                preOpenOutgoingRequests.add(request);
-                return; // ok
-            case OPEN:
-                connection.requestsManager.addOutgoingRequest(request);
-                return; // ok
-            case CANCELLING:
-                if (preOpenOutgoingRequests == null)
-                    connection.requestsManager.addOutgoingRequest(request);
-                else
+                case NEW:
+                    if (preOpenOutgoingRequests == null)
+                        preOpenOutgoingRequests = new ArrayList<>();
                     preOpenOutgoingRequests.add(request);
-                return;
+                    return; // ok
+                case OPEN:
+                    connection.requestsManager.addOutgoingRequest(request);
+                    return; // ok
+                case CANCELLING:
+                    if (preOpenOutgoingRequests == null)
+                        connection.requestsManager.addOutgoingRequest(request);
+                    else
+                        preOpenOutgoingRequests.add(request);
+                    return;
             }
             // otherwise (state==CLOSED) make failed outside of the lock!
         }

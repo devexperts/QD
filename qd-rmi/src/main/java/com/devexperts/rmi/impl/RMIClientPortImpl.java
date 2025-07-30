@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,6 +15,7 @@ import com.devexperts.io.Marshalled;
 import com.devexperts.rmi.RMIClientPort;
 import com.devexperts.rmi.RMIOperation;
 import com.devexperts.rmi.RMIRequest;
+import com.devexperts.rmi.RMIRequestTransformer;
 import com.devexperts.rmi.message.RMIRequestMessage;
 import com.devexperts.rmi.message.RMIRequestType;
 import com.devexperts.rmi.message.RMIRoute;
@@ -37,15 +38,19 @@ abstract class RMIClientPortImpl implements RMIClientPort {
     private final Marshalled<?> subject; // null means "get subject at the request creation time"
 
     private final RMIEndpointImpl endpoint;
+    private final RMIRequestTransformer requestTransformer;
 
     @GuardedBy("this")
     private Map<String, Object> cachedProxies; // initialized on first need
 
     // ==================== constructor ====================
 
-    protected RMIClientPortImpl(RMIEndpointImpl endpoint, @Nullable Marshalled<?> subject) {
+    protected RMIClientPortImpl(RMIEndpointImpl endpoint, @Nullable Marshalled<?> subject,
+        @Nullable RMIRequestTransformer requestTransformer)
+    {
         this.subject = subject;
         this.endpoint = endpoint;
+        this.requestTransformer = requestTransformer;
     }
 
     // ==================== methods ====================
@@ -114,13 +119,30 @@ abstract class RMIClientPortImpl implements RMIClientPort {
         Object[] parameters)
     {
         RMIRoute route = RMIRoute.createRMIRoute(endpoint.getEndpointId());
-        return new RMIRequestMessage<>(type, operation,
+        RMIRequestMessage<T> message = new RMIRequestMessage<>(type, operation,
             Marshalled.forObject(parameters, operation.getParametersMarshaller()), route, null);
+        if (currentRequestTransformer() != null) {
+            //noinspection unchecked
+            message = currentRequestTransformer().updateRequest(message, this);
+        }
+        return message;
     }
 
     @Nonnull
     protected final <T> RMIRequestMessage<T> updateRequestMessage(RMIRequestMessage<T> message) {
         RMIRoute route = message.getRoute().append(endpoint.getEndpointId());
-        return message.changeTargetRoute(message.getTarget(), route);
+        message = message.changeTargetRoute(message.getTarget(), route);
+        if (currentRequestTransformer() != null) {
+            //noinspection unchecked
+            message = currentRequestTransformer().updateRequest(message, this);
+        }
+        return message;
+    }
+
+    protected RMIRequestTransformer currentRequestTransformer() {
+        if (requestTransformer != null)
+            return requestTransformer;
+        // should use the actual default transformer as it may be changed after port creation
+        return endpoint.getDefaultRequestTransformer();
     }
 }

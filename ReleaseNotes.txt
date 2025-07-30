@@ -1,3 +1,16 @@
+QDS 3.345:
+
+* [QD-1565] dxFeed API: Add DataType candle attribute
+* [QD-1669] [EXPERIMENTAL] [RMI] RMI request transformers support
+  Experimental API for the client requests transformation:
+  - RMIRequestTransformer - request transformation algorithm interface
+  - RMIRequestTransformerFactory - injecting a default transformer by adding a module to the class-path
+  - RMIClient - creating a client port with a custom request transformer
+  - RMIEndpoint - setting a default request transformer
+  BACKWARD-INCOMPATIBLE CHANGE: added new abstract methods in RMIClient and RMIEndpoint
+* [QD-1692] dxFeed API: Clarify DXEndpoint.executor docs
+* [QD-1694] dxFeed API: Add NuamTrade event
+
 QDS 3.344:
 
 * [QD-1258] Sticky subscription / delayed subscription removal

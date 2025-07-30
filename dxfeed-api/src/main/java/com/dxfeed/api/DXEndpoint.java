@@ -601,8 +601,10 @@ public abstract class DXEndpoint implements AutoCloseable {
     public abstract void removeStateChangeListener(PropertyChangeListener listener);
 
     /**
-     * Changes executor that is used for notifications.
-     * By default, the thread pool with the size equal to the number of available processors is used.
+     * Changes executor which is used for all asynchronous interaction with user code, such as event processing,
+     * RMI request processing, state changes, etc.
+     *
+     * <p>By default, the thread pool with the size equal to the number of available processors is used.
      * The number of threads in the default pool can be configured using
      * {@link #DXFEED_THREAD_POOL_SIZE_PROPERTY DXFEED_THREAD_POOL_SIZE_PROPERTY}
      * for endpoints with role
@@ -611,6 +613,8 @@ public abstract class DXEndpoint implements AutoCloseable {
      * for endpoints with role
      * {@link Role#PUBLISHER PUBLISHER}.
      * See also <a href="#defaultPropertiesSection">default properties section</a>.
+     *
+     * <p>NOTE: Provided executor may not reject the submitted tasks.
      *
      * @param executor the executor.
      * @return this {@code DXEndpoint}.
@@ -684,7 +688,7 @@ public abstract class DXEndpoint implements AutoCloseable {
      * TCP connections with multiple target addresses will try switch to an alternative address, configured
      * reconnect timeouts will apply.
      *
-     * <p><b>Note:</b> The method will not connect endpoint that was not initially connected with
+     * <p><b>Note:</b> The method will not connect an endpoint that was not initially connected with
      * {@link #connect(String)} method or was disconnected with {@link #disconnect()} method.
      *
      * <p>The method initiates a short-path way for reconnecting, so whether observers will have a chance to see
@@ -713,7 +717,7 @@ public abstract class DXEndpoint implements AutoCloseable {
     public abstract void disconnectAndClear();
 
     /**
-     * Closes this endpoint. All network connection are terminated as with
+     * Closes this endpoint. All network connections are terminated as with
      * {@link #disconnect() disconnect} method and no further connections
      * can be established.
      * The endpoint {@link #getState() state} immediately becomes {@link State#CLOSED CLOSED}.
@@ -748,7 +752,7 @@ public abstract class DXEndpoint implements AutoCloseable {
 
     /**
      * Closes this endpoint and wait until all pending data processing tasks are completed.
-     * This  method performs the same actions as close {@link #close()}, but also awaits
+     * This method performs the same actions as {@link #close()}, but also awaits
      * termination of all outstanding data processing tasks. It is designed to be used
      * with {@link Role#STREAM_FEED STREAM_FEED} role after {@link #awaitNotConnected()} method returns
      * to make sure that file was completely processed.

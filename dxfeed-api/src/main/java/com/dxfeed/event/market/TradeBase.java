@@ -382,33 +382,45 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
      */
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "{" + baseFieldsToString() + "}";
+        StringBuilder sb = new StringBuilder(getClass().getSimpleName());
+        sb.append('{');
+        fieldsToString(sb);
+        sb.append('}');
+        return sb.toString();
     }
 
-    // ========================= package private access for Trade and TradeETH =========================
+    // ========================= package private access for other subclasses =========================
 
     /**
-     * Returns string representation of this trade event's fields.
-     * @return string representation of this trade event's fields.
+     * Appends the field values of this event to a provided {@link StringBuilder}.
+     * This method is responsible for converting each field to a string representation and appending it
+     * to the {@link StringBuilder} passed as a parameter.
+     * <p> Inheritor classes are encouraged to override this method to add additional fields specific
+     * to their implementations. When overriding, the subclass should first call
+     * {@code super.fieldsToString(sb)} before appending its own fields to maintain the
+     * structure of the data representation.
+     * @param sb instance to which field values are appended.
+     * @return instance passed in, after field values have been appended.
      */
-    String baseFieldsToString() {
-        return getEventSymbol() +
-            ", eventTime=" + TimeFormat.DEFAULT.withMillis().format(getEventTime()) +
-            ", time=" + TimeFormat.DEFAULT.withMillis().format(getTime()) +
-            ", timeNanoPart=" + timeNanoPart +
-            ", sequence=" + getSequence() +
-            ", exchange=" + EventUtil.encodeChar(exchangeCode) +
-            ", price=" + price +
-            ", change=" + change +
-            ", size=" + size +
-            ", day=" + DayUtil.getYearMonthDayByDayId(dayId) +
-            ", dayVolume=" + dayVolume +
-            ", dayTurnover=" + dayTurnover +
-            ", direction=" + getTickDirection() +
-            ", ETH=" + isExtendedTradingHours();
+    protected StringBuilder fieldsToString(StringBuilder sb) {
+        sb.append(getEventSymbol())
+            .append(", eventTime=").append(TimeFormat.DEFAULT.withMillis().format(getEventTime()))
+            .append(", time=").append(TimeFormat.DEFAULT.withMillis().format(getTime()))
+            .append(", timeNanoPart=").append(timeNanoPart)
+            .append(", sequence=").append(getSequence())
+            .append(", exchange=").append(EventUtil.encodeChar(exchangeCode))
+            .append(", price=").append(price)
+            .append(", change=").append(change)
+            .append(", size=").append(size)
+            .append(", day=").append(DayUtil.getYearMonthDayByDayId(dayId))
+            .append(", dayVolume=").append(dayVolume)
+            .append(", dayTurnover=").append(dayTurnover)
+            .append(", direction=").append(getTickDirection())
+            .append(", ETH=").append(isExtendedTradingHours());
+        return sb;
     }
 
-    // ========================= package private access for delegate =========================
+    // ========================= protected access for Nuam Trade delegate in custom package =========================
 
     /**
      * Returns implementation-specific flags.
@@ -416,7 +428,7 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
      * It may be removed or changed in the future versions.
      * @return flags.
      */
-    int getFlags() {
+    protected int getFlags() {
         return flags;
     }
 
@@ -426,7 +438,7 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
      * It may be removed or changed in the future versions.
      * @param flags flags.
      */
-    void setFlags(int flags) {
+    protected void setFlags(int flags) {
         this.flags = flags;
     }
 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -86,6 +86,7 @@ public class CandleSymbol implements Serializable {
     transient CandlePeriod period;
     transient CandleAlignment alignment;
     transient CandlePriceLevel priceLevel;
+    transient CandleDataType dataType;
 
     private CandleSymbol(String symbol) {
         this.symbol = normalize(symbol);
@@ -160,6 +161,14 @@ public class CandleSymbol implements Serializable {
      */
     public CandlePriceLevel getPriceLevel() {
         return priceLevel;
+    }
+
+    /**
+     * Returns data type attribute of this symbol.
+     * @return data type attribute of this symbol.
+     */
+    public CandleDataType getDataType() {
+        return dataType;
     }
 
     /**
@@ -244,6 +253,7 @@ public class CandleSymbol implements Serializable {
         symbol = CandlePeriod.normalizeAttributeForSymbol(symbol);
         symbol = CandleAlignment.normalizeAttributeForSymbol(symbol);
         symbol = CandlePriceLevel.normalizeAttributeForSymbol(symbol);
+        symbol = CandleDataType.normalizeAttributeForSymbol(symbol);
         return symbol;
     }
 
@@ -261,6 +271,8 @@ public class CandleSymbol implements Serializable {
             alignment = CandleAlignment.getAttributeForSymbol(symbol);
         if (priceLevel == null)
             priceLevel = CandlePriceLevel.getAttributeForSymbol(symbol);
+        if (dataType == null)
+            dataType = CandleDataType.getAttributeForSymbol(symbol);
     }
 
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
