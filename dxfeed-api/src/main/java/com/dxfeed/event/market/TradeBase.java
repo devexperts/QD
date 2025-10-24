@@ -39,7 +39,7 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  */
 @XmlType(propOrder = {
     "time", "timeNanoPart", "sequence", "exchangeCode", "price", "change", "sizeAsDouble",
-    "dayId", "dayVolumeAsDouble", "dayTurnover", "tickDirection", "extendedTradingHours"
+    "dayId", "dayVolumeAsDouble", "dayTurnover", "tickDirection", "extendedTradingHours", "tradeId"
 })
 public abstract class TradeBase extends MarketEvent implements LastingEvent<String> {
     private static final long serialVersionUID = 1;
@@ -80,6 +80,7 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
     private double dayVolume = Double.NaN;
     private double dayTurnover = Double.NaN;
     private int flags;
+    private long tradeId;
 
     /**
      * Creates new trade with default values.
@@ -377,6 +378,22 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
     }
 
     /**
+     * Returns trade ID for events containing trade-related action (executions, corrections, or cancellations).
+     * @return trade ID or 0 if not available.
+     */
+    public long getTradeId() {
+        return tradeId;
+    }
+
+    /**
+     * Changes trade ID.
+     * @param tradeId trade ID.
+     */
+    public void setTradeId(long tradeId) {
+        this.tradeId = tradeId;
+    }
+
+    /**
      * Returns string representation of this trade event.
      * @return string representation of this trade event.
      */
@@ -412,6 +429,7 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
             .append(", price=").append(price)
             .append(", change=").append(change)
             .append(", size=").append(size)
+            .append(", tradeId=").append(tradeId)
             .append(", day=").append(DayUtil.getYearMonthDayByDayId(dayId))
             .append(", dayVolume=").append(dayVolume)
             .append(", dayTurnover=").append(dayTurnover)

@@ -32,8 +32,8 @@ public class NuamTimeAndSaleMapping extends MarketEventMapping {
     private final int iFlags;
     private final int oBuyer;
     private final int oSeller;
-    private final int iMatchId;
     private final int iTradeId;
+    private final int iMatchId;
 
     public NuamTimeAndSaleMapping(DataRecord record) {
         super(record);
@@ -49,8 +49,8 @@ public class NuamTimeAndSaleMapping extends MarketEventMapping {
         iFlags = MappingUtil.findIntField(record, "Flags", true);
         oBuyer = MappingUtil.findObjField(record, "Buyer", false);
         oSeller = MappingUtil.findObjField(record, "Seller", false);
-        iMatchId = MappingUtil.findIntField(record, "MatchId", true);
         iTradeId = MappingUtil.findIntField(record, "TradeId", true);
+        iMatchId = MappingUtil.findIntField(record, "MatchId", true);
         putNonDefaultPropertyName("Exchange", "ExchangeCode");
         putNonDefaultPropertyName("ExchangeSaleConditions", "SaleConditions");
     }
@@ -289,20 +289,20 @@ public class NuamTimeAndSaleMapping extends MarketEventMapping {
         setObj(cursor, oSeller, seller);
     }
 
-    public long getMatchId(RecordCursor cursor) {
-        return getLong(cursor, iMatchId);
-    }
-
-    public void setMatchId(RecordCursor cursor, long matchId) {
-        setLong(cursor, iMatchId, matchId);
-    }
-
     public long getTradeId(RecordCursor cursor) {
         return getLong(cursor, iTradeId);
     }
 
     public void setTradeId(RecordCursor cursor, long tradeId) {
         setLong(cursor, iTradeId, tradeId);
+    }
+
+    public long getMatchId(RecordCursor cursor) {
+        return getLong(cursor, iMatchId);
+    }
+
+    public void setMatchId(RecordCursor cursor, long matchId) {
+        setLong(cursor, iMatchId, matchId);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }

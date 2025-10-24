@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -52,6 +52,7 @@ public final class TradeETHDelegate extends MarketEventDelegateImpl<TradeETH> {
         event.setDayVolumeAsDouble(m.getDayVolumeDouble(cursor));
         event.setDayTurnover(m.getDayTurnover(cursor));
         event.setFlags(m.getFlags(cursor));
+        event.setTradeId(m.getTradeId(cursor));
         return event;
     }
 
@@ -69,6 +70,7 @@ public final class TradeETHDelegate extends MarketEventDelegateImpl<TradeETH> {
         m.setDayVolumeDouble(cursor, event.getDayVolumeAsDouble());
         m.setDayTurnover(cursor, event.getDayTurnover());
         m.setFlags(cursor, event.getFlags());
+        m.setTradeId(cursor, event.getTradeId());
         return cursor;
     }
 // END: CODE AUTOMATICALLY GENERATED

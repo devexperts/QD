@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -46,13 +46,13 @@ public class SSLMismatchTest {
     public void testThreadLeak() throws InterruptedException {
         SampleCert.init();
         server = RMIEndpoint.createEndpoint();
-        NTU.connect(server, "ssl+:1234");
+        int port = NTU.connectServer(server, "ssl+");
         client = RMIEndpoint.createEndpoint();
-        NTU.connect(client, "localhost:1234[reconnectDelay=100000]");
+        NTU.connect(client, NTU.LOCAL_HOST + ":" + port + "[reconnectDelay=100000]");
         Thread.sleep(300);
         // disconnect and reconnect multiple times
         client.disconnect();
-        client.connect("localhost:1234[reconnectDelay=0]");
+        client.connect(NTU.LOCAL_HOST + ":" + port + "[reconnectDelay=0]");
         // wait more to have multiple connection attempts
         Thread.sleep(3000);
         //waitConnected(client);

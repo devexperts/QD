@@ -507,6 +507,34 @@ public final class OrderSource extends IndexedEventSource {
      */
     public static final OrderSource nuam = new OrderSource("nuam", PUB_ORDER | PUB_NUAM_ORDER);
 
+    /**
+     * MOON ATS.
+     * {@link Order} and {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource MOON = new OrderSource("MOON", PUB_ORDER);
+
+    /**
+     * MOON ATS. Record for price level book.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource moon = new OrderSource("moon", PUB_ORDER);
+
+    /**
+     * OTC Overnight.
+     * {@link Order} and {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource OTCM = new OrderSource("OTCM", PUB_ORDER);
+
+    /**
+     * OTC Overnight. Record for price level book.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource otcm = new OrderSource("otcm", PUB_ORDER);
+
     // ATTENTION: Every time a custom OrderSource constant is added run com.dxfeed.api.codegen.ImplCodeGen
     // and commit updated implementation classes.
 

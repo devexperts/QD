@@ -61,6 +61,7 @@ import javax.xml.bind.annotation.XmlType;
  * <li>{@link #isExtendedTradingHours() extendedTradingHours} - whether this event represents an extended trading hours sale;
  * <li>{@link #isValidTick() validTick} - whether this event represents a valid intraday tick;
  * <li>{@link #getType() type} - type of this time and sale event.
+ * <li>{@link #getTradeId() tradeId} - trade ID for events containing trade-related action (executions, corrections, or cancellations).;
  * </ul>
  *
  * <h3><a name="eventFlagsSection">Event flags, transactions and snapshots</a></h3>
@@ -93,7 +94,7 @@ import javax.xml.bind.annotation.XmlType;
 @XmlType(propOrder = {
     "eventFlags", "index", "time", "timeNanoPart", "sequence", "exchangeCode", "price", "sizeAsDouble",
     "bidPrice", "askPrice", "exchangeSaleConditions", "tradeThroughExempt", "aggressorSide", "spreadLeg",
-    "extendedTradingHours", "validTick", "type", "buyer", "seller"
+    "extendedTradingHours", "validTick", "type", "buyer", "seller", "tradeId"
 })
 public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> {
     private static final long serialVersionUID = 3;
@@ -155,6 +156,7 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
     private int flags;
     private String buyer;
     private String seller;
+    private long tradeId;
 
     /**
      * Creates new time and sale event with default values.
@@ -615,6 +617,22 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
     }
 
     /**
+     * Returns trade ID for events containing trade-related action (executions, corrections, or cancellations).
+     * @return trade ID or 0 if not available.
+     */
+    public long getTradeId() {
+        return tradeId;
+    }
+
+    /**
+     * Changes trade ID.
+     * @param tradeId trade ID.
+     */
+    public void setTradeId(long tradeId) {
+        this.tradeId = tradeId;
+    }
+
+    /**
      * Returns string representation of this time and sale event.
      * @return string representation of this time and sale event.
      */
@@ -650,6 +668,7 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
             .append(", exchange=").append(EventUtil.encodeChar(exchangeCode))
             .append(", price=").append(price)
             .append(", size=").append(size)
+            .append(", tradeId=").append(tradeId)
             .append(", bid=").append(bidPrice)
             .append(", ask=").append(askPrice)
             .append(", ESC='").append(exchangeSaleConditions).append("'")

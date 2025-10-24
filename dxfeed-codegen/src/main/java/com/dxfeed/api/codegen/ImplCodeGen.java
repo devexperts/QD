@@ -146,6 +146,7 @@ public class ImplCodeGen {
             map("DayVolume", "Volume", FieldType.VOLUME).optional().
             map("DayTurnover", "DayTurnover", FieldType.TURNOVER).optional().
             map("Flags", "Last.Flags", FieldType.FLAGS).optional().
+            map("TradeId", "TradeId", FieldType.LONG).optional().
             injectGetEventCode(
                 "if (event.getTickDirection() == Direction.UNDEFINED) {",
                 "    // if direction is not provided via flags field - compute it from tick field if provided",
@@ -178,6 +179,7 @@ public class ImplCodeGen {
             map("DayVolume", "Volume", FieldType.VOLUME).optional().
             map("DayTurnover", "DayTurnover", FieldType.TURNOVER).optional().
             map("Flags", "Last.Flags", FieldType.FLAGS).optional().
+            map("TradeId", "TradeId", FieldType.LONG).optional().
             injectGetEventCode(
                 "if (event.getTickDirection() == Direction.UNDEFINED) {",
                 "    // if direction is not provided via flags field - compute it from tick field if provided",
@@ -214,6 +216,7 @@ public class ImplCodeGen {
             map("DayVolume", "ETHVolume", FieldType.VOLUME).optional().
             map("DayTurnover", "ETHDayTurnover", FieldType.TURNOVER).optional().
             map("Flags", "ETHLast.Flags", FieldType.FLAGS).
+            map("TradeId", "TradeId", FieldType.LONG).optional().
             publishable();
 
         ctx.delegate("Summary", Summary.class, "Summary&").
@@ -670,6 +673,7 @@ public class ImplCodeGen {
             map("Flags", "Flags", FieldType.FLAGS).
             map("Buyer", "Buyer", FieldType.STRING).optional().disabledByDefault().
             map("Seller", "Seller", FieldType.STRING).optional().disabledByDefault().
+            map("TradeId", "TradeId", FieldType.LONG).optional().
             publishable();
 
         ctx.delegate("NuamTimeAndSale", NuamTimeAndSale.class, "NuamTimeAndSale&").
@@ -688,8 +692,8 @@ public class ImplCodeGen {
             map("Flags", "Flags", FieldType.FLAGS).
             map("Buyer", "Buyer", FieldType.STRING).optional().disabledByDefault().
             map("Seller", "Seller", FieldType.STRING).optional().disabledByDefault().
-            map("MatchId", "MatchId", FieldType.LONG).
             map("TradeId", "TradeId", FieldType.LONG).
+            map("MatchId", "MatchId", FieldType.LONG).
             publishable();
 
         ctx.delegate("OptionSale", OptionSale.class, "OptionSale").

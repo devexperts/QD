@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -52,6 +52,7 @@ public final class TradeDelegate extends MarketEventDelegateImpl<Trade> {
         event.setDayVolumeAsDouble(m.getDayVolumeDouble(cursor));
         event.setDayTurnover(m.getDayTurnover(cursor));
         event.setFlags(m.getFlags(cursor));
+        event.setTradeId(m.getTradeId(cursor));
         if (event.getTickDirection() == Direction.UNDEFINED) {
             // if direction is not provided via flags field - compute it from tick field if provided
             int tick = m.getTick(cursor);
@@ -77,6 +78,7 @@ public final class TradeDelegate extends MarketEventDelegateImpl<Trade> {
         m.setDayVolumeDouble(cursor, event.getDayVolumeAsDouble());
         m.setDayTurnover(cursor, event.getDayTurnover());
         m.setFlags(cursor, event.getFlags());
+        m.setTradeId(cursor, event.getTradeId());
         Direction d = event.getTickDirection();
         m.setTick(cursor, d == Direction.UP || d == Direction.ZERO_UP ? 1 : d == Direction.DOWN || d == Direction.ZERO_DOWN ? 2 : 0);
         return cursor;

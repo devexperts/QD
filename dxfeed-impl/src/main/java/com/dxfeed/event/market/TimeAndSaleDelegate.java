@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -54,6 +54,7 @@ public final class TimeAndSaleDelegate extends MarketEventDelegateImpl<TimeAndSa
         event.setFlags(m.getFlags(cursor));
         event.setBuyer(m.getBuyer(cursor));
         event.setSeller(m.getSeller(cursor));
+        event.setTradeId(m.getTradeId(cursor));
         return event;
     }
 
@@ -73,6 +74,7 @@ public final class TimeAndSaleDelegate extends MarketEventDelegateImpl<TimeAndSa
         m.setFlags(cursor, event.getFlags());
         m.setBuyer(cursor, event.getBuyer());
         m.setSeller(cursor, event.getSeller());
+        m.setTradeId(cursor, event.getTradeId());
         return cursor;
     }
 // END: CODE AUTOMATICALLY GENERATED

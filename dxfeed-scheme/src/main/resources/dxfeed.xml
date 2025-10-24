@@ -143,6 +143,7 @@
                     <field name="Direction" offset="1" size="3"/>
                 </bitfields>
             </field>
+            <field name="TradeId" type="long"/>
         </record>
 
         <!-- MarketFactoryImpl -->
@@ -164,6 +165,7 @@
                     <field name="Direction" offset="1" size="3"/>
                 </bitfields>
             </field>
+            <field name="TradeId" type="long"/>
         </record>
 
         <!-- MarketFactoryImpl -->
@@ -326,6 +328,10 @@
                 <value>edx</value>
                 <value>NUAM</value>
                 <value>nuam</value>
+                <value>MOON</value>
+                <value>moon</value>
+                <value>OTCM</value>
+                <value>otcm</value>
             </iterator>
             <!-- Simple copy from "OrderBase" -->
             <record name="Order" copyFrom="OrderIcebergBase"/>
@@ -413,6 +419,7 @@
             </field>
             <field name="Buyer" type="string" disabled="true"/>
             <field name="Seller" type="string" disabled="true"/>
+            <field name="TradeId" type="long"/>
         </record>
 
         <!-- MarketFactoryImpl -->
@@ -676,9 +683,7 @@
         <!-- CustomFactoryImpl -->
         <record name="NuamTimeAndSale" regionals="true" copyFrom="TimeAndSale">
             <field name="MatchId" type="long"/>
-            <field name="TradeId" type="long"/>
         </record>
-
 
     </records>
 </dxfeed>

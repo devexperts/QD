@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -157,6 +157,7 @@ public class DXPublisherTest extends AbstractDXPublisherTest {
             t.setSequence(i++);
             t.setPrice(i++);
             t.setSize(i++);
+            t.setTradeId(i++);
             char exchangeCode = EXCHANGE_CODES[i % EXCHANGE_CODES.length];
             t.setExchangeCode(exchangeCode == 0 ? 'C' : exchangeCode);
             t.setTimeNanos(i++ * 1000_000L + i++);
@@ -170,6 +171,7 @@ public class DXPublisherTest extends AbstractDXPublisherTest {
         testGetLastEvent(Trade.class, trade, new Trade(), (publishedEvent, receivedEvent) -> {
             assertEquals(publishedEvent.getSize(), receivedEvent.getSize());
             assertEquals(publishedEvent.getEventTime(), receivedEvent.getEventTime());
+            assertEquals(publishedEvent.getTradeId(), receivedEvent.getTradeId());
         });
     }
 
@@ -258,6 +260,7 @@ public class DXPublisherTest extends AbstractDXPublisherTest {
             ts.setSequence(i++);
             ts.setPrice(i++);
             ts.setSize(i++);
+            ts.setTradeId(i++);
             ts.setExchangeCode((char) i++);
             ts.setBidPrice(i++);
             ts.setAskPrice(i++);

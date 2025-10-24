@@ -126,6 +126,7 @@
                 </execution>
                 <execution artifactId="maven-dependency-plugin">
                     <execIds>
+                        <execId>copy-integration-test-war</execId>
                         <execId>copy-local-packages</execId>
                         <execId>install-artifact-file</execId>
                     </execIds>
@@ -161,6 +162,11 @@
                         <reconcile propertyName="skipTests" skipValue="true"/>
                         <reconcile propertyName="testFailureIgnore" skipValue="true"/>
                     </reconciles>
+                </plugin>
+                <plugin artifactId="maven-enforcer-plugin" goal="enforce">
+                    <nologs>
+                        <nolog propertyName="commandLineRules"/>
+                    </nologs>
                 </plugin>
                 <!--
 

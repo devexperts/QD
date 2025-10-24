@@ -48,6 +48,7 @@ public final class CustomFactoryImpl extends EventDelegateFactory implements Rec
         builder.addOptionalField("NuamTrade", "Volume", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "NuamTrade", "DayVolume", true);
         builder.addOptionalField("NuamTrade", "DayTurnover", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "NuamTrade", "DayTurnover", true);
         builder.addOptionalField("NuamTrade", "Last.Flags", SerialFieldType.COMPACT_INT, "NuamTrade", "Flags", true);
+        builder.addOptionalField("NuamTrade", "TradeId", SerialFieldType.LONG, "NuamTrade", "TradeId", true);
         builder.addOptionalField("NuamTrade", "Date", SerialFieldType.COMPACT_INT, "NuamTrade", "Date", SystemProperties.getBooleanProperty("reuters.phantom", false));
         builder.addOptionalField("NuamTrade", "Operation", SerialFieldType.COMPACT_INT, "NuamTrade", "Operation", SystemProperties.getBooleanProperty("reuters.phantom", false));
         builder.addRequiredField("NuamTrade", "TradeStatTime", SerialFieldType.TIME_MILLIS);
@@ -68,6 +69,7 @@ public final class CustomFactoryImpl extends EventDelegateFactory implements Rec
             builder.addOptionalField(recordName, "Volume", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "NuamTrade", "DayVolume", true);
             builder.addOptionalField(recordName, "DayTurnover", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "NuamTrade", "DayTurnover", true);
             builder.addOptionalField(recordName, "Last.Flags", SerialFieldType.COMPACT_INT, "NuamTrade", "Flags", true);
+            builder.addOptionalField(recordName, "TradeId", SerialFieldType.LONG, "NuamTrade", "TradeId", true);
             builder.addRequiredField(recordName, "TradeStatTime", SerialFieldType.TIME_MILLIS);
             builder.addRequiredField(recordName, "LastSignificantPrice", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
             builder.addRequiredField(recordName, "LastPriceForAll", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
@@ -125,8 +127,8 @@ public final class CustomFactoryImpl extends EventDelegateFactory implements Rec
         builder.addRequiredField("NuamTimeAndSale", "Flags", SerialFieldType.COMPACT_INT);
         builder.addOptionalField("NuamTimeAndSale", "Buyer", SerialFieldType.UTF_CHAR_ARRAY, "NuamTimeAndSale", "Buyer", false);
         builder.addOptionalField("NuamTimeAndSale", "Seller", SerialFieldType.UTF_CHAR_ARRAY, "NuamTimeAndSale", "Seller", false);
-        builder.addRequiredField("NuamTimeAndSale", "MatchId", SerialFieldType.LONG);
         builder.addRequiredField("NuamTimeAndSale", "TradeId", SerialFieldType.LONG);
+        builder.addRequiredField("NuamTimeAndSale", "MatchId", SerialFieldType.LONG);
         for (char exchange : getExchanges("com.dxfeed.event.custom.impl.NuamTimeAndSale.exchanges")) {
             String recordName = "NuamTimeAndSale&" + exchange;
             builder.addRequiredField(recordName, "Time", SerialFieldType.TIME_SECONDS, SchemeFieldTime.FIRST_TIME_INT_FIELD);
@@ -141,8 +143,8 @@ public final class CustomFactoryImpl extends EventDelegateFactory implements Rec
             builder.addRequiredField(recordName, "Flags", SerialFieldType.COMPACT_INT);
             builder.addOptionalField(recordName, "Buyer", SerialFieldType.UTF_CHAR_ARRAY, "NuamTimeAndSale", "Buyer", false);
             builder.addOptionalField(recordName, "Seller", SerialFieldType.UTF_CHAR_ARRAY, "NuamTimeAndSale", "Seller", false);
-            builder.addRequiredField(recordName, "MatchId", SerialFieldType.LONG);
             builder.addRequiredField(recordName, "TradeId", SerialFieldType.LONG);
+            builder.addRequiredField(recordName, "MatchId", SerialFieldType.LONG);
         }
     }
 

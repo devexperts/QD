@@ -36,8 +36,6 @@ import javax.xml.bind.annotation.XmlType;
  *
  * <ul>
  * <li>{@link #getMatchId() matchId} - the unique identifier of the match associated with this transaction;</li>
- * <li>{@link #getTradeId() tradeId} - the public unique identifier of the trade
- *     associated with this transaction only within the trading day;</li>
  * </ul>
  *
  * <h3><a name="eventFlagsSection">Event flags, transactions and snapshots</a></h3>
@@ -69,13 +67,12 @@ import javax.xml.bind.annotation.XmlType;
 @Experimental
 @XmlRootElement(name = "NuamTimeAndSale")
 @XmlType(propOrder = {
-    "matchId", "tradeId"
+    "matchId"
 })
 public class NuamTimeAndSale extends TimeAndSale {
     private static final long serialVersionUID = 0;
 
     private long matchId;
-    private long tradeId;
 
     /**
      * Creates new nuam time and sale event with default values.
@@ -114,35 +111,12 @@ public class NuamTimeAndSale extends TimeAndSale {
     }
 
     /**
-     * Gets the trade ID, which uniquely identifies the trade
-     * associated with this transaction only within the trading day.
-     * Unlike matchId, it can be treated as "public" information and used in client widgets and internal Nuam systems.
-     *
-     * @return the trade ID.
-     */
-    public long getTradeId() {
-        return tradeId;
-    }
-
-    /**
-     * Changes the trade ID, which uniquely identifies the trade
-     * associated with this transaction only within the trading day.
-     * Unlike matchId, it can be treated as "public" information and used in client widgets and internal Nuam systems.
-     *
-     * @param tradeId the trade ID to set.
-     */
-    public void setTradeId(long tradeId) {
-        this.tradeId = tradeId;
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
     protected StringBuilder fieldsToString(StringBuilder sb) {
         return super.fieldsToString(sb)
-            .append(", matchId=").append(matchId)
-            .append(", tradeId=").append(tradeId);
+            .append(", matchId=").append(matchId);
     }
 
     /**

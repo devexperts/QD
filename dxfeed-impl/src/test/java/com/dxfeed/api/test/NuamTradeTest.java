@@ -77,6 +77,7 @@ public class NuamTradeTest {
         trade.setDayTurnover(6.0);
         trade.setTickDirection(Direction.UP);
         trade.setChange(7.0);
+        trade.setTradeId(2L);
 
         trade.setTradeStatTime(TIME);
         trade.setLastSignificantPrice(101.0);
@@ -105,6 +106,7 @@ public class NuamTradeTest {
         assertEquals(expected.getLastPriceForAll(), actual.getLastPriceForAll(), 0.0);
         assertEquals(expected.getNumberOfTrades(), actual.getNumberOfTrades());
         assertEquals(expected.getVWAP(), actual.getVWAP(), 0.0);
+        assertEquals(expected.getTradeId(), actual.getTradeId());
     }
 
     @Test
@@ -127,5 +129,6 @@ public class NuamTradeTest {
         assertEquals(Double.NaN, trade.getLastPriceForAll(), 0.0);
         assertEquals(0, trade.getNumberOfTrades());
         assertEquals(Double.NaN, trade.getVWAP(), 0.0);
+        assertEquals(0, trade.getTradeId());
     }
 }

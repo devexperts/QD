@@ -37,6 +37,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  * <li>{@link #getSizeAsDouble() sizeAsDouble} - size of the last trade as floating number with fractions;
  * <li>{@link #getTickDirection() tickDirection} - tick direction of the last trade;
  * <li>{@link #isExtendedTradingHours() extendedTradingHours} - whether the last trade was in extended trading hours;
+ * <li>{@link #getTradeId() tradeId} - trade ID for events containing trade-related action (executions, corrections, or cancellations).;
  * </ul>
  * Accumulated trade statistics for a current day - both <b>regular trading hours</b> and <b>extended trading hours</b>
  * <ul>

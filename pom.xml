@@ -3,7 +3,7 @@
   !++
   QDS - Quick Data Signalling Library
   !-
-  Copyright (C) 2002 - 2024 Devexperts LLC
+  Copyright (C) 2002 - 2025 Devexperts LLC
   !-
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
   If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.345</version>
+    <version>3.346</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -162,11 +162,11 @@
         </shaded.war.excludes>
 
         <!-- version of Jetty for all web and servlet modules -->
-        <jetty.version>9.4.42.v20210604</jetty.version>
+        <jetty.version>9.4.57.v20241219</jetty.version>
         <!-- need to be in sync with servlet-api -->
         <servlet-api.version>3.1.0</servlet-api.version>
         <!-- need to be in sync with jetty -->
-        <jasper.version>8.5.54</jasper.version>
+        <jasper.version>8.5.100</jasper.version>
 
         <!-- versions of frameworks and libraries to use -->
         <log4j.version>1.1.3</log4j.version>
@@ -189,6 +189,8 @@
         <wiremock.version>2.35.2</wiremock.version>
         <awaitility.version>4.2.1</awaitility.version>
         <hamcrest.version>2.2</hamcrest.version>
+        <testcontainers.version>1.21.3</testcontainers.version>
+        <commons-compress.version>1.28.0</commons-compress.version>
     </properties>
 
     <profiles>
@@ -520,6 +522,10 @@
                 </plugin>
                 <plugin>
                     <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.1.0</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-failsafe-plugin</artifactId>
                     <version>3.1.0</version>
                 </plugin>
                 <plugin>
