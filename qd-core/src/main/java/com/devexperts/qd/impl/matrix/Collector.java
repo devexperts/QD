@@ -1271,13 +1271,11 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
     private void removeSubInternalExistingTime(SubMatrix asub, int aindex, int key, int rid,
         SubMatrix psub, int pindex, boolean moreAgents, boolean isStickyEnabled)
     {
-        int tindex = pindex;
-        SubMatrix tsub = total.sub;
-        boolean wasStickySubscription = isStickyEnabled && stickySubscription.isStickySubscription(tsub, tindex);
         long timePrev = asub.getLong(aindex + TIME_SUB);
         if (moreAgents) {
             // Other agents are still subscribed -- check if time needs to be recomputed
-            tindex = tsub.getIndex(key, rid, 0);
+            SubMatrix tsub = total.sub;
+            int tindex = tsub.getIndex(key, rid, 0);
             if (tindex == 0 || tsub.getInt(tindex + NEXT_AGENT) <= 0)
                 throw new IllegalStateException("Total agent misses entry");
             long timeTotal = tsub.getLong(tindex + TIME_TOTAL);
@@ -1292,13 +1290,13 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
                         reduceTimeTotal(key, rid, tsub, tindex, newTimeTotal);
                     }
                 }
-            } else if (wasStickySubscription) {
+            } else if (isStickyEnabled && stickySubscription.isStickySubscription(tsub, tindex)) {
                 // check and update watermark if needed
                 enableStickyOrUpdateWatermark(tsub, tindex, timePrev, true);
             }
         } else if (isStickyEnabled) {
             // the last agent is gone, perhaps we need to enable or update watermark
-            enableStickyOrUpdateWatermark(tsub, tindex, timePrev, wasStickySubscription);
+            enableStickyOrUpdateWatermark(psub, pindex, timePrev, stickySubscription.isStickySubscription(psub, pindex));
         } else {
             psub.setLong(pindex + TIME_TOTAL, Long.MAX_VALUE); // no total subscription any more
         }

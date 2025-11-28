@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -183,11 +183,6 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
 
     public QDCollector getCollector(QDContract contract) {
         return collectors[contract.ordinal()];
-    }
-
-    @Deprecated
-    protected QDDistributor createDistributor(QDCollector collector, SubscriptionFilter filter, String keyProperties) {
-        return createDistributor(collector, QDFilter.fromFilter(filter, scheme), QDFilter.ANYTHING, keyProperties);
     }
 
     /**

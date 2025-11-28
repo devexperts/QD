@@ -1,3 +1,13 @@
+QDS 3.347:
+
+* [QD-1708] Legacy DistributorAdapter.createDistributor method works incorrectly
+  BACKWARD-INCOMPATIBLE CHANGE:
+  - Removed deprecated method DistributorAdapter#createDistributor. Use overloaded method instead.
+* [QD-1709] Connector stats report invalid top read/write bytes
+* [QD-1710] AIOBE during subscription remove in History Agent with enabled sticky subscription
+* [QD-1714] [Schedule] Allow specifying zero-length days
+* [QD-1716] [RMI] Memory leak in RMI connections using nested requests
+
 QDS 3.346:
 
 * [QD-1696] Migrate to Jetty 9.4.57

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -39,7 +39,7 @@ class DeltaCounter {
                 }
 
                 // Move previous values to the oldValues array
-                System.arraycopy(oldValues, 0, newValues, 0, count);
+                System.arraycopy(newValues, 0, oldValues, 0, count);
                 Arrays.fill(newValues, 0);
                 // Copy record values from stats
                 stats.addValues(statValue, false, newValues);

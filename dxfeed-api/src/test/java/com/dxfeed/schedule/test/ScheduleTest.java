@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -113,7 +113,55 @@ public class ScheduleTest {
     }
 
     @Test
-    public void testShortDaysStrategyEarlyClose () {
+    public void testEmptyDays() {
+        // support for schedules with manually defined zero-length days and an adjacent multi-day span
+        // (custom variant of a jntd-like strategy)
+        Schedule schedule =
+            gmt("td=1234567;de=1005;0=r-1030-1600r-17001000;3=r---10301000d---10051005;1=d-1005-1005;2=d--1005--1005");
+        Day mon = schedule.getDayByYearMonthDay(20251124);
+        Day tue = schedule.getDayByYearMonthDay(20251125);
+        Day wed = schedule.getDayByYearMonthDay(20251126);
+        // Expected schedule (GMT)
+        // 20241124 (mon): 2025-11-23 10:05-10:05 (empty)
+        // 20241125 (tue): 2025-11-23 10:05-10:05 (empty)
+        // 20241126 (wed): 2025-11-23 10:05 - 2025-11-26 10:05 (3-day span)
+        long sundayEnd = schedule.getDayByYearMonthDay(20251123).getEndTime();
+        // monday is empty
+        assertEquals(sundayEnd, mon.getStartTime());
+        assertEquals(sundayEnd, mon.getEndTime());
+        assertEquals(sundayEnd, mon.getResetTime());
+        assertEquals(1, mon.getSessions().size());
+        assertTrue(mon.getSessions().get(0).isEmpty());
+        // tuesday is empty
+        assertEquals(sundayEnd, tue.getStartTime());
+        assertEquals(sundayEnd, tue.getEndTime());
+        assertEquals(sundayEnd, tue.getResetTime());
+        assertEquals(1, tue.getSessions().size());
+        assertTrue(tue.getSessions().get(0).isEmpty());
+        // wednesday spans from the sunday till the thursday
+        assertEquals(sundayEnd, wed.getStartTime());
+        List<Session> sessions = wed.getSessions();
+        assertEquals(3, sessions.size());
+        assertEquals(SessionType.NO_TRADING, sessions.get(0).getType()); // 2025-11-23 10:05-10:30
+        assertEquals(SessionType.REGULAR, sessions.get(1).getType()); // 2025-11-23 10:30 - 2025-11-26 10:00
+        assertEquals(SessionType.NO_TRADING, sessions.get(2).getType()); // 2025-11-26 10:00-10:05
+
+        // test reset time validation
+        gmt("td=1234567;0=d1030+1030;rt=1030");
+        gmt("td=1234567;0=d1030+1030;rt=+1029");
+        checkException("(tz=GMT;td=1234567;0=d1030+1030;rt=1029)",
+            "illegal reset time 0:10:29:0 for 0:10:30:0 and 1:10:30:0 in ");
+        checkException("(tz=GMT;td=1234567;0=d1030+1030;rt=+1030)",
+            "illegal reset time 1:10:30:0 for 0:10:30:0 and 1:10:30:0 in ");
+        gmt("td=1234567;0=d1030+1030;rt=1030;1=d10301030;2=d-1030+1030");
+        checkException("(tz=GMT;td=1234567;0=d1030+1030;1=d10301030rt1031;2=d-1030+1030)",
+            "illegal reset time 0:10:31:0 for 0:10:30:0 and 0:10:30:0 in ");
+        checkException("(tz=GMT;td=1234567;0=d1030+1030;1=d10301030rt1029;2=d-1030+1030)",
+            "illegal reset time 0:10:29:0 for 0:10:30:0 and 0:10:30:0 in ");
+    }
+
+    @Test
+    public void testShortDaysStrategyEarlyClose() {
         Map<Integer, String> map = new HashMap<>();
         map.put(1, "07000930");
         map.put(2, "09301230");

@@ -39,7 +39,6 @@ public class HistoryStickySubscriptionTest {
     private static final DataScheme SCHEME = new TestDataScheme(1, 123, TestDataScheme.Type.HAS_TIME);
     private static final DataRecord RECORD = SCHEME.getRecord(0);
     private static final String SYMBOL = "TEST";
-    private static final int CIPHER = SCHEME.getCodec().encode(SYMBOL);
 
     @Test
     public void testRemoveSubscription() {
@@ -196,6 +195,52 @@ public class HistoryStickySubscriptionTest {
     }
 
     @Test
+    public void testNotReduceTimeStepsCloseAgents() {
+        QDHistory history = createHistory(100);
+
+        // prepare distributor
+        QDDistributor distributor = history.distributorBuilder().build();
+        TestRecordListener addSubscriptionListener = new TestRecordListener();
+        TestRecordListener removeSubscriptionListener = new TestRecordListener();
+        distributor.getAddedRecordProvider().setRecordListener(addSubscriptionListener);
+        distributor.getRemovedRecordProvider().setRecordListener(removeSubscriptionListener);
+
+        // create agents with subscriptions
+        QDAgent agent1 = history.agentBuilder().build();
+        agent1.setSubscription(getSubscription(TIME2));
+
+        Assert.assertTrue(addSubscriptionListener.isNotifiedAndReset());
+        Assert.assertFalse(removeSubscriptionListener.isNotifiedAndReset());
+
+        // check agent and distributor subscription
+        checkSubscription(history, distributor, TIME2);
+
+        QDAgent agent2 = history.agentBuilder().build();
+        agent2.setSubscription(getSubscription(TIME1));
+
+        Assert.assertTrue(addSubscriptionListener.isNotifiedAndReset());
+        Assert.assertFalse(removeSubscriptionListener.isNotifiedAndReset());
+
+        agent1.close();
+
+        // check that subscription depth is not changed
+        Assert.assertFalse(addSubscriptionListener.isNotifiedAndReset());
+        Assert.assertFalse(removeSubscriptionListener.isNotifiedAndReset());
+        checkSubscription(history, distributor, TIME1);
+
+        agent2.close();
+
+        // subscription fully removed
+        Awaitility.waitAtMost(1, TimeUnit.SECONDS).until(removeSubscriptionListener::isNotified);
+        Assert.assertTrue(removeSubscriptionListener.elapsed() >= 100);
+        SubscriptionMap distSub = new SubscriptionMap(history.getScheme(), distributor.getAddedRecordProvider());
+        assertTrue(distSub.isEmpty());
+
+        distributor.close();
+        history.close();
+    }
+
+    @Test
     public void testReduceStepsUpdateHistoryTime() {
         QDHistory history = createHistory(100);
 
@@ -240,7 +285,11 @@ public class HistoryStickySubscriptionTest {
 
     private RecordBuffer getSubscription(long time) {
         RecordBuffer sb = new RecordBuffer(RecordMode.HISTORY_SUBSCRIPTION);
-        sb.add(RECORD, CIPHER, SYMBOL).setTime(time);
+        for (int i = 0; i < 42; i++) {
+            String symbol = SYMBOL + i;
+            int cipher = SCHEME.getCodec().encode(symbol);
+            sb.add(RECORD, cipher, symbol).setTime(time);
+        }
         return sb;
     }
 

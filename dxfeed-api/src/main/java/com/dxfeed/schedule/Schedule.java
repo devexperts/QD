@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -606,8 +606,14 @@ public final class Schedule {
                 throw new IllegalArgumentException("unmatched data in " + def + " in " + scheduleDefinition);
             if (resetTime == null)
                 resetTime = dayStart;
-            if (resetTime.compareTo(dayStart) < 0 || resetTime.compareTo(dayEnd) >= 0)
-                throw new IllegalArgumentException("illegal reset time " + resetTime + " for " + dayStart + " and " + dayEnd + " in " + scheduleDefinition);
+            boolean emptyDay = dayStart.compareTo(dayEnd) == 0;
+            // in empty (zero-length) days resetTime should be equal to dayStart and dayEnd
+            boolean resetTimeOutOfBound = resetTime.compareTo(dayStart) < 0 ||
+                (emptyDay ? resetTime.compareTo(dayEnd) > 0 : resetTime.compareTo(dayEnd) >= 0);
+            if (resetTimeOutOfBound) {
+                throw new IllegalArgumentException("illegal reset time " + resetTime +
+                    " for " + dayStart + " and " + dayEnd + " in " + scheduleDefinition);
+            }
             this.dayStart = dayStart;
             this.dayEnd = dayEnd;
             this.resetTime = resetTime;

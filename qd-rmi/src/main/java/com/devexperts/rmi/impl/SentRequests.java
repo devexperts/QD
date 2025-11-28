@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -33,27 +33,30 @@ class SentRequests {
             channelRequests.add(request);
             return;
         }
-        Map<Long, IndexedSet<Long, RMIRequestImpl<?>>> map = request.getKind().hasClient() ? clientNestedRequests : serverNestedRequests;
-        IndexedSet<Long, RMIRequestImpl<?>> set = map.get(request.getChannelId());
-        if (set == null) {
-            set = IndexedSet.createLong((IndexerFunction.LongKey<RMIRequestImpl<?>>) RMIRequestImpl::getId);
-            map.put(request.getChannelId(), set);
-        }
-        set.add(request);
+        Map<Long, IndexedSet<Long, RMIRequestImpl<?>>> map =
+            request.getKind().hasClient() ? clientNestedRequests : serverNestedRequests;
+        IndexedSet<Long, RMIRequestImpl<?>> nestedRequests = map.computeIfAbsent(request.getChannelId(),
+            id -> IndexedSet.createLong((IndexerFunction.LongKey<RMIRequestImpl<?>>) RMIRequestImpl::getId));
+        nestedRequests.add(request);
     }
 
     //if channelId = 0 => top-level request
     RMIRequestImpl<?> removeSentRequest(long channelId, long curRequestId, RMIMessageKind kind) {
         RMIRequestImpl<?> headRequest;
-        RMIRequestImpl<?> result;
         IndexedSet<Long, RMIRequestImpl<?>> set;
         // Limit synchronized range to honor lock hierarchy with requestLock
         synchronized (this) {
             if (channelId != 0) {
-                IndexedSet<Long, RMIRequestImpl<?>> requests = kind.hasClient() ? clientNestedRequests.get(channelId)
-                    : serverNestedRequests.get(channelId);
-                result = requests != null ? requests.removeKey(curRequestId) : null;
-                return result;
+                Map<Long, IndexedSet<Long, RMIRequestImpl<?>>> map =
+                    kind.hasClient() ? clientNestedRequests : serverNestedRequests;
+                IndexedSet<Long, RMIRequestImpl<?>> nestedRequests = map.get(channelId);
+                if (nestedRequests != null) {
+                    RMIRequestImpl<?> nestedRequest = nestedRequests.removeKey(curRequestId);
+                    if (nestedRequests.isEmpty())
+                        map.remove(channelId);
+                    return nestedRequest;
+                }
+                return null;
             }
             headRequest = channelRequests.removeKey(curRequestId);
             if (headRequest == null)
@@ -61,8 +64,9 @@ class SentRequests {
             set = clientNestedRequests.remove(((RMIChannelImpl) headRequest.getChannel()).getChannelId());
         }
         if (set != null  && !set.isEmpty()) {
-            for (RMIRequestImpl<?> request : set)
+            for (RMIRequestImpl<?> request : set) {
                 request.setFailedState(RMIExceptionType.CHANNEL_CLOSED, null);
+            }
         }
         return headRequest;
     }
@@ -75,11 +79,13 @@ class SentRequests {
         List<RMIRequestImpl<?>> allRequests = new ArrayList<>();
         // Limit synchronized range to honor lock hierarchy with requestLock
         synchronized (this) {
-            for (IndexedSet<Long, RMIRequestImpl<?>> requests : clientNestedRequests.values())
+            for (IndexedSet<Long, RMIRequestImpl<?>> requests : clientNestedRequests.values()) {
                 allRequests.addAll(requests);
+            }
             clientNestedRequests.clear();
-            for (IndexedSet<Long, RMIRequestImpl<?>> requests : serverNestedRequests.values())
+            for (IndexedSet<Long, RMIRequestImpl<?>> requests : serverNestedRequests.values()) {
                 allRequests.addAll(requests);
+            }
             serverNestedRequests.clear();
             allRequests.addAll(channelRequests);
             channelRequests.clear();
