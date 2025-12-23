@@ -23,6 +23,7 @@ public class NuamTradeMapping extends MarketEventMapping {
     private final int iSequence;
     private final int iTimeNanoPart;
     private final int iExchangeCode;
+    private final int iTradeId;
     private final int iPrice;
     private final int iSize;
     private final int iTick;
@@ -31,7 +32,6 @@ public class NuamTradeMapping extends MarketEventMapping {
     private final int iDayVolume;
     private final int iDayTurnover;
     private final int iFlags;
-    private final int iTradeId;
     private final int iTradeStatTime;
     private final int iLastSignificantPrice;
     private final int iLastPriceForAll;
@@ -44,6 +44,7 @@ public class NuamTradeMapping extends MarketEventMapping {
         iSequence = MappingUtil.findIntField(record, "Last.Sequence", false);
         iTimeNanoPart = MappingUtil.findIntField(record, "Last.TimeNanoPart", false);
         iExchangeCode = MappingUtil.findIntField(record, "Last.Exchange", false);
+        iTradeId = MappingUtil.findIntField(record, "TradeId", false);
         iPrice = findIntField("Last.Price", true);
         iSize = findIntField("Last.Size", true);
         iTick = MappingUtil.findIntField(record, "Last.Tick", false);
@@ -52,7 +53,6 @@ public class NuamTradeMapping extends MarketEventMapping {
         iDayVolume = findIntField("Volume", false);
         iDayTurnover = findIntField("DayTurnover", false);
         iFlags = MappingUtil.findIntField(record, "Last.Flags", false);
-        iTradeId = MappingUtil.findIntField(record, "TradeId", false);
         iTradeStatTime = MappingUtil.findIntField(record, "TradeStatTime", true);
         iLastSignificantPrice = findIntField("LastSignificantPrice", true);
         iLastPriceForAll = findIntField("LastPriceForAll", true);
@@ -198,6 +198,18 @@ public class NuamTradeMapping extends MarketEventMapping {
         if (iExchangeCode < 0)
             return;
         setInt(cursor, iExchangeCode, exchangeCode);
+    }
+
+    public long getTradeId(RecordCursor cursor) {
+        if (iTradeId < 0)
+            return 0;
+        return getLong(cursor, iTradeId);
+    }
+
+    public void setTradeId(RecordCursor cursor, long tradeId) {
+        if (iTradeId < 0)
+            return;
+        setLong(cursor, iTradeId, tradeId);
     }
 
     @Deprecated
@@ -624,18 +636,6 @@ public class NuamTradeMapping extends MarketEventMapping {
         if (iFlags < 0)
             return;
         setInt(cursor, iFlags, flags);
-    }
-
-    public long getTradeId(RecordCursor cursor) {
-        if (iTradeId < 0)
-            return 0;
-        return getLong(cursor, iTradeId);
-    }
-
-    public void setTradeId(RecordCursor cursor, long tradeId) {
-        if (iTradeId < 0)
-            return;
-        setLong(cursor, iTradeId, tradeId);
     }
 
     public long getTradeStatTimeMillis(RecordCursor cursor) {

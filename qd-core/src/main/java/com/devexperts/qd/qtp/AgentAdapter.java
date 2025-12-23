@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,10 +11,10 @@
  */
 package com.devexperts.qd.qtp;
 
+import com.devexperts.annotation.Internal;
 import com.devexperts.auth.AuthSession;
 import com.devexperts.connector.proto.Configurable;
 import com.devexperts.logging.Logging;
-import com.devexperts.qd.DataProvider;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDCollector;
@@ -31,6 +31,7 @@ import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.qd.ng.EventFlag;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordProvider;
 import com.devexperts.qd.ng.RecordSource;
 import com.devexperts.qd.qtp.auth.BasicChannelShaperFactory;
 import com.devexperts.qd.qtp.auth.ChannelShapersFactory;
@@ -38,6 +39,7 @@ import com.devexperts.qd.spi.QDFilterContext;
 import com.devexperts.qd.spi.QDFilterFactory;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.LegacyAdapter;
+import com.devexperts.qd.util.RateLimiter;
 import com.devexperts.services.Services;
 import com.devexperts.util.LogUtil;
 import com.devexperts.util.LoggedThreadPoolExecutor;
@@ -244,6 +246,7 @@ public class AgentAdapter extends MessageAdapter {
     QDFilter peerStripe;
 
     private AgentChannels channels; // effectively final, filled by initialize method
+    private RateLimiter rateLimiter = RateLimiter.UNLIMITED; // effectively final
 
     private MessageVisitor retrieveVisitor;
 
@@ -270,7 +273,7 @@ public class AgentAdapter extends MessageAdapter {
             shapers.add(newDynamicShaper(stream));
         if (history != null)
             shapers.add(newDynamicShaper(history));
-        channels = new AgentChannels(new OwnerImpl(), shapers);
+        channels = new AgentChannels(new OwnerImpl(), shapers, rateLimiter);
     }
 
     @Deprecated
@@ -333,8 +336,23 @@ public class AgentAdapter extends MessageAdapter {
     public synchronized AgentAdapter initialize(ChannelShaper... shapers) {
         if (channels != null)
             throw new IllegalArgumentException("Already initialized");
-        channels = new AgentChannels(new OwnerImpl(), Arrays.asList(shapers));
+        channels = new AgentChannels(new OwnerImpl(), Arrays.asList(shapers), rateLimiter);
         return this;
+    }
+
+    /**
+     * Sets data rate limiter for this message adapter.
+     * This is an internal method used by QTP infrastructure to control message processing rate.
+     *
+     * @param rateLimiter the rate limiter to use, or null to disable rate limiting
+     */
+    @Internal
+    void setRateLimiter(RateLimiter rateLimiter) {
+        if (channels != null) {
+            log.warn("Rate limiter is set after adapter is initialized. Rate limiter will be ignored");
+            return;
+        }
+        this.rateLimiter = rateLimiter;
     }
 
     /**
@@ -396,8 +414,8 @@ public class AgentAdapter extends MessageAdapter {
         }
 
         @Override
-        public boolean retrieveData(DataProvider dataProvider, QDContract contract) {
-            return retrieveVisitor.visitData(dataProvider, MessageType.forData(contract));
+        public boolean retrieve(RecordProvider recordProvider, QDContract contract) {
+            return retrieveVisitor.visitData(recordProvider, MessageType.forData(contract));
         }
     }
 

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,7 +11,7 @@
  */
 package com.devexperts.qd.qtp;
 
-import com.devexperts.qd.DataProvider;
+import com.devexperts.annotation.Internal;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
@@ -19,7 +19,9 @@ import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordCursor;
+import com.devexperts.qd.ng.RecordProvider;
 import com.devexperts.qd.ng.RecordSource;
+import com.devexperts.qd.util.RateLimiter;
 
 import java.util.Collection;
 
@@ -27,7 +29,10 @@ import java.util.Collection;
  * The AgentChannels class represents a collection of agent channels, each associated with a QDAgent.
  * The main methods of this class, such as {@link #processSubscription}, {@link #retrieveData},
  * and {@link #nextRetrieveTime}, automatically operate on the collection of channels.
+ * <p>
+ * <b>This API is internal and subject to change without notice.</b>
  */
+@Internal
 public class AgentChannels {
 
     public static void clearDataInBuffer(RecordBuffer buf, boolean keepTime) {
@@ -46,6 +51,7 @@ public class AgentChannels {
      * the channel owner by calling the {@link #recordsAvailable()} method. Other methods are necessary for creating
      * and configuring the agent inside the channel.
      */
+    @Internal
     public static interface Owner {
 
         /**
@@ -99,17 +105,23 @@ public class AgentChannels {
          * Returns <code>true</code> if some data still remains in the provider
          * or <code>false</code> if all accumulated data were retrieved.
          */
-        public boolean retrieveData(DataProvider dataProvider, QDContract contract);
+        public boolean retrieve(RecordProvider recordProvider, QDContract contract);
     }
 
     private final Owner owner;
     final ChannelShaper[] shapers;
     private final AgentChannel[] channels; // initially all elements are null, filled (assigned) lazily
+    private final RateLimiter rateLimiter;
 
     public AgentChannels(Owner owner, Collection<ChannelShaper> shapers) {
+        this(owner, shapers, RateLimiter.UNLIMITED);
+    }
+
+    AgentChannels(Owner owner, Collection<ChannelShaper> shapers, RateLimiter rateLimiter) {
         this.owner = owner;
         this.shapers = shapers.toArray(new ChannelShaper[0]);
         channels = new AgentChannel[this.shapers.length];
+        this.rateLimiter = rateLimiter;
     }
 
     /**
@@ -149,11 +161,19 @@ public class AgentChannels {
             if (channel == null)
                 continue; // not initialized yet (no subscription)
             long retrieveTime = channel.nextRetrieveTime(currentTime);
-            if (retrieveTime == 0)
-                return 0;
+            if (retrieveTime == 0) {
+                time = 0;
+                break;
+            }
             time = Math.min(time, retrieveTime);
         }
-        return time;
+        if (time == Long.MAX_VALUE)
+            return Long.MAX_VALUE;
+        long waitTime = rateLimiter.waitTime();
+        if (waitTime > Long.MAX_VALUE - currentTime) {
+            return Long.MAX_VALUE;
+        }
+        return Math.max(time, currentTime + waitTime);
     }
 
     /**
@@ -162,6 +182,8 @@ public class AgentChannels {
      * @return true if some messages still remain in the provider, false otherwise
      */
     public boolean retrieveData() {
+        if (rateLimiter.needWait())
+            return false;
         for (int iterations = channels.length; --iterations >= 0;) {
             long currentTime = System.currentTimeMillis();
             double minDistance = Double.POSITIVE_INFINITY; // how much weight should be distributed to allow channel with data to achieve quota of 1
@@ -200,6 +222,21 @@ public class AgentChannels {
                 return true;
         }
         return true;
+    }
+
+    /**
+     * Returns the cumulative count of all records that have been dropped due to buffer overflow.
+     *
+     * @return the total number of dropped records since subscription start
+     */
+    public long getDroppedRecords() {
+        long droppedRecords = 0;
+        // Note: when we start closing agents, we need to remember the accumulated DroppedRecords from closed agents
+        for (AgentChannel channel : channels) {
+            if (channel != null) // not initialized yet (no subscription)
+                droppedRecords += channel.getDroppedRecords();
+        }
+        return droppedRecords;
     }
 
     public void close() {
@@ -249,7 +286,7 @@ public class AgentChannels {
         AgentChannel channel = channels[i];
         if (channel == null) {
             ChannelShaper shaper = shapers[i];
-            channel = new AgentChannel(owner, shaper);
+            channel = new AgentChannel(owner, shaper, rateLimiter);
             channels[i] = channel;
         }
         return channel;

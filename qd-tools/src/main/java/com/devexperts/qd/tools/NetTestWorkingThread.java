@@ -12,9 +12,13 @@
 package com.devexperts.qd.tools;
 
 import com.devexperts.qd.qtp.QDEndpoint;
+import com.devexperts.qd.util.RateLimiter;
+
+import java.util.function.IntConsumer;
 
 abstract class NetTestWorkingThread extends Thread {
 
+    private final RateLimiter rateLimiter;
     protected final NetTestSide side;
     protected final int index;
     protected final QDEndpoint endpoint;
@@ -27,7 +31,15 @@ abstract class NetTestWorkingThread extends Thread {
         this.index = index;
         this.side = side;
         this.endpoint = endpoint;
-        processedRecords = 0;
+        if (side.config.rateLimiters != null) {
+            RateLimiter rateLimiter = side.config.rateLimiters.get(Integer.toString(index));
+            if (rateLimiter == null) {
+                rateLimiter = side.config.rateLimiters.get("*");
+            }
+            this.rateLimiter = rateLimiter;
+        } else {
+            this.rateLimiter = null;
+        }
     }
 
     synchronized void addStats(long currentLatency, long currentRecords) {
@@ -47,4 +59,22 @@ abstract class NetTestWorkingThread extends Thread {
 
     @Override
     public abstract void run();
+
+    protected void availableOrWait(IntConsumer availableConsumer) throws InterruptedException {
+        if (rateLimiter != null) {
+            availableConsumer.accept((int) rateLimiter.availableOrWait());
+        }
+    }
+
+    protected void processed(int records) {
+        if (rateLimiter != null) {
+            rateLimiter.reportConsumed(records);
+        }
+    }
+
+    protected void consume(int records) throws InterruptedException {
+        if (rateLimiter != null) {
+            rateLimiter.consume(records);
+        }
+    }
 }

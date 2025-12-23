@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -38,7 +38,8 @@ class AgentBuffer implements RecordFilter {
     private int maxBufferSize;
     private QDAgent.BufferOverflowStrategy overflowStrategy = QDAgent.BufferOverflowStrategy.DROP_OLDEST;
 
-    private int droppedRecords;
+    private long lastLoggedDroppedRecords;
+    private volatile long droppedRecords; // volatile to guarantee atomicity of unsynchronized read
     private int lastLogTime; // UNIX seconds when last time the log was written
     private boolean blocked; // true when the distribution to this buffer was blocked
 
@@ -235,14 +236,16 @@ class AgentBuffer implements RecordFilter {
     }
 
     public void logDrops(Agent agent) {
-        if (droppedRecords <= 0)
+        if (droppedRecords <= lastLoggedDroppedRecords)
             return;
         int time = (int) (System.currentTimeMillis() / 1000);
         if (time - lastLogTime < agent.collector.management.getBufferOverflowLogIntervalSeconds())
             return;
+        int dropped = (int) (droppedRecords - lastLoggedDroppedRecords);
         lastLogTime = time;
+        lastLoggedDroppedRecords = droppedRecords;
         String message = agent.collector.getContract() +
-            " buffer overflow - " + droppedRecords + " records skipped for agent [" +
+            " buffer overflow - " + dropped + " records skipped for agent [" +
             agent.getStats().getFullKeyProperties() + "]." +
             (lastDroppedRecord == null ? "" : " Last record was " +
                 agent.collector.getScheme().getCodec().decode(lastDroppedCipher, lastDroppedSymbol) + ":" +
@@ -250,8 +253,11 @@ class AgentBuffer implements RecordFilter {
             );
         log.error(message);
         agent.collector.droppedLogAccept(message);
-        agent.collector.counters.countDropped(droppedRecords);
-        droppedRecords = 0;
+        agent.collector.counters.countDropped(dropped);
+    }
+
+    public long getDroppedRecords() {
+        return droppedRecords;
     }
 
     public void clear() {

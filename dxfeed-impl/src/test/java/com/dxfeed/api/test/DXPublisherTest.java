@@ -155,9 +155,9 @@ public class DXPublisherTest extends AbstractDXPublisherTest {
             t.setEventTime(i++);
             t.setTime(i++);
             t.setSequence(i++);
+            t.setTradeId(i++);
             t.setPrice(i++);
             t.setSize(i++);
-            t.setTradeId(i++);
             char exchangeCode = EXCHANGE_CODES[i % EXCHANGE_CODES.length];
             t.setExchangeCode(exchangeCode == 0 ? 'C' : exchangeCode);
             t.setTimeNanos(i++ * 1000_000L + i++);

@@ -138,6 +138,7 @@ public class ImplCodeGen {
             mapTimeAndSequence("Last.Time", "Last.Sequence").optional().prevOptional().
             map("TimeNanoPart", "Last.TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
             map("ExchangeCode", "Last.Exchange", FieldType.CHAR).alt("recordExchange").compositeOnly().optional().
+            map("TradeId", "TradeId", FieldType.LONG).optional().
             map("Price", "Last.Price", FieldType.PRICE).
             map("Size", "Last.Size", FieldType.SIZE).
             field("Tick", "Last.Tick", FieldType.FLAGS).optional().
@@ -146,7 +147,6 @@ public class ImplCodeGen {
             map("DayVolume", "Volume", FieldType.VOLUME).optional().
             map("DayTurnover", "DayTurnover", FieldType.TURNOVER).optional().
             map("Flags", "Last.Flags", FieldType.FLAGS).optional().
-            map("TradeId", "TradeId", FieldType.LONG).optional().
             injectGetEventCode(
                 "if (event.getTickDirection() == Direction.UNDEFINED) {",
                 "    // if direction is not provided via flags field - compute it from tick field if provided",
@@ -171,6 +171,7 @@ public class ImplCodeGen {
             mapTimeAndSequence("Last.Time", "Last.Sequence").optional().prevOptional().
             map("TimeNanoPart", "Last.TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
             map("ExchangeCode", "Last.Exchange", FieldType.CHAR).alt("recordExchange").compositeOnly().optional().
+            map("TradeId", "TradeId", FieldType.LONG).optional().
             map("Price", "Last.Price", FieldType.PRICE).
             map("Size", "Last.Size", FieldType.SIZE).
             field("Tick", "Last.Tick", FieldType.FLAGS).optional().
@@ -179,7 +180,6 @@ public class ImplCodeGen {
             map("DayVolume", "Volume", FieldType.VOLUME).optional().
             map("DayTurnover", "DayTurnover", FieldType.TURNOVER).optional().
             map("Flags", "Last.Flags", FieldType.FLAGS).optional().
-            map("TradeId", "TradeId", FieldType.LONG).optional().
             injectGetEventCode(
                 "if (event.getTickDirection() == Direction.UNDEFINED) {",
                 "    // if direction is not provided via flags field - compute it from tick field if provided",
@@ -209,6 +209,7 @@ public class ImplCodeGen {
             mapTimeAndSequence("ETHLast.Time", "ETHLast.Sequence").optional().prevOptional().
             map("TimeNanoPart", "Last.TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
             map("ExchangeCode", "ETHLast.Exchange", FieldType.CHAR).alt("recordExchange").compositeOnly().optional().
+            map("TradeId", "TradeId", FieldType.LONG).optional().
             map("Price", "ETHLast.Price", FieldType.PRICE).
             map("Size", "ETHLast.Size", FieldType.SIZE).
             map("Change", "ETHLast.Change", FieldType.PRICE).optional().
@@ -216,7 +217,6 @@ public class ImplCodeGen {
             map("DayVolume", "ETHVolume", FieldType.VOLUME).optional().
             map("DayTurnover", "ETHDayTurnover", FieldType.TURNOVER).optional().
             map("Flags", "ETHLast.Flags", FieldType.FLAGS).
-            map("TradeId", "TradeId", FieldType.LONG).optional().
             publishable();
 
         ctx.delegate("Summary", Summary.class, "Summary&").
@@ -665,6 +665,7 @@ public class ImplCodeGen {
             mapTimeAndSequenceToIndex().
             map("TimeNanoPart", "TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
             map("ExchangeCode", "Exchange", FieldType.CHAR).
+            map("TradeId", "TradeId", FieldType.LONG).optional().
             map("Price", "Price", FieldType.PRICE).
             map("Size", "Size", FieldType.SIZE).
             map("BidPrice", "Bid.Price", FieldType.PRICE).
@@ -673,7 +674,6 @@ public class ImplCodeGen {
             map("Flags", "Flags", FieldType.FLAGS).
             map("Buyer", "Buyer", FieldType.STRING).optional().disabledByDefault().
             map("Seller", "Seller", FieldType.STRING).optional().disabledByDefault().
-            map("TradeId", "TradeId", FieldType.LONG).optional().
             publishable();
 
         ctx.delegate("NuamTimeAndSale", NuamTimeAndSale.class, "NuamTimeAndSale&").
@@ -684,6 +684,7 @@ public class ImplCodeGen {
             mapTimeAndSequenceToIndex().
             map("TimeNanoPart", "TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
             map("ExchangeCode", "Exchange", FieldType.CHAR).
+            map("TradeId", "TradeId", FieldType.LONG).
             map("Price", "Price", FieldType.PRICE).
             map("Size", "Size", FieldType.SIZE).
             map("BidPrice", "Bid.Price", FieldType.PRICE).
@@ -692,7 +693,6 @@ public class ImplCodeGen {
             map("Flags", "Flags", FieldType.FLAGS).
             map("Buyer", "Buyer", FieldType.STRING).optional().disabledByDefault().
             map("Seller", "Seller", FieldType.STRING).optional().disabledByDefault().
-            map("TradeId", "TradeId", FieldType.LONG).
             map("MatchId", "MatchId", FieldType.LONG).
             publishable();
 

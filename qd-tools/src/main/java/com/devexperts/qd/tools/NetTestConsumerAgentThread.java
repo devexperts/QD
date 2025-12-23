@@ -22,7 +22,10 @@ import com.devexperts.qd.ng.RecordListener;
 import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.qtp.QDEndpoint;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
+
+import static com.devexperts.qd.tools.NetTest.RECORDS_PER_ITERATION;
 
 /**
  * This thread connects to collector via {@link com.devexperts.qd.QDAgent agent}
@@ -43,7 +46,7 @@ class NetTestConsumerAgentThread extends NetTestWorkingThread {
     private final QDAgent[] agents;
     private final LatencyFunction latencyFunc;
     private long currentTimeMillis;
-    private long currentRecords;
+    private int currentRecords;
     private long currentLatency;
 
     NetTestConsumerAgentThread(int index, NetTestConsumerSide side, QDEndpoint endpoint) {
@@ -51,7 +54,7 @@ class NetTestConsumerAgentThread extends NetTestWorkingThread {
         agents = endpoint.getCollectors().stream().map(c -> c.agentBuilder().build()).toArray(QDAgent[]::new);
         latencyFunc = createLatencyFunction();
     }
-    
+
     private LatencyFunction createLatencyFunction() {
         int indexFieldTimeMillis = -1;
         int indexFieldTimeSecond = -1;
@@ -84,7 +87,7 @@ class NetTestConsumerAgentThread extends NetTestWorkingThread {
             return (cursor, currentTimeMillis) -> 0;
         }
     }
-    
+
     @Override
     public void run() {
         subscribe();
@@ -97,24 +100,34 @@ class NetTestConsumerAgentThread extends NetTestWorkingThread {
 
             @Override
             public boolean hasCapacity() {
-                return currentRecords < 100;
+                return currentRecords < RECORDS_PER_ITERATION;
             }
         };
-
-        RecordListener listener = provider -> LockSupport.unpark(NetTestConsumerAgentThread.this);
+        AtomicBoolean hasMore = new AtomicBoolean(false);
+        RecordListener listener = provider -> {
+            hasMore.set(true);
+            LockSupport.unpark(NetTestConsumerAgentThread.this);
+        };
         for (QDAgent agent : agents) {
             agent.setRecordListener(listener);
         }
         while (true) {
             for (QDAgent agent : agents) {
-                boolean hasMore;
                 do {
                     currentTimeMillis = System.currentTimeMillis();
                     currentRecords = 0;
                     currentLatency = 0;
-                    hasMore = agent.retrieve(sink);
+                    hasMore.set(false);
+                    if (agent.retrieve(sink))
+                        hasMore.set(true);
                     addStats(currentLatency, currentRecords);
-                } while (hasMore);
+                    try {
+                        consume(currentRecords);
+                    } catch (InterruptedException e) {
+                        log.error("Consumer #" + index + " interrupted while consuming records", e);
+                        return;
+                    }
+                } while (hasMore.get());
             }
             LockSupport.park();
         }

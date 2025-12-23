@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.qd;
 
+import com.devexperts.annotation.Experimental;
 import com.devexperts.qd.ng.EventFlag;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordProvider;
@@ -244,6 +245,14 @@ public interface QDAgent extends RecordProvider, SubscriptionContainer, QDStatsC
      * @see #setMaxBufferSize(int)
      */
     public void setBufferOverflowStrategy(BufferOverflowStrategy bufferOverflowStrategy);
+
+    /**
+     * Returns the cumulative count of all records that have been dropped due to buffer overflow.
+     *
+     * @return the total number of dropped records since subscription start
+     */
+    @Experimental
+    public long getDroppedRecords();
 
     /**
      * Strategy for handling of stream and history buffer overflow events.

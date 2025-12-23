@@ -1010,8 +1010,10 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
                         long totalTime = tsub.getLong(tindex + TIME_TOTAL);
                         if (time <= totalTime) {
                             stickySubscription.dropStickySubscription(tsub, tindex);
-                            tsub.setLong(tindex + TIME_TOTAL, time);
-                            totalRecordAdded = true;
+                            if (time < totalTime) {
+                                tsub.setLong(tindex + TIME_TOTAL, time);
+                                totalRecordAdded = true;
+                            }
                         }
                     } else {
                         tsub.setLong(tindex + TIME_TOTAL, time);

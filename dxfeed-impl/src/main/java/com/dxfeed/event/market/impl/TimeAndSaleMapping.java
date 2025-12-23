@@ -23,6 +23,7 @@ public class TimeAndSaleMapping extends MarketEventMapping {
     private final int iSequence;
     private final int iTimeNanoPart;
     private final int iExchangeCode;
+    private final int iTradeId;
     private final int iPrice;
     private final int iSize;
     private final int iBidPrice;
@@ -31,7 +32,6 @@ public class TimeAndSaleMapping extends MarketEventMapping {
     private final int iFlags;
     private final int oBuyer;
     private final int oSeller;
-    private final int iTradeId;
 
     public TimeAndSaleMapping(DataRecord record) {
         super(record);
@@ -39,6 +39,7 @@ public class TimeAndSaleMapping extends MarketEventMapping {
         iSequence = MappingUtil.findIntField(record, "Sequence", true);
         iTimeNanoPart = MappingUtil.findIntField(record, "TimeNanoPart", false);
         iExchangeCode = MappingUtil.findIntField(record, "Exchange", true);
+        iTradeId = MappingUtil.findIntField(record, "TradeId", false);
         iPrice = findIntField("Price", true);
         iSize = findIntField("Size", true);
         iBidPrice = findIntField("Bid.Price", true);
@@ -47,7 +48,6 @@ public class TimeAndSaleMapping extends MarketEventMapping {
         iFlags = MappingUtil.findIntField(record, "Flags", true);
         oBuyer = MappingUtil.findObjField(record, "Buyer", false);
         oSeller = MappingUtil.findObjField(record, "Seller", false);
-        iTradeId = MappingUtil.findIntField(record, "TradeId", false);
         putNonDefaultPropertyName("Exchange", "ExchangeCode");
         putNonDefaultPropertyName("ExchangeSaleConditions", "SaleConditions");
     }
@@ -104,6 +104,18 @@ public class TimeAndSaleMapping extends MarketEventMapping {
 
     public void setExchangeCode(RecordCursor cursor, char exchangeCode) {
         setInt(cursor, iExchangeCode, exchangeCode);
+    }
+
+    public long getTradeId(RecordCursor cursor) {
+        if (iTradeId < 0)
+            return 0;
+        return getLong(cursor, iTradeId);
+    }
+
+    public void setTradeId(RecordCursor cursor, long tradeId) {
+        if (iTradeId < 0)
+            return;
+        setLong(cursor, iTradeId, tradeId);
     }
 
     public double getPrice(RecordCursor cursor) {
@@ -284,18 +296,6 @@ public class TimeAndSaleMapping extends MarketEventMapping {
         if (oSeller < 0)
             return;
         setObj(cursor, oSeller, seller);
-    }
-
-    public long getTradeId(RecordCursor cursor) {
-        if (iTradeId < 0)
-            return 0;
-        return getLong(cursor, iTradeId);
-    }
-
-    public void setTradeId(RecordCursor cursor, long tradeId) {
-        if (iTradeId < 0)
-            return;
-        setLong(cursor, iTradeId, tradeId);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }

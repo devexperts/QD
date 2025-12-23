@@ -45,6 +45,7 @@ public final class TradeETHDelegate extends MarketEventDelegateImpl<TradeETH> {
         event.setTimeSequence((((long) m.getTimeSeconds(cursor)) << 32) | (m.getSequence(cursor) & 0xFFFFFFFFL));
         event.setTimeNanoPart(m.getTimeNanoPart(cursor));
         event.setExchangeCode(m.getExchangeCode(cursor));
+        event.setTradeId(m.getTradeId(cursor));
         event.setPrice(m.getPrice(cursor));
         event.setSizeAsDouble(m.getSizeDouble(cursor));
         event.setChange(m.getChange(cursor));
@@ -52,7 +53,6 @@ public final class TradeETHDelegate extends MarketEventDelegateImpl<TradeETH> {
         event.setDayVolumeAsDouble(m.getDayVolumeDouble(cursor));
         event.setDayTurnover(m.getDayTurnover(cursor));
         event.setFlags(m.getFlags(cursor));
-        event.setTradeId(m.getTradeId(cursor));
         return event;
     }
 
@@ -63,6 +63,7 @@ public final class TradeETHDelegate extends MarketEventDelegateImpl<TradeETH> {
         m.setSequence(cursor, (int) event.getTimeSequence());
         m.setTimeNanoPart(cursor, event.getTimeNanoPart());
         m.setExchangeCode(cursor, event.getExchangeCode());
+        m.setTradeId(cursor, event.getTradeId());
         m.setPrice(cursor, event.getPrice());
         m.setSizeDouble(cursor, event.getSizeAsDouble());
         m.setChange(cursor, event.getChange());
@@ -70,7 +71,6 @@ public final class TradeETHDelegate extends MarketEventDelegateImpl<TradeETH> {
         m.setDayVolumeDouble(cursor, event.getDayVolumeAsDouble());
         m.setDayTurnover(cursor, event.getDayTurnover());
         m.setFlags(cursor, event.getFlags());
-        m.setTradeId(cursor, event.getTradeId());
         return cursor;
     }
 // END: CODE AUTOMATICALLY GENERATED

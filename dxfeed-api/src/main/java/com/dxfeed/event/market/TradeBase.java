@@ -38,8 +38,8 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  * last trade price during ETH and also accumulated volume and turnover during ETH for current trading day.
  */
 @XmlType(propOrder = {
-    "time", "timeNanoPart", "sequence", "exchangeCode", "price", "change", "sizeAsDouble",
-    "dayId", "dayVolumeAsDouble", "dayTurnover", "tickDirection", "extendedTradingHours", "tradeId"
+    "time", "timeNanoPart", "sequence", "exchangeCode", "tradeId", "price", "change", "sizeAsDouble",
+    "dayId", "dayVolumeAsDouble", "dayTurnover", "tickDirection", "extendedTradingHours"
 })
 public abstract class TradeBase extends MarketEvent implements LastingEvent<String> {
     private static final long serialVersionUID = 1;
@@ -72,15 +72,18 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
 
     private long timeSequence;
     private int timeNanoPart;
+
     private char exchangeCode;
+    private long tradeId;
     private double price = Double.NaN;
     private double change = Double.NaN;
     private double size = Double.NaN;
+
     private int dayId;
     private double dayVolume = Double.NaN;
     private double dayTurnover = Double.NaN;
+
     private int flags;
-    private long tradeId;
 
     /**
      * Creates new trade with default values.
@@ -208,6 +211,22 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
      */
     public void setExchangeCode(char exchangeCode) {
         this.exchangeCode = exchangeCode;
+    }
+
+    /**
+     * Returns trade ID for events containing trade-related action (executions, corrections, or cancellations).
+     * @return trade ID or 0 if not available.
+     */
+    public long getTradeId() {
+        return tradeId;
+    }
+
+    /**
+     * Changes trade ID.
+     * @param tradeId trade ID.
+     */
+    public void setTradeId(long tradeId) {
+        this.tradeId = tradeId;
     }
 
     /**
@@ -378,22 +397,6 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
     }
 
     /**
-     * Returns trade ID for events containing trade-related action (executions, corrections, or cancellations).
-     * @return trade ID or 0 if not available.
-     */
-    public long getTradeId() {
-        return tradeId;
-    }
-
-    /**
-     * Changes trade ID.
-     * @param tradeId trade ID.
-     */
-    public void setTradeId(long tradeId) {
-        this.tradeId = tradeId;
-    }
-
-    /**
      * Returns string representation of this trade event.
      * @return string representation of this trade event.
      */
@@ -426,10 +429,10 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
             .append(", timeNanoPart=").append(timeNanoPart)
             .append(", sequence=").append(getSequence())
             .append(", exchange=").append(EventUtil.encodeChar(exchangeCode))
+            .append(", tradeId=").append(tradeId)
             .append(", price=").append(price)
             .append(", change=").append(change)
             .append(", size=").append(size)
-            .append(", tradeId=").append(tradeId)
             .append(", day=").append(DayUtil.getYearMonthDayByDayId(dayId))
             .append(", dayVolume=").append(dayVolume)
             .append(", dayTurnover=").append(dayTurnover)

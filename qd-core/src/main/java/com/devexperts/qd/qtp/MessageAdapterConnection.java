@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,11 +16,17 @@ import com.devexperts.connector.proto.TransportConnection;
 import com.devexperts.io.ChunkList;
 import com.devexperts.io.ChunkPool;
 import com.devexperts.logging.Logging;
+import com.devexperts.qd.DataIterator;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.SubscriptionIterator;
+import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.stats.QDStats;
+import com.devexperts.qd.util.RateLimiter;
 import com.devexperts.qd.util.TimeMarkUtil;
 import com.devexperts.util.SystemProperties;
+
+import java.util.function.BiConsumer;
 
 /**
  * QTP protocol implementing application connection.
@@ -36,6 +42,7 @@ class MessageAdapterConnection extends ApplicationConnection<MessageAdapterConne
     private static final Logging log = Logging.getLogging(MessageAdapterConnection.class);
 
     private final MessageAdapter adapter;
+    private final MessageConsumer messageConsumer;
     private final ConnectionQTPComposer composer;
     private final ConnectionQTPParser parser;
 
@@ -43,6 +50,7 @@ class MessageAdapterConnection extends ApplicationConnection<MessageAdapterConne
 
     private volatile long nextHeartbeatTime;
     private volatile long heartbeatDisconnectTime;
+    private volatile boolean ignoreHeartbeatDisconnectTime;
 
     private long heartbeatPeriod;
     private long bytesToNextHeartbeat;
@@ -55,6 +63,12 @@ class MessageAdapterConnection extends ApplicationConnection<MessageAdapterConne
     MessageAdapterConnection(MessageAdapter adapter, MessageAdapterConnectionFactory factory, TransportConnection transportConnection) {
         super(factory, transportConnection);
         this.adapter = adapter;
+        final RateLimiter rateLimiter = RateLimiter.valueOf(factory.getRateLimit());
+        if (rateLimiter != RateLimiter.UNLIMITED && adapter instanceof DistributorAdapter) {
+            this.messageConsumer = new RateLimitedMessageConsumer(adapter, rateLimiter);
+        } else {
+            this.messageConsumer = adapter;
+        }
         final DataScheme scheme = adapter.getScheme();
         composer = new ConnectionQTPComposer(scheme, this);
         parser = new ConnectionQTPParser(scheme, this);
@@ -91,16 +105,22 @@ class MessageAdapterConnection extends ApplicationConnection<MessageAdapterConne
 
     @Override
     public long examine(long currentTime) {
-        if (currentTime >= heartbeatDisconnectTime) {
-            log.info(adapter +  " heartbeat timeout exceeded: disconnecting");
-            close();
+        long disconnectTime = heartbeatDisconnectTime;
+        if (currentTime >= disconnectTime) {
+            if (ignoreHeartbeatDisconnectTime) {
+                // ignore heartbeat disconnect time if we are in the middle of processing incoming packets
+                disconnectTime = currentTime + 10;
+            } else {
+                log.info(adapter + " heartbeat timeout exceeded: disconnecting");
+                close();
+            }
         }
         long nextRetrieveTime = Math.min(adapter.nextRetrieveTime(currentTime), nextHeartbeatTime);
         if (currentTime >= nextRetrieveTime) {
             notifyChunksAvailable();
             nextRetrieveTime = currentTime + 10;
         }
-        return Math.min(nextRetrieveTime, heartbeatDisconnectTime);
+        return Math.min(nextRetrieveTime, disconnectTime);
     }
 
     @Override
@@ -131,8 +151,13 @@ class MessageAdapterConnection extends ApplicationConnection<MessageAdapterConne
     public boolean processChunks(ChunkList chunks, Object owner) {
         parser.addChunks(chunks, owner);
         parser.setCurrentTimeMark(computeTimeMark(TimeMarkUtil.currentTimeMark()));
-        parser.parse(adapter); // will call processIncomingHeartbeat as soon as they are encountered
-        heartbeatDisconnectTime = System.currentTimeMillis() + factory.getHeartbeatTimeout().getTime();
+        ignoreHeartbeatDisconnectTime = true;
+        try {
+            parser.parse(messageConsumer); // will call processIncomingHeartbeat as soon as they are encountered
+        } finally {
+            heartbeatDisconnectTime = System.currentTimeMillis() + factory.getHeartbeatTimeout().getTime();
+            ignoreHeartbeatDisconnectTime = false;
+        }
         return true;
     }
 
@@ -172,8 +197,9 @@ class MessageAdapterConnection extends ApplicationConnection<MessageAdapterConne
         String version = desc.getProperty(ProtocolDescriptor.VERSION_PROPERTY);
         if (version != null && version.startsWith("QDS-3.")) {
             int n = "QDS-3.".length();
-            while (n < version.length() && version.charAt(n) >= '0' && version.charAt(n) <= '9')
+            while (n < version.length() && version.charAt(n) >= '0' && version.charAt(n) <= '9') {
                 n++;
+            }
             try {
                 composer.wideDecimalSupported = Long.parseLong(version.substring("QDS-3.".length(), n)) >= 263;
             } catch (NumberFormatException e) {
@@ -218,5 +244,109 @@ class MessageAdapterConnection extends ApplicationConnection<MessageAdapterConne
         if (adapter.isMarkedForImmediateRestart())
             markForImmediateRestart();
         close();
+    }
+
+    private static class RateLimitedMessageConsumer implements MessageConsumer {
+        private final MessageAdapter adapter;
+        private final RateLimiter rateLimiter;
+
+        public RateLimitedMessageConsumer(MessageAdapter adapter, RateLimiter rateLimiter) {
+            this.adapter = adapter;
+            this.rateLimiter = rateLimiter;
+        }
+
+        @Override
+        public void handleCorruptedStream() {
+            adapter.handleCorruptedStream();
+        }
+
+        @Override
+        public void handleCorruptedMessage(int messageTypeId) {
+            adapter.handleCorruptedMessage(messageTypeId);
+        }
+
+        @Override
+        public void handleUnknownMessage(int messageTypeId) {
+            adapter.handleUnknownMessage(messageTypeId);
+        }
+
+        @Override
+        public void processDescribeProtocol(ProtocolDescriptor desc, boolean logging) {
+            adapter.processDescribeProtocol(desc, logging);
+        }
+
+        @Override
+        public void processHeartbeat(HeartbeatPayload heartbeatPayload) {
+            adapter.processHeartbeat(heartbeatPayload);
+        }
+
+        @Override
+        public void processTickerData(DataIterator iterator) {
+            processData(MessageAdapter::processTickerData, iterator);
+        }
+
+        @Override
+        public void processTickerAddSubscription(SubscriptionIterator iterator) {
+            adapter.processTickerAddSubscription(iterator);
+        }
+
+        @Override
+        public void processTickerRemoveSubscription(SubscriptionIterator iterator) {
+            adapter.processTickerRemoveSubscription(iterator);
+        }
+
+        @Override
+        public void processStreamData(DataIterator iterator) {
+            processData(MessageAdapter::processStreamData, iterator);
+        }
+
+        @Override
+        public void processStreamAddSubscription(SubscriptionIterator iterator) {
+            adapter.processStreamAddSubscription(iterator);
+        }
+
+        @Override
+        public void processStreamRemoveSubscription(SubscriptionIterator iterator) {
+            adapter.processStreamRemoveSubscription(iterator);
+        }
+
+        @Override
+        public void processHistoryData(DataIterator iterator) {
+            processData(MessageAdapter::processHistoryData, iterator);
+        }
+
+        @Override
+        public void processHistoryAddSubscription(SubscriptionIterator iterator) {
+            adapter.processHistoryAddSubscription(iterator);
+        }
+
+        @Override
+        public void processHistoryRemoveSubscription(SubscriptionIterator iterator) {
+            adapter.processHistoryRemoveSubscription(iterator);
+        }
+
+        @Override
+        public void processOtherMessage(int messageTypeId, byte[] bytes, int ofs, int len) {
+            adapter.processOtherMessage(messageTypeId, bytes, ofs, len);
+        }
+
+        private void processData(BiConsumer<MessageAdapter, DataIterator> processor, DataIterator iterator) {
+            try {
+                if (iterator instanceof RecordBuffer) {
+                    RecordBuffer recordBuffer = (RecordBuffer) iterator;
+                    rateLimiter.consume(recordBuffer.size());
+                    processor.accept(adapter, recordBuffer);
+                } else {
+                    // slow path legacy processing
+                    RecordBuffer recordBuffer = RecordBuffer.getInstance();
+                    recordBuffer.processData(iterator);
+                    rateLimiter.consume(recordBuffer.size());
+                    processor.accept(adapter, recordBuffer);
+                    recordBuffer.release();
+                }
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 }

@@ -21,6 +21,8 @@ import com.devexperts.qd.qtp.QDEndpoint;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.devexperts.qd.tools.NetTest.RECORDS_PER_ITERATION;
+
 /**
  * This thread connects to collector via {@link com.devexperts.qd.QDDistributor distributor}
  * and passes randomly-generated records to it.
@@ -30,13 +32,11 @@ import java.util.List;
  */
 class NetTestProducerDistributorThread extends NetTestWorkingThread {
 
-    private static final int RECORDS_PER_ITERATION = 1000;
-
     private final List<QDDistributor> distributors;
 
     NetTestProducerDistributorThread(int index, NetTestProducerSide side, QDEndpoint endpoint) {
         super("ProducerDistributorThread", index, side, endpoint);
-        distributors = new ArrayList<QDDistributor>();
+        distributors = new ArrayList<>();
         createDistributor(endpoint.getTicker());
         createDistributor(endpoint.getStream());
         createDistributor(endpoint.getHistory());
@@ -55,8 +55,14 @@ class NetTestProducerDistributorThread extends NetTestWorkingThread {
             side.createSublist(), RECORDS_PER_ITERATION, RECORDS_PER_ITERATION);
         while (true) {
             long startTime = System.currentTimeMillis();
+            try {
+                availableOrWait(buf::setCapacityLimit);
+            } catch (InterruptedException e) {
+                break;
+            }
             provider.retrieve(buf);
             int num = buf.size();
+            processed(num);
             for (QDDistributor distributor : distributors) {
                 buf.rewind();
                 distributor.processData(buf);

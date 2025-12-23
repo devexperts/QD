@@ -129,6 +129,7 @@
             <field name="Sequence" type="sequence"><alias name="Last.Sequence"/></field>
             <field name="TimeNanoPart" type="time_nano_part" disabled="true"><alias name="Last.TimeNanoPart"/></field>
             <field name="ExchangeCode" type="exchange" compositeOnly="true"><alias name="Last.Exchange"/></field>
+            <field name="TradeId" type="long"/>
             <field name="Price" type="price"><alias name="Last.Price"/></field>
             <field name="Size" type="size"><alias name="Last.Size"/></field>
             <field name="Tick" type="compact_int"><alias name="Last.Tick"/></field>
@@ -143,7 +144,6 @@
                     <field name="Direction" offset="1" size="3"/>
                 </bitfields>
             </field>
-            <field name="TradeId" type="long"/>
         </record>
 
         <!-- MarketFactoryImpl -->
@@ -152,6 +152,7 @@
             <field name="Sequence" type="sequence"><alias name="ETHLast.Sequence"/></field>
             <field name="TimeNanoPart" type="time_nano_part" disabled="true"><alias name="Last.TimeNanoPart"/></field>
             <field name="ExchangeCode" type="exchange" compositeOnly="true"><alias name="ETHLast.Exchange"/></field>
+            <field name="TradeId" type="long"/>
             <field name="Price" type="price"><alias name="ETHLast.Price"/></field>
             <field name="Size" type="size"><alias name="ETHLast.Size"/></field>
             <field name="Change" type="price"><alias name="ETHLast.Change"/></field>
@@ -165,7 +166,6 @@
                     <field name="Direction" offset="1" size="3"/>
                 </bitfields>
             </field>
-            <field name="TradeId" type="long"/>
         </record>
 
         <!-- MarketFactoryImpl -->
@@ -402,6 +402,7 @@
             <field name="TimeNanoPart" type="time_nano_part" disabled="true"/>
             <!-- NB! This is not only for composites, see line 296 -->
             <field name="Exchange" type="char"/>
+            <field name="TradeId" type="long"/>
             <field name="Price" type="price"/>
             <field name="Size" type="size"/>
             <field name="BidPrice" type="price"><alias name="Bid.Price"/></field>
@@ -419,7 +420,6 @@
             </field>
             <field name="Buyer" type="string" disabled="true"/>
             <field name="Seller" type="string" disabled="true"/>
-            <field name="TradeId" type="long"/>
         </record>
 
         <!-- MarketFactoryImpl -->

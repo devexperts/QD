@@ -1,3 +1,50 @@
+QDS 3.348:
+
+* [QD-1632] Added rate limiting to control records flow
+  - Connection rate limiting (EXPERIMENTAL):
+    - Format: address[rateLimit=<config>]
+    - Example: demo.dxfeed.com:7300[rateLimit=1000;2s]
+    - Config format: <rate>[;<bucket>]
+      - <rate> - records per second, supports fractional values, supports optional multiplier k, M or G (required)
+      - <bucket> - bucket time period (default: 1s)
+    - Examples:
+      - rateLimit=30k - 30,000 records/sec, 1s bucket
+      - rateLimit=0.5k - 500 records/sec, 1s bucket
+      - rateLimit=100;0.5s - 100 records/sec, 0.5s bucket
+  - NetTest rate limiting: -r <target>/<config>
+    - <target> - target publisher/consumer (* for all, or number)
+    - <config> - same format as connection rate limiting
+    - Option can be specified several times to apply to several publishers/consumers
+    - Examples:
+      - -r */30k - apply 30k records/sec to each publisher/consumer
+      - -r */0.5k - apply 500 records/sec to each publisher/consumer
+      - -r 1/1k -r 2/4M - apply different limits to publishers/consumers 1 and 2
+  - NetTest multiple addresses support:
+    - Format: NetTest <side> <address1> [<address2> ...] -C <count>
+    - First address is used for first instance and as default for all others
+    - Additional addresses override defaults for subsequent instances (2nd, 3rd, etc.)
+  - Added properties:
+    - com.devexperts.qd.tools.NetTest.batchSize: Controls records per batch (default: 100)
+    - com.devexperts.qd.tools.NetTest.delayConnect: Delays connection start in ms (default: 0)
+  - Marked AgentChannels interface as @Internal to clarify it's not part of public API
+  - This command demonstrates a comprehensive rate limiting test scenario:
+    java -jar qds-tools.jar Multiplexor :7300 :6666 + \
+        NetTest p "localhost:7300[rateLimit=1M]" "(localhost:7300[rateLimit=100k])(localhost:7300[rateLimit=200k])"  \
+            -C 2 -r "1/1.5M" -r "2/500k" -n producer -s 10 -S 1 -c stream + \
+        NetTest c "localhost:6666[rateLimit=250k]" "(localhost:6666[rateLimit=100k])(localhost:6666[rateLimit=50k])" \
+            -C 2 -r "*/50k" -r "1/10k" -n consumer -s 10 -S 1 -c stream
+    - Multiplexor acts as a proxy between the data source (:7300) and consumers (:6666)
+    - Producer side:
+      * instance #1: produce 1,500,000 rps to one connection with limit: 1,000,000 rps
+      * instance #2: produce 500,000 rps to two connections with limits: 100,000 rps and 200,000 rps
+    - Consumer side:
+      * instance #1: consume 10,000 rps from one connection with limit: 250,000 rps
+      * instance #2: consume 50,000 rps from two connections with limits: 100,000 rps and 50,000 rps
+* [QD-1698] [EXPERIMENTAL] Add buffer overflow getter to DXFeedSubscription
+* [QD-1713] [Schedule] Update holidays/short days for 2026
+* [QD-1718] dxFeed API: Change "tradeId" field position in TimeAndSale, Trade and TradeETH events
+* [QD-1719] Redundant distributor notifications on sticky subscription renewal at the same depth
+
 QDS 3.347:
 
 * [QD-1708] Legacy DistributorAdapter.createDistributor method works incorrectly

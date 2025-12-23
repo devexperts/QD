@@ -11,6 +11,7 @@
  */
 package com.dxfeed.api;
 
+import com.devexperts.annotation.Internal;
 import com.dxfeed.api.osub.IndexedEventSubscriptionSymbol;
 import com.dxfeed.api.osub.ObservableSubscriptionChangeListener;
 import com.dxfeed.api.osub.TimeSeriesSubscriptionSymbol;
@@ -686,10 +687,14 @@ public abstract class DXFeed {
      * event listeners. This is a protected method for use by {@code DXFeed} implementation classes only.
      *
      * @param events the list of received events.
+     * @param totalDroppedEvents the cumulative count of all events dropped since the subscription was created.
      * @param <E> the type of events.
      */
-    protected static <E> void processEvents(DXFeedSubscription<E> subscription, List<E> events) {
-        subscription.processEvents(events);
+    @Internal
+    protected static <E> void processEvents(DXFeedSubscription<E> subscription, List<E> events,
+        long totalDroppedEvents)
+    {
+        subscription.processEvents(events, totalDroppedEvents);
     }
 
 }

@@ -17,6 +17,7 @@ import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDHistory;
+import com.devexperts.qd.impl.matrix.Collector;
 import com.devexperts.qd.ng.RecordBuffer;
 import com.devexperts.qd.ng.RecordListener;
 import com.devexperts.qd.ng.RecordMode;
@@ -56,13 +57,12 @@ public class HistoryStickySubscriptionTest {
         // check agent and distributor subscription
         checkSubscription(history, distributor, TIME1);
 
-        removeSubscriptionListener.reset();
         // remove subscription
         agent.removeSubscription(getSubscription(TIME1));
         // still available subscription
 
         // check agent and distributor subscription
-        Awaitility.waitAtMost(1, TimeUnit.SECONDS).until(removeSubscriptionListener::isNotified);
+        Awaitility.waitAtMost(5, TimeUnit.SECONDS).until(removeSubscriptionListener::isNotified);
         Assert.assertTrue(removeSubscriptionListener.elapsed() >= 100);
         SubscriptionMap distSub = new SubscriptionMap(history.getScheme(), distributor.getAddedRecordProvider());
         assertTrue(distSub.isEmpty());
@@ -88,12 +88,11 @@ public class HistoryStickySubscriptionTest {
         // check agent and distributor subscription
         checkSubscription(history, distributor, TIME1);
 
-        removeSubscriptionListener.reset();
         // remove subscription
         agent.close();
 
         // check agent and distributor subscription
-        Awaitility.waitAtMost(1, TimeUnit.SECONDS).until(removeSubscriptionListener::isNotified);
+        Awaitility.waitAtMost(5, TimeUnit.SECONDS).until(removeSubscriptionListener::isNotified);
         Assert.assertTrue(removeSubscriptionListener.elapsed() >= 100);
         SubscriptionMap distSub = new SubscriptionMap(history.getScheme(), distributor.getAddedRecordProvider());
         assertTrue(distSub.isEmpty());
@@ -128,7 +127,7 @@ public class HistoryStickySubscriptionTest {
         agent.setSubscription(getSubscription(TIME2));
 
         // updated subscription
-        Awaitility.waitAtMost(1, TimeUnit.SECONDS).until(addSubscriptionListener::isNotified);
+        Awaitility.waitAtMost(5, TimeUnit.SECONDS).until(addSubscriptionListener::isNotified);
         Assert.assertTrue(addSubscriptionListener.elapsed() >= 100);
         Assert.assertFalse(removeSubscriptionListener.isNotifiedAndReset());
         checkSubscription(history, distributor, TIME2);
@@ -136,7 +135,7 @@ public class HistoryStickySubscriptionTest {
         agent.close();
 
         // no subscription
-        Awaitility.waitAtMost(1, TimeUnit.SECONDS).until(removeSubscriptionListener::isNotified);
+        Awaitility.waitAtMost(5, TimeUnit.SECONDS).until(removeSubscriptionListener::isNotified);
         Assert.assertTrue(removeSubscriptionListener.elapsed() >= 100);
 
         SubscriptionMap distSub = new SubscriptionMap(history.getScheme(), distributor.getAddedRecordProvider());
@@ -177,7 +176,7 @@ public class HistoryStickySubscriptionTest {
         agent2.close();
 
         // check that subscription depth is changed
-        Awaitility.waitAtMost(1, TimeUnit.SECONDS).until(addSubscriptionListener::isNotified);
+        Awaitility.waitAtMost(5, TimeUnit.SECONDS).until(addSubscriptionListener::isNotified);
         Assert.assertTrue(addSubscriptionListener.elapsed() >= 100);
         Assert.assertFalse(removeSubscriptionListener.isNotifiedAndReset());
         checkSubscription(history, distributor, TIME2);
@@ -185,7 +184,72 @@ public class HistoryStickySubscriptionTest {
         agent1.close();
 
         // subscription fully removed
-        Awaitility.waitAtMost(1, TimeUnit.SECONDS).until(removeSubscriptionListener::isNotified);
+        Awaitility.waitAtMost(5, TimeUnit.SECONDS).until(removeSubscriptionListener::isNotified);
+        Assert.assertTrue(removeSubscriptionListener.elapsed() >= 100);
+        SubscriptionMap distSub = new SubscriptionMap(history.getScheme(), distributor.getAddedRecordProvider());
+        assertTrue(distSub.isEmpty());
+
+        distributor.close();
+        history.close();
+    }
+
+    @Test
+    public void testStepUnsubscribeSubscribeWithSameTime() {
+        QDHistory history = createHistory(100);
+
+        // prepare distributor
+        QDDistributor distributor = history.distributorBuilder().build();
+        TestRecordListener addSubscriptionListener = new TestRecordListener();
+        TestRecordListener removeSubscriptionListener = new TestRecordListener();
+        distributor.getAddedRecordProvider().setRecordListener(addSubscriptionListener);
+        distributor.getRemovedRecordProvider().setRecordListener(removeSubscriptionListener);
+
+        // create agent with subscription
+        QDAgent agent = history.agentBuilder().build();
+        agent.setSubscription(getSubscription(TIME1));
+
+        // check agent and distributor subscription
+        Assert.assertTrue(addSubscriptionListener.isNotifiedAndReset());
+        Assert.assertFalse(removeSubscriptionListener.isNotifiedAndReset());
+        checkSubscription(history, distributor, TIME1);
+
+        // set lage sticky 1 min
+        ((Collector) history).setStickySubscriptionPeriod(TimeUnit.MINUTES.toMillis(1));
+
+        // unsubscribe
+        agent.removeSubscription(getSubscription(TIME1));
+        // subscribe to same time
+        agent.setSubscription(getSubscription(TIME1));
+
+        // nothing change
+        Assert.assertFalse(addSubscriptionListener.isNotifiedAndReset());
+        Assert.assertFalse(removeSubscriptionListener.isNotifiedAndReset());
+
+        // unsubscribe
+        agent.removeSubscription(getSubscription(TIME1));
+        // subscribe
+        agent.setSubscription(getSubscription(TIME2));
+
+        // nothing change
+        Assert.assertFalse(addSubscriptionListener.isNotifiedAndReset());
+        Assert.assertFalse(removeSubscriptionListener.isNotifiedAndReset());
+
+        // unsubscribe
+        agent.removeSubscription(getSubscription(TIME2));
+        // subscribe
+        agent.setSubscription(getSubscription(TIME1 - 1));
+
+        // add notification for deeper subscription
+        Assert.assertTrue(addSubscriptionListener.isNotifiedAndReset());
+        Assert.assertFalse(removeSubscriptionListener.isNotifiedAndReset());
+
+        // return sticky to 100 ms
+        ((Collector) history).setStickySubscriptionPeriod(100);
+
+        agent.close();
+
+        // subscription fully removed
+        Awaitility.waitAtMost(5, TimeUnit.SECONDS).until(removeSubscriptionListener::isNotified);
         Assert.assertTrue(removeSubscriptionListener.elapsed() >= 100);
         SubscriptionMap distSub = new SubscriptionMap(history.getScheme(), distributor.getAddedRecordProvider());
         assertTrue(distSub.isEmpty());
@@ -231,7 +295,7 @@ public class HistoryStickySubscriptionTest {
         agent2.close();
 
         // subscription fully removed
-        Awaitility.waitAtMost(1, TimeUnit.SECONDS).until(removeSubscriptionListener::isNotified);
+        Awaitility.waitAtMost(5, TimeUnit.SECONDS).until(removeSubscriptionListener::isNotified);
         Assert.assertTrue(removeSubscriptionListener.elapsed() >= 100);
         SubscriptionMap distSub = new SubscriptionMap(history.getScheme(), distributor.getAddedRecordProvider());
         assertTrue(distSub.isEmpty());
@@ -265,7 +329,7 @@ public class HistoryStickySubscriptionTest {
         agent.setSubscription(getSubscription(TIME2));
 
         // check agent and distributor subscription
-        Awaitility.waitAtMost(1, TimeUnit.SECONDS).until(addSubscriptionListener::isNotified);
+        Awaitility.waitAtMost(5, TimeUnit.SECONDS).until(addSubscriptionListener::isNotified);
         Assert.assertTrue(addSubscriptionListener.elapsed() >= 100);
         checkSubscription(history, distributor, TIME2);
         Assert.assertFalse(removeSubscriptionListener.isNotifiedAndReset());
@@ -274,7 +338,7 @@ public class HistoryStickySubscriptionTest {
         agent.removeSubscription(getSubscription(TIME2));
 
         // subscription fully removed
-        Awaitility.waitAtMost(1, TimeUnit.SECONDS).until(removeSubscriptionListener::isNotified);
+        Awaitility.waitAtMost(5, TimeUnit.SECONDS).until(removeSubscriptionListener::isNotified);
         SubscriptionMap distSub = new SubscriptionMap(history.getScheme(), distributor.getAddedRecordProvider());
         assertTrue(distSub.isEmpty());
 

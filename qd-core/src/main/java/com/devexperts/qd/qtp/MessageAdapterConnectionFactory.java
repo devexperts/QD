@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.qd.qtp;
 
+import com.devexperts.annotation.Experimental;
 import com.devexperts.connector.proto.ApplicationConnection;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.connector.proto.Configurable;
@@ -25,6 +26,7 @@ import com.devexperts.qd.qtp.auth.QDLoginHandler;
 import com.devexperts.qd.qtp.auth.QDLoginHandlerFactory;
 import com.devexperts.qd.qtp.socket.SocketMessageAdapterFactory;
 import com.devexperts.qd.stats.QDStats;
+import com.devexperts.qd.util.RateLimiter;
 import com.devexperts.services.Services;
 import com.devexperts.util.InvalidFormatException;
 import com.devexperts.util.SystemProperties;
@@ -55,6 +57,7 @@ public class MessageAdapterConnectionFactory extends ApplicationConnectionFactor
 
     private QDAuthRealm authRealm;
     private QDLoginHandler loginHandler;
+    private String rateLimit = "";
 
     private TimePeriod heartbeatPeriod = DEFAULT_HEARTBEAT_PERIOD;
     private TimePeriod heartbeatTimeout = DEFAULT_HEARTBEAT_TIMEOUT;
@@ -86,7 +89,9 @@ public class MessageAdapterConnectionFactory extends ApplicationConnectionFactor
         adapter.setConnectionVariables(transportConnection.variables());
         adapter.setLoginHandler(loginHandler);
         adapter.setAuthRealm(authRealm);
-        transportConnection.variables();
+        if (adapter instanceof AgentAdapter) {
+            ((AgentAdapter) adapter).setRateLimiter(RateLimiter.valueOf(getRateLimit()));
+        }
         return new MessageAdapterConnection(adapter, this, transportConnection);
     }
 
@@ -121,6 +126,34 @@ public class MessageAdapterConnectionFactory extends ApplicationConnectionFactor
         if (super.supportedConfiguration().contains(key))
             return super.setConfiguration(key, value);
         return factory.setConfiguration(key, value);
+    }
+
+    /**
+     * Gets the rate limit specification.
+     * <p>
+     * <b>Note:</b> This feature is experimental and the API may change in future versions.
+     * 
+     * @return the rate limit specification, or empty string if no limit is set
+     * @see RateLimiter#valueOf(String)
+     */
+    @Experimental
+    public String getRateLimit() {
+        return rateLimit;
+    }
+
+    /**
+     * Sets the rate limit specification.
+     * <p>
+     * <b>Note:</b> This feature is experimental and the API may change in future versions.
+     * 
+     * @param rateLimit rate limit specification using format described in {@link RateLimiter#valueOf(String)}
+     */
+    @Experimental
+    @Configurable(description = "rate limit (EXPERIMENTAL)")
+    public void setRateLimit(String rateLimit) {
+        // call valueOf to early check rate limit syntax
+        RateLimiter.valueOf(rateLimit);
+        this.rateLimit = rateLimit;
     }
 
     public String getUser() {

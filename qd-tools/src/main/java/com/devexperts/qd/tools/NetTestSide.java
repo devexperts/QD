@@ -26,6 +26,7 @@ import com.dxfeed.ipf.InstrumentProfileReader;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -43,6 +44,8 @@ import java.util.stream.Collectors;
 abstract class NetTestSide {
 
     private static final Logging log = Logging.getLogging(NetTestSide.class);
+
+    private static final int DELAY_CONNECT = SystemProperties.getIntProperty(NetTest.class, "delayConnect", 0);
 
     private static final String RECORD_NAME =
         SystemProperties.getProperty(NetTest.class, "record", "TimeAndSale");
@@ -98,7 +101,18 @@ abstract class NetTestSide {
                 firstEndpoint = endpoint;
         }
         firstEndpoint.registerMonitoringTask(statisticsCollector);
-        MessageConnectors.startMessageConnectors(connectors);
+        if (DELAY_CONNECT <= 0) {
+            MessageConnectors.startMessageConnectors(connectors);
+        } else {
+            try {
+                for (MessageConnector connector : connectors) {
+                    Thread.sleep(DELAY_CONNECT);
+                    connector.start();
+                }
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     public SymbolList createSublist() {

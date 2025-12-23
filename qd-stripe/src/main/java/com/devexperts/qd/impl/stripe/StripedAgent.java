@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -118,6 +118,16 @@ class StripedAgent<C extends QDCollector> extends AbstractAgent {
             if (agents[i] != null)
                 agents[i].setBufferOverflowStrategy(bufferOverflowStrategy);
         }
+    }
+
+    @Override
+    public long getDroppedRecords() {
+        long count = 0;
+        for (int i = 0; i < n; i++) {
+            if (agents[i] != null)
+                count += agents[i].getDroppedRecords();
+        }
+        return count;
     }
 
     @Override

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,7 +12,6 @@
 package com.dxfeed.api.impl;
 
 import com.devexperts.logging.Logging;
-import com.devexperts.qd.DataProvider;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
@@ -794,6 +793,7 @@ public class DXFeedImpl extends DXFeed {
 
         // Events cache
         List<E> events;
+        long totalDroppedEvents;
 
         EventProcessor(DXFeedSubscription<E> subscription) {
             this.subscription = subscription;
@@ -835,8 +835,8 @@ public class DXFeedImpl extends DXFeed {
         }
 
         @Override
-        public boolean retrieveData(DataProvider dataProvider, QDContract contract) {
-            return dataProvider.retrieveData(retrieveBuffer);
+        public boolean retrieve(RecordProvider recordProvider, QDContract contract) {
+            return recordProvider.retrieve(retrieveBuffer);
         }
 
         private void examineAndScheduleRetrieveTask() {
@@ -868,6 +868,7 @@ public class DXFeedImpl extends DXFeed {
                 retrieveBuffer = buf;
                 channels.retrieveData();
                 retrieveBuffer = null;
+                totalDroppedEvents = channels.getDroppedRecords();
                 if (!buf.isEmpty())
                     process(buf); // create events and put in event listener
                 buf.release();
@@ -951,7 +952,7 @@ public class DXFeedImpl extends DXFeed {
                     EVENT_PROCESSOR_ATTACHMENT_STRATEGY.processEach(cursor, this); // will invoke processEvent
                 if (events.isEmpty())
                     return;
-                processEvents(subscription, events);
+                processEvents(subscription, events, totalDroppedEvents);
             } finally {
                 events = null;
             }

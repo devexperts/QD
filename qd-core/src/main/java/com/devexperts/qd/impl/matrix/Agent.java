@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -428,6 +428,11 @@ final class Agent extends AbstractAgent {
         } finally {
             localLock.unlock();
         }
+    }
+
+    @Override
+    public long getDroppedRecords() {
+        return buffer == null ? 0 : buffer.getDroppedRecords();
     }
 
     // ========== Debugging ==========

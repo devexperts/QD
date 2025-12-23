@@ -70,6 +70,7 @@ public class NuamTradeTest {
         trade.setTime(TIME);
         trade.setSequence(2);
         trade.setExchangeCode('A');
+        trade.setTradeId(2L);
         trade.setPrice(3.0);
         trade.setSizeAsDouble(4.0);
         trade.setDayId(DAYS_SINCE_EPOCH);
@@ -77,7 +78,6 @@ public class NuamTradeTest {
         trade.setDayTurnover(6.0);
         trade.setTickDirection(Direction.UP);
         trade.setChange(7.0);
-        trade.setTradeId(2L);
 
         trade.setTradeStatTime(TIME);
         trade.setLastSignificantPrice(101.0);
@@ -93,6 +93,7 @@ public class NuamTradeTest {
         assertEquals(TIME, actual.getTime());
         assertEquals(expected.getSequence(), actual.getSequence());
         assertEquals(expected.getExchangeCode(), actual.getExchangeCode());
+        assertEquals(expected.getTradeId(), actual.getTradeId());
         assertEquals(expected.getPrice(), actual.getPrice(), 0.0);
         assertEquals(expected.getSizeAsDouble(), actual.getSizeAsDouble(), 0.0);
         assertEquals(expected.getDayId(), actual.getDayId());
@@ -106,7 +107,6 @@ public class NuamTradeTest {
         assertEquals(expected.getLastPriceForAll(), actual.getLastPriceForAll(), 0.0);
         assertEquals(expected.getNumberOfTrades(), actual.getNumberOfTrades());
         assertEquals(expected.getVWAP(), actual.getVWAP(), 0.0);
-        assertEquals(expected.getTradeId(), actual.getTradeId());
     }
 
     @Test
@@ -116,6 +116,7 @@ public class NuamTradeTest {
         assertEquals(0, trade.getTime());
         assertEquals(0, trade.getSequence());
         assertEquals(0, trade.getExchangeCode());
+        assertEquals(0, trade.getTradeId());
         assertEquals(Double.NaN, trade.getPrice(), 0.0);
         assertEquals(Double.NaN, trade.getSizeAsDouble(), 0.0);
         assertEquals(0, trade.getDayId());
@@ -129,6 +130,5 @@ public class NuamTradeTest {
         assertEquals(Double.NaN, trade.getLastPriceForAll(), 0.0);
         assertEquals(0, trade.getNumberOfTrades());
         assertEquals(Double.NaN, trade.getVWAP(), 0.0);
-        assertEquals(0, trade.getTradeId());
     }
 }

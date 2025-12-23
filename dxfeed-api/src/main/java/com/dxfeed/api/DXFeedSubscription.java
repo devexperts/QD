@@ -12,6 +12,7 @@
 package com.dxfeed.api;
 
 import com.devexperts.annotation.Experimental;
+import com.devexperts.annotation.Internal;
 import com.devexperts.io.IOUtil;
 import com.devexperts.logging.Logging;
 import com.devexperts.util.IndexedSet;
@@ -261,6 +262,7 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
     private transient Set<?> decoratedSymbols;
     private transient volatile TimePeriod aggregationPeriod;
     private transient volatile int eventsBatchLimit = OPTIMAL_BATCH_LIMIT;
+    private transient volatile long totalDroppedEvents;
 
     private final SubscriptionController subscriptionController = new DXFeedSubscriptionController();
 
@@ -623,6 +625,39 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
     }
 
     /**
+     * Returns maximum number of events in the single notification of {@link DXFeedEventListener#eventsReceived}.
+     * Special cases are supported for constants {@link #OPTIMAL_BATCH_LIMIT} and {@link #MAX_BATCH_LIMIT}.
+     */
+    public int getEventsBatchLimit() {
+        return eventsBatchLimit;
+    }
+
+    /**
+     * Sets maximum number of events in the single notification of {@link DXFeedEventListener#eventsReceived}.
+     * Special cases are supported for constants {@link #OPTIMAL_BATCH_LIMIT} and {@link #MAX_BATCH_LIMIT}.
+     *
+     * @param eventsBatchLimit the notification events limit
+     * @throws IllegalArgumentException if eventsBatchLimit < 0 (see {@link #OPTIMAL_BATCH_LIMIT} or
+     *     {@link #MAX_BATCH_LIMIT})
+     */
+    public void setEventsBatchLimit(int eventsBatchLimit) {
+        if (eventsBatchLimit < 0)
+            throw new IllegalArgumentException();
+        this.eventsBatchLimit = eventsBatchLimit;
+    }
+
+    /**
+     * Returns the cumulative count of all events that have been dropped due to buffer overflow
+     * since this subscription was created.
+     *
+     * @return the total number of dropped events since subscription start
+     */
+    @Experimental
+    public long getTotalDroppedEvents() {
+        return totalDroppedEvents;
+    }
+
+    /**
      * Adds listener for events.
      * Event lister can be added only when subscription is not producing any events.
      * The subscription must be either empty
@@ -711,11 +746,15 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
     //----------------------- package-private API for DXFeed -----------------------
 
     /**
-     * Processes received events. This methods invokes {@link DXFeedEventListener#eventsReceived} on all installed
+     * Processes received events. This method invokes {@link DXFeedEventListener#eventsReceived} on all installed
      * event listeners. This is a package-private method for use by {@link DXFeed} class only.
+     *
      * @param events the list of received events.
+     * @param totalDroppedEvents the cumulative count of all events dropped since the subscription was created
      */
-    void processEvents(List<E> events) {
+    @Internal
+    void processEvents(List<E> events, long totalDroppedEvents) {
+        this.totalDroppedEvents = totalDroppedEvents;
         DXFeedEventListener<E> eventListeners = this.eventListeners; // atomic volatile read
         if (eventListeners != null)
             eventListeners.eventsReceived(events);
@@ -889,28 +928,6 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
         Collections.addAll(symbols, readCompactCollection(in));
         eventListeners = simplifyListener(readCompactCollection(in), EventListeners::new);
         changeListeners = simplifyListener(readCompactCollection(in), ChangeListeners::new);
-    }
-
-    /**
-     * Returns maximum number of events in the single notification of {@link DXFeedEventListener#eventsReceived}.
-     * Special cases are supported for constants {@link #OPTIMAL_BATCH_LIMIT} and {@link #MAX_BATCH_LIMIT}.
-     */
-    public int getEventsBatchLimit() {
-        return eventsBatchLimit;
-    }
-
-    /**
-     * Sets maximum number of events in the single notification of {@link DXFeedEventListener#eventsReceived}.
-     * Special cases are supported for constants {@link #OPTIMAL_BATCH_LIMIT} and {@link #MAX_BATCH_LIMIT}.
-     *
-     * @param eventsBatchLimit the notification events limit
-     * @throws IllegalArgumentException if eventsBatchLimit < 0 (see {@link #OPTIMAL_BATCH_LIMIT} or
-     *     {@link #MAX_BATCH_LIMIT}
-     */
-    public void setEventsBatchLimit(int eventsBatchLimit) {
-        if (eventsBatchLimit < 0)
-            throw new IllegalArgumentException();
-        this.eventsBatchLimit = eventsBatchLimit;
     }
 
     private class SymbolView extends AbstractSet<Object> {

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -44,7 +44,7 @@ class NetTestProducerSide extends NetTestSide {
     protected void createAgent(QDEndpoint endpoint, int index) {
         List<MessageConnector> connectors = MessageConnectors.createMessageConnectors(
             new AgentAdapter.Factory(endpoint, null),
-            config.address, endpoint.getRootStats()
+            config.addresses[index - 1], endpoint.getRootStats()
         );
         endpoint.addConnectors(connectors);
         this.connectors.addAll(connectors);

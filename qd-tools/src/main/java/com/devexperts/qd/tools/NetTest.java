@@ -11,9 +11,13 @@
  */
 package com.devexperts.qd.tools;
 
+import com.devexperts.qd.util.RateLimiter;
 import com.devexperts.services.ServiceProvider;
+import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimePeriod;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,14 +31,18 @@ import java.util.regex.Pattern;
  */
 @ToolSummary(
     info = "Tests network throughput.",
-    argString = "<side> <address>",
+    argString = "<side> <address> [<address2> ...]",
     arguments = {
         "<side>    -- either 'p' (producer) or 'c' (consumer)",
-        "<address> -- address to connect (see @link{address})"
+        "<address> -- address for the first instance and default for all others (see @link{address})",
+        "<address2> ... -- optional addresses for subsequent instances (2nd, 3rd, etc.)"
     }
 )
 @ServiceProvider
 public class NetTest extends AbstractTool {
+
+    static final int RECORDS_PER_ITERATION = SystemProperties.getIntProperty(NetTest.class, "batchSize", 100);
+
     private final OptionCollector collector = new OptionCollector("ticker");
     private final OptionStripe stripe = new OptionStripe();
     private final OptionSticky sticky = new OptionSticky();
@@ -44,10 +52,12 @@ public class NetTest extends AbstractTool {
     private final OptionLog logfile = OptionLog.getInstance();
     private final OptionStat stat = new OptionStat();
     private final OptionName name = new OptionName("NetTest");
+    private final OptionRateLimitSequence rateLimiter = new OptionRateLimitSequence();
 
     @Override
     protected Option[] getOptions() {
-        return new Option[] { logfile, collector, stripe, sticky, symbols, connections, stat, wildcard, name };
+        return new Option[] { logfile, collector, stripe, sticky, symbols, connections, stat, wildcard, name,
+            rateLimiter };
     }
 
     @Override
@@ -55,7 +65,7 @@ public class NetTest extends AbstractTool {
         if (args.length == 0) {
             noArguments();
         }
-        if (args.length != 2) {
+        if (args.length < 2) {
             wrongNumberOfArguments();
         }
 
@@ -64,10 +74,19 @@ public class NetTest extends AbstractTool {
             stat.init();
         }
         NetTestConfig config = new NetTestConfig();
-        config.name = name.getValue();
-        config.address = args[1];
+        config.name = name.isSet() ? name.getValue() : "NetTest";
         if (connections.isSet())
             config.instanceCount = connections.getValue();
+        if (args.length - 2 > config.instanceCount) {
+            throw new BadToolParametersException("Too many addresses specified: expected at most " + 
+                config.instanceCount + " addresses for " + config.instanceCount + " instances, but got " + 
+                (args.length - 2));
+        }
+        config.addresses = new String[config.instanceCount];
+        for (int i = 0; i < config.instanceCount; i++) {
+            config.addresses[i] = args[1];
+        }
+        System.arraycopy(args, 1, config.addresses, 0, args.length - 1);
         config.optionCollector = collector;
         if (symbols.isSet()) {
             config.totalSymbols = symbols.getTotal();
@@ -79,6 +98,9 @@ public class NetTest extends AbstractTool {
         }
         config.wildcard = wildcard.isSet();
         config.optionStat = stat;
+        if (rateLimiter.isSet()) {
+            config.rateLimiters = rateLimiter.getConfigs();
+        }
 
         NetTestSide side;
         if (args[0].equalsIgnoreCase("p")) {
@@ -198,6 +220,60 @@ public class NetTest extends AbstractTool {
                 ipfPath = matcher.group("filePath");
             } else {
                 throw new OptionParseException("Invalid symbols specification: " + spec);
+            }
+        }
+    }
+
+    static class OptionRateLimitSequence extends OptionMultiString {
+        private static final Pattern PATTERN = Pattern.compile("^(?<connection>\\*|\\d+)/(?<config>.+)$");
+        // "*" means each connection, "<number>" means number of connections
+        private final Map<String, RateLimiter> configs = new HashMap<>();
+
+        OptionRateLimitSequence() {
+            super('r', "rate-limit", "<target>/<config>",
+                "Generates a sequence of values for rate limiting. \n" +
+                    "- <target> - required: specify target publisher/consumer by number (* or a number). \n" +
+                    "- <config> - required: specify rate limiter configuration (see RateLimiter.of() format). \n" +
+                    "  Format: <rate>[kMG][;<bucket>] \n" +
+                    "  - <rate> - records per second, supports fractional values \n" +
+                    "  Examples: \n" +
+                    "    30k - 30,000 records/sec with default bucket \n" +
+                    "    0.5k - 500 records/sec with default bucket \n" +
+                    "    1000;2s - 1,000 records/sec, 2 second bucket \n" +
+                    "Examples: \n" +
+                    "  */30k - apply to each publisher/consumer rate limit 30,000. \n" +
+                    "  */0.5k - apply to each publisher/consumer rate limit 500. \n" +
+                    "Option can be specified several times to apply to several publishers/consumers."
+            );
+        }
+
+        public Map<String, RateLimiter> getConfigs() {
+            return configs;
+        }
+
+        @Override
+        public int parse(int i, String[] args) throws OptionParseException {
+            i = super.parse(i, args);
+            for (String value : getValues()) {
+                parse(value);
+            }
+            return i;
+        }
+
+        private void parse(String value) throws OptionParseException {
+            Matcher matcher = PATTERN.matcher(value);
+            if (matcher.matches()) {
+                String connection = matcher.group("connection");
+                String config = matcher.group("config");
+                try {
+                    configs.put(connection, RateLimiter.valueOf(config));
+                } catch (IllegalArgumentException e) {
+                    throw new OptionParseException("Invalid rate limiter configuration '" + config + "': " +
+                        e.getMessage());
+                }
+            } else {
+                throw new OptionParseException("Invalid rate limit format: " + value +
+                    ". Expected format: <connection>/<config>");
             }
         }
     }

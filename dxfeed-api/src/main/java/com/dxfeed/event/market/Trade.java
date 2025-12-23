@@ -31,13 +31,13 @@ import javax.xml.bind.annotation.XmlRootElement;
  * <li>{@link #getTimeNanoPart() timeNanoPart} - microseconds and nanoseconds time part of the last trade;
  * <li>{@link #getSequence() sequence} - sequence of the last trade;
  * <li>{@link #getExchangeCode() exchangeCode} - exchange code of the last trade;
+ * <li>{@link #getTradeId() tradeId} - trade ID for events containing trade-related action (executions, corrections, or cancellations);
  * <li>{@link #getPrice() price} - price of the last trade;
  * <li>{@link #getChange() change} - change of the last trade;
  * <li>{@link #getSize() size} - size of the last trade as integer number (rounded toward zero);
  * <li>{@link #getSizeAsDouble() sizeAsDouble} - size of the last trade as floating number with fractions;
  * <li>{@link #getTickDirection() tickDirection} - tick direction of the last trade;
  * <li>{@link #isExtendedTradingHours() extendedTradingHours} - whether the last trade was in extended trading hours;
- * <li>{@link #getTradeId() tradeId} - trade ID for events containing trade-related action (executions, corrections, or cancellations).;
  * </ul>
  * Accumulated trade statistics for a current day - both <b>regular trading hours</b> and <b>extended trading hours</b>
  * <ul>

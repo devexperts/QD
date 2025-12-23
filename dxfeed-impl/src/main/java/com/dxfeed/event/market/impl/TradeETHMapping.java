@@ -22,6 +22,7 @@ public class TradeETHMapping extends MarketEventMapping {
     private final int iSequence;
     private final int iTimeNanoPart;
     private final int iExchangeCode;
+    private final int iTradeId;
     private final int iPrice;
     private final int iSize;
     private final int iChange;
@@ -29,7 +30,6 @@ public class TradeETHMapping extends MarketEventMapping {
     private final int iDayVolume;
     private final int iDayTurnover;
     private final int iFlags;
-    private final int iTradeId;
 
     public TradeETHMapping(DataRecord record) {
         super(record);
@@ -37,6 +37,7 @@ public class TradeETHMapping extends MarketEventMapping {
         iSequence = MappingUtil.findIntField(record, "ETHLast.Sequence", false);
         iTimeNanoPart = MappingUtil.findIntField(record, "Last.TimeNanoPart", false);
         iExchangeCode = MappingUtil.findIntField(record, "ETHLast.Exchange", false);
+        iTradeId = MappingUtil.findIntField(record, "TradeId", false);
         iPrice = findIntField("ETHLast.Price", true);
         iSize = findIntField("ETHLast.Size", true);
         iChange = findIntField("ETHLast.Change", false);
@@ -44,7 +45,6 @@ public class TradeETHMapping extends MarketEventMapping {
         iDayVolume = findIntField("ETHVolume", false);
         iDayTurnover = findIntField("ETHDayTurnover", false);
         iFlags = MappingUtil.findIntField(record, "ETHLast.Flags", true);
-        iTradeId = MappingUtil.findIntField(record, "TradeId", false);
         putNonDefaultPropertyName("ETHLast.Time", "Time");
         putNonDefaultPropertyName("ETHLast.Sequence", "Sequence");
         putNonDefaultPropertyName("Last.TimeNanoPart", "TimeNanoPart");
@@ -185,6 +185,18 @@ public class TradeETHMapping extends MarketEventMapping {
         if (iExchangeCode < 0)
             return;
         setInt(cursor, iExchangeCode, exchangeCode);
+    }
+
+    public long getTradeId(RecordCursor cursor) {
+        if (iTradeId < 0)
+            return 0;
+        return getLong(cursor, iTradeId);
+    }
+
+    public void setTradeId(RecordCursor cursor, long tradeId) {
+        if (iTradeId < 0)
+            return;
+        setLong(cursor, iTradeId, tradeId);
     }
 
     @Deprecated
@@ -619,18 +631,6 @@ public class TradeETHMapping extends MarketEventMapping {
 
     public void setFlags(RecordCursor cursor, int flags) {
         setInt(cursor, iFlags, flags);
-    }
-
-    public long getTradeId(RecordCursor cursor) {
-        if (iTradeId < 0)
-            return 0;
-        return getLong(cursor, iTradeId);
-    }
-
-    public void setTradeId(RecordCursor cursor, long tradeId) {
-        if (iTradeId < 0)
-            return;
-        setLong(cursor, iTradeId, tradeId);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }

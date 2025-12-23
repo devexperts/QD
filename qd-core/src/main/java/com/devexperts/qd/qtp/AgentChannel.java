@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2025 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,13 +11,16 @@
  */
 package com.devexperts.qd.qtp;
 
-import com.devexperts.qd.DataProvider;
+import com.devexperts.qd.DataListener;
+import com.devexperts.qd.DataVisitor;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
 import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.QDStream;
 import com.devexperts.qd.SubscriptionFilter;
+import com.devexperts.qd.SubscriptionListener;
+import com.devexperts.qd.SubscriptionVisitor;
 import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.qd.ng.AbstractRecordProvider;
 import com.devexperts.qd.ng.AbstractRecordSink;
@@ -30,6 +33,8 @@ import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.ng.RecordProvider;
 import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.ng.RecordSource;
+import com.devexperts.qd.util.LegacyAdapter;
+import com.devexperts.qd.util.RateLimiter;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -82,6 +87,10 @@ class AgentChannel implements RecordListener {
 
     private static final AtomicIntegerFieldUpdater<AgentChannel> DATA_AVAILABLE_STATE_UPDATER =
         AtomicIntegerFieldUpdater.newUpdater(AgentChannel.class, "dataAvailableState");
+
+    private static interface RetrieveStrategy {
+        boolean retrieve(RecordProvider recordProvider, QDContract contract);
+    }
 
     // ======================================== helper classes ========================================
 
@@ -438,13 +447,20 @@ class AgentChannel implements RecordListener {
      */
     private volatile long nextDataTime;
 
+    private final RetrieveStrategy retrieveStrategy;
+
     double quota; // in range [0..1], 1 means channel can send data; directly accessed from AgentAdapter
 
     // ======================================== creation ========================================
 
-    AgentChannel(AgentChannels.Owner owner, ChannelShaper shaper) {
+    AgentChannel(AgentChannels.Owner owner, ChannelShaper shaper, RateLimiter rateLimiter) {
         this.owner = owner;
         this.shaper = shaper;
+        if (rateLimiter == RateLimiter.UNLIMITED) {
+            this.retrieveStrategy = owner::retrieve;
+        } else {
+            this.retrieveStrategy = new RecordProviderWrapper(owner, rateLimiter);
+        }
         subActionConfig = createNewConfig();
         shaper.bind(this);
     }
@@ -790,6 +806,11 @@ class AgentChannel implements RecordListener {
         }
     }
 
+    long getDroppedRecords() {
+        AgentConfig agentConfig = this.agentConfig; // atomic volatile read
+        return agentConfig == null ? 0 : agentConfig.agent.getDroppedRecords();
+    }
+
     // This method is never invoked concurrently, but it can be concurrent with recordsAvailable.
     // Note, that this method is the only method that updates nextDataTime.
     boolean retrieveSnapshotOrData(long currentTime) {
@@ -899,10 +920,89 @@ class AgentChannel implements RecordListener {
                 filteringRecordProvider.set(provider, remainingSubscriptionFilter, dataFilter);
                 provider = filteringRecordProvider;
             }
-            return owner.retrieveData(provider, shaper.getContract());
+            return retrieveStrategy.retrieve(provider, shaper.getContract());
         } finally {
             if (filteringRecordProvider != null)
                 filteringRecordProvider.set(null, null, null);
+        }
+    }
+
+    private static class RecordProviderWrapper implements RecordProvider, RetrieveStrategy {
+        private final AgentChannels.Owner owner;
+        private final DataVisitorWrapper dataVisitor = new DataVisitorWrapper();
+        private final RateLimiter rateLimiter;
+        private RecordProvider delegate;
+
+        public RecordProviderWrapper(AgentChannels.Owner owner, RateLimiter rateLimiter) {
+            this.owner = owner;
+            this.rateLimiter = rateLimiter;
+        }
+
+        @Override
+        public boolean retrieve(RecordProvider provider, QDContract contract) {
+            delegate = provider;
+            return owner.retrieve(this, contract);
+        }
+
+        @Override
+        public boolean retrieve(RecordSink sink) {
+            dataVisitor.sink = sink;
+            long tokensToProcess = rateLimiter.available();
+            dataVisitor.tokensToProcess = tokensToProcess;
+            boolean retrieved = delegate.retrieve(dataVisitor);
+            rateLimiter.reportConsumed(tokensToProcess - dataVisitor.tokensToProcess);
+            return retrieved;
+        }
+
+        @Override
+        public RecordMode getMode() {
+            return delegate.getMode();
+        }
+
+        @Override
+        public void setRecordListener(RecordListener listener) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean retrieveData(DataVisitor visitor) {
+            return retrieve(LegacyAdapter.of(visitor));
+        }
+
+        @Override
+        public boolean retrieveSubscription(SubscriptionVisitor visitor) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void setDataListener(DataListener listener) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void setSubscriptionListener(SubscriptionListener listener) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    private static class DataVisitorWrapper extends AbstractRecordSink {
+        private RecordSink sink;
+        private long tokensToProcess = 0L;
+
+        @Override
+        public boolean hasCapacity() {
+            return tokensToProcess > 0 && sink.hasCapacity();
+        }
+
+        @Override
+        public void append(RecordCursor cursor) {
+            tokensToProcess--;
+            sink.append(cursor);
+        }
+
+        @Override
+        public String toString() {
+            return sink.toString();
         }
     }
 

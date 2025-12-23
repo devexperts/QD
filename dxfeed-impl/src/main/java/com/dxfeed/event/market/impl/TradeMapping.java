@@ -22,6 +22,7 @@ public class TradeMapping extends MarketEventMapping {
     private final int iSequence;
     private final int iTimeNanoPart;
     private final int iExchangeCode;
+    private final int iTradeId;
     private final int iPrice;
     private final int iSize;
     private final int iTick;
@@ -30,7 +31,6 @@ public class TradeMapping extends MarketEventMapping {
     private final int iDayVolume;
     private final int iDayTurnover;
     private final int iFlags;
-    private final int iTradeId;
 
     public TradeMapping(DataRecord record) {
         super(record);
@@ -38,6 +38,7 @@ public class TradeMapping extends MarketEventMapping {
         iSequence = MappingUtil.findIntField(record, "Last.Sequence", false);
         iTimeNanoPart = MappingUtil.findIntField(record, "Last.TimeNanoPart", false);
         iExchangeCode = MappingUtil.findIntField(record, "Last.Exchange", false);
+        iTradeId = MappingUtil.findIntField(record, "TradeId", false);
         iPrice = findIntField("Last.Price", true);
         iSize = findIntField("Last.Size", true);
         iTick = MappingUtil.findIntField(record, "Last.Tick", false);
@@ -46,7 +47,6 @@ public class TradeMapping extends MarketEventMapping {
         iDayVolume = findIntField("Volume", false);
         iDayTurnover = findIntField("DayTurnover", false);
         iFlags = MappingUtil.findIntField(record, "Last.Flags", false);
-        iTradeId = MappingUtil.findIntField(record, "TradeId", false);
         putNonDefaultPropertyName("Last.Time", "Time");
         putNonDefaultPropertyName("Last.Sequence", "Sequence");
         putNonDefaultPropertyName("Last.TimeNanoPart", "TimeNanoPart");
@@ -187,6 +187,18 @@ public class TradeMapping extends MarketEventMapping {
         if (iExchangeCode < 0)
             return;
         setInt(cursor, iExchangeCode, exchangeCode);
+    }
+
+    public long getTradeId(RecordCursor cursor) {
+        if (iTradeId < 0)
+            return 0;
+        return getLong(cursor, iTradeId);
+    }
+
+    public void setTradeId(RecordCursor cursor, long tradeId) {
+        if (iTradeId < 0)
+            return;
+        setLong(cursor, iTradeId, tradeId);
     }
 
     @Deprecated
@@ -613,18 +625,6 @@ public class TradeMapping extends MarketEventMapping {
         if (iFlags < 0)
             return;
         setInt(cursor, iFlags, flags);
-    }
-
-    public long getTradeId(RecordCursor cursor) {
-        if (iTradeId < 0)
-            return 0;
-        return getLong(cursor, iTradeId);
-    }
-
-    public void setTradeId(RecordCursor cursor, long tradeId) {
-        if (iTradeId < 0)
-            return;
-        setLong(cursor, iTradeId, tradeId);
     }
 // END: CODE AUTOMATICALLY GENERATED
 }

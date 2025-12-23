@@ -47,6 +47,7 @@ public final class NuamTimeAndSaleDelegate extends MarketEventDelegateImpl<NuamT
         event.setIndex((((long) m.getTimeSeconds(cursor)) << 32) | (m.getSequence(cursor) & 0xFFFFFFFFL));
         event.setTimeNanoPart(m.getTimeNanoPart(cursor));
         event.setExchangeCode(m.getExchangeCode(cursor));
+        event.setTradeId(m.getTradeId(cursor));
         event.setPrice(m.getPrice(cursor));
         event.setSizeAsDouble(m.getSizeDouble(cursor));
         event.setBidPrice(m.getBidPrice(cursor));
@@ -55,7 +56,6 @@ public final class NuamTimeAndSaleDelegate extends MarketEventDelegateImpl<NuamT
         event.setFlags(m.getFlags(cursor));
         event.setBuyer(m.getBuyer(cursor));
         event.setSeller(m.getSeller(cursor));
-        event.setTradeId(m.getTradeId(cursor));
         event.setMatchId(m.getMatchId(cursor));
         return event;
     }
@@ -68,6 +68,7 @@ public final class NuamTimeAndSaleDelegate extends MarketEventDelegateImpl<NuamT
         m.setSequence(cursor, (int) event.getIndex());
         m.setTimeNanoPart(cursor, event.getTimeNanoPart());
         m.setExchangeCode(cursor, event.getExchangeCode());
+        m.setTradeId(cursor, event.getTradeId());
         m.setPrice(cursor, event.getPrice());
         m.setSizeDouble(cursor, event.getSizeAsDouble());
         m.setBidPrice(cursor, event.getBidPrice());
@@ -76,7 +77,6 @@ public final class NuamTimeAndSaleDelegate extends MarketEventDelegateImpl<NuamT
         m.setFlags(cursor, event.getFlags());
         m.setBuyer(cursor, event.getBuyer());
         m.setSeller(cursor, event.getSeller());
-        m.setTradeId(cursor, event.getTradeId());
         m.setMatchId(cursor, event.getMatchId());
         return cursor;
     }
