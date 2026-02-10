@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -400,6 +400,9 @@ public class DXFeedImpl extends DXFeed {
         EventDelegate<E> delegate = delegates.get(0);
         if (delegate.getContract() != QDContract.HISTORY)
             return Promise.failed(new IllegalArgumentException(INVALID_EVENT_MSG));
+        //FIXME Get rid of fetchTime heuristics. Instead all chart servers must properly close snapshot:
+        // either send SNAPSHOT_END with REMOVE_EVENT for the fromTime exactly
+        // or SNAPSHOT_SNIP for the deepest available candle
         long fetchTime = delegate.getFetchTimeHeuristicByEventSymbolAndFromTime(symbol, fromTime);
         return fetchOrSubscribeFromHistory(symbol, delegate,
             delegate.getQDTimeByEventTime(fetchTime),

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,12 +11,16 @@
  */
 package com.dxfeed.ipf.filter;
 
+import com.devexperts.logging.Logging;
+
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 class IPFUpdater {
     private IPFUpdater() {} // do not create
+
+    private static final Logging log = Logging.getLogging(IPFUpdater.class);
 
     private static final ScheduledThreadPoolExecutor EXECUTOR = new ScheduledThreadPoolExecutor(0, r -> {
         Thread thread = new Thread(r, "IPFUpdater");
@@ -44,7 +48,11 @@ class IPFUpdater {
         }
 
         public void run() {
-            filter.update();
+            try {
+                filter.update();
+            } catch (Throwable t) {
+                log.error("Unexpected error", t);
+            }
         }
     }
 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -107,6 +107,7 @@ public abstract class EventDelegate<T extends EventType<?>> {
         return time == Long.MAX_VALUE ? Long.MAX_VALUE : TimeSequenceUtil.getTimeMillisFromTimeSequence(time);
     }
 
+    @Deprecated
     public long getFetchTimeHeuristicByEventSymbolAndFromTime(Object eventSymbol, long fromTime) {
         Timing.Day day = Timing.EST.getByTime(fromTime);
         do {

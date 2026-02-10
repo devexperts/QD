@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -177,6 +177,8 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
     // SNAPSHOT_QUEUE & UPDATE_QUEUE state mark bits
     static final int QUEUE_BIT = 1 << 31; // highest bit
 
+    // NEXT_AGENT value to support storeEverything and STATE_KEEP_TIME in total sub for HISTORY
+    static final int NO_NEXT_AGENT_BUT_STORE_HB = -1;
     // A marker flag for delayed cleaning of sticky elements from the total matrix
     static final int NO_NEXT_AGENT_STICKY_DELAY = -2;
 

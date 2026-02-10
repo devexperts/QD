@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,9 +17,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Responsobilities: determine operating mode by day, location specified (you should create instance for every country
+ * Responsibilities: determine operating mode by day, location specified (you should create instance for every country
  * or even exchange)
+ *
+ * @deprecated Use dxFeed Schedule API instead.
  */
+@Deprecated
 public abstract class BusinessSchedule {
     /**
      * @param id - currently supports "US", "RU", "CA"; otherwise EMPTY
@@ -83,6 +86,8 @@ public abstract class BusinessSchedule {
         "0:20230102,1:20230116,2:20230220,3:20230407,4:20230529,9:20230619,5:20230704,6:20230904,7:20231123,8:20231225," +
         "0:20240101,1:20240115,2:20240219,3:20240329,4:20240527,9:20240619,5:20240704,6:20240902,7:20241128,8:20241225," +
         "0:20250101,1:20250120,2:20250217,3:20250418,4:20250526,9:20250619,5:20250704,6:20250901,7:20251127,8:20251225," +
+        "0:20260101,1:20260119,2:20260216,3:20260403,4:20260525,9:20260619,5:20260703,6:20260907,7:20261126,8:20261225," +
+        "0:20270101,1:20270118,2:20270215,3:20270326,4:20270531,9:20270618,5:20270705,6:20270906,7:20271125,8:20271224," +
         "",
         "H:New Year's Day,Martin Luther King Jr. Day,President's Day,Good Friday,Memorial Day,Independence Day,Labor Day,Thanksgiving Day,Christmas,Juneteenth;"
     );
@@ -102,8 +107,10 @@ public abstract class BusinessSchedule {
     );
 
     /**
-     * information about operating mode (is it Holiday, etc) for Day instance from Timing
+     * Information about operating mode (is it Holiday, etc) for Day instance from Timing
+     * @deprecated Use dxFeed Schedule API instead.
      */
+    @Deprecated
     public static class OperatingMode {
         private final boolean short_business;
         private final boolean weekend;

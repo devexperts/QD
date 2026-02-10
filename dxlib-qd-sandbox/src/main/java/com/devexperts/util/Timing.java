@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -116,7 +116,9 @@ public class Timing {
 
         /**
          * Operating mode of this day in a business-vs-holiday classification.
+         * @deprecated Use dxFeed Schedule API instead.
          */
+        @Deprecated
         public final BusinessSchedule.OperatingMode mode;
 
         // we don't need it volatile, since we don't really care about the preciseness and/or atomicity of this field
@@ -176,21 +178,27 @@ public class Timing {
 
         /**
          * Determines if this day is a weekend (Saturday or Sunday).
+         * @deprecated Use dxFeed Schedule API instead.
          */
+        @Deprecated
         public boolean isWeekend() {
             return mode.isWeekend();
         }
 
         /**
          * Determines if this day is a holiday from the list of exchange holidays.
+         * @deprecated Use dxFeed Schedule API instead.
          */
+        @Deprecated
         public boolean isHoliday() {
             return mode.isHoliday();
         }
 
         /**
          * Determines if this day is a trading day - not a weekend and not a holiday.
+         * @deprecated Use dxFeed Schedule API instead.
          */
+        @Deprecated
         public boolean isTrading() {
             return mode.isBusiness();
         }
@@ -212,6 +220,7 @@ public class Timing {
     /**
      * Creates {@code Timing} instance for the specified calendar and business schedule.
      */
+    @Deprecated
     public Timing(Calendar calendar, BusinessSchedule businessSchedule) {
         // Custom constructor and order of initialization to preserve the given Calendar
         this.calendar = (Calendar) calendar.clone();

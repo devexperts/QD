@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.qd;
 
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.kit.CompositeFilters;
 import com.devexperts.qd.kit.NotFilter;
 import com.devexperts.qd.ng.RecordCursor;
@@ -79,6 +80,8 @@ public abstract class QDFilter implements SubscriptionFilter, StableSubscription
     }
 
     public enum SyntaxPrecedence { OR, AND, TOKEN }
+
+    private static final Logging log = Logging.getLogging(QDFilter.class);
 
     private final DataScheme scheme;
     private String name;
@@ -414,9 +417,15 @@ public abstract class QDFilter implements SubscriptionFilter, StableSubscription
         }
         // fire listeners installed on this specific QDFilter instance, will fire listeners installed on "updated", too
         // because "updated" itself is always in the list of listeners.
-        if (fireListeners != null)
-            for (UpdateListener listener : fireListeners)
-                listener.filterUpdated(this);
+        if (fireListeners != null) {
+            for (UpdateListener listener : fireListeners) {
+                try {
+                    listener.filterUpdated(this);
+                } catch (Throwable t) {
+                    log.error("Unexpected error in listener", t);
+                }
+            }
+        }
     }
 
     /**
@@ -646,9 +655,15 @@ public abstract class QDFilter implements SubscriptionFilter, StableSubscription
         @Override
         public void filterUpdated(QDFilter filter) {
             CopyOnWriteArrayList<UpdateListener> listeners = this.listeners; // volatile read
-            if (listeners != null)
-                for (UpdateListener listener : listeners)
-                    listener.filterUpdated(filter);
+            if (listeners != null) {
+                for (UpdateListener listener : listeners) {
+                    try {
+                        listener.filterUpdated(filter);
+                    } catch (Throwable t) {
+                        log.error("Unexpected error in listener", t);
+                    }
+                }
+            }
         }
     }
 }

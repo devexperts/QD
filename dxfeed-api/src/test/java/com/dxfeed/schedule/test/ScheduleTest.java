@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -211,6 +211,11 @@ public class ScheduleTest {
         map.put(2, "17001800");
         map.put(3, "18001900");
         checkSessions("sd=20191224;sds=ec0330;0=p10001700r17001800a18001900", 20191224, map);
+
+        map.clear();
+        map.put(1, "08001130");
+        map.put(2, "11300000");
+        checkSessions("sd=20191224;sds=ec0330;20191224=r08001500;0=r08001700", 20191224, map);
     }
 
     @Test
@@ -352,6 +357,54 @@ public class ScheduleTest {
     }
 
     /**
+     * Test jntd strategy when holiday is overridden to be non-traded
+     */
+    @Test
+    public void testJntdWithClosedOverride() {
+        String def = "hd=20231225;ds.20231225=closed;0=r09001700;hds=jntd3";
+        int hdId = DayUtil.getDayIdByYearMonthDay(20231225);
+        check(def, "000000", "NO_TRADING", new int[]{hdId}, hdId);
+        check(def, "000000,000000,090000,170000", "NO_TRADING,NO_TRADING,REGULAR,NO_TRADING",
+            new int[]{hdId, hdId + 1, hdId + 1, hdId + 1}, hdId + 1);
+    }
+
+    @Test
+    public void testJntdWithEarlyCloseOverride() {
+        String def = "hd=20231225;ds.20231225=ec:0300;0=r09001700;hds=jntd3";
+        int hdId = DayUtil.getDayIdByYearMonthDay(20231225);
+        check(def, "000000", "NO_TRADING", new int[]{hdId}, hdId);
+        check(def, "000000,090000,140000,000000,090000,170000",
+            "NO_TRADING,REGULAR,NO_TRADING,NO_TRADING,REGULAR,NO_TRADING",
+            new int[]{hdId, hdId, hdId, hdId + 1, hdId + 1, hdId + 1}, hdId + 1);
+    }
+
+    @Test
+    public void testJntdWithOverrideOnWeekend() {
+        // 2026-01-31 is Saturday
+        String def = "hd=20260131;ds.20260131=ec:0300;0=r09001700;hds=jntd3";
+        int hdId = DayUtil.getDayIdByYearMonthDay(20260131);
+        check(def, "000000", "NO_TRADING", new int[] {hdId}, hdId);
+        check(def, "000000", "NO_TRADING", new int[] {hdId + 1}, hdId + 1);
+        check(def, "000000,090000,170000", "NO_TRADING,REGULAR,NO_TRADING",
+            new int[] {hdId + 2, hdId + 2, hdId + 2}, hdId + 2);
+
+        def = "hd=20260131;ds.20260131=closed;0=r09001700;hds=jntd3";
+        hdId = DayUtil.getDayIdByYearMonthDay(20260131);
+        check(def, "000000", "NO_TRADING", new int[] {hdId}, hdId);
+        check(def, "000000", "NO_TRADING", new int[] {hdId + 1}, hdId + 1);
+        check(def, "000000,090000,170000", "NO_TRADING,REGULAR,NO_TRADING",
+            new int[] {hdId + 2, hdId + 2, hdId + 2}, hdId + 2);
+
+        def = "hd=20260131;ds.20260131=def:r10001200;0=r09001700;hds=jntd3";
+        hdId = DayUtil.getDayIdByYearMonthDay(20260131);
+        check(def, "000000", "NO_TRADING", new int[] {hdId}, hdId);
+        check(def, "000000", "NO_TRADING", new int[] {hdId}, hdId + 1);
+        check(def, "000000,100000,120000,000000,000000,090000,170000",
+            "NO_TRADING,REGULAR,NO_TRADING,NO_TRADING,NO_TRADING,REGULAR,NO_TRADING",
+            new int[] {hdId, hdId, hdId, hdId + 1, hdId + 2, hdId + 2, hdId + 2}, hdId + 2);
+    }
+
+    /**
      * Test hd sets union with default syntax
      */
     @Test
@@ -437,6 +490,197 @@ public class ScheduleTest {
         assertFalse("CA Holiday", gmt(def).getDayByYearMonthDay(20210524).isHoliday());
         assertFalse("US and CA Holiday", gmt(def).getDayByYearMonthDay(20210215).isHoliday());
         assertTrue("Only one remain holiday", gmt(def).getDayByYearMonthDay(20210101).isHoliday());
+    }
+
+    @Test
+    public void testForcedTradingDay() {
+        Schedule schedule = Schedule.getInstance(gmtde("hd=20231225;ds.20231225=normal;0=r09001700"));
+        Day day = schedule.getDayByYearMonthDay(20231225);
+        assertTrue(day.isHoliday());
+        assertTrue("should be trading", day.isTrading());
+
+        Schedule noHolidaySchedule = Schedule.getInstance(gmtde("hd=;0=r09001700"));
+        Day noHolidayDay = noHolidaySchedule.getDayByYearMonthDay(20231225);
+
+        assertEquals(day.getSessions().size(), noHolidayDay.getSessions().size());
+        for (int i = 0; i < day.getSessions().size(); i++) {
+            Session session = day.getSessions().get(i);
+            Session noHolidaySession = noHolidayDay.getSessions().get(i);
+            assertEquals(session.getType(), noHolidaySession.getType());
+            assertEquals(session.getStartTime(), noHolidaySession.getStartTime());
+            assertEquals(session.getEndTime(), noHolidaySession.getEndTime());
+        }
+    }
+
+    @Test
+    public void testExplicitClosedDay() {
+        Schedule schedule = Schedule.getInstance(gmtde("ds.20231226=closed;0=r09001700"));
+        Day day = schedule.getDayByYearMonthDay(20231226);
+
+        assertFalse("should not be trading", day.isTrading());
+        assertEquals("should have one NO_TRADING session", 1, day.getSessions().size());
+        assertEquals(SessionType.NO_TRADING, day.getSessions().get(0).getType());
+    }
+
+    @Test
+    public void testDefinedDayWithEarlyClose() {
+        Schedule expected = Schedule.getInstance(gmtde("0=r08001300;20231227=r09001030"));
+        Schedule schedule = Schedule.getInstance(gmtde("0=r08001300;ds.20231227=def:r09001500,ec:0430"));
+
+        checkSame("Early close for special day", expected, schedule, 20231226, 20231228);
+
+        expected = Schedule.getInstance(gmtde("sd=20231227;sds=ec0430;0=r08001300;20231227=r09001500"));
+        schedule = Schedule.getInstance(gmtde("sd=20231227;sds=ec0430;0=r08001300;ds.20231227=def:r09001500"));
+
+        checkSame("Early close for special day", expected, schedule, 20231226, 20231228);
+    }
+
+    @Test
+    public void testClosedOverriddenByDef() {
+        Schedule expected = Schedule.getInstance(gmtde("0=r09001700;20231226=r10001200"));
+        Schedule schedule = Schedule.getInstance(gmtde("0=r09001700;ds.20231226=closed,def:r10001200"));
+        checkSame("defined day must override close", expected, schedule, 20231225, 20231227);
+    }
+
+    @Test
+    public void testDefOverriddenByClosed() {
+        Schedule schedule = Schedule.getInstance(gmtde("0=r09001700;ds.20231226=def:r10001200,closed"));
+        Day day = schedule.getDayByYearMonthDay(20231226);
+        assertFalse("should not be trading", day.isTrading());
+        assertEquals("should have one NO_TRADING session", 1, day.getSessions().size());
+        assertEquals(SessionType.NO_TRADING, day.getSessions().get(0).getType());
+    }
+
+    @Test
+    public void testClosedOverriddenByEarlyClose() {
+        Schedule expected = Schedule.getInstance(gmtde("0=r09001700;20231226=r09001400"));
+        Schedule schedule = Schedule.getInstance(gmtde("0=r09001700;ds.20231226=closed,ec:0300"));
+        checkSame("early close must override closed", expected, schedule, 20231225, 20231227);
+    }
+
+    @Test
+    public void testEarlyCloseOverriddenByClosed() {
+        Schedule schedule = Schedule.getInstance(gmtde("0=r09001700;ds.20231226=ec:0300,closed"));
+        Day day = schedule.getDayByYearMonthDay(20231226);
+        assertFalse("should not be trading", day.isTrading());
+        assertEquals("should have one NO_TRADING session", 1, day.getSessions().size());
+        assertEquals(SessionType.NO_TRADING, day.getSessions().get(0).getType());
+    }
+
+    @Test
+    public void testNormalOverriddenByDef() {
+        Schedule expected = Schedule.getInstance(gmtde("hd=20231226;0=r09001700;20231226=r10001200"));
+        Schedule schedule = Schedule.getInstance(gmtde("hd=20231226;0=r09001700;ds.20231226=normal,def:r10001200"));
+        checkSame("defines day must override normal", expected, schedule, 20231225, 20231227);
+    }
+
+    @Test
+    public void testDefOverriddenByNormal() {
+        Schedule expected = Schedule.getInstance(gmtde("0=r09001700"));
+        Schedule schedule = Schedule.getInstance(gmtde("0=r09001700;ds.20231226=def:r10001200,normal"));
+        checkSame("normal must override defined day", expected, schedule, 20231225, 20231227);
+    }
+
+    @Test
+    public void testEarlyCloseOnHoliday() {
+        Schedule expected = Schedule.getInstance(gmtde("hd=20231226;0=r09001700"));
+        Schedule schedule = Schedule.getInstance(gmtde("hd=20231226;0=r09001700;ds.20231226=ec:0300"));
+
+        checkSame("early close on holiday has no effect", expected, schedule, 20231225, 20231227);
+    }
+
+    @Test
+    public void testNormalAndEarlyClose() {
+        Schedule schedule = Schedule.getInstance(gmtde("hd=20231226;0=r09001700;ds.20231226=ec:0300,normal"));
+        Schedule scheduleReordered = Schedule.getInstance(gmtde("hd=20231226;0=r09001700;ds.20231226=normal,ec:0300"));
+        checkSame("early close does not override schedule", schedule, scheduleReordered, 20231225, 20231227);
+
+        Day actualDay = schedule.getDayByYearMonthDay(20231226);
+
+        Schedule noHoliday = Schedule.getInstance(gmtde("0=r09001700;20231226=r09001400"));
+        Day defaultDay = noHoliday.getDayByYearMonthDay(20231226);
+
+        assertEquals(defaultDay.getSessions().size(), actualDay.getSessions().size());
+        for (int i = 0; i < defaultDay.getSessions().size(); i++) {
+            Session s1 = defaultDay.getSessions().get(i);
+            Session s2 = actualDay.getSessions().get(i);
+            assertEquals(s1.getType(), s2.getType());
+            assertEquals(s1.getStartTime(), s2.getStartTime());
+            assertEquals(s1.getEndTime(), s2.getEndTime());
+        }
+        assertTrue(schedule.getDayByYearMonthDay(20231226).isHoliday());
+        assertTrue(schedule.getDayByYearMonthDay(20231226).isTrading());
+    }
+
+    @Test
+    public void testDefAndEarlyClose() {
+        Schedule schedule = Schedule.getInstance(gmtde("0=r09001700;ds.20231226=ec:0300,def:r09001600"));
+        Schedule scheduleReordered = Schedule.getInstance(gmtde("0=r09001700;ds.20231226=def:r09001600,ec:0300"));
+        checkSame("early close does not override schedule", schedule, scheduleReordered, 20231225, 20231227);
+
+        Schedule expected = Schedule.getInstance(gmtde("0=r09001700;20231226=r09001300"));
+        checkSame("early close substracts from defined day", expected, schedule, 20231225, 20231227);
+    }
+
+    @Test
+    public void testWeekendOverrideWithDef() {
+        // 2026-01-31 is Saturday
+        Schedule expected = Schedule.getInstance(gmtde("0=r08001300;6=r08001500"));
+        Day expectedDay = expected.getDayByYearMonthDay(20260131);
+
+        Schedule schedule = Schedule.getInstance(gmtde("0=r08001300;ds.20260131=def:r08001500"));
+        Day day = schedule.getDayByYearMonthDay(20260131);
+
+        assertEquals("should have 3 sessions", 3, day.getSessions().size());
+        for (int i = 0; i < day.getSessions().size(); i++) {
+            Session s1 = expectedDay.getSessions().get(i);
+            Session s2 = day.getSessions().get(i);
+            assertEquals(s1.getType(), s2.getType());
+            assertEquals(s1.getStartTime(), s2.getStartTime());
+            assertEquals(s1.getEndTime(), s2.getEndTime());
+        }
+        assertTrue(day.isTrading());
+    }
+
+    @Test
+    public void testWeekendOverrideWithEarlyClose() {
+        // 2026-01-31 is Saturday
+        Schedule schedule = Schedule.getInstance(gmtde("0=r08001300;ds.20260131=ec:0300"));
+        Day day = schedule.getDayByYearMonthDay(20260131);
+
+        assertFalse("should not be trading", day.isTrading());
+        assertEquals("should have one NO_TRADING session", 1, day.getSessions().size());
+        assertEquals(SessionType.NO_TRADING, day.getSessions().get(0).getType());
+    }
+
+    @Test
+    public void testWeekendOverrideWithClosed() {
+        // 2026-01-31 is Saturday
+        Schedule schedule = Schedule.getInstance(gmtde("0=r08001300;ds.20260131=closed"));
+        Day day = schedule.getDayByYearMonthDay(20260131);
+
+        assertFalse("should not be trading", day.isTrading());
+        assertEquals("should have one NO_TRADING session", 1, day.getSessions().size());
+        assertEquals(SessionType.NO_TRADING, day.getSessions().get(0).getType());
+    }
+
+    @Test
+    public void testPropertiesOverride() {
+        Schedule expected = Schedule.getInstance(gmtde("0=r08001300;20260119=r08001500"));
+        Schedule schedule = Schedule.getInstance(gmtde("0=r08001300;20260119=r08001100;20260119=r08001500"));
+        checkSame("Override closed with normal", expected, schedule, 20260118, 20260120);
+
+        expected = Schedule.getInstance(gmtde("0=r08001300"));
+        schedule = Schedule.getInstance(gmtde("0=r08001300;ds.20260119=closed;ds.hd.US=closed;ds.20260119=normal"));
+        checkSame("Override closed with normal", expected, schedule, 20260118, 20260120);
+    }
+
+    @Test
+    public void testCompactSyntax() {
+        Schedule expected = Schedule.getInstance(gmtde("0=r08001300;20231227=r09001030;20241227=r09001030"));
+        Schedule schedule = Schedule.getInstance(gmtde("0=r08001300;20231227=20241227=r09001030"));
+        checkSame("Compact syntax", expected, schedule, 20231226, 20231228);
+        checkSame("Compact syntax", expected, schedule, 20241226, 20241228);
     }
 
     // check jntd strategy in action for given holiday; generates all permutations to load days in that order
@@ -669,17 +913,29 @@ public class ScheduleTest {
     }
 
     private void check(String extra, String times, String types) {
-        List<Session> sessions = gmt(extra).getDayById(42).getSessions();
+        check(extra, times, types, null, 42);
+    }
+
+    private void check(String extra, String times, String types, int[] days, int dayId) {
+        List<Session> sessions = gmt(extra).getDayById(dayId).getSessions();
         String[] timeArray = times.split(",");
         String[] typeArray = types.split(",");
         assertEquals(timeArray.length, sessions.size());
         assertEquals(typeArray.length, sessions.size());
+        if (days != null) {
+            assertEquals(days.length, sessions.size());
+        }
+
         for (int i = 0; i < sessions.size(); i++) {
             Session s = sessions.get(i);
             long time = Integer.parseInt(timeArray[i]);
             time = time / 10000 * HOUR + time / 100 % 100 * MINUTE + time % 100 * SECOND;
             assertEquals(time, s.getStartTime() % DAY);
             assertEquals(SessionType.valueOf(typeArray[i]), s.getType());
+
+            if (days != null) {
+                assertEquals(days[i], s.getStartTime() / DAY);
+            }
         }
     }
 }

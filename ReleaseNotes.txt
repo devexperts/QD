@@ -1,3 +1,21 @@
+QDS 3.349:
+
+* [QD-1556] Deprecate schedule-depending methods in Timing
+  - com.devexperts.util.Timing class is not deprecated and can be used to work with days/months/years
+  - Deprecate com.devexperts.util.BusinessSchedule class
+  - Deprecate methods in com.devexperts.util.Timing.Day: isWeekend(), isHoliday(), isTrading()
+  - For holiday/trading use dxFeed Schedule API: com.dxfeed.schedule.Schedule.
+    New constants Schedule.UTC and Schedule.NYSE are introduced for easier migration
+  - To support migration Timing.Day contains holidays for 2026 and 2027
+* [QD-1644] [Schedule] Holiday schedule extension
+  - Introduced day strategy rules 'ds.<target>=<rule>' for day groups and specific dates:
+    'closed', 'normal', 'ec:HHMM', 'def:<schedule>'
+  - Added special date groups 'xd.<name>' (e.g., 'xd.US.BFD')
+  - Defined precedence in schedule definitions by declaration order: later rules override earlier ones.
+  - Tradegate migration example: used 'ds.sd.XGAT.LTD' instead of separate year-specific overrides.
+* [QD-1721] StackOverflowError in CodecConnection.markForImmediateRestart
+* [QD-1723] History and Ticker snapshots are not updated in sticky subscription mode when there are no active subscribers
+
 QDS 3.348:
 
 * [QD-1632] Added rate limiting to control records flow

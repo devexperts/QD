@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -69,9 +69,6 @@ public class History extends Collector implements QDHistory {
     static final int SNAPSHOT_END = EventFlag.SNAPSHOT_END.flag();
     static final int SNAPSHOT_SNIP = EventFlag.SNAPSHOT_SNIP.flag();
     static final int SNAPSHOT_MODE = EventFlag.SNAPSHOT_MODE.flag();
-
-    // NEXT_AGENT value to support storeEverything in total sub
-    static final int NO_NEXT_AGENT_BUT_STORE_HB = -1;
 
     // -----------------------------------------------------------------------------------------------------------
 
@@ -665,8 +662,12 @@ public class History extends Collector implements QDHistory {
                     tsub = total.sub;
                     tindex = createDummyTotalSubEntry(tsub, rid, key);
                 }
-            } else if (tsub.getInt(tindex + NEXT_AGENT) <= 0)
-                continue; // No subscription -- ignore incoming event (unless storing everything)
+            } else {
+                int nextAgent = tsub.getInt(tindex + NEXT_AGENT);
+                if (nextAgent <= 0 && nextAgent != NO_NEXT_AGENT_STICKY_DELAY) {
+                    continue; // No subscription -- ignore incoming event (unless storing everything or sticky subscription)
+                }
+            }
             /*
              * time == Long.MAX_VALUE is not supported, because it is used as initial value for KNOWN_TIME.
              * For potential future backwards compatibility, REMOVE_TIME on time == Long.MAX_VALUE is
