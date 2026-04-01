@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -19,6 +19,7 @@ import com.devexperts.qd.qtp.QDEndpoint;
 import com.devexperts.qd.qtp.socket.ClientSocketConnector;
 import com.devexperts.qd.qtp.socket.ServerSocketConnector;
 import com.devexperts.qd.qtp.socket.ServerSocketTestHelper;
+import com.devexperts.qd.qtp.socket.SocketInfo;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.rmi.RMIServer;
 import com.devexperts.rmi.impl.RMIEndpointImpl;
@@ -28,7 +29,6 @@ import com.dxfeed.api.impl.DXEndpointImpl;
 import com.dxfeed.promise.Promise;
 
 import java.lang.reflect.Field;
-import java.net.Socket;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -148,8 +148,8 @@ public class NTU {
                 for (Object handler : handlers) {
                     // imitate connection failure by closing socket
                     Object threadData = getPrivateField(handler, handler.getClass(), "threadData");
-                    Socket socket = (Socket) getPrivateField(threadData, threadData.getClass(), "socket");
-                    socket.close();
+                    SocketInfo socketInfo = (SocketInfo) getPrivateField(threadData, threadData.getClass(), "socketInfo");
+                    socketInfo.getSocket().close();
                 }
             } else {
                 messageConnector.reconnect();

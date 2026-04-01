@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -534,6 +534,20 @@ public final class OrderSource extends IndexedEventSource {
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
      */
     public static final OrderSource otcm = new OrderSource("otcm", PUB_ORDER);
+
+    /**
+     * Bruce book.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource BOSS = new OrderSource("BOSS", PUB_ORDER);
+
+    /**
+     * Bruce book. Record for price level book.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource boss = new OrderSource("boss", PUB_ORDER);
 
     // ATTENTION: Every time a custom OrderSource constant is added run com.dxfeed.api.codegen.ImplCodeGen
     // and commit updated implementation classes.

@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.349</version>
+    <version>3.350</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -615,7 +615,7 @@
                         <dependency>
                             <groupId>org.codehaus.plexus</groupId>
                             <artifactId>plexus-utils</artifactId>
-                            <version>3.5.0</version>
+                            <version>4.0.3</version>
                         </dependency>
                     </dependencies>
                 </plugin>

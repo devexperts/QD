@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 
@@ -235,8 +236,8 @@ public class ClientSocketConnector extends AbstractMessageConnector
         log.info("Starting restoreNow");
         SocketHandler[] handlers = this.handlers; // Atomic read.
 
-        if (handlers == null || !isActive() || !isValidOrderRestoreConnector()) {
-            String message = "restoreNow was skipped due to inactive status or inappropriate connect order";
+        if (handlers == null || !isActive()) {
+            String message = "restoreNow was skipped due to inactive status";
             log.info(message);
             return message;
         }
@@ -251,32 +252,50 @@ public class ClientSocketConnector extends AbstractMessageConnector
     }
 
     private String restoreGracefully(long gracefulDelay) {
-        log.info("Starting restoreGraceful(" + gracefulDelay + ")");
+        log.info("Starting restoreGracefully(" + gracefulDelay + ")");
         SocketHandler[] handlers = this.handlers; // Atomic read.
 
-        if (handlers == null || !isActive() || !isValidOrderRestoreConnector()) {
-            String message = "restoreGraceful was skipped due to inactive status or inappropriate connect order";
+        if (handlers == null || !isActive()) {
+            String message = "restoreGracefully was skipped due to inactive status";
             log.info(message);
             return message;
         }
 
-        StringBuilder message = new StringBuilder("restoreGraceful executed with result:");
+        StringBuilder message = new StringBuilder("restoreGracefully executed with result:");
         Random random = new Random();
         for (SocketHandler socketHandler : handlers) {
-            long delayTime = random.nextInt(Math.toIntExact(gracefulDelay));
-            String msg = "Scheduling restore for " + socketHandler + " at " +
-                TimeFormat.DEFAULT.withMillis().format(System.currentTimeMillis() + delayTime);
-            log.info(msg);
+            String msg;
+            if (shouldRestoreConnection(socketHandler)) {
+                long delayTime = random.nextInt(Math.toIntExact(gracefulDelay));
+                msg = "Scheduling restore for " + socketHandler + " at " +
+                    TimeFormat.DEFAULT.withMillis().format(System.currentTimeMillis() + delayTime);
+                log.info(msg);
+                DxTimer.getInstance().runOnce(() -> restoreConnectionDelayed(socketHandler), delayTime);
+            } else {
+                msg = "Skipped restore for " + socketHandler;
+                log.info(msg);
+            }
             message.append("\n").append(msg);
-            DxTimer.getInstance().runOnce(() -> restoreConnection(socketHandler), delayTime);
         }
         return message.toString();
     }
 
+    private void restoreConnectionDelayed(SocketHandler handler) {
+        if (!handler.isClosed()) {
+            try {
+                log.info("Restoring connection: " + handler);
+                handler.close();
+            } catch (Exception e) {
+                log.error("Failed to restore connection: " + handler, e);
+            }
+        } else {
+            log.info("Skipped restore connection for stale handler: " + handler);
+        }
+    }
+
     private String restoreConnection(SocketHandler handler) {
         String status;
-        ClientSocketSource clientSocketSource = (ClientSocketSource) handler.getSocketSource();
-        if (clientSocketSource.checkAndResetConnection()) {
+        if (shouldRestoreConnection(handler)) {
             try {
                 log.info("Restoring connection: " + handler);
                 handler.close();
@@ -292,9 +311,13 @@ public class ClientSocketConnector extends AbstractMessageConnector
         return handler + ": " + status;
     }
 
+    private boolean shouldRestoreConnection(SocketHandler handler) {
+        return handler.getSocketSource().shouldRestoreConnection(handler.getCurrentSocketInfo());
+    }
+
     private void startRestoreConnectorTask() {
         stopRestoreConnectorTask();
-        if (connectionRestoreTime != null && isValidOrderRestoreConnector()) {
+        if (connectionRestoreTime != null) {
             log.info("Scheduled restore connector task at " + connectionRestoreTime);
             connectionRestoreTask = DxTimer.getInstance()
                 .runDaily(() -> restoreGracefully(QTPConstants.GRACEFUL_DELAY), connectionRestoreTime);
@@ -307,10 +330,6 @@ public class ClientSocketConnector extends AbstractMessageConnector
             connectionRestoreTask.cancel();
             connectionRestoreTask = null;
         }
-    }
-
-    private boolean isValidOrderRestoreConnector() {
-        return connectOrder == ConnectOrder.PRIORITY || connectOrder == ConnectOrder.ORDERED;
     }
 
     @Override
@@ -478,6 +497,7 @@ public class ClientSocketConnector extends AbstractMessageConnector
             // Close striped stats for previous striper config (end stats are closed by socket handlers)
             QDStats cons = getStats().getOrVoid(QDStats.SType.CONNECTIONS);
             cons.getAll(QDStats.SType.CONNECTION).forEach(QDStats::close);
+            closeSocketSources(oldHandlers);
         }
 
         // Initialize handlers (publish the array with non-null elements)
@@ -485,7 +505,7 @@ public class ClientSocketConnector extends AbstractMessageConnector
             QDFilter stripeFilter = (stripeCount > 1) ? striper.getStripeFilter(i) : null;
             newHandlers[i] = reuseHandlers ?
                 createSocketHandlerFromClosed(oldHandlers[i]) :
-                new SocketHandler(this, new ClientSocketSource(this), stripeFilter);
+                new SocketHandler(this, createSocketSource(stripeFilter), stripeFilter);
             newHandlers[i].setCloseListener(this);
         }
 
@@ -498,6 +518,19 @@ public class ClientSocketConnector extends AbstractMessageConnector
         }
 
         startRestoreConnectorTask();
+    }
+
+    @Nonnull
+    private SocketSource createSocketSource(QDFilter stripe) {
+        SocketSourceFactory.Context context =
+            new SocketSourceFactory.Context(stripe == null ? null : stripe.toString());
+        for (SocketSourceFactory factory : Services.createServices(SocketSourceFactory.class, null)) {
+            SocketSource socketSource = factory.createSocketSource(this, context);
+            if (socketSource != null)
+                return socketSource;
+        }
+        // Fallback to the default implementation
+        return new ClientSocketSource(this);
     }
 
     protected Socket createSocket(String host, int port) throws IOException {
@@ -538,6 +571,7 @@ public class ClientSocketConnector extends AbstractMessageConnector
         if (fullStop) {
             // disabling the reconnection scheduler if it was started
             stopRestoreConnectorTask();
+            closeSocketSources(oldHandlers);
             handlers = null;
         }
 
@@ -550,6 +584,15 @@ public class ClientSocketConnector extends AbstractMessageConnector
                 handler.join();
             }
         };
+    }
+
+    private static void closeSocketSources(SocketHandler[] handlers) {
+        if (handlers == null)
+            return;
+        for (SocketHandler handler : handlers) {
+            if (handler != null && handler.getSocketSource() != null)
+                handler.getSocketSource().close();
+        }
     }
 
     @Override

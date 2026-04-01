@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -61,7 +61,7 @@ class SocketWriter extends QTPWorkerThread {
         SocketHandler.ThreadData threadData = handler.initThreadData();
         if (threadData == null)
             return;
-        OutputStream out = threadData.socket.getOutputStream();
+        OutputStream out = threadData.getOutputStream();
         while (!isClosed()) {
             // don't even go into the wait loop if data is already available
             if (state != STATE_AVAILABLE) {

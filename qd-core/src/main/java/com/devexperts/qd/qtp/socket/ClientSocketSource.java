@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -34,13 +34,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Implements load-balancing algorithm for {@link ClientSocketConnector} by resolving host
  * names to IP address and returning resulting addresses in a random order.
  * Note: this class is not thread-safe.
  */
-class ClientSocketSource extends SocketSource {
+class ClientSocketSource implements SocketSource {
 
     private static final ConnectOrder DEFAULT_CONNECT_ORDER = ConnectOrder.SHUFFLE;
 
@@ -81,6 +82,7 @@ class ClientSocketSource extends SocketSource {
 
     private volatile boolean priorityConnection;
     private volatile boolean resetSocketSource;
+    private volatile boolean closed;
 
     ClientSocketSource(ClientSocketConnector connector) {
         this.connector = connector;
@@ -100,7 +102,9 @@ class ClientSocketSource extends SocketSource {
     }
 
     @Override
-    public SocketInfo nextSocket() throws InterruptedException {
+    public SocketInfo getSocket() throws InterruptedException {
+        if (closed)
+            return null;
         SocketAddress address = nextAddress();
         if (address == null)
             return null;
@@ -108,6 +112,8 @@ class ClientSocketSource extends SocketSource {
         ReconnectHelper reconnectHelper = getReconnectHelper(address);
 
         reconnectHelper.sleepBeforeConnection();
+        if (closed)
+            return null;
         log.info("Connecting to " + LogUtil.hideCredentials(address));
 
         Socket socket = null;
@@ -116,13 +122,13 @@ class ClientSocketSource extends SocketSource {
             if (proxyHost.length() <= 0) {
                 // connect directly
                 socket = connector.createSocket(address.host, address.port);
-                configureSocket(socket);
+                SocketUtil.configureSocket(socket);
             } else {
                 // connect via HTTPS proxy
                 int proxyPort = connector.getProxyPort();
                 log.info("Using HTTPS proxy: " + LogUtil.hideCredentials(proxyHost) + ":" + proxyPort);
                 socket = connector.createSocket(proxyHost, proxyPort);
-                configureSocket(socket);
+                SocketUtil.configureSocket(socket);
                 String connectRequest = "CONNECT " + address.host + ":" + address.port + " HTTP/1.0\r\n\r\n";
                 socket.getOutputStream().write(connectRequest.getBytes());
                 InputStream input = socket.getInputStream();
@@ -146,8 +152,17 @@ class ClientSocketSource extends SocketSource {
         }
         if (connectOrder.isResetOnConnect())
             reset();
-        log.info("Connected to " + LogUtil.hideCredentials(address));
         return new SocketInfo(socket, address);
+    }
+
+    @Override
+    public void closeSocket(SocketInfo socketInfo, @Nullable Throwable reason) throws IOException {
+        socketInfo.socket.close();
+    }
+
+    @Override
+    public void close() {
+        closed = true;
     }
 
     private synchronized ReconnectHelper getReconnectHelper(SocketAddress address) {
@@ -199,7 +214,11 @@ class ClientSocketSource extends SocketSource {
         }
     }
 
-    boolean checkAndResetConnection() {
+    @Override
+    public boolean shouldRestoreConnection(SocketInfo socketInfo) {
+        if (connectOrder != ConnectOrder.PRIORITY && connectOrder != ConnectOrder.ORDERED)
+            return false;
+
         boolean resetConnection = !priorityConnection;
         if (resetConnection) {
             resetSocketSource = true;

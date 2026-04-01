@@ -1,3 +1,12 @@
+QDS 3.350:
+
+* [QD-1725] New Order source for Bruce gate: BOSS
+* [QD-1728] [EXPERIMENTAL] Public SocketSource API/SPI for ClientSocketConnector
+  - Public API: `SocketSource` interface represents a pluggable connection strategy
+  - SPI: `SocketSourceFactory` discovered via service facility (META-INF/services lookup)
+* [QD-1729] [Schedule] Update schedule for CME Crypto
+* [QD-1731] Bump org.codehaus.plexus:plexus-utils dependency
+
 QDS 3.349:
 
 * [QD-1556] Deprecate schedule-depending methods in Timing

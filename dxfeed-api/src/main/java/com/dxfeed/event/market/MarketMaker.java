@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -61,7 +61,7 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  * <li>{@link #getAskTime() askTime} - time of the last ask change;
  * <li>{@link #getAskPrice() askPrice} - ask price;
  * <li>{@link #getAskSize() askSize} - ask size;
- * <li>{@link #getAskCount() askCount} - number of individual bid orders in this market maker event.
+ * <li>{@link #getAskCount() askCount} - number of individual ask orders in this market maker event.
  * </ul>
  *
  * <h3><a name="eventFlagsSection">Event flags, transactions and snapshots</a></h3>

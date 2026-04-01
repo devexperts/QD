@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -29,7 +29,10 @@ import com.devexperts.util.SystemProperties;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
+import javax.annotation.Nullable;
 
 /**
  * The <code>SocketHandler</code> handles standard socket using blocking API.
@@ -84,25 +87,35 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
 
     public String getHost() {
         ThreadData threadData = this.threadData; // atomic read
-        return threadData != null ? threadData.address.host : "";
+        return threadData != null ? threadData.getAddress().host : "";
     }
 
     public int getPort() {
         ThreadData threadData = this.threadData; // atomic read
-        return threadData != null ? threadData.address.port : 0;
+        return threadData != null ? threadData.getAddress().port : 0;
     }
 
     public String getCurrentAddress() {
         ThreadData threadData = this.threadData; // atomic read
-        return threadData != null ? (threadData.address.host + ":" + threadData.address.port) : null;
+        return threadData != null ? (threadData.getAddress().host + ":" + threadData.getAddress().port) : null;
     }
 
     public MessageConnectorState getHandlerState() {
         return state.state;
     }
 
+    @Nullable
+    SocketInfo getCurrentSocketInfo() {
+        ThreadData threadData = this.threadData; // atomic read
+        return threadData != null ? threadData.socketInfo : null;
+    }
+
     public boolean isConnected() {
         return state == SocketState.CONNECTED;
+    }
+
+    public boolean isClosed() {
+        return state == SocketState.STOPPED;
     }
 
     ConnectionStats getActiveConnectionStats() {
@@ -171,18 +184,34 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
     // These methods shall be called only by dedicated reader/writer sockets (threads).
 
     static class ThreadData {
-        final Socket socket;
-        final SocketAddress address;
+        final SocketInfo socketInfo;
         final ApplicationConnection<?> connection;
         final QDStats stats;
         final ConnectionStats connectionStats;
 
-        ThreadData(SocketInfo socketInfo, ApplicationConnection<?> connection, QDStats stats, ConnectionStats connectionStats) {
-            this.socket = socketInfo.socket;
-            this.address = socketInfo.socketAddress;
+        ThreadData(SocketInfo socketInfo, ApplicationConnection<?> connection, QDStats stats,
+            ConnectionStats connectionStats)
+        {
+            this.socketInfo = socketInfo;
             this.connection = connection;
             this.stats = stats;
             this.connectionStats = connectionStats;
+        }
+
+        public Socket getSocket() {
+            return socketInfo.getSocket();
+        }
+
+        public SocketAddress getAddress() {
+            return socketInfo.getSocketAddress();
+        }
+
+        public InputStream getInputStream() throws IOException {
+            return socketInfo.getInputStream();
+        }
+
+        public OutputStream getOutputStream() throws IOException {
+            return socketInfo.getOutputStream();
         }
     }
 
@@ -190,7 +219,7 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
         cleanupConnection(threadData.connection);
         cleanupStats(threadData.stats);
         connector.addClosedConnectionStats(threadData.connectionStats);
-        cleanupSocket(threadData.socket, threadData.address, reason);
+        cleanupSocket(threadData.socketInfo, reason);
     }
 
     private void cleanupConnection(ApplicationConnection<?> connection) {
@@ -209,10 +238,11 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
         }
     }
 
-    private void cleanupSocket(Socket socket, SocketAddress address, Throwable reason) {
+    private void cleanupSocket(SocketInfo socketInfo, Throwable reason) {
+        SocketAddress address = socketInfo.getSocketAddress();
         try {
-            socket.close();
-            if (reason == null || reason instanceof IOException && socketSource instanceof ServerSocketSource) {
+            socketSource.closeSocket(socketInfo, reason);
+            if (reason == null || (reason instanceof IOException && socketSource instanceof ServerSocketSource)) {
                 log.info("Disconnected from " + LogUtil.hideCredentials(address) +
                     (reason == null ? "" : " because of " +
                     (reason.getMessage() == null ? reason.toString() : reason.getMessage())));
@@ -231,12 +261,14 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
 
         // Connect in this thread
         // Create socket
-        SocketInfo socketInfo = socketSource.nextSocket();
+        SocketInfo socketInfo = socketSource.getSocket();
         if (socketInfo == null)
             return null;
-        Socket socket = socketInfo.socket;
+        if (!(socketSource instanceof ServerSocketSource))
+            log.info("Connected to " + LogUtil.hideCredentials(socketInfo.getSocketAddress()));
+        Socket socket = socketInfo.getSocket();
         variables().set(MessageConnectors.SOCKET_KEY, socket);
-        variables().set(REMOTE_HOST_ADDRESS_KEY, socketInfo.socketAddress.host);
+        variables().set(REMOTE_HOST_ADDRESS_KEY, socketInfo.getSocketAddress().host);
         ConnectionStats connectionStats = new ConnectionStats();
 
         // Create stats
@@ -248,13 +280,13 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
                 parentStats = parentStats.getOrCreate(QDStats.SType.CONNECTION, "stripe=" + stripeFilter);
             }
             stats = parentStats.create(QDStats.SType.CONNECTION,
-                "host=" + JMXNameBuilder.quoteKeyPropertyValue(socketInfo.socketAddress.host) + "," +
-                "port=" + socketInfo.socketAddress.port + "," +
+                "host=" + JMXNameBuilder.quoteKeyPropertyValue(socketInfo.getSocketAddress().host) + "," +
+                "port=" + socketInfo.getSocketAddress().port + "," +
                 "localPort=" + socket.getLocalPort());
         } catch (Throwable t) {
-            log.error("Failed to configure socket " + LogUtil.hideCredentials(socketInfo.socketAddress), t);
+            log.error("Failed to configure socket " + LogUtil.hideCredentials(socketInfo.getSocketAddress()), t);
             connector.addClosedConnectionStats(connectionStats);
-            cleanupSocket(socket, socketInfo.socketAddress, null);
+            cleanupSocket(socketInfo, null);
             return null;
         }
         variables().set(MessageConnectors.STATS_KEY, stats);
@@ -280,10 +312,10 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
         }
         if (connection == null) {
             log.error("Failed to create connection on socket " +
-                LogUtil.hideCredentials(socketInfo.socketAddress), failureReason);
+                LogUtil.hideCredentials(socketInfo.getSocketAddress()), failureReason);
             cleanupStats(stats);
             connector.addClosedConnectionStats(connectionStats);
-            cleanupSocket(socket, socketInfo.socketAddress, null);
+            cleanupSocket(socketInfo, null);
             return null;
         }
         variables().set(MessageConnectors.LOCAL_STRIPE_KEY, stripeFilter);
