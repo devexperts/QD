@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -42,6 +42,13 @@ public class BasicChannelShaperFactory implements ChannelShapersFactory {
         if (configuration == null)
             return null; // session was created by something other than BasicAuthRealm
         AgentAdapter.Factory factory = session.variables().get(FACTORY_KEY);
+        if (configuration == ALL_DATA) {
+            // No per-token channel restriction — defer to the operator's connector-level channels=
+            // configuration. The connector's shapers already exist on the factory; clone them so
+            // the session's adapter gets its own ChannelShaper instances.
+            AgentAdapter.Factory effectiveFactory = factory != null ? factory : agentAdapter.getAgentFactory();
+            return effectiveFactory.getAgentAdapterChannels().getNewShapers();
+        }
         AgentAdapterChannels adapter;
         if (factory != null)
             adapter = new AgentAdapterChannels(configuration, factory);

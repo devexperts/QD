@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -275,5 +275,20 @@ public class ServerSocketConnector extends AbstractServerConnector implements Se
     @Override
     protected synchronized List<Closeable> getConnections() {
         return new ArrayList<>(handlers);
+    }
+
+    @Override
+    protected synchronized List<MessageAdapter> getMessageAdapters() {
+        // synchronized guards only the handlers set membership; per-handler state is read via volatile below
+        List<MessageAdapter> result = new ArrayList<>(handlers.size());
+        for (SocketHandler handler : handlers) {
+            SocketHandler.ThreadData threadData = handler.getThreadData(); // volatile read
+            if (threadData != null) {
+                MessageAdapter adapter = MessageConnectors.extractAdapter(threadData.connection);
+                if (adapter != null)
+                    result.add(adapter);
+            }
+        }
+        return result;
     }
 }

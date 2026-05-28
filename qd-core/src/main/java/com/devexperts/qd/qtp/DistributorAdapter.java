@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -33,6 +33,8 @@ import com.devexperts.qd.spi.QDFilterContext;
 import com.devexperts.qd.spi.QDFilterFactory;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.util.LogUtil;
+import com.devexperts.util.TimePeriod;
+import com.devexperts.util.TimePeriodInfo;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -62,10 +64,11 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
     }
 
     /**
-     * The factory for distributor side of an QD.
+     * The factory for distributor side of a QD.
      */
     public static class Factory extends MessageAdapter.AbstractFactory {
         private FieldReplacersCache fieldReplacer = null;
+        private TimePeriod requestedAggregationPeriod; // null = undefined (use server default)
 
         /**
          * Creates new factory. Accepts <code>null</code> parameters.
@@ -99,8 +102,10 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
 
         @Override
         public MessageAdapter createAdapter(QDStats stats) {
-            return new DistributorAdapter(endpoint, ticker, stream, history,
+            DistributorAdapter adapter = new DistributorAdapter(endpoint, ticker, stream, history,
                 getFilter(), getStripe(), stats, fieldReplacer);
+            adapter.setRequestedAggregationPeriod(requestedAggregationPeriod);
+            return adapter;
         }
 
         /**
@@ -118,6 +123,22 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
         @Configurable(description = "Field Replacers for input connection")
         public void setFieldReplacer(String fieldReplacer) {
             this.fieldReplacer = fieldReplacer == null ? null : FieldReplacersCache.valueOf(getScheme(), fieldReplacer);
+        }
+
+        public TimePeriod getRequestedAggregationPeriod() {
+            return this.requestedAggregationPeriod;
+        }
+
+        /**
+         * Sets requested aggregation period for new adapter instances.
+         *
+         * @param requestedAggregationPeriod aggregation period (e.g. 1s, 0.5s),
+         *        or {@code null} to use server default
+         */
+        @Configurable(description = "requested aggregation period sent to server")
+        public void setRequestedAggregationPeriod(TimePeriod requestedAggregationPeriod) {
+            ChannelShaper.validateAggregationPeriod(requestedAggregationPeriod);
+            this.requestedAggregationPeriod = requestedAggregationPeriod;
         }
     }
 
@@ -142,6 +163,11 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
 
     private int phaseAdd;
     private int phaseRemove;
+
+    // SYNC: write(local), read(none)
+    private volatile TimePeriod requestedAggregationPeriod; // null = undefined (use server default)
+    // SYNC: write(local), read(none)
+    private volatile TimePeriodInfo aggregationPeriodInfo = TimePeriodInfo.UNKNOWN;
 
     // ------------------------- constructors -------------------------
 
@@ -180,6 +206,37 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
     }
 
     // ------------------------- instance methods -------------------------
+
+    @Override
+    public String getRequestedAggregationPeriod() {
+        TimePeriod period = requestedAggregationPeriod;
+        return period == null ? null : period.toString();
+    }
+
+    @Override
+    public void setRequestedAggregationPeriod(String requestedAggregationPeriod) {
+        setRequestedAggregationPeriod(
+            AbstractMessageConnector.parseAggregationPeriodString(requestedAggregationPeriod));
+    }
+
+    /**
+     * Sets requested aggregation period (programmatic API, TimePeriod).
+     */
+    public void setRequestedAggregationPeriod(TimePeriod requestedAggregationPeriod) {
+        ChannelShaper.validateAggregationPeriod(requestedAggregationPeriod);
+        this.requestedAggregationPeriod = requestedAggregationPeriod;
+        addMask(getMessageMask(MessageType.DESCRIBE_PROTOCOL));
+    }
+
+    @Override
+    public void setAggregationPeriodInfo(TimePeriodInfo timePeriodInfo) {
+        this.aggregationPeriodInfo = timePeriodInfo;
+    }
+
+    @Override
+    public TimePeriodInfo getAggregationPeriodInfo() {
+        return aggregationPeriodInfo;
+    }
 
     public QDCollector getCollector(QDContract contract) {
         return collectors[contract.ordinal()];
@@ -334,6 +391,17 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
         if (stableStripe != QDFilter.ANYTHING) {
             desc.setProperty(ProtocolDescriptor.STRIPE_PROPERTY, stableStripe.toString());
         }
+        // Empty string signals "reset to server default" — required because the receiver
+        // accumulates properties and cannot drop keys.
+        TimePeriod requestedPeriod = this.requestedAggregationPeriod;
+        String wireValue = requestedPeriod != null ? requestedPeriod.toString() : "";
+        for (QDContract contract : QD_CONTRACTS) {
+            if (collectors[contract.ordinal()] != null) {
+                MessageDescriptor dataMsg = desc.getReceive(MessageType.forData(contract));
+                if (dataMsg != null)
+                    dataMsg.setProperty(ProtocolDescriptor.REQUESTED_AGGREGATION_PERIOD_PROPERTY, wireValue);
+            }
+        }
     }
 
     @Override
@@ -378,6 +446,19 @@ public class DistributorAdapter extends MessageAdapter implements QDFilter.Updat
             distributor.getAddedRecordProvider().setRecordListener(add ? subListener : RecordListener.VOID);
             distributor.getRemovedRecordProvider().setRecordListener(remove ? subListener : RecordListener.VOID);
         }
+        // Parse aggregationPeriodInfo from server's SEND DATA messages
+        TimePeriodInfo result = TimePeriodInfo.UNKNOWN;
+        for (QDContract contract : QD_CONTRACTS) {
+            if (collectors[contract.ordinal()] == null)
+                continue;
+            MessageDescriptor messageDescriptor = desc.getSend(MessageType.forData(contract));
+            if (messageDescriptor == null)
+                continue;
+            String infoStr = messageDescriptor.getProperty(ProtocolDescriptor.AGGREGATION_PERIOD_INFO_PROPERTY);
+            if (infoStr != null)
+                result = result.add(TimePeriodInfo.valueOf(infoStr));
+        }
+        aggregationPeriodInfo = result;
     }
 
     @Override

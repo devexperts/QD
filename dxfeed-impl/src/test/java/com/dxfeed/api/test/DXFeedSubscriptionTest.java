@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,6 +12,7 @@
 package com.dxfeed.api.test;
 
 import com.devexperts.io.IOUtil;
+import com.devexperts.util.TimePeriodInfo;
 import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.DXFeedEventListener;
 import com.dxfeed.api.DXFeedSubscription;
@@ -38,7 +39,7 @@ public class DXFeedSubscriptionTest {
 
     abstract static class ProcessEventsAccess extends DXFeed {
         public static <T> void processEvents(DXFeedSubscription<T> subscription, List<T> events) {
-            DXFeed.processEvents(subscription, events, 0);
+            DXFeed.processEvents(subscription, events, 0, TimePeriodInfo.UNKNOWN);
         }
     }
 

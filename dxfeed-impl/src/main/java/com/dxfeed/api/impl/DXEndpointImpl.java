@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -41,6 +41,8 @@ import com.devexperts.util.IndexedSet;
 import com.devexperts.util.IndexerFunction;
 import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimePeriod;
+import com.devexperts.util.TimePeriodInfo;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.DXPublisher;
@@ -147,6 +149,11 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
         } else
             executorProvider = DEFAULT_EXECUTOR_PROVIDER;
         executorReference = executorProvider.newReference();
+        // configures requested aggregation period to be negotiated with the remote side
+        if (hasProperty(DXFEED_REQUESTED_AGGREGATION_PERIOD_PROPERTY)) {
+            qdEndpoint.setRequestedAggregationPeriod(
+                TimePeriod.valueOf(getProperty(DXFEED_REQUESTED_AGGREGATION_PERIOD_PROPERTY)));
+        }
         // turns on stream wildcard support if enabled in properties
         if (Boolean.parseBoolean(props.getProperty(DXFEED_WILDCARD_ENABLE_PROPERTY, "false")))
             qdEndpoint.getStream().setEnableWildcards(true);
@@ -166,19 +173,6 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
         // ---- the very last stuff (when everything is already constructed) ---
         // will cause notifications and updateState
         qdEndpoint.addMessageConnectionListener(this);
-    }
-
-    /**
-     * @deprecated Use {@link #DXEndpointImpl(Role, QDEndpoint, Properties)} or {@link Builder} to
-     * {@link Builder#build() build()} endpoints with custom properties.
-     */
-    public DXEndpointImpl(Role role, QDCollector... collectors) {
-        this(role, QDEndpoint.newBuilder()
-            .withScheme(collectors[0].getScheme())
-            .build()
-            .addCollectors(collectors),
-            new Properties());
-        initConnectivity();
     }
 
     private void initConnectivity() {
@@ -310,6 +304,21 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
     public DXEndpoint password(String password) {
         qdEndpoint.password(password);
         return this;
+    }
+
+    @Override
+    public TimePeriod getRequestedAggregationPeriod() {
+        return qdEndpoint.getRequestedAggregationPeriod();
+    }
+
+    @Override
+    public void setRequestedAggregationPeriod(TimePeriod requestedAggregationPeriod) {
+        qdEndpoint.setRequestedAggregationPeriod(requestedAggregationPeriod);
+    }
+
+    @Override
+    public TimePeriodInfo getAggregationPeriodInfo() {
+        return qdEndpoint.getAggregationPeriodInfo();
     }
 
     @Override
@@ -557,6 +566,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
         DXFEED_PROPERTIES_PROPERTY,
         DXFEED_THREAD_POOL_SIZE_PROPERTY,
         DXFEED_AGGREGATION_PERIOD_PROPERTY,
+        DXFEED_REQUESTED_AGGREGATION_PERIOD_PROPERTY,
         DXFEED_ADDRESS_PROPERTY,
         DXFEED_USER_PROPERTY,
         DXFEED_PASSWORD_PROPERTY,

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,8 +14,10 @@ package com.devexperts.qd.qtp.nio;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.monitoring.Monitored;
 import com.devexperts.qd.qtp.AbstractServerConnector;
+import com.devexperts.qd.qtp.MessageAdapter;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.MessageConnectorState;
+import com.devexperts.qd.qtp.MessageConnectors;
 import com.devexperts.qd.qtp.help.MessageConnectorProperty;
 import com.devexperts.qd.qtp.help.MessageConnectorSummary;
 import com.devexperts.qd.stats.QDStats;
@@ -26,6 +28,7 @@ import com.devexperts.util.SystemProperties;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -266,5 +269,19 @@ public class NioServerConnector extends AbstractServerConnector implements NioSe
 
     boolean isCoreActive(NioCore core) {
         return core != null && !core.isClosed();
+    }
+
+    @Override
+    protected List<MessageAdapter> getMessageAdapters() {
+        NioCore core = this.core;
+        if (!isCoreActive(core))
+            return Collections.emptyList();
+        ArrayList<MessageAdapter> result = new ArrayList<>();
+        for (NioConnection connection : core.connections) {
+            MessageAdapter adapter = MessageConnectors.extractAdapter(connection.applicationConnection);
+            if (adapter != null)
+                result.add(adapter);
+        }
+        return result;
     }
 }

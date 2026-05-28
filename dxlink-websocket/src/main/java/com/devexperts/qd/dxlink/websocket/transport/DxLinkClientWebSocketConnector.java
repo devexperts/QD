@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,6 +15,7 @@ import com.devexperts.connector.proto.AbstractTransportConnection;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.qtp.AbstractMessageConnector;
+import com.devexperts.qd.qtp.MessageAdapter;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.MessageConnectorState;
 import com.devexperts.qd.qtp.ReconnectHelper;
@@ -26,6 +27,9 @@ import com.devexperts.transport.stats.ConnectionStats;
 import com.devexperts.transport.stats.EndpointStats;
 import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  * The <code>DxLinkClientWebSocketConnector</code> handles standard client WebSocket.
@@ -197,6 +201,17 @@ public class DxLinkClientWebSocketConnector extends AbstractMessageConnector
             transportConnection.close();
         }
         return transportConnection;
+    }
+
+    @Override
+    protected List<MessageAdapter> getMessageAdapters() {
+        WebSocketTransportConnection transportConnection = this.transportConnection; // volatile read
+        if (transportConnection == null)
+            return Collections.emptyList();
+        MessageAdapter adapter = transportConnection.getMessageAdapter();
+        if (adapter == null)
+            return Collections.emptyList();
+        return Collections.singletonList(adapter);
     }
 
     public ReconnectHelper getReconnectHelper() {

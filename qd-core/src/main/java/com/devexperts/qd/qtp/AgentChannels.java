@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -106,6 +106,15 @@ public class AgentChannels {
          * or <code>false</code> if all accumulated data were retrieved.
          */
         public boolean retrieve(RecordProvider recordProvider, QDContract contract);
+
+        /**
+         * Called by a {@link ChannelShaper} when its {@code defaultAggregationPeriod},
+         * {@code minAggregationPeriod} or {@code maxAggregationPeriod} bound changes so the owner
+         * can re-resolve effective per-channel periods against connector-level bounds and refresh
+         * the {@code aggregationPeriodInfo} reported to the remote side. Default implementation is
+         * a no-op for owners that do not participate in remote aggregation-period negotiation.
+         */
+        public default void synchronizeAggregationPeriods() {}
     }
 
     private final Owner owner;

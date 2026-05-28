@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -15,12 +15,15 @@ import com.devexperts.io.BufferedInput;
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.qtp.AbstractQTPParser;
+import com.devexperts.qd.qtp.MessageAdapter;
 import com.devexperts.qd.qtp.MessageConsumer;
 import com.devexperts.qd.qtp.ProtocolDescriptor;
 import com.devexperts.qd.qtp.RuntimeQTPException;
 import com.devexperts.qd.qtp.fieldreplacer.FieldReplacersCache;
+import com.devexperts.util.TimePeriodInfo;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -45,16 +48,20 @@ class DxLinkWebSocketQTPParser extends AbstractQTPParser {
 
     private final DxLinkJsonMessageParser messageParser;
     private final HeartbeatProcessor heartbeatProcessor;
+    private final MessageAdapter adapter;
+    private final Map<Integer, Long> channelAggregationPeriods = new HashMap<>();
     private ProtocolDescriptor descriptor = ProtocolDescriptor.newPeerProtocolDescriptor(null);
     private MessageConsumer currentConsumer;
 
     DxLinkWebSocketQTPParser(DataScheme scheme, boolean supportsMixedSubscription, FieldReplacersCache fieldReplacer,
-        HeartbeatProcessor heartbeatProcessor, Function<DxLinkClientReceiver, DxLinkJsonMessageParser> factory)
+        HeartbeatProcessor heartbeatProcessor, MessageAdapter adapter,
+        Function<DxLinkClientReceiver, DxLinkJsonMessageParser> factory)
     {
         super(scheme);
         setMixedSubscription(supportsMixedSubscription);
         setFieldReplacers(fieldReplacer);
         this.heartbeatProcessor = heartbeatProcessor;
+        this.adapter = adapter;
         this.messageParser = factory.apply(new DxLinkClientReceiverImpl());
     }
 
@@ -133,6 +140,16 @@ class DxLinkWebSocketQTPParser extends AbstractQTPParser {
             Map<String, List<String>> eventFields)
         {
             messageParser.updateConfigChannelParser(channel, dataFormat, eventFields);
+            if (aggregationPeriod != null) {
+                channelAggregationPeriods.put(channel, aggregationPeriod);
+            } else {
+                channelAggregationPeriods.remove(channel);
+            }
+            TimePeriodInfo result = TimePeriodInfo.UNKNOWN;
+            for (Long period : channelAggregationPeriods.values()) {
+                result = result.add(period);
+            }
+            adapter.setAggregationPeriodInfo(result);
         }
 
         @Override

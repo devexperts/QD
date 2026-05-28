@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,18 +14,22 @@ package com.devexperts.qd.sample;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDStream;
+import com.devexperts.qd.stats.QDStats;
 
 import java.io.PrintStream;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 class TestThroughputConfig {
+
     @Retention(RetentionPolicy.RUNTIME) @interface Doc { String value(); }
     @Retention(RetentionPolicy.RUNTIME) @interface Hex {}
 
@@ -34,6 +38,9 @@ class TestThroughputConfig {
 
     @Doc("number of different symbols")
     public int symbols = 300000;
+
+    @Doc("symbol's length")
+    public int symlength = 10;
 
     @Doc("number of records in the data scheme")
     public int records = 1;
@@ -99,55 +106,85 @@ class TestThroughputConfig {
     @Doc("report stats every N seconds")
     public int statperiod = 1;
 
+    @Doc("report counters after every N stat lines, 0 -- don't report")
+    public int reportcounters = 0;
+
     @Doc("stop after num of stat lines, 0 -- don't stop")
     public int stopafter = 0;
 
+    @Doc("skip first N stats for warm up")
+    public int warmup = 10;
+
     @Doc("writes report on stop to file")
     public String stopreport = "throughput.report";
+
+    @Doc("Tukey Fence outliers truncation coefficient, 0 -- don't remove outliers")
+    public double tukeyk = 1.5;
+
+    @Doc("test meta information. Format: tag=value,...")
+    public Map<String, String> meta = new TreeMap<>();
 
     static TestThroughputConfig parseConfig(String[] args) {
         // Read args
         Properties props = new Properties();
         props.put("collector", "ticker");
-    args_loop:
+
+        Map<String, Field> fieldMap =
+            Arrays.stream(TestThroughputConfig.class.getFields())
+                .collect(Collectors.toMap(f -> f.getName().toLowerCase(Locale.ROOT), f -> f));
         for (int i = 0; i < args.length; i++) {
             String arg = args[i].trim();
             if (arg.isEmpty())
                 continue;
-            if (i < args.length)
-                for (Field f : TestThroughputConfig.class.getFields()) {
-                    if (arg.equalsIgnoreCase("-" + f.getName())) {
-                        if (f.getType() == boolean.class) {
-                            props.put(f.getName(), "true");
-                            continue args_loop;
-                        } else if (i < args.length - 1) {
-                            props.put(f.getName(), args[++i]);
-                            continue args_loop;
-                        }
-                    }
+            Field f = null;
+            if (arg.startsWith("-"))
+                f = fieldMap.get(arg.substring(1).toLowerCase(Locale.ROOT));
+            if (f == null) {
+                System.err.println("Unrecognized: " + arg);
+                return null;
+            }
+            if (f.getType() == boolean.class) {
+                props.put(f.getName(), "true");
+            } else {
+                if (i >= args.length - 1) {
+                    System.err.println("Missing arg '" + arg + "' value");
+                    return null;
                 }
-            System.err.println("Unrecognized: " + arg);
-            return null;
+                String argVal = args[++i];
+                props.put(f.getName(), argVal);
+            }
         }
+
         // Parse
         TestThroughputConfig config = new TestThroughputConfig();
         try {
             config.collector = getCollectorFactory(props.getProperty("collector"));
             for (Field field : TestThroughputConfig.class.getFields()) {
+                if (field.getName().equals("collector"))
+                    continue;
                 String value = props.getProperty(field.getName());
-                if (value != null)
+                if (value != null) {
                     try {
-                        if (field.getType() == int.class)
+                        if (field.getType() == int.class) {
                             field.set(config, (int) parseNumber(value));
-                        if (field.getType() == long.class)
+                        } else if (field.getType() == long.class) {
                             field.set(config, parseNumber(value));
-                        else if (field.getType() == boolean.class)
+                        } else if (field.getType() == double.class) {
+                            field.set(config, parseDouble(value));
+                        } else if (field.getType() == boolean.class) {
                             field.set(config, Boolean.valueOf(value));
-                        else if (field.getType() == String.class)
+                        } else if (field.getType() == String.class) {
                             field.set(config, value);
+                        } else if ("meta".equals(field.getName())) {
+                            field.set(config, parseMeta(value));
+                        } else {
+                            // this should never happen
+                            throw new UnsupportedOperationException("Unexpected field type: " + field.getName());
+                        }
                     } catch (IllegalAccessException e) {
-                        e.printStackTrace();  // should not happen.
+                        throw new IllegalStateException(e);
                     }
+                }
             }
         } catch (IllegalArgumentException e) {
             System.err.println(e.getMessage());
@@ -188,16 +225,21 @@ class TestThroughputConfig {
     void dumpConfig(PrintStream out) {
         Map<String, String> sys = new TreeMap<>();
         // Properties.stringPropertyNames() is properly synchronized to avoid ConcurrentModificationException.
-        for (String key : System.getProperties().stringPropertyNames())
-            if (key.startsWith("com.devexperts.qd.") || key.equals("java.vm.name") || key.equals("java.version"))
+        for (String key : System.getProperties().stringPropertyNames()) {
+            if (key.startsWith("com.devexperts.qd.") || key.startsWith("dxfeed.") ||
+                key.equals("java.vm.name") || key.equals("java.version"))
+            {
                 sys.put(key, System.getProperty(key));
+            }
+        }
         out.println("SYSTEM: " + QDFactory.getVersion() + " " + sys);
+        meta.forEach((key, value) -> out.println("  META: " + key + " = " + value));
         try {
             for (Field f : TestThroughputConfig.class.getFields()) {
                 out.println("CONFIG: " + f.getName() + " = " + toString(f, f.get(this)));
             }
         } catch (IllegalAccessException e) {
-            e.printStackTrace();  // should not happen
+            throw new IllegalStateException(e);
         }
     }
 
@@ -230,6 +272,29 @@ class TestThroughputConfig {
         }
     }
 
+    private static double parseDouble(String arg) {
+        try {
+            return Double.parseDouble(arg);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Unrecognized number: " + arg);
+        }
+    }
+
+    private static Map<String, String> parseMeta(String value) {
+        Map<String, String> tvals = new TreeMap<>();
+        String[] tags = value.split(",");
+        for (String tag : tags) {
+            if (tag.isEmpty())
+                continue;
+            String[] tagValue = tag.split("=", 2);
+            if (tagValue.length < 2 || tagValue[0].isEmpty() || tagValue[1].isEmpty()) {
+                throw new IllegalArgumentException("Invalid '-meta' arg value: " + value);
+            }
+            tvals.put(tagValue[0], tagValue[1]);
+        }
+        return tvals;
+    }
+
     static void help() {
         System.err.println("Usage: java " + TestThroughput.class.getName());
         TestThroughputConfig def = new TestThroughputConfig();
@@ -245,17 +310,20 @@ class TestThroughputConfig {
                 System.err.println(sb);
             }
         } catch (IllegalAccessException e) {
-            e.printStackTrace(); // should not happen
+            throw new IllegalStateException(e);
         }
     }
 
     static interface CollectorFactory {
-        QDCollector createCollector(TestThroughputConfig config, TestThroughputScheme scheme);
+        QDCollector createCollector(TestThroughputConfig config, TestThroughputScheme scheme, QDStats stats);
     }
 
     private static final CollectorFactory TICKER = new CollectorFactory() {
-        public QDCollector createCollector(TestThroughputConfig config, TestThroughputScheme scheme) {
-            return QDFactory.getDefaultFactory().createTicker(scheme);
+        public QDCollector createCollector(TestThroughputConfig config, TestThroughputScheme scheme, QDStats stats) {
+            return QDFactory.getDefaultFactory().tickerBuilder()
+                .withScheme(scheme)
+                .withStats(stats.create(QDStats.SType.TICKER))
+                .build();
         }
 
         public String toString() {
@@ -264,8 +332,11 @@ class TestThroughputConfig {
     };
 
     private static final CollectorFactory STREAM = new CollectorFactory() {
-        public QDCollector createCollector(TestThroughputConfig config, TestThroughputScheme scheme) {
-            QDStream stream = QDFactory.getDefaultFactory().createStream(scheme);
+        public QDCollector createCollector(TestThroughputConfig config, TestThroughputScheme scheme, QDStats stats) {
+            QDStream stream = QDFactory.getDefaultFactory().streamBuilder()
+                .withScheme(scheme)
+                .withStats(stats.create(QDStats.SType.STREAM))
+                .build();
             if (config.wildcard)
                 stream.setEnableWildcards(true);
             return stream;
@@ -277,8 +348,11 @@ class TestThroughputConfig {
     };
 
     private static final CollectorFactory HISTORY = new CollectorFactory() {
-        public QDCollector createCollector(TestThroughputConfig config, TestThroughputScheme scheme) {
-            return QDFactory.getDefaultFactory().createHistory(scheme);
+        public QDCollector createCollector(TestThroughputConfig config, TestThroughputScheme scheme, QDStats stats) {
+            return QDFactory.getDefaultFactory().historyBuilder()
+                .withScheme(scheme)
+                .withStats(stats.create(QDStats.SType.HISTORY))
+                .build();
         }
 
         public String toString() {

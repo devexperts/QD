@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,6 +16,7 @@ import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.connector.proto.Configurable;
 import com.devexperts.connector.proto.ConfigurationKey;
 import com.devexperts.connector.proto.TransportConnection;
+import com.devexperts.logging.Logging;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.dxlink.websocket.transport.DxLinkLoginHandlerFactory;
 import com.devexperts.qd.dxlink.websocket.transport.TokenDxLinkLoginHandlerFactory;
@@ -40,23 +41,33 @@ import java.util.regex.Pattern;
 
 /**
  * DxLink Connection protocol implementation.
+ *
+ * <p>JMX attribute name and system property are spelled {@code requestedAggregationPeriod}.
+ * The legacy {@code acceptAggregationPeriod} JMX attribute and system property are kept
+ * as deprecated aliases. The DxLink JSON wire field is still {@code acceptAggregationPeriod}
+ * pending coordinated rename with the DxLink protocol team.
  */
 public class DxLinkWebSocketApplicationConnectionFactory extends ApplicationConnectionFactory {
-    private static final Pattern acceptEventFieldsValidator =
+    private static final Logging log = Logging.getLogging(DxLinkWebSocketApplicationConnectionFactory.class);
+
+    private static final Pattern ACCEPT_EVENT_FIELDS_VALIDATOR =
         Pattern.compile("^\\((\\w+\\[\\w+(,\\w+)*])(,\\w+\\[\\w+(,\\w+)*])*\\)$");
-    private static final Pattern acceptEventFieldsParser = Pattern.compile("(\\w+)\\[([^]]+)]");
+    private static final Pattern ACCEPT_EVENT_FIELDS_PARSER = Pattern.compile("(\\w+)\\[([^]]+)]");
     private static final String APPLICATION_VERSION =
         SystemProperties.getProperty("com.devexperts.qd.dxlink.applicationVersion", null);
     private static final String ACCEPT_EVENT_FIELDS =
         SystemProperties.getProperty("com.devexperts.qd.dxlink.websocket.acceptEventFields", "");
     private static final TimePeriod DEFAULT_HEARTBEAT_TIMEOUT = TimePeriod.valueOf(
         SystemProperties.getProperty("com.devexperts.qd.dxlink.websocket.heartbeatTimeout", "60s"));
-    private static final TimePeriod ACCEPT_AGGREGATION_PERIOD = TimePeriod.valueOf(
-        SystemProperties.getProperty("com.devexperts.qd.dxlink.feedService.acceptAggregationPeriod", "0s"));
+
+    private static final String REQUESTED_AGGREGATION_PERIOD_PROPERTY =
+        "com.devexperts.qd.dxlink.feedService.requestedAggregationPeriod";
+    private static final String LEGACY_ACCEPT_AGGREGATION_PERIOD_PROPERTY =
+        "com.devexperts.qd.dxlink.feedService.acceptAggregationPeriod";
+    private static final TimePeriod REQUESTED_AGGREGATION_PERIOD = readRequestedAggregationPeriodProperty();
 
     private TimePeriod heartbeatTimeout = DEFAULT_HEARTBEAT_TIMEOUT;
     private String applicationVersion = APPLICATION_VERSION;
-    private TimePeriod acceptAggregationPeriod = ACCEPT_AGGREGATION_PERIOD;
     private String acceptEventFields = ACCEPT_EVENT_FIELDS;
     private Map<String, List<String>> acceptEventFieldsByType = Collections.emptyMap();
     private MessageAdapter.ConfigurableFactory factory;
@@ -66,6 +77,10 @@ public class DxLinkWebSocketApplicationConnectionFactory extends ApplicationConn
         if (factory == null)
             throw new NullPointerException();
         this.factory = factory;
+        if (REQUESTED_AGGREGATION_PERIOD != null) {
+            factory.setConfiguration(MessageConnectors.REQUESTED_AGGREGATION_PERIOD_CONFIGURATION_KEY,
+                REQUESTED_AGGREGATION_PERIOD);
+        }
     }
 
     @Override
@@ -92,6 +107,7 @@ public class DxLinkWebSocketApplicationConnectionFactory extends ApplicationConn
                 adapter.supportsMixedSubscription(),
                 adapter.getFieldReplacer(),
                 heartbeatProcessor,
+                adapter,
                 receiver -> new DxLinkJsonMessageParser(receiver, delegates)
             ),
             new DxLinkWebSocketQTPComposer(
@@ -99,7 +115,8 @@ public class DxLinkWebSocketApplicationConnectionFactory extends ApplicationConn
                 delegates,
                 new DxLinkJsonMessageFactory(),
                 heartbeatProcessor,
-                this
+                this,
+                adapter
             ),
             heartbeatProcessor
         );
@@ -148,18 +165,49 @@ public class DxLinkWebSocketApplicationConnectionFactory extends ApplicationConn
     public QDLoginHandler getLogin() { return loginHandler; }
 
     /**
-     * Returns accept aggregation period for this application protocol.
-     * @return accept aggregation period for this application protocol
+     * Returns the aggregation period this client requests from the remote side.
+     * @return the requested aggregation period
      */
-    public TimePeriod getAcceptAggregationPeriod() {
-        return acceptAggregationPeriod;
+    public TimePeriod getRequestedAggregationPeriod() {
+        return factory.getConfiguration(MessageConnectors.REQUESTED_AGGREGATION_PERIOD_CONFIGURATION_KEY);
     }
 
-    @Configurable(description = "accept aggregation period")
+    @Configurable(description = "aggregation period requested from the remote side")
+    public void setRequestedAggregationPeriod(TimePeriod requestedAggregationPeriod) {
+        factory.setConfiguration(MessageConnectors.REQUESTED_AGGREGATION_PERIOD_CONFIGURATION_KEY,
+            requestedAggregationPeriod);
+    }
+
+    /**
+     * @deprecated use {@link #getRequestedAggregationPeriod()}.
+     */
+    @Deprecated
+    public TimePeriod getAcceptAggregationPeriod() {
+        return getRequestedAggregationPeriod();
+    }
+
+    /**
+     * @deprecated use {@link #setRequestedAggregationPeriod(TimePeriod)} and the
+     *     {@code requestedAggregationPeriod} address-string / JMX property.
+     */
+    @Deprecated
+    @Configurable(description = "deprecated alias for requestedAggregationPeriod")
     public void setAcceptAggregationPeriod(TimePeriod acceptAggregationPeriod) {
-        if (acceptAggregationPeriod.getTime() < 0)
-            throw new IllegalArgumentException("cannot be negative");
-        this.acceptAggregationPeriod = acceptAggregationPeriod;
+        factory.setConfiguration(MessageConnectors.REQUESTED_AGGREGATION_PERIOD_CONFIGURATION_KEY,
+            acceptAggregationPeriod);
+    }
+
+    private static TimePeriod readRequestedAggregationPeriodProperty() {
+        String requested = SystemProperties.getProperty(REQUESTED_AGGREGATION_PERIOD_PROPERTY, null);
+        if (requested != null)
+            return TimePeriod.valueOf(requested);
+        String legacy = SystemProperties.getProperty(LEGACY_ACCEPT_AGGREGATION_PERIOD_PROPERTY, null);
+        if (legacy != null) {
+            log.warn("System property '" + LEGACY_ACCEPT_AGGREGATION_PERIOD_PROPERTY +
+                "' is deprecated; use '" + REQUESTED_AGGREGATION_PERIOD_PROPERTY + "' instead");
+            return TimePeriod.valueOf(legacy);
+        }
+        return null;
     }
 
     /**
@@ -192,10 +240,10 @@ public class DxLinkWebSocketApplicationConnectionFactory extends ApplicationConn
     }
 
     static Map<String, List<String>> parseAcceptEventFields(String acceptEventFields) {
-        if (!acceptEventFieldsValidator.matcher(acceptEventFields).matches())
+        if (!ACCEPT_EVENT_FIELDS_VALIDATOR.matcher(acceptEventFields).matches())
             throw new IllegalArgumentException("Invalid acceptEventFields format");
         Map<String, List<String>> result = new HashMap<>();
-        Matcher matcher = acceptEventFieldsParser.matcher(acceptEventFields);
+        Matcher matcher = ACCEPT_EVENT_FIELDS_PARSER.matcher(acceptEventFields);
         while (matcher.find()) {
             String eventType = matcher.group(1);
             String[] fields = matcher.group(2).split(",");

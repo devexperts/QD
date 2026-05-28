@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,6 +18,7 @@ import com.devexperts.logging.Logging;
 import com.devexperts.util.IndexedSet;
 import com.devexperts.util.IndexerFunction;
 import com.devexperts.util.TimePeriod;
+import com.devexperts.util.TimePeriodInfo;
 import com.dxfeed.api.osub.ObservableSubscription;
 import com.dxfeed.api.osub.ObservableSubscriptionChangeListener;
 import com.dxfeed.api.osub.TimeSeriesSubscriptionSymbol;
@@ -234,6 +235,13 @@ import javax.annotation.Nullable;
 public class DXFeedSubscription<E> implements Serializable, ObservableSubscription<E>, AutoCloseable {
     private static final long serialVersionUID = 0;
 
+    // This constant is linked with same one in ChannelShaper - AGGREGATION_PERIOD_MAX_VALUE.
+    /**
+     * Maximum aggregation period (24 hours).
+     * Any aggregation period greater than this value is rejected.
+     */
+    public static final TimePeriod AGGREGATION_PERIOD_MAX_VALUE = TimePeriod.valueOf(24 * 3600 * 1000L);
+
     // These constants are linked with same ones in RecordBuffer - POOLED_CAPACITY and UNLIMITED_CAPACITY.
     /**
      * The optimal events' batch limit for single notification in {@link DXFeedEventListener#eventsReceived}.
@@ -263,6 +271,7 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
     private transient volatile TimePeriod aggregationPeriod;
     private transient volatile int eventsBatchLimit = OPTIMAL_BATCH_LIMIT;
     private transient volatile long totalDroppedEvents;
+    private transient volatile TimePeriodInfo aggregationPeriodInfo = TimePeriodInfo.UNKNOWN;
 
     private final SubscriptionController subscriptionController = new DXFeedSubscriptionController();
 
@@ -599,9 +608,25 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
     }
 
     /**
-     * Returns the aggregation period for data for this subscription instance.
+     * Returns the effective aggregation period applied to events delivered to this subscription.
+     * The value reflects the maximum of {@link DXEndpoint#DXFEED_AGGREGATION_PERIOD_PROPERTY} and
+     * {@link #getAggregationPeriod()} as it was actually used when events were emitted to listeners.
      *
-     * @return The aggregation period for data, represented as a {@link TimePeriod} object.
+     * <p>Informational only: the value is updated when events are delivered to listeners.
+     * Before the first batch of events arrives the method returns {@link TimePeriodInfo#UNKNOWN}.
+     *
+     * @return effective aggregation period info, or {@link TimePeriodInfo#UNKNOWN} if no info is available yet
+     * @see <a href="DXEndpoint.html#aggregationPeriodSection">Aggregation period</a>
+     */
+    public TimePeriodInfo getAggregationPeriodInfo() {
+        return aggregationPeriodInfo;
+    }
+
+    /**
+     * Returns the aggregation period for data for this subscription instance,
+     * or {@code null} if none was set.
+     *
+     * @return the aggregation period, or {@code null} if not set
      */
     public TimePeriod getAggregationPeriod() {
         return aggregationPeriod;
@@ -609,13 +634,18 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
 
     /**
      * Sets the aggregation period for data.
-     * This method sets a new aggregation period for data, which will only take effect on the next iteration of
-     * data notification. For example, if the current aggregation period is 5 seconds and it is changed
-     * to 1 second, the next call to the next call to the retrieve method may take up to 5 seconds, after which
-     * the new aggregation period will take effect.
-     * @param aggregationPeriod the new aggregation period for data
+     * The new aggregation period takes effect only after the currently running one elapses.
+     *
+     * @param aggregationPeriod the new aggregation period for data; must not exceed
+     *        {@link #AGGREGATION_PERIOD_MAX_VALUE}. {@code null} clears any previous setting.
+     * @throws IllegalArgumentException if {@code aggregationPeriod} exceeds
+     *        {@link #AGGREGATION_PERIOD_MAX_VALUE}
+     * @see <a href="DXEndpoint.html#aggregationPeriodSection">Aggregation period</a>
      */
     public synchronized void setAggregationPeriod(TimePeriod aggregationPeriod) {
+        // Validation mirrors ChannelShaper.validateAggregationPeriod (qd-core module boundary)
+        if (aggregationPeriod != null && aggregationPeriod.getTime() > AGGREGATION_PERIOD_MAX_VALUE.getTime())
+            throw new IllegalArgumentException("Aggregation period is too large: " + aggregationPeriod);
         if (Objects.equals(this.aggregationPeriod, aggregationPeriod))
             return;
         this.aggregationPeriod = aggregationPeriod;
@@ -750,10 +780,13 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
      * event listeners. This is a package-private method for use by {@link DXFeed} class only.
      *
      * @param events the list of received events.
-     * @param totalDroppedEvents the cumulative count of all events dropped since the subscription was created
+     * @param totalDroppedEvents the cumulative count of all events dropped since the subscription was created.
+     * @param aggregationPeriodInfo the effective aggregation period info to publish via
+     *        {@link #getAggregationPeriodInfo()}; {@link TimePeriodInfo#UNKNOWN} when not available.
      */
     @Internal
-    void processEvents(List<E> events, long totalDroppedEvents) {
+    void processEvents(List<E> events, long totalDroppedEvents, TimePeriodInfo aggregationPeriodInfo) {
+        this.aggregationPeriodInfo = aggregationPeriodInfo;
         this.totalDroppedEvents = totalDroppedEvents;
         DXFeedEventListener<E> eventListeners = this.eventListeners; // atomic volatile read
         if (eventListeners != null)
@@ -826,6 +859,7 @@ public class DXFeedSubscription<E> implements Serializable, ObservableSubscripti
         }
         eventSymbolIndexer = getClass() == DXFeedSubscription.class ? IndexerFunction.DEFAULT : this::undecorateSymbol;
         symbols = IndexedSet.create(eventSymbolIndexer);
+        aggregationPeriodInfo = TimePeriodInfo.UNKNOWN;
     }
 
     private IndexedSet<Object, Object> decorateSymbols(Collection<?> symbols) {

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -168,4 +168,79 @@ public interface MessageConnectorMBean {
      * @param fieldReplacer field replacers specification.
      */
     public void setFieldReplacer(String fieldReplacer);
+
+    // ========== Aggregation Period Management ==========
+    // See <a href="../../../../com/dxfeed/api/DXEndpoint.html#aggregationPeriodSection">DXEndpoint, "Aggregation period"</a>
+    // for the overview of three aggregation period mechanisms and their interactions.
+
+    /**
+     * Returns the current effective aggregation period info as JSON across all active connections.
+     * Format: {@code {"min":1.5,"max":2.0}} (seconds with decimals),
+     * or {@code {"min":-1,"max":-1}} if not available.
+     */
+    public default String getAggregationPeriodInfoStr() { return null; }
+
+    /**
+     * Returns the client-requested aggregation period string.
+     * Returns {@code null} if not set.
+     * Applicable for client-side connectors (propagated to all DistributorAdapters).
+     */
+    public default String getRequestedAggregationPeriod() { return null; }
+
+    /**
+     * Sets the requested aggregation period to send to the server via DESCRIBE_PROTOCOL.
+     * Propagated to all active DistributorAdapter connections.
+     *
+     * @param requestedAggregationPeriod aggregation period string (e.g. "1s", "0.5s"),
+     *        or {@code "undefined"}/{@code null}/empty to reset (server uses its default)
+     */
+    public default void setRequestedAggregationPeriod(String requestedAggregationPeriod) {}
+
+    /**
+     * Returns the default aggregation period for server-side connections, or {@code null} if not set.
+     * Alias: {@link #getAggregationPeriod()}.
+     */
+    public default String getDefaultAggregationPeriod() { return null; }
+
+    /**
+     * Sets the default aggregation period applied when client doesn't specify one.
+     * Propagated to all active AgentAdapter connections.
+     *
+     * @param defaultAggregationPeriod default aggregation period string (e.g. "1s"), or {@code null} to reset
+     */
+    public default void setDefaultAggregationPeriod(String defaultAggregationPeriod) {}
+
+    /**
+     * Returns the default aggregation period (alias for {@link #getDefaultAggregationPeriod()}).
+     */
+    public default String getAggregationPeriod() {
+        return getDefaultAggregationPeriod();
+    }
+
+    /**
+     * Returns the minimum aggregation period bound for server-side connections, or {@code null} if not set.
+     */
+    public default String getMinAggregationPeriod() { return null; }
+
+    /**
+     * Sets the minimum bound for aggregation period validation.
+     * Client requests below this value will be clamped up.
+     *
+     * @param minAggregationPeriod minimum aggregation period string (e.g. "0.5s"), or {@code null} to reset
+     */
+    public default void setMinAggregationPeriod(String minAggregationPeriod) {}
+
+    /**
+     * Returns the maximum aggregation period bound for server-side connections, or {@code null} if not set.
+     */
+    public default String getMaxAggregationPeriod() { return null; }
+
+    /**
+     * Sets the maximum bound for aggregation period validation.
+     * Client requests above this value will be clamped down.
+     *
+     * @param maxAggregationPeriod maximum aggregation period string (e.g. "5s"), or {@code null} to reset
+     */
+    public default void setMaxAggregationPeriod(String maxAggregationPeriod) {}
+
 }

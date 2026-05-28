@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.qd.qtp.socket;
 
+import com.devexperts.annotation.Experimental;
 import com.devexperts.util.IndexedSet;
 import com.devexperts.util.InvalidFormatException;
 
@@ -81,11 +82,20 @@ public class ConnectOrder {
         return name;
     }
 
-    boolean isRandomized() {
+    /**
+     * @return true if the instance represents a randomized connection choosing strategy
+     */
+    @Experimental
+    public boolean isRandomized() {
         return randomized;
     }
 
-    boolean isResetOnConnect() {
+    /**
+     * @return true if the connection choosing strategy supposes starting from the first candidate after a
+     *     successful connection.
+     */
+    @Experimental
+    public boolean isResetOnConnect() {
         return resetOnConnect;
     }
 }

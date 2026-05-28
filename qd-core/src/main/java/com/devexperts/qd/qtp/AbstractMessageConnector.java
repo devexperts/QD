@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,18 +11,31 @@
  */
 package com.devexperts.qd.qtp;
 
+import com.devexperts.annotation.Internal;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
+import com.devexperts.connector.proto.ConfigurationKey;
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.qtp.help.MessageConnectorProperty;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.transport.stats.ConnectionStats;
 import com.devexperts.transport.stats.EndpointStats;
+import com.devexperts.util.TimePeriod;
+import com.devexperts.util.TimePeriodInfo;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BiConsumer;
 
 public abstract class AbstractMessageConnector implements MessageConnector {
+
+    static TimePeriod parseAggregationPeriodString(String value) {
+        if (value == null || value.isEmpty() || "-1".equals(value) || "undefined".equalsIgnoreCase(value))
+            return null;
+        return TimePeriod.valueOf(value);
+    }
+
     protected Logging log;
 
     private ApplicationConnectionFactory factory;
@@ -309,6 +322,148 @@ public abstract class AbstractMessageConnector implements MessageConnector {
     public synchronized void addClosedConnectionStats(ConnectionStats stats) {
         closedConnectionsStats.addClosedConnectionCount(1);
         closedConnectionsStats.addConnectionStats(stats);
+    }
+
+    // ========== Aggregation Period Management ==========
+    // Connector delegates to factory for storage (single source of truth).
+    // SYNC: write(synchronized(this) via setter + propagateSetting), read(synchronized(this) via getter)
+    // ConfigurationKey delegation without reconfigure() — live propagation to active adapters.
+
+    @Override
+    public synchronized String getRequestedAggregationPeriod() {
+        TimePeriod period = factory.getConfiguration(MessageConnectors.REQUESTED_AGGREGATION_PERIOD_CONFIGURATION_KEY);
+        return period == null ? null : period.toString();
+    }
+
+    @Override
+    @MessageConnectorProperty("Requested aggregation period sent to server (client-side)")
+    public synchronized void setRequestedAggregationPeriod(String requestedAggregationPeriod) {
+        TimePeriod period = parseAggregationPeriodString(requestedAggregationPeriod);
+        ChannelShaper.validateAggregationPeriod(period);
+        if (Objects.equals(period,
+            factory.getConfiguration(MessageConnectors.REQUESTED_AGGREGATION_PERIOD_CONFIGURATION_KEY)))
+        {
+            return;
+        }
+        propagateSetting(MessageConnectors.REQUESTED_AGGREGATION_PERIOD_CONFIGURATION_KEY, period,
+            MessageAdapter::setRequestedAggregationPeriod);
+    }
+
+    @Override
+    public TimePeriodInfo getAggregationPeriodInfo() {
+        TimePeriodInfo result = TimePeriodInfo.UNKNOWN;
+        for (MessageAdapter adapter : getMessageAdapters()) {
+            result = result.add(adapter.getAggregationPeriodInfo());
+        }
+        return result;
+    }
+
+    @Override
+    public String getAggregationPeriodInfoStr() {
+        return getAggregationPeriodInfo().toString();
+    }
+
+    @Override
+    public synchronized String getDefaultAggregationPeriod() {
+        TimePeriod period = factory.getConfiguration(MessageConnectors.DEFAULT_AGGREGATION_PERIOD_CONFIGURATION_KEY);
+        return period == null ? null : period.toString();
+    }
+
+    @Override
+    @MessageConnectorProperty("Default aggregation period for server-side connections")
+    public synchronized void setDefaultAggregationPeriod(String defaultAggregationPeriod) {
+        TimePeriod period = parseAggregationPeriodString(defaultAggregationPeriod);
+        ChannelShaper.validateAggregationPeriod(period);
+        if (Objects.equals(period,
+            factory.getConfiguration(MessageConnectors.DEFAULT_AGGREGATION_PERIOD_CONFIGURATION_KEY)))
+        {
+            return;
+        }
+        propagateSetting(MessageConnectors.DEFAULT_AGGREGATION_PERIOD_CONFIGURATION_KEY, period,
+            MessageAdapter::setDefaultAggregationPeriod);
+    }
+
+    /**
+     * Alias for {@link #setDefaultAggregationPeriod} to support address format {@code aggregationPeriod=1s}.
+     */
+    @MessageConnectorProperty("Default aggregation period for server-side connections (alias)")
+    public void setAggregationPeriod(String period) {
+        setDefaultAggregationPeriod(period);
+    }
+
+    @Override
+    public synchronized String getMinAggregationPeriod() {
+        TimePeriod period = factory.getConfiguration(MessageConnectors.MIN_AGGREGATION_PERIOD_CONFIGURATION_KEY);
+        return period == null ? null : period.toString();
+    }
+
+    @Override
+    @MessageConnectorProperty("Minimum aggregation period bound for server-side connections")
+    public synchronized void setMinAggregationPeriod(String minAggregationPeriod) {
+        TimePeriod period = parseAggregationPeriodString(minAggregationPeriod);
+        ChannelShaper.validateAggregationPeriod(period);
+        if (Objects.equals(period,
+            factory.getConfiguration(MessageConnectors.MIN_AGGREGATION_PERIOD_CONFIGURATION_KEY)))
+        {
+            return;
+        }
+        propagateSetting(MessageConnectors.MIN_AGGREGATION_PERIOD_CONFIGURATION_KEY, period,
+            MessageAdapter::setMinAggregationPeriod);
+    }
+
+    @Override
+    public synchronized String getMaxAggregationPeriod() {
+        TimePeriod period = factory.getConfiguration(MessageConnectors.MAX_AGGREGATION_PERIOD_CONFIGURATION_KEY);
+        return period == null ? null : period.toString();
+    }
+
+    @Override
+    @MessageConnectorProperty("Maximum aggregation period bound for server-side connections")
+    public synchronized void setMaxAggregationPeriod(String maxAggregationPeriod) {
+        TimePeriod period = parseAggregationPeriodString(maxAggregationPeriod);
+        ChannelShaper.validateAggregationPeriod(period);
+        if (Objects.equals(period,
+            factory.getConfiguration(MessageConnectors.MAX_AGGREGATION_PERIOD_CONFIGURATION_KEY)))
+        {
+            return;
+        }
+        propagateSetting(MessageConnectors.MAX_AGGREGATION_PERIOD_CONFIGURATION_KEY, period,
+            MessageAdapter::setMaxAggregationPeriod);
+    }
+
+    /**
+     * Clones factory, sets the configuration value on the clone, and propagates to all active adapters.
+     * Does NOT call {@link #reconfigure()} — aggregation period changes are applied live without reconnection.
+     */
+    // SYNC: this
+    private void propagateSetting(
+        ConfigurationKey<TimePeriod> key, TimePeriod value,
+        BiConsumer<MessageAdapter, String> adapterSetter)
+    {
+        // Clone factory before mutating (copy-on-write invariant).
+        // Connectors whose factory does not own the key (e.g. tape writer, role mismatch) would
+        // otherwise silently drop the setting — fail fast with the connector and key name instead.
+        factory = factory.clone();
+        if (!factory.setConfiguration(key, value))
+            throw new IllegalArgumentException(getName() + " does not support '" + key.getName() + "'");
+        // Read back effective value (factory setter may have mapped null to default)
+        TimePeriod effectiveValue = factory.getConfiguration(key);
+        String effectiveString = effectiveValue == null ? null : effectiveValue.toString();
+        // Dispatch through MessageAdapterMBean String setters: irrelevant adapter types inherit
+        // the MBean no-op default; wrapper adapters (e.g. RMIMessageAdapter) delegate to their
+        // attached adapter via their own override.
+        for (MessageAdapter adapter : getMessageAdapters()) {
+            adapterSetter.accept(adapter, effectiveString);
+        }
+    }
+
+    /**
+     * Returns a snapshot list of all active message adapters.
+     * Subclasses should override this for connector-level aggregation queries.
+     */
+    @Internal
+    protected List<MessageAdapter> getMessageAdapters() {
+        return Collections.emptyList();
     }
 
     @Override

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -41,7 +41,13 @@ public class TimePeriod implements Serializable {
      * @return <code>TimePeriod</code> with <tt>value</tt> milliseconds.
      */
     public static TimePeriod valueOf(long value) {
-        return value == 0 ? ZERO : (value == Long.MAX_VALUE ? UNLIMITED : new TimePeriod(value));
+        if (value < 0)
+            throw new IllegalArgumentException("TimePeriod value cannot be negative: " + value);
+        if (value == 0)
+            return ZERO;
+        if (value == Long.MAX_VALUE)
+            return UNLIMITED;
+        return new TimePeriod(value);
     }
 
     /**
@@ -82,6 +88,8 @@ public class TimePeriod implements Serializable {
     private final long value;
 
     protected TimePeriod(long value) {
+        if (value < 0)
+            throw new IllegalArgumentException("TimePeriod value cannot be negative: " + value);
         this.value = value;
     }
 
@@ -163,6 +171,8 @@ public class TimePeriod implements Serializable {
     }
 
     public String toString() {
+        if (value == Long.MAX_VALUE)
+            return UNLIMITED_STR;
         long v = value;
         long millis = v % 1000;
         v = v / 1000;

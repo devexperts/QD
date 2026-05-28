@@ -357,7 +357,7 @@ public final class MarketFactoryImpl extends EventDelegateFactory implements Rec
         builder.addRequiredField("OptionSale", "Delta", selectDecimal(SerialFieldType.DECIMAL));
         builder.addRequiredField("OptionSale", "OptionSymbol", SerialFieldType.UTF_CHAR_ARRAY);
 
-        for (String suffix : SystemProperties.getProperty("com.dxfeed.event.market.impl.OrderImbalance.suffixes", "|#NUAM").split("\\|")) {
+        for (String suffix : SystemProperties.getProperty("com.dxfeed.event.market.impl.OrderImbalance.suffixes", "|#NTV|#ARCA|#NUAM").split("\\|")) {
             String recordName = "OrderImbalance" + suffix;
             builder.addOptionalField(recordName, "Time", SerialFieldType.TIME_SECONDS, "OrderImbalance", "Time", true);
             builder.addOptionalField(recordName, "Sequence", SerialFieldType.SEQUENCE, "OrderImbalance", "Sequence", true);

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,6 +20,15 @@ public class DynamicChannelShaper extends ChannelShaper implements QDFilter.Upda
     public DynamicChannelShaper(QDContract contract, Executor subscriptionExecutor, QDFilter subscriptionFilter) {
         super(contract, subscriptionExecutor, subscriptionFilter.isDynamic());
         super.setSubscriptionFilter(subscriptionFilter);
+    }
+
+    /**
+     * Creates a new dynamic channel shaper as an unbound copy of {@code source}. The copy is not
+     * registered as a filter update listener — registration is done by {@link #bind} when the
+     * copy is later bound to an {@link AgentChannel}.
+     */
+    public DynamicChannelShaper(DynamicChannelShaper source) {
+        super(source);
     }
 
     @Override

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -305,13 +305,17 @@ public class BinaryQTPParser extends AbstractQTPParser {
     }
 
     private void parseDescribeProtocol(BufferedInput msg, MessageConsumer consumer) throws CorruptedException {
+        ProtocolDescriptor delta = ProtocolDescriptor.newEmptyProtocolDescriptor();
         try {
-            protocolDescriptor = ProtocolDescriptor.newPeerProtocolDescriptor(protocolDescriptor);
-            protocolDescriptor.parseFrom(msg);
+            delta.parseFrom(msg);
         } catch (IOException e) {
             dumpParseMessageErrorReport(msg, e.getMessage(), e, -1);
             throw new CorruptedException(e);
         }
+        if (log.debugEnabled())
+            log.debug("DESCRIBE_PROTOCOL on-wire:\n" + delta);
+        protocolDescriptor = ProtocolDescriptor.newPeerProtocolDescriptor(protocolDescriptor);
+        protocolDescriptor.mergeFrom(delta);
         ProtocolDescriptor desc = applyReadAs(protocolDescriptor);
         // MIND THE BUG: [QD-808] Event flags are not sent immediately after connection establishment (random effect)
         // NOTE: MUST INVOKE onDescribeProtocol first

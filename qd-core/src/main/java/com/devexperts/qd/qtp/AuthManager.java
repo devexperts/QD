@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -77,6 +77,7 @@ class AuthManager implements PromiseHandler<AuthSession> {
     private TypedMap connectionVariables;
     private SessionCloseListener listener;
     private long startTime;
+    private AuthToken lastToken;
 
     // set to null when closed, does not add anymore
     @GuardedBy("this")
@@ -94,6 +95,13 @@ class AuthManager implements PromiseHandler<AuthSession> {
     }
 
     void authenticate(AuthToken authToken, TypedMap connectionVariables) {
+        if (Objects.equals(authToken, lastToken) &&
+            (state == AuthState.AUTHENTICATE || state == AuthState.AUTHENTICATE_AND_AUTH_PREPARING ||
+                state == AuthState.AUTH_OK || state == AuthState.DATA_PREPARING || state == AuthState.COMPLETED))
+        {
+            return;
+        }
+        this.lastToken = authToken;
         authenticateSync(connectionVariables);
         Promise<AuthSession> authSession = realm.authenticate(authToken, connectionVariables);
         authSession.whenDone(this);
@@ -228,6 +236,8 @@ class AuthManager implements PromiseHandler<AuthSession> {
             firstAuthProtocolWasSent = true;
             authenticatePreparing = true;
             break;
+        case COMPLETED:
+            break;
         default:
             throw new AssertionError();
         }
@@ -250,6 +260,8 @@ class AuthManager implements PromiseHandler<AuthSession> {
         case DATA_PREPARING:
             state = AuthState.COMPLETED;
             break;
+        case COMPLETED:
+            return false;
         default:
             throw new AssertionError();
         }

@@ -11,6 +11,7 @@
  */
 package com.devexperts.connector.codec;
 
+import com.devexperts.annotation.Internal;
 import com.devexperts.connector.proto.ApplicationConnection;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.connector.proto.TransportConnection;
@@ -49,6 +50,11 @@ public abstract class CodecConnection<F extends ApplicationConnectionFactory>
     {
         super(config, transportConnection);
         this.delegate = delegateFactory.createConnection(this);
+    }
+
+    @Internal
+    public ApplicationConnection<?> getDelegate() {
+        return delegate;
     }
 
     @Override

@@ -43,6 +43,7 @@ import com.devexperts.util.TimeUtil;
 import java.io.IOException;
 import java.net.Socket;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -687,6 +688,23 @@ public class ClientSocketConnector extends AbstractMessageConnector
         }
         log.warn("Unsupported application connection class: use striper " + MonoStriper.INSTANCE);
         return MonoStriper.INSTANCE;
+    }
+
+    @Override
+    protected List<MessageAdapter> getMessageAdapters() {
+        SocketHandler[] handlers = this.handlers; // Atomic read
+        if (handlers == null)
+            return Collections.emptyList();
+        List<MessageAdapter> result = new ArrayList<>(handlers.length);
+        for (SocketHandler handler : handlers) {
+            SocketHandler.ThreadData threadData = handler.getThreadData(); // volatile read
+            if (threadData != null) {
+                MessageAdapter adapter = MessageConnectors.extractAdapter(threadData.connection);
+                if (adapter != null)
+                    result.add(adapter);
+            }
+        }
+        return result;
     }
 
     /**

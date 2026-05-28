@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -41,6 +41,7 @@ import java.util.concurrent.atomic.AtomicLongArray;
  * This class models weighted data shaping in agent adapter.
  */
 public class TestAgentAdapterShaping {
+
     public static void main(String[] args) throws InterruptedException {
         final int[] weights = {1, 2, 5, 10, 100, 50, 25, 1, 3, 1};
         final int n = weights.length;
@@ -60,7 +61,7 @@ public class TestAgentAdapterShaping {
         final ChannelShaper[] shapers = new ChannelShaper[n];
         final SymbolObjectMap<Integer> symbolIndexMap = SymbolObjectMap.createInstance();
         for (int i = 0; i < n; i++) {
-            collectors[i] = QDFactory.getDefaultFactory().createTicker(scheme);
+            collectors[i] = QDFactory.getDefaultFactory().tickerBuilder().withScheme(scheme).build();
 
             for (int j = 0; j < k; j++) {
                 int t = i * k + j;
@@ -135,7 +136,6 @@ public class TestAgentAdapterShaping {
             }
         };
 
-
         MessageConnectors.startMessageConnectors(
             MessageConnectors.createMessageConnectors(MessageConnectors.applicationConnectionFactory(
                 stats -> new AgentAdapter(scheme, stats).initialize(shapers)), ":" + port)
@@ -165,7 +165,7 @@ public class TestAgentAdapterShaping {
                 RecordBuffer buffer = new RecordBuffer();
                 for (int i1 = 0; !Thread.interrupted(); i1 = (i1 + 1) % n) {
                     providers[i1].retrieveData(buffer);
-                    distributors[i1].processData(buffer);
+                    distributors[i1].process(buffer);
                     buffer.clear();
                 }
                 System.out.println("generator exit");
@@ -178,8 +178,8 @@ public class TestAgentAdapterShaping {
             for (int i = 0; i < n; i++) {
                 System.out.println(weights[i] + " " + count.get(i));
             }
-            System.out.println("");
-            Thread.sleep(5000);
+            System.out.println();
+            Thread.sleep(5_000);
         }
     }
 }

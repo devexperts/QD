@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -93,7 +93,7 @@ public class DumpTimestampConversionTest {
     private static final String EXPECTED_FILE_1_TIME = "20130910-113000-0400";
 
     private static final String BINARY_TIME_NONE_DESCRIPTOR =
-        "31:01:DXP3 #0204 type #04 tape #07 version #08 QDS-TEST #010f0b STREAM_DATA #0000\n";
+        "36:01:DXP3 #0304 type #04 tape #07 version #08 QDS-TEST #03 opt #00010f0b STREAM_DATA #0000\n";
 
     private static final String BINARY_QUOTE_DESCRIPTOR =
         "63:02: #0005 Quote #0807 BidTime8 #0f BidExchangeCode #0208 BidPrice #1807 BidSize #0807 AskTime8 #0f AskExchangeCode #0208 AskPrice #1807 AskSize #08\n";
@@ -109,7 +109,7 @@ public class DumpTimestampConversionTest {
         "00";
 
     private static final String BINARY_TIME_LONG_DESCRIPTOR =
-        "3b:01:DXP3 #0304 type #04 tape #07 version #08 QDS-TEST #04 time #04 long #010f0b STREAM_DATA #0000\n";
+        "40:01:DXP3 #0404 type #04 tape #07 version #08 QDS-TEST #03 opt #0004 time #04 long #010f0b STREAM_DATA #0000\n";
 
     private static final String EXPECTED_BINARY_TIME_LONG_CONTENTS =
         BINARY_TIME_LONG_DESCRIPTOR +
@@ -119,7 +119,7 @@ public class DumpTimestampConversionTest {
         "00";
 
     private static final String BINARY_TIME_TEXT_DESCRIPTOR =
-        "3b:01:DXP3 #0304 type #04 tape #07 version #08 QDS-TEST #04 time #04 text #010f0b STREAM_DATA #0000\n";
+        "40:01:DXP3 #0404 type #04 tape #07 version #08 QDS-TEST #03 opt #0004 time #04 text #010f0b STREAM_DATA #0000\n";
 
     private static final String EXPECTED_BINARY_TIME_TEXT_CONTENTS =
         BINARY_TIME_TEXT_DESCRIPTOR +
@@ -147,10 +147,10 @@ public class DumpTimestampConversionTest {
         "00";
 
     private static final String BINARY_TIME_MESSAGE_DESCRIPTOR =
-        "3e:01:DXP3 #0304 type #04 tape #07 version #08 QDS-TEST #04 time #07 message #010f0b STREAM_DATA #0000\n";
+        "43:01:DXP3 #0404 type #04 tape #07 version #08 QDS-TEST #03 opt #0004 time #07 message #010f0b STREAM_DATA #0000\n";
 
     private static final String BINARY_TIME_MESSAGE_RAW_DATA_DESCRIPTOR =
-        "3b:01:DXP3 #0304 type #04 tape #07 version #08 QDS-TEST #04 time #07 message #010508 RAW_DATA #0000\n";
+        "40:01:DXP3 #0404 type #04 tape #07 version #08 QDS-TEST #03 opt #0004 time #07 message #010508 RAW_DATA #0000\n";
 
     private static final String EXPECTED_BINARY_TIME_MESSAGE_CONTENTS =
         BINARY_TIME_MESSAGE_DESCRIPTOR +
@@ -171,7 +171,7 @@ public class DumpTimestampConversionTest {
         "00";
 
     private static final String BINARY_TIME_FIELD_DESCRIPTOR =
-        "3c:01:DXP3 #0304 type #04 tape #07 version #08 QDS-TEST #04 time #05 field #010f0b STREAM_DATA #0000\n";
+        "41:01:DXP3 #0404 type #04 tape #07 version #08 QDS-TEST #03 opt #0004 time #05 field #010f0b STREAM_DATA #0000\n";
 
     private static final String BINARY_QUOTE_TIME_FIELD_DESCRIPTOR =
         "7e:02: #0005 Quote #0a09 EventTime8 #0d EventSequence #80 H #07 BidTime8 #0f BidExchangeCode #0208 BidPrice #1807 BidSize #0807 AskTime8 #0f AskExchangeCode #0208 AskPrice #1807 AskSize #08\n";
@@ -252,12 +252,12 @@ public class DumpTimestampConversionTest {
         "00";
 
     private static final String EXPECTED_BINARY_TIME_LONG_TIME_CONTENTS =
-        "1378821604123:60\n" +
-        "1378827300987:184\n";
+        "1378821604123:66\n" +
+        "1378827300987:190\n";
 
     private static final String EXPECTED_BINARY_TIME_TEXT_TIME_CONTENTS =
-        "20130910-100004.123-0400:60\n" +
-        "20130910-113500.987-0400:184\n";
+        "20130910-100004.123-0400:66\n" +
+        "20130910-113500.987-0400:190\n";
 
     private static final String EXPECTED_TIME_LONG_SPLIT_0_TIME_PATTERN =
         "1378821604123:\\d+\n";
@@ -272,7 +272,7 @@ public class DumpTimestampConversionTest {
         "20130910-113500.987-0400:\\d+\n";
 
     private static final String TEXT_TIME_NONE_DESCRIPTOR =
-        "==DXP3\ttype=tape\tversion=QDS-TEST\t+STREAM_DATA\n";
+        "==DXP3\ttype=tape\tversion=QDS-TEST\topt=\t+STREAM_DATA\n";
 
     private static final String TEXT_QUOTE_DESCRIPTOR =
         "=Quote\tEventSymbol\tBidTime\tBidExchangeCode\tBidPrice\tBidSize\tAskTime\tAskExchangeCode\tAskPrice\tAskSize\n";
@@ -287,7 +287,7 @@ public class DumpTimestampConversionTest {
         "==\n";
 
     private static final String TEXT_TIME_LONG_DESCRIPTOR =
-        "==DXP3\ttype=tape\tversion=QDS-TEST\ttime=long\t+STREAM_DATA\n";
+        "==DXP3\ttype=tape\tversion=QDS-TEST\topt=\ttime=long\t+STREAM_DATA\n";
 
     private static final String EXPECTED_TEXT_TIME_LONG_CONTENTS =
         TEXT_TIME_LONG_DESCRIPTOR +
@@ -299,7 +299,7 @@ public class DumpTimestampConversionTest {
         "==\n";
 
     private static final String TEXT_TIME_TEXT_DESCRIPTOR =
-        "==DXP3\ttype=tape\tversion=QDS-TEST\ttime=text\t+STREAM_DATA\n";
+        "==DXP3\ttype=tape\tversion=QDS-TEST\topt=\ttime=text\t+STREAM_DATA\n";
 
     private static final String EXPECTED_TEXT_TIME_TEXT_CONTENTS =
         TEXT_TIME_TEXT_DESCRIPTOR +
@@ -356,10 +356,10 @@ public class DumpTimestampConversionTest {
         "==\n";
 
     private static final String TEXT_TIME_FIELD_DESCRIPTOR =
-        "==DXP3\ttype=tape\tversion=QDS-TEST\ttime=field\t+STREAM_DATA\n";
+        "==DXP3\ttype=tape\tversion=QDS-TEST\topt=\ttime=field\t+STREAM_DATA\n";
 
     private static final String TEXT_TIME_FIELD_DESCRIPTOR_RAW_DATA =
-        "==DXP3\ttype=tape\tversion=QDS-TEST\ttime=field\t+RAW_DATA\n";
+        "==DXP3\ttype=tape\tversion=QDS-TEST\topt=\ttime=field\t+RAW_DATA\n";
 
     private static final String TEXT_QUOTE_TIME_FIELD_DESCRIPTOR =
         "=Quote\tEventSymbol\tEventTime\tBidTime\tBidExchangeCode\tBidPrice\tBidSize\tAskTime\tAskExchangeCode\tAskPrice\tAskSize\n";
@@ -408,7 +408,7 @@ public class DumpTimestampConversionTest {
 
 
     private static final String TEXT_TIME_MESSAGE_DESCRIPTOR =
-        "==DXP3\ttype=tape\tversion=QDS-TEST\ttime=message\t+STREAM_DATA\n";
+        "==DXP3\ttype=tape\tversion=QDS-TEST\topt=\ttime=message\t+STREAM_DATA\n";
 
     private static final String EXPECTED_TEXT_TIME_MESSAGE_CONTENTS =
         TEXT_TIME_MESSAGE_DESCRIPTOR +

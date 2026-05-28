@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,11 +11,20 @@
  */
 package com.devexperts.qd.qtp.socket;
 
+/**
+ * A socket address representation used by connectors' infrastructure.
+ */
 public class SocketAddress {
     public final String host;
     public final int port;
 
-    SocketAddress(String host, int port) {
+    /**
+     * Constructs a new {@code SocketAddress} instance with a specified host and port.
+     *
+     * @param host the hostname or IP address
+     * @param port the port number
+     */
+    public SocketAddress(String host, int port) {
         this.host = host;
         this.port = port;
     }

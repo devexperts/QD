@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -36,6 +36,7 @@ import com.devexperts.services.Services;
 import com.devexperts.util.InvalidFormatException;
 import com.devexperts.util.TimeFormat;
 import com.devexperts.util.TimePeriod;
+import com.devexperts.util.TimePeriodInfo;
 
 import java.io.Closeable;
 import java.util.ArrayList;
@@ -116,6 +117,7 @@ public class QDEndpoint implements Closeable {
 
     private String user = ""; // SYNC(lock)
     private String password = ""; // SYNC(lock)
+    private volatile TimePeriod requestedAggregationPeriod; // null = undefined, SYNC(lock)
 
     private final EnumMap<QDContract, QDCollector> collectors = new EnumMap<>(QDContract.class);
     private final Set<QDContract> collectorsKeys = Collections.unmodifiableSet(collectors.keySet());
@@ -237,6 +239,7 @@ public class QDEndpoint implements Closeable {
             throw new IllegalStateException("ConnectorsInitializer is not set");
         connectorInitializer.createAndAddConnector(this, address);
         updateUserAndPasswordImpl(connectors);
+        updateRequestedAggregationPeriod(connectors);
     }
 
     /**
@@ -399,6 +402,43 @@ public class QDEndpoint implements Closeable {
         return this;
     }
 
+    /**
+     * Returns the requested aggregation period, or {@code null} if not set.
+     * @see <a href="../../../../com/dxfeed/api/DXEndpoint.html#aggregationPeriodSection">DXEndpoint, "Aggregation period"</a>
+     */
+    public TimePeriod getRequestedAggregationPeriod() {
+        return requestedAggregationPeriod;
+    }
+
+    /**
+     * Sets the requested aggregation period and propagates to all connectors.
+     * @see <a href="../../../../com/dxfeed/api/DXEndpoint.html#aggregationPeriodSection">DXEndpoint, "Aggregation period"</a>
+     */
+    public void setRequestedAggregationPeriod(TimePeriod requestedAggregationPeriod) {
+        ChannelShaper.validateAggregationPeriod(requestedAggregationPeriod);
+        synchronized (lock) {
+            this.requestedAggregationPeriod = requestedAggregationPeriod;
+            String periodStr = requestedAggregationPeriod == null ? null : requestedAggregationPeriod.toString();
+            for (MessageConnector connector : connectors) {
+                connector.setRequestedAggregationPeriod(periodStr);
+            }
+        }
+    }
+
+    /**
+     * Returns aggregated aggregation period info across all connectors.
+     * @see <a href="../../../../com/dxfeed/api/DXEndpoint.html#aggregationPeriodSection">DXEndpoint, "Aggregation period"</a>
+     */
+    public TimePeriodInfo getAggregationPeriodInfo() {
+        synchronized (lock) {
+            TimePeriodInfo result = TimePeriodInfo.UNKNOWN;
+            for (MessageConnector connector : connectors) {
+                result = result.add(connector.getAggregationPeriodInfo());
+            }
+            return result;
+        }
+    }
+
     public final QDEndpoint addConnectors(Collection<MessageConnector> connectors) {
         synchronized (lock) {
             if (closed)
@@ -412,6 +452,7 @@ public class QDEndpoint implements Closeable {
     // extension point, SYNC(lock)
     protected void addConnectorsImpl(Collection<MessageConnector> connectors) {
         updateUserAndPasswordImpl(connectors);
+        updateRequestedAggregationPeriod(connectors);
         this.connectors.addAll(connectors);
         for (MessageConnectorListener listener : connectorListeners) {
             for (MessageConnector connector : connectors) {
@@ -586,6 +627,16 @@ public class QDEndpoint implements Closeable {
                 connector.setUser(user);
             if (!password.isEmpty())
                 connector.setPassword(password);
+        }
+    }
+
+    // SYNC(lock)
+    private void updateRequestedAggregationPeriod(Collection<MessageConnector> connectors) {
+        if (requestedAggregationPeriod != null) {
+            String periodStr = requestedAggregationPeriod.toString();
+            for (MessageConnector connector : connectors) {
+                connector.setRequestedAggregationPeriod(periodStr);
+            }
         }
     }
 

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -34,6 +34,7 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import javax.swing.BorderFactory;
 import javax.swing.DefaultButtonModel;
 import javax.swing.DefaultComboBoxModel;
@@ -50,6 +51,7 @@ import javax.swing.border.Border;
 public class TestThroughputReportExplorer {
     private static final Pattern SYSTEM_PATTERN = Pattern.compile("SYSTEM: (.+) \\{(.+)\\}");
     private static final Pattern CONFIG_PATTERN = Pattern.compile("CONFIG: (\\w+) = (\\S+)");
+    private static final Pattern START_PATTERN = Pattern.compile(" START: (\\S+)");
     private static final Pattern RESULT_PATTERN = Pattern.compile("\\s*(\\w+): .* \\[\\d+ - (\\d+) - \\d+\\] .*");
 
     private static final String ANY_FILTER = "*";
@@ -114,7 +116,7 @@ public class TestThroughputReportExplorer {
 
     private JLabel createPlainLabel(String key) {
         JLabel label = new JLabel(key);
-        label.setFont(label.getFont().deriveFont(0));
+        label.setFont(label.getFont().deriveFont(Font.PLAIN));
         return label;
     }
 
@@ -137,42 +139,56 @@ public class TestThroughputReportExplorer {
         Set<String> values = fm.props.get(key);
         if (values.size() == 1)
             return createPlainLabel(values.iterator().next());
-        JComboBox comboBox = new JComboBox(new ItemFilterValuesModel(key, fm));
+        JComboBox<?> comboBox = new JComboBox<>(new ItemFilterValuesModel(key, fm));
         comboBox.setPreferredSize(comboBox.getPreferredSize());
         return comboBox;
     }
 
     private Report parseFile(String reportName) throws IOException {
-        BufferedReader in = new BufferedReader(new FileReader(reportName));
-        try {
+        try (BufferedReader in = new BufferedReader(new FileReader(reportName))) {
             return parseStream(in);
-        } finally {
-            in.close();
         }
     }
 
     private Report parseStream(BufferedReader in) throws IOException {
         Report report = new Report();
         Item item = null;
+        long lineNum = 0;
         String line;
         while ((line = in.readLine()) != null) {
+            lineNum++;
             if (line.startsWith("SYSTEM:")) {
-                // new item
-                item = new Item();
+                if (item == null) {
+                    item = new Item();
+                    item.map.put("START", "-"); // for compatibility with old reports
+                }
+                //item.map.put("LOC", String.valueOf(lineNum));
                 parseSystemLine(line, item);
+                continue;
             }
-            if (line.startsWith("CONFIG:"))
+            if (line.startsWith(" START:")) {
+                if (item == null)
+                    item = new Item();
+                parseStartLine(line, item);
+                continue;
+            }
+            if (line.startsWith("CONFIG:")) {
                 parseConfigLine(line, item);
-            if (line.startsWith(" DIST:") || line.startsWith("AGENT:"))
+                continue;
+            }
+            if (line.startsWith(" DIST:")) {
                 parseResultLine(line, item);
-            if (line.startsWith("  SUM:")) {
-                //parseResultLine(line, item); // don't need sum
+                continue;
+            }
+            if (line.startsWith("AGENT:")) {    // "AGENT:" is the last line of results
+                assert (item != null);
+                parseResultLine(line, item);
                 item.map.put("CEIL RPS",
                     String.valueOf(Long.parseLong(item.map.get("agents")) *
                         Long.parseLong(item.map.get("DIST RPS"))));
-                // last line for this item
                 report.items.add(item);
                 item = null;
+                continue;
             }
         }
         return report;
@@ -200,6 +216,13 @@ public class TestThroughputReportExplorer {
         item.map.put(m.group(1), m.group(2));
     }
 
+    private void parseStartLine(String line, Item item) {
+        Matcher m = START_PATTERN.matcher(line);
+        if (!m.matches())
+            throw new IllegalArgumentException("Invalid line: " + line);
+        item.map.put("START", m.group(1));
+    }
+
     private void parseResultLine(String line, Item item) {
         Matcher m = RESULT_PATTERN.matcher(line);
         if (!m.matches())
@@ -208,7 +231,7 @@ public class TestThroughputReportExplorer {
     }
 
     static class Item {
-        final Map<String, String> map = new LinkedHashMap<String, String>();
+        final Map<String, String> map = new LinkedHashMap<>();
 
         boolean matches(Map<String, String> filter) {
             for (Map.Entry<String, String> fentry : filter.entrySet())
@@ -219,19 +242,16 @@ public class TestThroughputReportExplorer {
     }
 
     static class Report {
-        final List<Item> items = new ArrayList<Item>();
+        final List<Item> items = new ArrayList<>();
 
         Map<String, Set<String>> refilter(Map<String, String> filter) {
-            Map<String, Set<String>> props = new LinkedHashMap<String, Set<String>>();
+            Map<String, Set<String>> props = new LinkedHashMap<>();
             for (Item item : items)
                 if (item.matches(filter))
                     for (Map.Entry<String, String> ientry : item.map.entrySet()) {
                         String key = ientry.getKey();
                         String value = ientry.getValue();
-                        Set<String> vset = props.get(key);
-                        if (vset == null)
-                            props.put(key, vset = new LinkedHashSet<String>());
-                        vset.add(value);
+                        props.computeIfAbsent(key, k -> new LinkedHashSet<>()).add(value);
                     }
             return props;
         }
@@ -239,9 +259,9 @@ public class TestThroughputReportExplorer {
 
     static class FilterModel {
         final Report report;
-        final Map<String, String> filter = new HashMap<String, String>();
-        final List<ItemFilterToggleModel> itemToggleModels = new ArrayList<ItemFilterToggleModel>();
-        final List<ItemFilterValuesModel> itemValuesModels = new ArrayList<ItemFilterValuesModel>();
+        final Map<String, String> filter = new HashMap<>();
+        final List<ItemFilterToggleModel> itemToggleModels = new ArrayList<>();
+        final List<ItemFilterValuesModel> itemValuesModels = new ArrayList<>();
         final Map<String, Set<String>> allProps;
         Map<String, Set<String>> props;
 
@@ -272,13 +292,13 @@ public class TestThroughputReportExplorer {
         }
     }
 
-    static class ItemFilterValuesModel extends DefaultComboBoxModel {
+    static class ItemFilterValuesModel extends DefaultComboBoxModel<String> {
         boolean rebuilding;
         final String key;
         final FilterModel fm;
 
         ItemFilterValuesModel(String key, FilterModel fm) {
-            super(getItems(fm.props.get(key)).toArray());
+            super(getItems(fm.props.get(key)).toArray(new String[0]));
             this.key = key;
             this.fm = fm;
             fm.itemValuesModels.add(this);
@@ -295,12 +315,12 @@ public class TestThroughputReportExplorer {
                 addElement(item);
             setSelectedItem(
                 filtered != null ? filtered :
-                (values.size() == 1 ? values.iterator().next() : items.iterator().next()));
+                    (values.size() == 1 ? values.iterator().next() : items.iterator().next()));
             rebuilding = false;
         }
 
         static List<String> getItems(Set<String> values) {
-            List<String> items = new ArrayList<String>();
+            List<String> items = new ArrayList<>();
             items.add(ANY_FILTER);
             items.addAll(values);
             return items;
@@ -319,10 +339,10 @@ public class TestThroughputReportExplorer {
         WIKI("||", "||", "|", "|"),
         CSV("", ",", "", ",");
 
-        String thAround;
-        String thBetween;
-        String trAround;
-        String trBetween;
+        final String thAround;
+        final String thBetween;
+        final String trAround;
+        final String trBetween;
 
         Format(String thAround, String thBetween, String trAround, String trBetween) {
             this.thAround = thAround;
@@ -336,7 +356,7 @@ public class TestThroughputReportExplorer {
         final FilterModel fm;
         final JButton writeButton;
         final JTextField fileName;
-        final JComboBox fileFormat;
+        final JComboBox<Object> fileFormat;
 
         FileWritePanel(FilterModel fm) {
             this.fm = fm;
@@ -344,51 +364,52 @@ public class TestThroughputReportExplorer {
             add(new JLabel("file"));
             add(fileName = new JTextField(20));
             add(new JLabel("format"));
-            add(fileFormat = new JComboBox(new Object[] { Format.WIKI , Format.CSV}));
+            add(fileFormat = new JComboBox<>(new Object[] { Format.WIKI , Format.CSV}));
             fileName.setText("report.out");
             writeButton.addActionListener(this);
             setBorder(createSectionBorder(1, 2, 2, 2));
         }
 
         public void actionPerformed(ActionEvent e) {
-            writeToFile(fileName.getText(), (Format) fileFormat.getSelectedItem());
+            writeToFile(fileName.getText(), (Format) fileFormat.getSelectedItem(), buildExportKeys(true));
         }
 
-        private void writeToFile(String fileName, Format fileFormat) {
+        private void writeToFile(String fileName, Format fileFormat, List<String> exportKeys) {
             try {
-                PrintWriter out = new PrintWriter(new FileWriter(fileName));
-                try {
-                    writeToStream(out, fileFormat);
-                } finally {
-                    out.close();
+                try (PrintWriter out = new PrintWriter(new FileWriter(fileName))) {
+                    writeToStream(out, fileFormat, exportKeys);
                 }
             } catch (IOException e) {
-                JOptionPane.showConfirmDialog(this, e.toString(), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, e.toString(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
 
-        private void writeToStream(PrintWriter out, Format fileFormat) {
-            ArrayList<String> keys = new ArrayList<String>();
-            for (Map.Entry<String, Set<String>> entry : fm.props.entrySet())
-                if (entry.getValue().size() > 1)
-                    keys.add(entry.getKey());
+        private void writeToStream(PrintWriter out, Format fileFormat, List<String> exportKeys) {
             out.print(fileFormat.thAround);
-            for (int i = 0; i < keys.size(); i++) {
+            for (int i = 0; i < exportKeys.size(); i++) {
                 if (i > 0)
                     out.print(fileFormat.thBetween);
-                out.print(keys.get(i));
+                out.print(exportKeys.get(i));
             }
             out.println(fileFormat.thAround);
             for (Item item : fm.report.items)
                 if (item.matches(fm.filter)) {
                     out.print(fileFormat.trAround);
-                    for (int i = 0; i < keys.size(); i++) {
+                    for (int i = 0; i < exportKeys.size(); i++) {
                         if (i > 0)
                             out.print(fileFormat.trBetween);
-                        out.print(item.map.get(keys.get(i)));
+                        out.print(item.map.get(exportKeys.get(i)));
                     }
                     out.println(fileFormat.trAround);
                 }
+        }
+
+        private List<String> buildExportKeys(boolean exportAllProps) {
+            Map<String, Set<String>> props = exportAllProps ? fm.allProps : fm.props;
+            return props.entrySet().stream()
+                .filter(entry -> exportAllProps || entry.getValue().size() > 1)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
         }
     }
 }

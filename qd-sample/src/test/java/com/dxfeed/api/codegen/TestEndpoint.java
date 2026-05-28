@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -27,6 +27,7 @@ import com.dxfeed.api.impl.DXEndpointImpl;
 import com.dxfeed.promise.Promise;
 
 import java.util.Arrays;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -73,18 +74,23 @@ class TestEndpoint implements AutoCloseable {
 
     DXPublisher getPublisher() {
         if (publisherEndpoint == null) {
-            publisherEndpoint =
-                new DXEndpointImpl(DXEndpoint.Role.PUBLISHER, endpoint.getCollectors().toArray(new QDCollector[0]));
+            publisherEndpoint = createDXEndpoint(DXEndpoint.Role.PUBLISHER);
         }
         return publisherEndpoint.getPublisher();
     }
 
     DXFeed getFeed() {
         if (feedEndpoint == null) {
-            feedEndpoint =
-                new DXEndpointImpl(DXEndpoint.Role.FEED, endpoint.getCollectors().toArray(new QDCollector[0]));
+            feedEndpoint = createDXEndpoint(DXEndpoint.Role.FEED);
         }
         return feedEndpoint.getFeed();
+    }
+
+    private DXEndpointImpl createDXEndpoint(DXEndpoint.Role role) {
+        DXEndpointImpl dxEndpoint = new DXEndpointImpl(role, endpoint, new Properties()) {};
+        // do not call dxEndpoint.initConnectivity() because we connect endpoint directly
+        // dxEndpoint.initConnectivity();
+        return dxEndpoint;
     }
 
     int getServerPort() {

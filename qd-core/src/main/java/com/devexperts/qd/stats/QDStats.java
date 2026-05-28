@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -631,74 +631,74 @@ public class QDStats {
     // ========== Gathering API ==========
 
     // invoked for each parsed packet
-    public final void updateIOReadBytes(long bytes) {
+    public void updateIOReadBytes(long bytes) {
         stats[KIND_IO_READ_BYTES] += bytes;
     }
 
-    public final void updateIOReadRecordBytes(int rid, long bytes) {
+    public void updateIOReadRecordBytes(int rid, long bytes) {
         stats[KIND_IO_READ_BYTES + (rid + 1) * ridStride] += bytes;
         stats[KIND_IO_READ_BYTES] -= bytes; // to prevent double accounting of record bytes
     }
 
-    public final void updateIOReadSubRecord() {
+    public void updateIOReadSubRecord() {
         stats[KIND_IO_SUB_READ_RECORDS]++;
     }
 
-    public final void updateIOReadDataRecord() {
+    public void updateIOReadDataRecord() {
         stats[KIND_IO_DATA_READ_RECORDS]++;
     }
 
-    public final void updateIOReadRtts(int rtt) {
+    public void updateIOReadRtts(int rtt) {
         stats[KIND_IO_READ_RTTS] += rtt;
     }
 
-    public final void updateIOReadDataLags(long sumLag) {
+    public void updateIOReadDataLags(long sumLag) {
         stats[KIND_IO_DATA_READ_LAGS] += sumLag;
     }
 
     // invoked for each composed packet
-    public final void updateIOWriteBytes(long bytes) {
+    public void updateIOWriteBytes(long bytes) {
         stats[KIND_IO_WRITE_BYTES] += bytes;
     }
 
-    public final void updateIOWriteRecordBytes(int rid, long bytes) {
+    public void updateIOWriteRecordBytes(int rid, long bytes) {
         stats[KIND_IO_WRITE_BYTES + (rid + 1) * ridStride] += bytes;
         stats[KIND_IO_WRITE_BYTES] -= bytes; // to prevent double accounting of record bytes
     }
 
-    public final void updateIOWriteSubRecord() {
+    public void updateIOWriteSubRecord() {
         stats[KIND_IO_SUB_WRITE_RECORDS]++;
     }
 
-    public final void updateIOWriteDataRecord() {
+    public void updateIOWriteDataRecord() {
         stats[KIND_IO_DATA_WRITE_RECORDS]++;
     }
 
-    public final void updateIOWriteRtts(int rtt) {
+    public void updateIOWriteRtts(int rtt) {
         stats[KIND_IO_WRITE_RTTS] += rtt;
     }
 
-    public final void updateIOWriteDataLags(long sumLag) {
+    public void updateIOWriteDataLags(long sumLag) {
         stats[KIND_IO_DATA_WRITE_LAGS] += sumLag;
     }
 
-    public final void updateAdded(int rid) {
+    public void updateAdded(int rid) {
         stats[KIND_ADDED + (rid + 1) * ridStride]++;
     }
 
-    public final void updateChanged(int rid) {
+    public void updateChanged(int rid) {
         stats[KIND_CHANGED + (rid + 1) * ridStride]++;
     }
 
-    public final void updateFiltered(int rid) {
+    public void updateFiltered(int rid) {
         stats[KIND_FILTERED + (rid + 1) * ridStride]++;
     }
 
-    public final void updateRemoved(int rid) {
+    public void updateRemoved(int rid) {
         stats[KIND_REMOVED + (rid + 1) * ridStride]++;
     }
 
-    public final void updateRemoved(int rid, int count) {
+    public void updateRemoved(int rid, int count) {
         stats[KIND_REMOVED + (rid + 1) * ridStride] += count;
     }
 
@@ -965,6 +965,57 @@ public class QDStats {
         VoidQDStats(SType type) {
             super(type);
         }
+
+        @Override
+        public void updateIOReadBytes(long bytes) {}
+
+        @Override
+        public void updateIOReadRecordBytes(int rid, long bytes) {}
+
+        @Override
+        public void updateIOReadSubRecord() {}
+
+        @Override
+        public void updateIOReadDataRecord() {}
+
+        @Override
+        public void updateIOReadRtts(int rtt) {}
+
+        @Override
+        public void updateIOReadDataLags(long sumLag) {}
+
+        @Override
+        public void updateIOWriteBytes(long bytes) {}
+
+        @Override
+        public void updateIOWriteRecordBytes(int rid, long bytes) {}
+
+        @Override
+        public void updateIOWriteSubRecord() {}
+
+        @Override
+        public void updateIOWriteDataRecord() {}
+
+        @Override
+        public void updateIOWriteRtts(int rtt) {}
+
+        @Override
+        public void updateIOWriteDataLags(long sumLag) {}
+
+        @Override
+        public void updateAdded(int rid) {}
+
+        @Override
+        public void updateChanged(int rid) {}
+
+        @Override
+        public void updateFiltered(int rid) {}
+
+        @Override
+        public void updateRemoved(int rid) {}
+
+        @Override
+        public void updateRemoved(int rid, int count) {}
 
         @Override
         public long getValue(SValue value, boolean localOnly) {

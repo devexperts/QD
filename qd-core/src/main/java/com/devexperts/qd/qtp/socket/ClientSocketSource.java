@@ -14,6 +14,7 @@ package com.devexperts.qd.qtp.socket;
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.qtp.ReconnectHelper;
 import com.devexperts.util.LogUtil;
+import com.devexperts.util.SystemProperties;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,7 +44,11 @@ import javax.annotation.Nullable;
  */
 class ClientSocketSource implements SocketSource {
 
-    private static final ConnectOrder DEFAULT_CONNECT_ORDER = ConnectOrder.SHUFFLE;
+    private static final String CONNECT_ORDER_SYSTEM_PROPERTY = "com.devexperts.qd.qtp.socket.connectOrder";
+
+    private static final ConnectOrder DEFAULT_CONNECT_ORDER = ConnectOrder.valueOf(
+        SystemProperties.getProperty(CONNECT_ORDER_SYSTEM_PROPERTY, ConnectOrder.SHUFFLE.getName())
+    );
 
     // ============ performance note ============
     // Extracted from getLocalAddresses() for improving performance.

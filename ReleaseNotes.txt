@@ -1,3 +1,77 @@
+QDS 3.351:
+
+* [QD-1033] Event flags are stored into a tape file by default
+  - All tape writing now defaults to [opt=hs] instead of [opt=]. Thus, event flags (TX_PENDING, SNAPSHOT_XXX)
+    are written by default.
+  - Explicit [opt=] parameter disables event flag storage.
+* [QD-1631] [Build] Verify generated files during a regular build phase
+* [QD-1676] Enable remote aggregationPeriod management from the client side
+  - Client can request the remote aggregation period to reduce network traffic and load.
+    The remote restricts the request to per-channel and connector-level bounds and responds
+    with the actual aggregation period
+  - Client-side API:
+    - DXEndpoint.setRequestedAggregationPeriod / getRequestedAggregationPeriod
+    - DXEndpoint.getAggregationPeriodInfo — actual period aggregated across all channels
+    - New property: dxfeed.requestedAggregationPeriod
+    - Address property: [requestedAggregationPeriod=5s]
+  - Remote-side bounds (apply per channel):
+    - Connector-level: address[minAggregationPeriod=1s,defaultAggregationPeriod=4s,maxAggregationPeriod=10s]
+    - Per-channel: (AAPL&ticker[minAggregationPeriod=1s,defaultAggregationPeriod=5s,maxAggregationPeriod=10s])
+    - Shorthand @Ns sets both minAggregationPeriod and defaultAggregationPeriod;
+      later channel properties override the values from @
+    - Effective channel min is max of channel and connector min; effective channel max is min of
+      channel and connector max; if min exceeds max, min wins; values capped at 24h
+    - Channels come from the realm session, the address, or one per available collector —
+      connector-level bounds apply in every case
+  - JMX management (runtime, no reconnection required):
+    - 'RequestedAggregationPeriod' — client side; 'undefined' resets to no request
+    - 'DefaultAggregationPeriod', 'MinAggregationPeriod', 'MaxAggregationPeriod' — remote side
+    - 'AggregationPeriodInfo' — read-only, JSON {min, max} in seconds
+  - NOTE: code that copies a ChannelShaper or DynamicChannelShaper should use the new copying
+    constructor — it carries the minAggregationPeriod and maxAggregationPeriod fields, which
+    manual field-by-field copying does not
+  - BACKWARD-INCOMPATIBLE CHANGE: channel @Ns now sets minAggregationPeriod in addition to
+    defaultAggregationPeriod. Client requests below @Ns are raised to it; previously a request
+    could lower the channel below @Ns. Use [defaultAggregationPeriod=Ns] instead of @Ns to keep
+    the prior behavior
+  - BACKWARD-INCOMPATIBLE CHANGE: BasicAuthRealm config lines "user:pass" and "user:pass:*" now
+    resolve to the operator's address channels= configuration. Previously they exposed Ticker,
+    History and Stream unconditionally. Declare the channels explicitly on the auth line or
+    address to keep the prior behavior
+  - BACKWARD-INCOMPATIBLE CHANGE: ProtocolDescriptor.setProperty / MessageDescriptor.setProperty
+    with a null value now stores an empty string instead of removing the key. Third-party
+    MessageAdapter subclasses that called setProperty(key, null) expecting removal must guard
+    the call
+* [QD-1726] [EXPERIMENTAL] DXFeedFilter API
+  - Public API: DXFeedFilter evaluates QD filter expressions against DXFeed API
+    coordinates (event type + subscription symbol) instead of QD-level coordinates
+  - Supports accept/reject filtering and classification into named categories
+  - SPI: DXFeedFilterFactory discovered via service facility for custom implementations
+  - DXFeedFilterTracker provides a stable reference to the latest filter instance
+    with listener-based notifications for dynamic (e.g. IPF-based) filters
+* [QD-1732] Support OrderImbalance publishing for ARCA and NTV gates
+* [QD-1733] setting connectOrder option JVM-wide default
+  JVM-wide default of 'connectOrder' option for ClientSocket connectors can be specified with the system property:
+  `-Dcom.devexperts.qd.qtp.socket.connectOrder=shuffle|random|ordered|priority` (built-in default is 'shuffle').
+  The 'connectOrder' option in an individual connector's address will override the JVM-wide default if specified.
+* [QD-1736] Update throughput tests
+  - QDStats.VOID now overrides all update methods for better performance
+  - TestThroughput now by default uses longer symbol's length (-symlength 10),
+    warm-up iterations (-warmup 10) and filters outliers using Tukey's fences (-tukeyk 1.5).
+  - In addition, TestThroughput reports collector counters in the end of the test.
+* [QD-1737] [QDStats] Introduce "heap_before_gc/heap_after_gc" metric
+  - Added MARS nodes "jvm.GC.heap_before_gc_usage" and "jvm.GC.heap_after_gc_usage"
+    reporting used heap before/after the last GC as percent of configured
+    maximum heap size, %.
+* [QD-1738] Sticky subscription: confine sticky-delay marker to total.sub matrix
+* [QD-1740] [EXPERIMENTAL] Public SocketSource API/SPI: extend visibility of SocketAddress and ConnectOrder
+  API changes:
+  - com.devexperts.qd.qtp.socket.SocketAddress constructor made public
+  - com.devexperts.qd.qtp.socket.ConnectOrder: isRandomized & isResetOnConnect made public
+* [QD-382] Tools: Modularize "qds help"
+  - support multiple help resources (META-INF/qds/qdshelp.txt)
+* [QD-1735] Tools: "help <connector-type>" should work for all connectors
+
 QDS 3.350:
 
 * [QD-1725] New Order source for Bruce gate: BOSS

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,6 +18,7 @@ import com.devexperts.logging.Logging;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.dxlink.websocket.application.DxLinkWebSocketApplicationConnection;
 import com.devexperts.qd.qtp.AbstractMessageConnector;
+import com.devexperts.qd.qtp.MessageAdapter;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.MessageConnectorState;
 import com.devexperts.qd.qtp.MessageConnectors;
@@ -148,6 +149,17 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
         return threadData == null ? null : threadData.connectionStats;
     }
 
+    MessageAdapter getMessageAdapter() {
+        Session session = this.session; // volatile read
+        if (session != null) {
+            DxLinkWebSocketApplicationConnection application = session.application; // volatile read
+            if (application != null) {
+                return application.getMessageAdapter();
+            }
+        }
+        return null;
+    }
+
     public void setCloseListener(CloseListener listener) { this.closeListener = listener; }
 
     public synchronized void start() {
@@ -195,16 +207,21 @@ class WebSocketTransportConnection extends AbstractTransportConnection implement
     // These methods shall be called only by dedicated reader/writer sockets (threads).
 
     class Session {
-        Channel channel;
-        DxLinkWebSocketApplicationConnection application;
+        // SYNC: written from Netty IO thread, read from JMX/writer threads via WebSocketTransportConnection.session
+        volatile Channel channel;
+        volatile DxLinkWebSocketApplicationConnection application;
         QDStats stats;
         ConnectionStats connectionStats = new ConnectionStats();
 
         public void writeAndFlush(ByteBuf message) {
             if (WebSocketTransportConnection.this.verbose && log.debugEnabled())
                 log.debug("SNT: " + message.toString(StandardCharsets.UTF_8));
+            // Snapshot size before ownership transfer: after new TextWebSocketFrame(message) the
+            // frame owns the refcount, and after channel.writeAndFlush(frame) Netty may release
+            // the chunk back to the pool on the EventLoop thread at any time.
+            int writtenBytes = message.readableBytes();
             channel.writeAndFlush(new TextWebSocketFrame(message));
-            connectionStats.addWrittenBytes(message.readableBytes());
+            connectionStats.addWrittenBytes(writtenBytes);
         }
 
         public void close(Throwable reason) {

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.qd.qtp;
 
+import com.devexperts.annotation.Internal;
 import com.devexperts.io.BufferedInput;
 import com.devexperts.io.BufferedOutput;
 
@@ -23,9 +24,12 @@ import java.util.Map;
 /**
  * Descriptor for QTP protocol message that is sent as a part of {@link ProtocolDescriptor}.
  */
+@Internal
 public final class MessageDescriptor {
     private static final int ID_UNKNOWN = -1;
 
+    // Not final because parseFrom()/appendFromTextTokens() set it during deserialization,
+    // but no public setter exists — id is effectively immutable after construction.
     private int id = ID_UNKNOWN;
     private String name;
     private final ProtocolDescriptor parent;
@@ -36,21 +40,29 @@ public final class MessageDescriptor {
         this.parent = parent;
     }
 
+    MessageDescriptor(ProtocolDescriptor parent, MessageType type) {
+        this.parent = parent;
+        this.id = type.getId();
+        this.name = type.name();
+    }
+
+    /**
+     * Creates a deep copy of the given descriptor under a new parent.
+     * Properties are copied; the new descriptor is independent of the original.
+     */
+    MessageDescriptor(ProtocolDescriptor parent, MessageDescriptor other) {
+        this.parent = parent;
+        this.id = other.id;
+        this.name = other.name;
+        this.properties.putAll(other.properties);
+    }
+
     public int getId() {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
     public String getName() {
         return name;
-    }
-
-    public void setMessageType(MessageType type) {
-        id = type.getId();
-        name = type.name();
     }
 
     public MessageType getMessageType() {
@@ -58,10 +70,6 @@ public final class MessageDescriptor {
             return MessageType.findByName(name);
         MessageType type = MessageType.findById(id);
         return type == null || !type.name().equals(name) ? null : type;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     public Map<String, String> getProperties() {
@@ -76,7 +84,7 @@ public final class MessageDescriptor {
     }
 
     public void setProperty(String key, String value) {
-        properties.put(key, value);
+        properties.put(key, value == null ? "" : value);
     }
 
     void composeTo(BufferedOutput out) throws IOException {
@@ -110,11 +118,20 @@ public final class MessageDescriptor {
         return ProtocolDescriptor.appendPropertiesFromTextTokens(tokens, properties, i);
     }
 
+    @Override
     public boolean equals(Object o) {
         return this == o || o instanceof MessageDescriptor && id == ((MessageDescriptor) o).id;
     }
 
+    @Override
     public int hashCode() {
         return id;
+    }
+
+    @Override
+    public String toString() {
+        if (properties.isEmpty())
+            return name;
+        return name + properties;
     }
 }

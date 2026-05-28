@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,6 +13,7 @@ package com.devexperts.qd.qtp;
 
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.qd.stats.QDStats;
+import com.devexperts.util.TimePeriodInfo;
 
 import java.net.UnknownHostException;
 
@@ -37,6 +38,14 @@ public interface MessageConnector extends MessageConnectorMBean {
         public String getBindAddr();
 
         public void setBindAddr(String bindAddress) throws UnknownHostException;
+    }
+
+    /**
+     * Returns the aggregation period info aggregated across all active adapters on this connector.
+     * Returns {@link TimePeriodInfo#UNKNOWN} if no adapter has aggregation period info available.
+     */
+    public default TimePeriodInfo getAggregationPeriodInfo() {
+        return TimePeriodInfo.UNKNOWN;
     }
 
     /**

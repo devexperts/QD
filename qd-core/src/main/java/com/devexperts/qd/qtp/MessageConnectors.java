@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,8 +11,10 @@
  */
 package com.devexperts.qd.qtp;
 
+import com.devexperts.connector.codec.CodecConnection;
 import com.devexperts.connector.codec.CodecConnectionFactory;
 import com.devexperts.connector.codec.CodecFactory;
+import com.devexperts.connector.proto.ApplicationConnection;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.connector.proto.ConfigurationException;
 import com.devexperts.connector.proto.ConfigurationKey;
@@ -26,6 +28,7 @@ import com.devexperts.transport.stats.EndpointStats;
 import com.devexperts.util.InvalidFormatException;
 import com.devexperts.util.JMXNameBuilder;
 import com.devexperts.util.LogUtil;
+import com.devexperts.util.TimePeriod;
 import com.devexperts.util.TypedKey;
 
 import java.io.File;
@@ -69,6 +72,18 @@ public class MessageConnectors {
         ConfigurationKey.create("fieldReplacer", String.class, "input field replacers for this connection");
     public static final ConfigurationKey<Integer> MAX_CONNECTIONS_CONFIGURATION_KEY =
         ConfigurationKey.create("maxConnections", Integer.class, "max number of allowed connections");
+    public static final ConfigurationKey<TimePeriod> REQUESTED_AGGREGATION_PERIOD_CONFIGURATION_KEY =
+        ConfigurationKey.create("requestedAggregationPeriod", TimePeriod.class,
+            "requested aggregation period sent to server");
+    public static final ConfigurationKey<TimePeriod> DEFAULT_AGGREGATION_PERIOD_CONFIGURATION_KEY =
+        ConfigurationKey.create("defaultAggregationPeriod", TimePeriod.class,
+            "default aggregation period for server-side connections");
+    public static final ConfigurationKey<TimePeriod> MIN_AGGREGATION_PERIOD_CONFIGURATION_KEY =
+        ConfigurationKey.create("minAggregationPeriod", TimePeriod.class,
+            "minimum aggregation period bound");
+    public static final ConfigurationKey<TimePeriod> MAX_AGGREGATION_PERIOD_CONFIGURATION_KEY =
+        ConfigurationKey.create("maxAggregationPeriod", TimePeriod.class,
+            "maximum aggregation period bound");
 
     public static final TypedKey<Socket> SOCKET_KEY = new TypedKey<>();
     public static final TypedKey<QDStats> STATS_KEY = new TypedKey<>();
@@ -121,6 +136,24 @@ public class MessageConnectors {
         } catch (ClassCastException e) {
             throw new IllegalArgumentException("Unsupported application connection class: " + pFactory.getClass().getName(), e);
         }
+    }
+
+    /**
+     * Extracts the {@link MessageAdapter} from an {@link ApplicationConnection},
+     * if it is a QTP message adapter connection. Unwraps any {@link CodecConnection}
+     * wrappers (tls, zlib, xor, etc.) before checking the inner connection type,
+     * so live JMX propagation reaches adapters behind codec layers.
+     *
+     * @param connection application connection
+     * @return the message adapter, or {@code null} if the connection is not a message adapter connection
+     */
+    public static MessageAdapter extractAdapter(ApplicationConnection<?> connection) {
+        while (connection instanceof CodecConnection) {
+            connection = ((CodecConnection<?>) connection).getDelegate();
+        }
+        if (connection instanceof MessageAdapterConnection)
+            return ((MessageAdapterConnection) connection).getMessageAdapter();
+        return null;
     }
 
     /**

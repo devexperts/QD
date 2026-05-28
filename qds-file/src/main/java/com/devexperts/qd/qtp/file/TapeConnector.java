@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,6 +18,7 @@ import com.devexperts.qd.qtp.AbstractMessageConnector;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.MessageConnectorState;
 import com.devexperts.qd.qtp.MessageType;
+import com.devexperts.qd.qtp.ProtocolOption;
 import com.devexperts.qd.qtp.help.MessageConnectorProperty;
 import com.devexperts.qd.qtp.help.MessageConnectorSummary;
 import com.devexperts.qd.util.QDConfig;
@@ -39,7 +40,7 @@ public class TapeConnector extends AbstractMessageConnector implements TapeConne
     private MessageType saveAs = MessageType.RAW_DATA;
     private TimePeriod storageTime = TimePeriod.UNLIMITED;
     private long storageSize = UNLIMITED_SIZE;
-    private String opt;
+    private String opt = ProtocolOption.SUPPORTED_SET.toString();
     private String tmpDir;
 
     private volatile FileWriterHandler handler;

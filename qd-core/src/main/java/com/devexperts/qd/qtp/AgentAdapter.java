@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -44,6 +44,7 @@ import com.devexperts.services.Services;
 import com.devexperts.util.LogUtil;
 import com.devexperts.util.LoggedThreadPoolExecutor;
 import com.devexperts.util.TimePeriod;
+import com.devexperts.util.TimePeriodInfo;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -52,7 +53,10 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 import javax.annotation.Nonnull;
+
+import static com.devexperts.qd.qtp.ChannelShaper.MIN_AGGREGATION_PERIOD;
 
 /**
  * The <code>AgentAdapter</code> adapts agent side of QD to message API.
@@ -75,10 +79,22 @@ public class AgentAdapter extends MessageAdapter {
      */
     public static class Factory extends MessageAdapter.AbstractFactory {
         /**
-         * Aggregation period is a single time period that serves as a default aggregation period
-         * for all channels, unless something else is explicitly specified.
+         * Default aggregation period for all channels,
+         * unless something else is explicitly specified per channel.
          */
-        private TimePeriod aggregationPeriod = TimePeriod.valueOf(0);
+        private TimePeriod defaultAggregationPeriod = null;
+
+        /**
+         * Minimum bound for aggregation period validation.
+         * Client requests below this value will be clamped up.
+         */
+        private TimePeriod minAggregationPeriod = ChannelShaper.MIN_AGGREGATION_PERIOD;
+
+        /**
+         * Maximum bound for aggregation period validation.
+         * Client requests above this value will be clamped down.
+         */
+        private TimePeriod maxAggregationPeriod = ChannelShaper.MAX_AGGREGATION_PERIOD;
 
         /**
          * Channels configuration.
@@ -133,17 +149,55 @@ public class AgentAdapter extends MessageAdapter {
             channels = new AgentAdapterChannels("", this);
         }
 
-        public synchronized TimePeriod getAggregationPeriod() {
-            return aggregationPeriod;
+        public synchronized TimePeriod getDefaultAggregationPeriod() {
+            return defaultAggregationPeriod;
         }
 
         @Configurable(description = "default aggregation period for all channels")
-        public synchronized void setAggregationPeriod(TimePeriod aggregationPeriod) {
-            if (aggregationPeriod.equals(this.aggregationPeriod)) // also throws NPE
+        public synchronized void setDefaultAggregationPeriod(TimePeriod defaultAggregationPeriod) {
+            ChannelShaper.validateAggregationPeriod(defaultAggregationPeriod);
+            if (Objects.equals(defaultAggregationPeriod, this.defaultAggregationPeriod))
                 return;
-            if (aggregationPeriod.getTime() < 0)
-                throw new IllegalArgumentException("cannot be negative");
-            this.aggregationPeriod = aggregationPeriod;
+            this.defaultAggregationPeriod = defaultAggregationPeriod;
+            rebuildChannels();
+        }
+
+        public synchronized TimePeriod getAggregationPeriod() {
+            return getDefaultAggregationPeriod();
+        }
+
+        @Configurable(description = "legacy default aggregation period for all channels")
+        public synchronized void setAggregationPeriod(TimePeriod aggregationPeriod) {
+            setMinAggregationPeriod(aggregationPeriod);
+        }
+
+        public synchronized TimePeriod getMinAggregationPeriod() {
+            return minAggregationPeriod;
+        }
+
+        @Configurable(description = "minimum aggregation period bound")
+        public synchronized void setMinAggregationPeriod(TimePeriod minAggregationPeriod) {
+            if (minAggregationPeriod == null)
+                minAggregationPeriod = MIN_AGGREGATION_PERIOD;
+            ChannelShaper.validateAggregationPeriod(minAggregationPeriod);
+            if (Objects.equals(minAggregationPeriod, this.minAggregationPeriod))
+                return;
+            this.minAggregationPeriod = minAggregationPeriod;
+            rebuildChannels();
+        }
+
+        public synchronized TimePeriod getMaxAggregationPeriod() {
+            return maxAggregationPeriod;
+        }
+
+        @Configurable(description = "maximum aggregation period bound")
+        public synchronized void setMaxAggregationPeriod(TimePeriod maxAggregationPeriod) {
+            if (maxAggregationPeriod == null)
+                maxAggregationPeriod = ChannelShaper.MAX_AGGREGATION_PERIOD;
+            ChannelShaper.validateAggregationPeriod(maxAggregationPeriod);
+            if (Objects.equals(maxAggregationPeriod, this.maxAggregationPeriod))
+                return;
+            this.maxAggregationPeriod = maxAggregationPeriod;
             rebuildChannels();
         }
 
@@ -209,7 +263,8 @@ public class AgentAdapter extends MessageAdapter {
         }
 
         @Nonnull
-        AgentAdapterChannels getAgentAdapterChannels() {
+        @Internal
+        public AgentAdapterChannels getAgentAdapterChannels() {
             AgentAdapterChannels channels;
             synchronized (this) {
                 if (this.channels == null)
@@ -250,6 +305,15 @@ public class AgentAdapter extends MessageAdapter {
 
     private MessageVisitor retrieveVisitor;
 
+    // Server-side aggregation period bounds (copied from factory, modifiable at runtime)
+    private volatile TimePeriod defaultAggregationPeriod = null; // SYNC: this, read(none)
+    private volatile TimePeriod minAggregationPeriod = ChannelShaper.MIN_AGGREGATION_PERIOD; // SYNC: this, read(none)
+    private volatile TimePeriod maxAggregationPeriod = ChannelShaper.MAX_AGGREGATION_PERIOD; // SYNC: this, read(none)
+    private volatile TimePeriodInfo aggregationPeriodInfo = TimePeriodInfo.UNKNOWN; // SYNC: write(this), read(none)
+
+    // Last received requestedAggregationPeriod per contract (for re-resolution on bounds change).
+    private final AtomicReferenceArray<TimePeriod> lastRequestedPeriod = new AtomicReferenceArray<>(N_CONTRACTS);
+
     // ------------------------- constructors -------------------------
 
     /**
@@ -274,6 +338,7 @@ public class AgentAdapter extends MessageAdapter {
         if (history != null)
             shapers.add(newDynamicShaper(history));
         channels = new AgentChannels(new OwnerImpl(), shapers, rateLimiter);
+        synchronizeAggregationPeriods();
     }
 
     @Deprecated
@@ -308,7 +373,13 @@ public class AgentAdapter extends MessageAdapter {
         this(null, scheme, QDFilter.ANYTHING, QDFilter.ANYTHING, stats);
     }
 
-    private AgentAdapter(QDEndpoint endpoint, DataScheme scheme, QDFilter filter, QDFilter stripe, QDStats stats) {
+    /**
+     * Scheme-only constructor used by the {@linkplain Factory factory} create-adapter path.
+     * Leaves {@code channels} null so a later {@link #reinitConfiguration(AuthSession)} can
+     * install shapers without short-circuiting on the re-auth guard.
+     */
+    @Internal
+    protected AgentAdapter(QDEndpoint endpoint, DataScheme scheme, QDFilter filter, QDFilter stripe, QDStats stats) {
         super(endpoint, stats);
         this.scheme = Objects.requireNonNull(scheme, "scheme");
         this.localFilter = Objects.requireNonNull(filter, "filter");
@@ -337,6 +408,7 @@ public class AgentAdapter extends MessageAdapter {
         if (channels != null)
             throw new IllegalArgumentException("Already initialized");
         channels = new AgentChannels(new OwnerImpl(), Arrays.asList(shapers), rateLimiter);
+        synchronizeAggregationPeriods();
         return this;
     }
 
@@ -417,6 +489,11 @@ public class AgentAdapter extends MessageAdapter {
         public boolean retrieve(RecordProvider recordProvider, QDContract contract) {
             return retrieveVisitor.visitData(recordProvider, MessageType.forData(contract));
         }
+
+        @Override
+        public void synchronizeAggregationPeriods() {
+            AgentAdapter.this.synchronizeAggregationPeriods();
+        }
     }
 
     @Override
@@ -433,10 +510,136 @@ public class AgentAdapter extends MessageAdapter {
     private void setAgentFactory(AgentAdapter.Factory factory) {
         this.factory = factory;
         skipRemoveSubscription = TimePeriod.UNLIMITED.equals(factory.getSubscriptionKeepAlive());
+        this.defaultAggregationPeriod = factory.getDefaultAggregationPeriod();
+        this.minAggregationPeriod = factory.getMinAggregationPeriod();
+        this.maxAggregationPeriod = factory.getMaxAggregationPeriod();
+        synchronizeAggregationPeriods();
     }
 
-    Factory getAgentFactory() {
+    @Internal
+    public Factory getAgentFactory() {
         return factory;
+    }
+
+    // ========== Aggregation Period Management ==========
+
+    @Override
+    public TimePeriodInfo getAggregationPeriodInfo() {
+        return aggregationPeriodInfo;
+    }
+
+    @Override
+    public String getDefaultAggregationPeriod() {
+        return defaultAggregationPeriod == null ? null : defaultAggregationPeriod.toString();
+    }
+
+    @Override
+    public void setDefaultAggregationPeriod(String defaultAggregationPeriod) {
+        setDefaultAggregationPeriod(AbstractMessageConnector.parseAggregationPeriodString(defaultAggregationPeriod));
+    }
+
+    public synchronized void setDefaultAggregationPeriod(TimePeriod defaultAggregationPeriod) {
+        if (defaultAggregationPeriod == null)
+            defaultAggregationPeriod = factory != null ? factory.getDefaultAggregationPeriod() : null;
+        ChannelShaper.validateAggregationPeriod(defaultAggregationPeriod);
+        this.defaultAggregationPeriod = defaultAggregationPeriod;
+        synchronizeAggregationPeriods();
+    }
+
+    @Override
+    public String getMinAggregationPeriod() {
+        return minAggregationPeriod.toString();
+    }
+
+    @Override
+    public void setMinAggregationPeriod(String minAggregationPeriod) {
+        setMinAggregationPeriod(AbstractMessageConnector.parseAggregationPeriodString(minAggregationPeriod));
+    }
+
+    public synchronized void setMinAggregationPeriod(TimePeriod minAggregationPeriod) {
+        if (minAggregationPeriod == null) {
+            minAggregationPeriod =
+                factory != null ? factory.getMinAggregationPeriod() : ChannelShaper.MIN_AGGREGATION_PERIOD;
+        }
+        ChannelShaper.validateAggregationPeriod(minAggregationPeriod);
+        this.minAggregationPeriod = minAggregationPeriod;
+        synchronizeAggregationPeriods();
+    }
+
+    @Override
+    public String getMaxAggregationPeriod() {
+        return maxAggregationPeriod.toString();
+    }
+
+    @Override
+    public void setMaxAggregationPeriod(String maxAggregationPeriod) {
+        setMaxAggregationPeriod(AbstractMessageConnector.parseAggregationPeriodString(maxAggregationPeriod));
+    }
+
+    public synchronized void setMaxAggregationPeriod(TimePeriod maxAggregationPeriod) {
+        if (maxAggregationPeriod == null) {
+            maxAggregationPeriod =
+                factory != null ? factory.getMaxAggregationPeriod() : ChannelShaper.MAX_AGGREGATION_PERIOD;
+        }
+        ChannelShaper.validateAggregationPeriod(maxAggregationPeriod);
+        this.maxAggregationPeriod = maxAggregationPeriod;
+        synchronizeAggregationPeriods();
+    }
+
+    /**
+     * Re-resolves each shaper's aggregation period via {@link #resolveChannelPeriod}, pushes the
+     * result into the shaper, and refreshes {@link #aggregationPeriodInfo}. Sets the
+     * {@link MessageType#DESCRIBE_PROTOCOL} mask when the aggregate changes.
+     */
+    private void synchronizeAggregationPeriods() {
+        if (channels == null) {
+            aggregationPeriodInfo = TimePeriodInfo.UNKNOWN;
+            return;
+        }
+        long connectorDefault = extractTimePeriodValue(defaultAggregationPeriod);
+        long connectorMin = minAggregationPeriod.getTime();
+        long connectorMax = maxAggregationPeriod.getTime();
+        TimePeriodInfo result = TimePeriodInfo.UNKNOWN;
+        for (int i = 0; i < channels.shapers.length; i++) {
+            ChannelShaper shaper = channels.shapers[i];
+            TimePeriod requested = lastRequestedPeriod.get(shaper.getContract().ordinal());
+            long period = resolveChannelPeriod(
+                extractTimePeriodValue(shaper.getDefaultAggregationPeriod()),
+                shaper.getMinAggregationPeriod().getTime(),
+                shaper.getMaxAggregationPeriod().getTime(),
+                connectorDefault, connectorMin, connectorMax,
+                extractTimePeriodValue(requested));
+            shaper.setAggregationPeriod(period);
+            result = result.add(period);
+        }
+        if (!aggregationPeriodInfo.equals(result)) {
+            aggregationPeriodInfo = result;
+            addMask(getMessageMask(MessageType.DESCRIBE_PROTOCOL));
+        }
+    }
+
+    private static long extractTimePeriodValue(TimePeriod timePeriod) {
+        return timePeriod == null ? -1 : timePeriod.getTime();
+    }
+
+    /**
+     * Resolves the effective aggregation period for a channel by intersecting channel and
+     * connector bounds and clamping the client request (or the channel default when no request)
+     * into that envelope. All values in milliseconds; {@code requested == -1} means no client
+     * request.
+     */
+    // VisibleForTesting
+    static long resolveChannelPeriod(
+        long channelDefault, long channelMin, long channelMax,
+        long connectorDefault, long connectorMin, long connectorMax, long requested)
+    {
+        long effMin = Math.max(channelMin, connectorMin);
+        long effMax = Math.min(channelMax, connectorMax);
+        if (effMax < effMin)
+            effMax = effMin; // min wins over max
+        long target = requested >= 0 ? requested : channelDefault >= 0 ? channelDefault :
+            connectorDefault >= 0 ? connectorDefault : ChannelShaper.DEFAULT_AGGREGATION_PERIOD.getTime();
+        return Math.max(effMin, Math.min(target, effMax));
     }
 
     @Override
@@ -534,13 +737,37 @@ public class AgentAdapter extends MessageAdapter {
                 .filter(entry -> !entry.getValue().isEmpty())
                 .forEach(entry -> entry.getKey().setProperty(ProtocolDescriptor.FILTER_PROPERTY, entry.getValue()));
         }
+        // Always send aggregationPeriodInfo (including UNKNOWN) so the client knows the current state.
+        // Omitting the property would leave the old value stuck in the client's accumulated descriptor
+        // (mergeOrAdd/putAll cannot remove keys).
+        TimePeriodInfo info = aggregationPeriodInfo; // volatile read
+        for (QDContract contract : QD_CONTRACTS) {
+            MessageDescriptor dataMsg = desc.getSend(MessageType.forData(contract));
+            if (dataMsg != null)
+                dataMsg.setProperty(ProtocolDescriptor.AGGREGATION_PERIOD_INFO_PROPERTY, info.toString());
+        }
     }
 
     @Override
     public void processDescribeProtocol(ProtocolDescriptor desc, boolean logDescriptor) {
         super.processDescribeProtocol(desc, logDescriptor);
-        if (channels == null)
-            return;
+        for (QDContract contract : QD_CONTRACTS) {
+            MessageDescriptor md = desc.getReceive(MessageType.forData(contract));
+            if (md == null)
+                continue;
+            String requested = md.getProperty(ProtocolDescriptor.REQUESTED_AGGREGATION_PERIOD_PROPERTY);
+            TimePeriod requestedPeriod = null;
+            if (requested != null && !requested.isEmpty()) {
+                try {
+                    requestedPeriod = TimePeriod.valueOf(requested);
+                } catch (IllegalArgumentException e) {
+                    log.warn("Cannot parse requestedAggregationPeriod '" + LogUtil.hideCredentials(requested) + "'" +
+                        " from " + LogUtil.hideCredentials(getRemoteHostAddress()), e);
+                }
+            }
+            lastRequestedPeriod.set(contract.ordinal(), requestedPeriod);
+        }
+        //TODO parse filter
         QDFilterFactory filterFactory = CompositeFilters.getFactory(scheme);
         Map<String, QDFilter> filters = new HashMap<>();
         filters.put(null, QDFilter.ANYTHING);
@@ -568,6 +795,7 @@ public class AgentAdapter extends MessageAdapter {
                     " from " + LogUtil.hideCredentials(getRemoteHostAddress()), e);
             }
         }
+        synchronizeAggregationPeriods();
     }
 
     @Override

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,11 +18,13 @@ class TestThroughputGenerator {
     private final int index;
     private final TestThroughputContext ctx;
     private final TestThroughputConfig config;
-    private int[][] sequence;
+    private final int[][] sequence;
+
+    private int initCount; // number of data to be initially filled
     private int rnd;
 
-    long start;
-    int n;
+    final long start;
+    final int n;
 
     TestThroughputGenerator(int index, TestThroughputContext ctx) {
         this.index = index;
@@ -34,12 +36,14 @@ class TestThroughputGenerator {
         long stop = ctx.config.distsplit == 0 ? ctx.size() :
             (long) ctx.size() * ctx.config.distsplit * (index + 1) / ctx.config.dists;
         n = (int) (stop - start);
-
+        initCount = n * config.records;
     }
 
     void retrieveRecordBuffer(RecordBuffer buf) {
-        int iflds = config.ifields;
-        int oflds = config.ofields;
+        if (initCount > 0) {
+            initialFill(buf);
+            return;
+        }
         int rofs = (rnd & 0x7fffffff) % config.records;
         int sid = 0;
         int rid = 0;
@@ -50,11 +54,31 @@ class TestThroughputGenerator {
                 rid = (i + rofs) % config.records;
             }
             RecordCursor cur = buf.add(ctx.scheme.getRecord(rid), ctx.getCipher(sid), ctx.getSymbol(sid));
-            int sequence = --this.sequence[rid][sid];
-            for (int k = 0; k < iflds; k++)
-                cur.setInt(k, sequence & ctx.ifldmask[k]);
-            for (int k = 0; k < oflds; k++)
-                cur.setObj(k, sequence & config.ovalmask);
+            fillData(cur, sid, rid);
+        }
+    }
+
+    /**
+     * Fill buffer with initial data: sequentially covers all symbols/records in generator's range.
+     */
+    void initialFill(RecordBuffer buf) {
+        for (int i = 0; i < config.distbuf && initCount > 0; i++) {
+            initCount--;
+            int sid = (int) ((start + initCount % n) % config.symbols);
+            int rid = (initCount / n) % config.records;
+
+            RecordCursor cur = buf.add(ctx.scheme.getRecord(rid), ctx.getCipher(sid), ctx.getSymbol(sid));
+            fillData(cur, sid, rid);
+        }
+    }
+
+    private void fillData(RecordCursor cur, int sid, int rid) {
+        int sequence = --this.sequence[rid][sid];
+        for (int k = 0; k < config.ifields; k++) {
+            cur.setInt(k, sequence & ctx.ifldmask[k]);
+        }
+        for (int k = 0; k < config.ofields; k++) {
+            cur.setObj(k, sequence & config.ovalmask);
         }
     }
 }

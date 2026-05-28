@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,7 +22,7 @@ import com.devexperts.qd.kit.PentaCodec;
 
 class TestThroughputScheme extends DefaultScheme {
     public TestThroughputScheme(TestThroughputConfig config) {
-        super(new PentaCodec(), createRecords(config));
+        super(PentaCodec.INSTANCE, createRecords(config));
     }
 
     private static DataRecord[] createRecords(TestThroughputConfig config) {
@@ -36,18 +36,18 @@ class TestThroughputScheme extends DefaultScheme {
     }
 
     private static DataIntField[] createIntFields(String record, TestThroughputConfig config) {
-        DataIntField[] iflds = new DataIntField[config.ifields];
+        DataIntField[] intFields = new DataIntField[config.ifields];
         for (int i = 0; i < config.ifields; i++) {
-            iflds[i] = new CompactIntField(i, record + ".Int" + i);
+            intFields[i] = new CompactIntField(i, record + ".Int" + i);
         }
-        return iflds;
+        return intFields;
     }
 
     private static DataObjField[] createObjFields(String record, TestThroughputConfig config) {
-        DataObjField[] oflds = new DataObjField[config.ofields];
+        DataObjField[] objFields = new DataObjField[config.ofields];
         for (int i = 0; i < config.ofields; i++) {
-            oflds[i] = new MarshalledObjField(i, record + ".Obj" + i);
+            objFields[i] = new MarshalledObjField(i, record + ".Obj" + i);
         }
-        return oflds;
+        return objFields;
     }
 }

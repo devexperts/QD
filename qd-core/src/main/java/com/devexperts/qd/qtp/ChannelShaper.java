@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,7 +16,10 @@ import com.devexperts.qd.QDContract;
 import com.devexperts.qd.QDFilter;
 import com.devexperts.qd.SubscriptionFilter;
 import com.devexperts.qd.ng.RecordFilter;
+import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimePeriod;
 
+import java.util.Objects;
 import java.util.concurrent.Executor;
 
 /**
@@ -36,6 +39,31 @@ import java.util.concurrent.Executor;
  * {@link AgentAdapter#updateChannel} method.
  */
 public class ChannelShaper implements Cloneable {
+
+    // This constant is linked with same one in DXFeedSubscription - AGGREGATION_PERIOD_MAX_VALUE.
+    /** Maximum aggregation period in milliseconds (24 hours). */
+    public static final long AGGREGATION_PERIOD_MAX_VALUE = 24L * 3600 * 1000;
+
+    static final TimePeriod DEFAULT_AGGREGATION_PERIOD = TimePeriod.valueOf(
+        SystemProperties.getProperty(ChannelShaper.class, "defaultAggregationPeriod", "0s"));
+    static final TimePeriod MIN_AGGREGATION_PERIOD = TimePeriod.valueOf(
+        SystemProperties.getProperty(ChannelShaper.class, "minAggregationPeriod", "0s"));
+    static final TimePeriod MAX_AGGREGATION_PERIOD = TimePeriod.valueOf(
+        SystemProperties.getProperty(ChannelShaper.class, "maxAggregationPeriod", null),
+            TimePeriod.valueOf(AGGREGATION_PERIOD_MAX_VALUE));
+
+    /**
+     * Validates that the given aggregation period does not exceed the 24-hour maximum.
+     * A {@code null} period is allowed (means "not specified").
+     *
+     * @param period the period to validate, or {@code null}
+     * @throws IllegalArgumentException if the period exceeds {@link #AGGREGATION_PERIOD_MAX_VALUE}
+     */
+    public static void validateAggregationPeriod(TimePeriod period) {
+        if (period != null && period.getTime() > AGGREGATION_PERIOD_MAX_VALUE)
+            throw new IllegalArgumentException("Aggregation period is too large: " + period);
+    }
+
     private final QDContract contract; // fixed on creation
     private final Executor subscriptionExecutor; // fixed on creation
     private final boolean keepRejected; // fixed on creation
@@ -47,6 +75,11 @@ public class ChannelShaper implements Cloneable {
     private volatile RecordFilter dataFilter;
     private volatile int weight = 1;
     private volatile long aggregationPeriod;
+
+    // null = unset; the connector-level bound applies during resolution
+    private volatile TimePeriod defaultAggregationPeriod = null;
+    private volatile TimePeriod minAggregationPeriod = MIN_AGGREGATION_PERIOD;
+    private volatile TimePeriod maxAggregationPeriod = MAX_AGGREGATION_PERIOD;
 
     /**
      * Creates new channel shaper with specified contract and subscription executor.
@@ -96,6 +129,26 @@ public class ChannelShaper implements Cloneable {
         setCollector(collector);
         setSubscriptionFilter(subscriptionFilter);
         setDataFilter(dataFilter);
+    }
+
+    /**
+     * Creates a new channel shaper as an unbound copy of {@code source}. Every property declared
+     * on {@code source} is transferred; the copy starts unbound (calling {@link #bind} on it
+     * succeeds exactly once). Subsequent property additions to {@code ChannelShaper} extend this
+     * constructor only — no migration-site sweep required.
+     *
+     * @param source the shaper to copy from; may not be {@code null}
+     */
+    public ChannelShaper(ChannelShaper source) {
+        this(source.contract, source.subscriptionExecutor, source.keepRejected);
+        this.collector = source.collector;
+        this.subscriptionFilter = source.subscriptionFilter;
+        this.dataFilter = source.dataFilter;
+        this.weight = source.weight;
+        this.aggregationPeriod = source.aggregationPeriod;
+        this.defaultAggregationPeriod = source.defaultAggregationPeriod;
+        this.minAggregationPeriod = source.minAggregationPeriod;
+        this.maxAggregationPeriod = source.maxAggregationPeriod;
     }
 
     /**
@@ -298,15 +351,82 @@ public class ChannelShaper implements Cloneable {
      * @throws IllegalArgumentException if aggregation period is negative or greater than 24 hours.
      */
     public void setAggregationPeriod(long aggregationPeriod) {
-        if (aggregationPeriod < 0 || aggregationPeriod > 24 * 3600 * 1000)
+        if (aggregationPeriod < 0 || aggregationPeriod > AGGREGATION_PERIOD_MAX_VALUE)
             throw new IllegalArgumentException("Aggregation period is out of limits: " + aggregationPeriod);
         this.aggregationPeriod = aggregationPeriod;
         reconfigureIfNeeded();
+    }
+
+    /**
+     * Returns the channel's own configured default aggregation period, or {@code null} if
+     * unset (falls back to the connector-level default during resolution).
+     */
+    public TimePeriod getDefaultAggregationPeriod() {
+        return defaultAggregationPeriod;
+    }
+
+    /**
+     * Sets the channel's own default aggregation period. {@code null} clears the override.
+     * Non-{@code null} values must not exceed 24 hours.
+     */
+    public void setDefaultAggregationPeriod(TimePeriod defaultAggregationPeriod) {
+        validateAggregationPeriod(defaultAggregationPeriod);
+        this.defaultAggregationPeriod = defaultAggregationPeriod;
+        resolveAggregationPeriod();
+    }
+
+    /**
+     * Returns the channel's own configured minimum aggregation period, or {@code null} if
+     * unset (falls back to the connector-level minimum during resolution).
+     */
+    public TimePeriod getMinAggregationPeriod() {
+        return minAggregationPeriod;
+    }
+
+    /**
+     * Sets the channel's own minimum aggregation period. {@code null} clears the override.
+     * Non-{@code null} values must not exceed 24 hours. {@code min > max} is accepted; the
+     * resolution layer applies min-wins-over-max.
+     */
+    public void setMinAggregationPeriod(TimePeriod minAggregationPeriod) {
+        Objects.requireNonNull(minAggregationPeriod, "minAggregationPeriod");
+        validateAggregationPeriod(minAggregationPeriod);
+        this.minAggregationPeriod = minAggregationPeriod;
+        resolveAggregationPeriod();
+    }
+
+    /**
+     * Returns the channel's own configured maximum aggregation period, or {@code null} if
+     * unset (falls back to the connector-level maximum during resolution).
+     */
+    public TimePeriod getMaxAggregationPeriod() {
+        return maxAggregationPeriod;
+    }
+
+    /**
+     * Sets the channel's own maximum aggregation period. {@code null} clears the override.
+     * Non-{@code null} values must not exceed 24 hours. {@code max < min} is accepted; the
+     * resolution layer applies min-wins-over-max.
+     */
+    public void setMaxAggregationPeriod(TimePeriod maxAggregationPeriod) {
+        Objects.requireNonNull(maxAggregationPeriod, "maxAggregationPeriod");
+        validateAggregationPeriod(maxAggregationPeriod);
+        this.maxAggregationPeriod = maxAggregationPeriod;
+        resolveAggregationPeriod();
     }
 
     private void reconfigureIfNeeded() {
         AgentChannel channel = this.channel; // atomic read
         if (channel != null)
             channel.reconfigureIfNeeded();
+    }
+
+    // delegates to the owner so the resolver can recompute effective periods against
+    // connector-level bounds and refresh aggregationPeriodInfo; the resolver writes a new
+    // aggregationPeriod via setAggregationPeriod, which in turn triggers reconfigureIfNeeded
+    private void resolveAggregationPeriod() {
+        AgentChannel channel = this.channel; // atomic read
+        if (channel != null)
+            channel.owner.synchronizeAggregationPeriods();
     }
 }

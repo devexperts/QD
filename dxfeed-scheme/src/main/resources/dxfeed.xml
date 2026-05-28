@@ -458,6 +458,8 @@
         <generator name="OrderImbalance" type="suffix" delimiter="#">
             <iterator>
                 <value/>
+                <value>NTV</value>
+                <value>ARCA</value>
                 <value>NUAM</value>
             </iterator>
             <record name="OrderImbalance">

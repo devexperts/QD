@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -239,6 +239,17 @@ public class QDConfig {
             kvList.add(prop.getName() + "=" + v);
         }
         return kvList;
+    }
+
+    public static String getProperty(List<String> kvList, String key) {
+        String value = null;
+        for (String kv : kvList) {
+            int i = kv.indexOf('=');
+            String k = i < 0 ? kv : kv.substring(0, i).trim();
+            if (k.equalsIgnoreCase(key))
+                value = i < 0 ? "" : kv.substring(i + 1).trim();
+        }
+        return value;
     }
 
     public static void setProperties(Object instance, Class<?> intf, List<String> kvList) throws InvalidFormatException {

@@ -1212,7 +1212,8 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
             throw new IllegalStateException("Previous agent misses entry");
         int nagent = asub.getInt(aindex + NEXT_AGENT);
         int nindex = asub.getInt(aindex + NEXT_INDEX);
-        psub.setInt(pindex + NEXT_AGENT, isStickyEnabled && nagent == 0 ? NO_NEXT_AGENT_STICKY_DELAY : nagent);
+        psub.setInt(pindex + NEXT_AGENT,
+            isStickyEnabled && nagent == 0 && pagent == total.number ? NO_NEXT_AGENT_STICKY_DELAY : nagent);
         psub.setInt(pindex + NEXT_INDEX, nindex);
         asub.setInt(aindex + NEXT_AGENT, 0);
         asub.setInt(aindex + NEXT_INDEX, 0);
@@ -1358,11 +1359,12 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
         long timeTotal = Math.min(time, watermark);
         // set reduced time
         tsub.setLong(tindex + TIME_TOTAL, timeTotal);
-        if (timeTotal < Long.MAX_VALUE) {
+        boolean keepTotal = timeTotal != Long.MAX_VALUE || tsub.getInt(tindex + NEXT_AGENT) > 0;
+        if (keepTotal) {
             // the following call also trims extra records from HistoryBuffer
             totalRecordAdded(key, rid, tsub, tindex, timeTotal);
         }
-        return timeTotal != Long.MAX_VALUE;
+        return keepTotal;
     }
 
     private void enableStickyOrUpdateWatermark(SubMatrix tsub, int tindex, long time, boolean wasStickySubscription) {

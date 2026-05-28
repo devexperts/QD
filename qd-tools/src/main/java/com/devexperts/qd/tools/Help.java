@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -25,13 +25,15 @@ import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.lang.reflect.Method;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -56,7 +58,8 @@ public class Help extends AbstractTool {
     public static final int MIN_WIDTH = 10;
     public static final int DEFAULT_WIDTH = 120;
 
-    private static final String HELP_DATA_RESOURCE = "qdshelp.txt";
+    // Help files location. Allowed to encounter multiple times.
+    private static final String HELP_DATA_RESOURCE = "META-INF/qds/qdshelp.txt";
     private static final char SPECIAL_SYMBOL = '@';
 
     private static final String COMMENT_MARKER = SPECIAL_SYMBOL + "#";
@@ -73,9 +76,11 @@ public class Help extends AbstractTool {
     private static final String LINK_MARKER = SPECIAL_SYMBOL + "link";
     private static final String LINEBREAK_MARKER = SPECIAL_SYMBOL + "br;";
 
-    private final OptionInteger widthOpt = new OptionInteger('w', "width", "<n>", "Screen width (default is " + DEFAULT_WIDTH + ")");
+    private final OptionInteger widthOpt =
+        new OptionInteger('w', "width", "<n>", "Screen width (default is " + DEFAULT_WIDTH + ")");
 
     private int width = DEFAULT_WIDTH;
+    private String separator;
 
     @Override
     protected Option[] getOptions() {
@@ -97,103 +102,146 @@ public class Help extends AbstractTool {
         for (String word : args) {
             caption = (caption == null) ? word : caption + " " + word;
         }
-        BufferedReader dataReader = new BufferedReader(new InputStreamReader(getHelpData()));
-        try {
-            showArticle(dataReader, caption);
-        } finally {
-            try {
-                dataReader.close();
-            } catch (IOException ignored) {}
-        }
-    }
-
-    private static InputStream getHelpData() {
-        InputStream content = Help.class.getResourceAsStream(HELP_DATA_RESOURCE);
-        if (content == null)
-            throw new RuntimeException("Couldn't find the help data resource.");
-        return content;
-    }
-
-    private void showArticle(BufferedReader reader, String caption) {
+        List<String> helpData = getHelpData();
         if (caption.equalsIgnoreCase("Contents")) {
-            printHelpContents(reader);
-            return;
-        }
-        if (caption.equalsIgnoreCase("All")) {
-            printAllArticles(reader);
-            return;
-        }
-
-        try {
-            // Skip until caption met
-            while (true) {
-                String line = reader.readLine();
-                if (line == null) {
-                    AbstractTool tool = Tools.getTool(caption);
-                    if (tool != null) {
-                        printCaption(caption);
-                        System.out.print(tool.generateHelpSummary(width));
-                    } else
-                        printFormat("No help article found for \"" + caption + "\"");
-                    return;
-                }
-                if (line.startsWith(ARTICLE_CAPTION_MARKER)) {
-                    line = line.substring(ARTICLE_CAPTION_MARKER.length()).trim();
-                    if (line.equalsIgnoreCase(caption)) {
-                        caption = line;
-                        break;
-                    }
-                }
-            }
-
-            List<String> lines = new ArrayList<>();
-            // Reading the article
-            while (true) {
-                String line = reader.readLine();
-                if ((line == null) || (line.startsWith(ARTICLE_CAPTION_MARKER)))
-                    break;
-                lines.add(line);
-            }
-            printArticle(caption, lines);
-        } catch (IOException e) {
-            System.err.println("IO error occurred while reading help data:");
-            e.printStackTrace();
+            printHelpContents(helpData);
+        } else if (caption.equalsIgnoreCase("All")) {
+            printAllArticles(helpData);
+        } else {
+            showArticle(helpData, caption);
         }
     }
 
-    private void printAllArticles(BufferedReader reader) {
+    /**
+     * Load bundled help contents. Partial or empty list of lines in case of error.
+     */
+    private List<String> getHelpData() {
+        ArrayList<String> lines = new ArrayList<>();
+        Enumeration<URL> resources;
         try {
-            char[] sep = new char[width];
-            Arrays.fill(sep, '-');
-            String articleSeparator = new String(sep);
-
-            String caption = null;
-            List<String> lines = new ArrayList<>();
-            do {
-                lines.clear();
-                String newCaption;
+            resources = getHelpClassLoader().getResources(HELP_DATA_RESOURCE);
+        } catch (IOException e) {
+            System.err.println("Error in help data resource lookup (" + HELP_DATA_RESOURCE + "): " + e);
+            return lines;
+        }
+        // At least one help data resource is expected
+        if (!resources.hasMoreElements()) {
+            System.err.println("Couldn't find the help data resource (" + HELP_DATA_RESOURCE + ").");
+            return lines;
+        }
+        while (resources.hasMoreElements()) {
+            URL resource = resources.nextElement();
+            try (BufferedReader reader =
+                     new BufferedReader(new InputStreamReader(resource.openStream(), StandardCharsets.UTF_8)))
+            {
                 while (true) {
                     String line = reader.readLine();
-                    if ((line == null) || (line.startsWith(ARTICLE_CAPTION_MARKER))) {
-                        newCaption = (line == null) ?
-                            null :
-                            line.substring(ARTICLE_CAPTION_MARKER.length()).trim();
+                    if (line == null)
                         break;
-                    }
                     lines.add(line);
                 }
-                if (caption != null)
-                    printArticle(caption, lines);
-                caption = newCaption;
-
-                System.out.println();
-                System.out.println(articleSeparator);
-                System.out.println();
-            } while (caption != null);
-        } catch (IOException e) {
-            System.err.println("IO error occurred while reading help data:");
-            e.printStackTrace();
+            } catch (IOException e) {
+                // Unexpected. Defensive diagnostics for malformed packaging.
+                System.err.println("Error reading help resource " + resource + " (skipped): " + e);
+            }
         }
+        if (lines.isEmpty()) {
+            System.err.println("Help data is empty (probably bundling error)");
+        }
+        return lines;
+    }
+
+    /**
+     * Show help article(s) matching the {@code request}.
+     * In case no matching articles found in provided {@code helpData}, will fall back to intrinsics for
+     * tools and connectors.
+     */
+    private void showArticle(List<String> helpData, String request) {
+        boolean found = false;
+
+        // show matching articles from helpData
+        int pos = 0;
+        while (true) {
+            int artIndex = findArticle(helpData, pos, request);
+            if (artIndex < 0)
+                break;
+            String caption = getArticleCaption(helpData.get(artIndex));
+            if (found) {
+                System.out.println(getSeparator());
+                System.out.println("*ALSO*");
+            }
+            found = true;
+            int endIndex = nextArticle(helpData, artIndex + 1);
+            printArticle(caption, helpData.subList(artIndex + 1, endIndex));
+            pos = endIndex;
+        }
+
+        if (!found) {
+            // Try a direct tool description
+            AbstractTool tool = Tools.getTool(request);
+            if (tool != null) {
+                printCaption(tool.getToolName());
+                System.out.print(tool.generateHelpSummary(width));
+                return;
+            }
+            // Try a direct connector description
+            Class<? extends MessageConnector> connector =
+                MessageConnectors.findMessageConnector(request + "Connector", getHelpClassLoader());
+            if (connector != null) {
+                printCaption(getConnectorName(connector));
+                printMessageConnectorHelpSummary(connector);
+                return;
+            }
+            printFormat("No help article found for \"" + request + "\"");
+        }
+    }
+
+    /**
+     * Find the next article matching the request. Return the article's caption index or -1.
+     */
+    private static int findArticle(List<String> lines, int fromIndex, String request) {
+        int index = nextArticle(lines, fromIndex);
+        while (index < lines.size()) {
+            if (getArticleCaption(lines.get(index)).equalsIgnoreCase(request))
+                return index;
+            index = nextArticle(lines, index + 1);
+        }
+        return -1;
+    }
+
+    /**
+     * Returns index of the next article caption directive; returns size of {@code lines} if the EOD is reached.
+     */
+    private static int nextArticle(List<String> lines, int fromIndex) {
+        for (int i = fromIndex; i < lines.size(); i++) {
+            String line = lines.get(i);
+            if (line.startsWith(ARTICLE_CAPTION_MARKER))
+                return i;
+        }
+        return lines.size();
+    }
+
+    private void printAllArticles(List<String> helpData) {
+        int artIndex = nextArticle(helpData, 0);
+        while (artIndex < helpData.size()) {
+            String caption = getArticleCaption(helpData.get(artIndex));
+            int nextIndex = nextArticle(helpData, artIndex + 1);
+            List<String> lines = helpData.subList(artIndex + 1, nextIndex);
+            printArticle(caption, lines);
+            System.out.println();
+            System.out.println(getSeparator());
+            System.out.println();
+            artIndex = nextIndex;
+        }
+    }
+
+    private String getSeparator() {
+        if (separator == null) {
+            char[] sep = new char[width];
+            Arrays.fill(sep, '-');
+            separator = new String(sep);
+        }
+        return separator;
     }
 
     private static class PropDescContainer {
@@ -219,33 +267,39 @@ public class Help extends AbstractTool {
         Map<String, PropDescContainer> properties = getAnnotatedConnectorProperties(connector);
         if (properties.isEmpty()) {
             printFormat("This connector has no special properties.");
-        } else try {
-            printFormat("Properties:");
-            ArrayList<String[]> table = new ArrayList<>();
-            table.add(new String[]{"  ", "[type]", "[name]", "[description]"});
-            List<String[]> deprecatedProperties = new ArrayList<>();
-            deprecatedProperties.add(new String[]{"  ", "[type]", "[name]", "[description]"});
-            for (PropDescContainer prop : properties.values()) {
-                String name = prop.propertyDescriptor.getName();
-                String desc = prop.propertyDescriptor.getWriteMethod().getAnnotation(MessageConnectorProperty.class).value();
-                String type = prop.propertyDescriptor.getPropertyType().getSimpleName();
-                String deprecated = prop.deprecated;
-                if (deprecated.isEmpty())
-                    table.add(new String[]{"", type, name, desc});
-                else
-                    deprecatedProperties.add(new String[]{"", type, name, desc + "\n" + deprecated});
+        } else {
+            try {
+                printFormat("Properties:");
+                ArrayList<String[]> table = new ArrayList<>();
+                table.add(new String[]{"  ", "[type]", "[name]", "[description]"});
+                List<String[]> deprecatedProperties = new ArrayList<>();
+                deprecatedProperties.add(new String[]{"  ", "[type]", "[name]", "[description]"});
+                for (PropDescContainer prop : properties.values()) {
+                    String name = prop.propertyDescriptor.getName();
+                    String desc =
+                        prop.propertyDescriptor.getWriteMethod().getAnnotation(MessageConnectorProperty.class).value();
+                    String type = prop.propertyDescriptor.getPropertyType().getSimpleName();
+                    String deprecated = prop.deprecated;
+                    if (deprecated.isEmpty()) {
+                        table.add(new String[]{"", type, name, desc});
+                    } else {
+                        deprecatedProperties.add(new String[]{"", type, name, desc + "\n" + deprecated});
+                    }
+                }
+                System.out.println(formatTable(table, width, "  "));
+                if (deprecatedProperties.size() > 1) {
+                    System.out.println("\nDeprecated properties:");
+                    System.out.println(formatTable(deprecatedProperties, width, "  "));
+                }
+            } catch (IllegalArgumentException e) {
+                printFormat("\t--- Error occurred while generating properties information ---");
             }
-            System.out.println(formatTable(table, width, "  "));
-            if (deprecatedProperties.size() > 1) {
-                System.out.println("\nDeprecated properties:");
-                System.out.println(formatTable(deprecatedProperties, width, "  "));
-            }
-        } catch (IllegalArgumentException e) {
-            printFormat("\t--- Error occurred while generating properties information ---");
         }
     }
 
-    private Map<String, PropDescContainer> getAnnotatedConnectorProperties(Class<? extends MessageConnector> connector) {
+    private Map<String, PropDescContainer> getAnnotatedConnectorProperties(
+        Class<? extends MessageConnector> connector)
+    {
         Map<String, PropDescContainer> result = new TreeMap<>();
         try {
             BeanInfo bi = Introspector.getBeanInfo(connector);
@@ -263,33 +317,41 @@ public class Help extends AbstractTool {
         return result;
     }
 
-    private void printHelpContents(BufferedReader reader) {
+    private void printHelpContents(List<String> lines) {
         // List all help article names
         ArrayList<String> captions = new ArrayList<>();
         Set<String> lowerCaptions = new HashSet<>();
-        try {
-            while (true) {
-                String line = reader.readLine();
-                if (line == null)
-                    break;
-                if (line.startsWith(ARTICLE_CAPTION_MARKER)) {
-                    line = line.substring(ARTICLE_CAPTION_MARKER.length()).trim();
-                    captions.add(line);
-                    lowerCaptions.add(line.toLowerCase(Locale.US));
-                }
+        for (String line : lines) {
+            if (line.startsWith(ARTICLE_CAPTION_MARKER)) {
+                String caption = getArticleCaption(line);
+                captions.add(caption);
+                lowerCaptions.add(caption.toLowerCase(Locale.US));
             }
-        } catch (IOException e) {
-            System.err.println("IO error occurred while reading help data:");
-            e.printStackTrace();
         }
+
         // Add all tool names to the list if specific article not found.
-        for (String tool : Tools.getToolNames())
+        for (String tool : Tools.getToolNames()) {
             if (!lowerCaptions.contains(tool.toLowerCase(Locale.US)))
                 captions.add(tool);
+        }
+        // ... and Connectors if missing
+        for (Class<? extends MessageConnector> connector :
+            MessageConnectors.listMessageConnectors(getHelpClassLoader()))
+        {
+            String connectorName = getConnectorName(connector);
+            if (!lowerCaptions.contains(connectorName.toLowerCase(Locale.US)))
+                captions.add(connectorName);
+        }
+
         Collections.sort(captions);
         printFormat("Help articles:");
-        for (String s : captions)
+        for (String s : captions) {
             System.out.println("    " + s);
+        }
+    }
+
+    private static String getArticleCaption(String s) {
+        return s.substring(ARTICLE_CAPTION_MARKER.length()).trim();
     }
 
     private void printArticle(String caption, List<String> lines) {
@@ -313,11 +375,13 @@ public class Help extends AbstractTool {
             }
             if (line.trim().equalsIgnoreCase(MESSAGECONNECTOR_SUMMARY_MARKER)) {
                 flush(sb);
-                Class<? extends MessageConnector> connector = MessageConnectors.findMessageConnector(caption + CONNECTOR_SUFFIX, getHelpClassLoader());
-                if (connector == null)
+                Class<? extends MessageConnector> connector =
+                    MessageConnectors.findMessageConnector(caption + CONNECTOR_SUFFIX, getHelpClassLoader());
+                if (connector == null) {
                     printFormat("--- Couldn't find connector \"" + caption + "\" ---");
-                else
+                } else {
                     printMessageConnectorHelpSummary(connector);
+                }
                 continue;
             }
             if (line.trim().equalsIgnoreCase(LIST_SPECIFIC_FILTERS_MARKER)) {
@@ -335,7 +399,9 @@ public class Help extends AbstractTool {
                 flush(sb);
                 ArrayList<String[]> table = new ArrayList<>();
                 table.add(new String[]{"  ", "[name]", "[address format]", "[description]"});
-                for (Class<? extends MessageConnector> connector : MessageConnectors.listMessageConnectors(getHelpClassLoader())) {
+                for (Class<? extends MessageConnector> connector : MessageConnectors.listMessageConnectors(
+                    getHelpClassLoader()))
+                {
                     MessageConnectorSummary annotation = connector.getAnnotation(MessageConnectorSummary.class);
                     String name = getConnectorName(connector);
                     String address = "";
@@ -358,8 +424,9 @@ public class Help extends AbstractTool {
             if (line.startsWith("\t") || line.startsWith(" ")) {
                 flush(sb);
                 sb.append('\t');
-            } else if (sb.length() > 0)
+            } else if (sb.length() > 0) {
                 sb.append(' ');
+            }
             sb.append(line.trim());
         }
         flush(sb);
@@ -393,14 +460,17 @@ public class Help extends AbstractTool {
     private void printSubscriptionFilters(QDFilterFactory filterFactory) {
         ArrayList<String[]> table = new ArrayList<>();
         table.add(new String[]{"[name]", "[description]"});
-        if (filterFactory != null)
-            for (Map.Entry<String, String> entry : filterFactory.describeFilters().entrySet())
-                if (entry.getValue().length() > 0)
-                    table.add(new String[] { entry.getKey(), entry.getValue() });
-        if (table.size() > 1)
+        if (filterFactory != null) {
+            for (Map.Entry<String, String> entry : filterFactory.describeFilters().entrySet()) {
+                if (!entry.getValue().isEmpty())
+                    table.add(new String[]{entry.getKey(), entry.getValue()});
+            }
+        }
+        if (table.size() > 1) {
             System.out.println(formatTable(table, width, "  "));
-        else
+        } else {
             printFormat("--- No project-specific filters found ---");
+        }
     }
 
     private void flush(StringBuilder sb) {
@@ -416,6 +486,7 @@ public class Help extends AbstractTool {
 
     /**
      * Formats a table by given screen width.
+     *
      * @param rows rows of a table.
      * @param screenWidth screen width
      * @param separator string used to separate columns
@@ -438,8 +509,9 @@ public class Help extends AbstractTool {
         }
 
         int totalWidth = separator.length() * (n - 1);
-        for (int wid : w)
+        for (int wid : w) {
             totalWidth += wid;
+        }
         int allExceptLastWidth = totalWidth - w[n - 1];
 
         StringBuilder result = new StringBuilder();
@@ -486,8 +558,9 @@ public class Help extends AbstractTool {
                     if (first) {
                         result.append(c);
                         first = false;
-                    } else
+                    } else {
                         result.append(empty);
+                    }
                     result.append(s).append('\n');
                 }
             }
@@ -509,22 +582,22 @@ public class Help extends AbstractTool {
         text = replaceSpecialMarkers(text);
         String[] paragraphs = text.split("\n");
         StringBuilder sb = new StringBuilder();
-        for (String p : paragraphs)
+        for (String p : paragraphs) {
             sb.append(formatParagraph(p, width)).append("\n");
+        }
         return sb.toString();
     }
 
     private static String replaceSpecialMarkers(String text) {
         // process '@link{...}'
         StringBuilder sb = new StringBuilder();
-        Pattern pattern = Pattern.compile(LINK_MARKER + "\\{[^\\}]*\\}");
+        Pattern pattern = Pattern.compile(LINK_MARKER + "\\{([^\\}]*)\\}");
         Matcher matcher = pattern.matcher(text);
         int pos = 0;
         while (matcher.find()) {
-            sb.append(text.substring(pos, matcher.start()));
-            String linkText = matcher.group().substring(LINK_MARKER.length() + 1);
-            linkText = linkText.substring(0, linkText.length() - 1);
-            sb.append("\"Help ").append(linkText).append("\"");
+            sb.append(text, pos, matcher.start());
+            String linkText = matcher.group(1);
+            sb.append("\"Help ").append(linkText).append('"');
             pos = matcher.end();
         }
         sb.append(text.substring(pos));

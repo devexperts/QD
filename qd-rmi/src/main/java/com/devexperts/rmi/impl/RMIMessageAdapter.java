@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -32,6 +32,7 @@ import com.devexperts.qd.qtp.fieldreplacer.FieldReplacersCache;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.util.LogUtil;
+import com.devexperts.util.TimePeriodInfo;
 import com.devexperts.util.TypedMap;
 
 import java.io.IOException;
@@ -120,6 +121,66 @@ class RMIMessageAdapter extends MessageAdapter implements MasterMessageAdapter {
     @Override
     public FieldReplacersCache getFieldReplacer() {
         return attachedAdapter != null ? attachedAdapter.getFieldReplacer() : null;
+    }
+
+    @Override
+    public TimePeriodInfo getAggregationPeriodInfo() {
+        return attachedAdapter != null ? attachedAdapter.getAggregationPeriodInfo() : TimePeriodInfo.UNKNOWN;
+    }
+
+    @Override
+    public void setAggregationPeriodInfo(TimePeriodInfo timePeriodInfo) {
+        if (attachedAdapter != null)
+            attachedAdapter.setAggregationPeriodInfo(timePeriodInfo);
+    }
+
+    @Override
+    public String getAggregationPeriodInfoStr() {
+        return getAggregationPeriodInfo().toString();
+    }
+
+    @Override
+    public String getRequestedAggregationPeriod() {
+        return attachedAdapter != null ? attachedAdapter.getRequestedAggregationPeriod() : null;
+    }
+
+    @Override
+    public void setRequestedAggregationPeriod(String requestedAggregationPeriod) {
+        if (attachedAdapter != null)
+            attachedAdapter.setRequestedAggregationPeriod(requestedAggregationPeriod);
+    }
+
+    @Override
+    public String getDefaultAggregationPeriod() {
+        return attachedAdapter != null ? attachedAdapter.getDefaultAggregationPeriod() : null;
+    }
+
+    @Override
+    public void setDefaultAggregationPeriod(String defaultAggregationPeriod) {
+        if (attachedAdapter != null)
+            attachedAdapter.setDefaultAggregationPeriod(defaultAggregationPeriod);
+    }
+
+    @Override
+    public String getMinAggregationPeriod() {
+        return attachedAdapter != null ? attachedAdapter.getMinAggregationPeriod() : null;
+    }
+
+    @Override
+    public void setMinAggregationPeriod(String minAggregationPeriod) {
+        if (attachedAdapter != null)
+            attachedAdapter.setMinAggregationPeriod(minAggregationPeriod);
+    }
+
+    @Override
+    public String getMaxAggregationPeriod() {
+        return attachedAdapter != null ? attachedAdapter.getMaxAggregationPeriod() : null;
+    }
+
+    @Override
+    public void setMaxAggregationPeriod(String maxAggregationPeriod) {
+        if (attachedAdapter != null)
+            attachedAdapter.setMaxAggregationPeriod(maxAggregationPeriod);
     }
 
     @Override

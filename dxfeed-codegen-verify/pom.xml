@@ -3,7 +3,7 @@
   !++
   QDS - Quick Data Signalling Library
   !-
-  Copyright (C) 2002 - 2021 Devexperts LLC
+  Copyright (C) 2002 - 2026 Devexperts LLC
   !-
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
   If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,18 +14,21 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.350</version>
+        <version>3.351</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>dxfeed-codegen-verify</artifactId>
-    <packaging>pom</packaging>
+    <packaging>jar</packaging>
 
     <description>Dummy module to verify generated impl classes</description>
 
     <properties>
         <!-- Internal module - do not deploy  -->
         <deploy.skip>true</deploy.skip>
+        <!-- Project sources root dir -->
+        <codegenRootDir>${project.basedir}/../</codegenRootDir>
     </properties>
 
     <dependencies>
@@ -44,39 +47,14 @@
     <build>
         <plugins>
             <plugin>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>copy-dependencies</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>copy-dependencies</goal>
-                        </goals>
-                        <configuration>
-                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
-                            <stripVersion>true</stripVersion>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>dxfeed-codegen-verify</id>
-                        <phase>install</phase>
-                        <configuration>
-                            <target>
-                                <java classname="com.dxfeed.api.codegen.ImplVerifyMain" classpath="${project.build.directory}/lib/dxfeed-codegen.jar;${project.build.directory}/lib/dxfeed-impl.jar" failonerror="true">
-                                   <arg value="${project.basedir}/../" />
-                                </java>
-                            </target>
-                        </configuration>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                    </execution>
-                </executions>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                    <systemPropertyVariables>
+                        <codegenRootDir>${codegenRootDir}</codegenRootDir>
+                    </systemPropertyVariables>
+                </configuration>
             </plugin>
         </plugins>
     </build>

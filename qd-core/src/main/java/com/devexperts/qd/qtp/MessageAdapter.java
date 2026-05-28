@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.qd.qtp;
 
+import com.devexperts.annotation.Internal;
 import com.devexperts.auth.AuthSession;
 import com.devexperts.auth.AuthToken;
 import com.devexperts.connector.proto.Configurable;
@@ -34,6 +35,7 @@ import com.devexperts.qd.qtp.fieldreplacer.FieldReplacersCache;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.util.LogUtil;
 import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimePeriodInfo;
 import com.devexperts.util.TypedMap;
 
 import java.util.Map;
@@ -341,6 +343,8 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
     private AuthManager authManager;
     private LoginManager loginManager;
 
+    private ProtocolDescriptor lastSentDescriptor; // null = next emission is full handshake
+
     // ------------------------- constructors -------------------------
 
     protected MessageAdapter(QDEndpoint endpoint, QDStats stats) {
@@ -369,6 +373,64 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
     public FieldReplacersCache getFieldReplacer() {
         return null;
     }
+
+    // ========== MBean aggregation period defaults (overridden in subclasses) ==========
+
+    /**
+     * Returns the aggregation period info for this adapter (programmatic API).
+     * For {@code AgentAdapter}: computed from actual channel shaper values.
+     * For {@code DistributorAdapter}: received from server.
+     *
+     * @return aggregation period info, or {@link TimePeriodInfo#UNKNOWN} if not available
+     */
+    public TimePeriodInfo getAggregationPeriodInfo() {
+        return TimePeriodInfo.UNKNOWN;
+    }
+
+    /**
+     * Updates the server-applied aggregation period info on this adapter. Default no-op;
+     * {@link DistributorAdapter} overrides with the real assignment, and wrapper adapters
+     * (e.g. {@code RMIMessageAdapter}) override to forward to their attached adapter.
+     */
+    @Internal
+    public void setAggregationPeriodInfo(TimePeriodInfo timePeriodInfo) {}
+
+    @Override
+    public String getAggregationPeriodInfoStr() {
+        return getAggregationPeriodInfo().toString();
+    }
+
+    @Override
+    public String getRequestedAggregationPeriod() {
+        return null;
+    }
+
+    @Override
+    public void setRequestedAggregationPeriod(String requestedAggregationPeriod) {}
+
+    @Override
+    public String getDefaultAggregationPeriod() {
+        return null;
+    }
+
+    @Override
+    public void setDefaultAggregationPeriod(String defaultAggregationPeriod) {}
+
+    @Override
+    public String getMinAggregationPeriod() {
+        return null;
+    }
+
+    @Override
+    public void setMinAggregationPeriod(String minAggregationPeriod) {}
+
+    @Override
+    public String getMaxAggregationPeriod() {
+        return null;
+    }
+
+    @Override
+    public void setMaxAggregationPeriod(String maxAggregationPeriod) {}
 
     /**
      * Returns description of this <code>MessageAdapter</code> for management and logging purposes.
@@ -488,7 +550,12 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
             prepareAuthenticateProtocolDescriptor(desc);
         if (master != null)
             master.augmentProtocolDescriptor(desc);
-        visitor.visitDescribeProtocol(desc);
+        ProtocolDescriptor onWire = desc.deltaFrom(lastSentDescriptor);
+        visitor.visitDescribeProtocol(onWire);
+        // Mask bit cleared only after visitor accepted the buffer.
+        // Failure path leaves it set so the next examine cycle retries; lastSentDescriptor
+        // stays unchanged so the retry sends the same delta.
+        lastSentDescriptor = desc;
         mask = clearMessageMask(mask, MessageType.DESCRIBE_PROTOCOL);
         updateManagerState(false);
         return mask;

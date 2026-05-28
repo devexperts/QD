@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.350</version>
+        <version>3.351</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -49,6 +49,10 @@
                                         <Main-Class>com.devexperts.qd.tools.Tools</Main-Class>
                                         <Class-Path>qds.jar qds-file.jar qds-monitoring.jar dxlink-websocket.jar config.jar</Class-Path>
                                     </manifestEntries>
+                                </transformer>
+                                <!-- Merge QDS help fragments, if any -->
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                    <resource>META-INF/qds/qdshelp.txt</resource>
                                 </transformer>
                             </transformers>
                             <artifactSet>

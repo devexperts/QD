@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,24 +18,26 @@ import com.devexperts.qd.DataObjField;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
 import com.devexperts.qd.QDContract;
+import com.devexperts.qd.dxlink.websocket.application.DxLinkJsonMessageFactory.FeedSetupJsonMessage;
+import com.devexperts.qd.dxlink.websocket.application.DxLinkJsonMessageFactory.FeedSubscriptionJsonMessage;
 import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.qtp.AbstractQTPComposer;
+import com.devexperts.qd.qtp.MessageAdapter;
 import com.devexperts.qd.qtp.MessageProvider;
 import com.devexperts.qd.qtp.MessageType;
 import com.devexperts.qd.qtp.ProtocolDescriptor;
 import com.devexperts.qd.qtp.QTPConstants;
 import com.devexperts.qd.qtp.RuntimeQTPException;
 import com.devexperts.util.SystemProperties;
+import com.devexperts.util.TimePeriod;
 import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static com.devexperts.qd.dxlink.websocket.transport.TokenDxLinkLoginHandlerFactory.DXLINK_AUTHORIZATION_SCHEME;
 
@@ -55,19 +57,24 @@ class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
     private final Map<QDContract, ChannelSubscriptionProcessor> processors = new EnumMap<>(QDContract.class);
     private final HeartbeatProcessor heartbeatProcessor;
     private final DxLinkWebSocketApplicationConnectionFactory factory;
+    private final MessageAdapter adapter;
     private final Delegates delegates;
     private ChannelSubscriptionProcessor currentSubscriptionProcessor;
-    private List<ByteBuf> messages = new ArrayList<>();
+    private boolean initialSetupSent;
+    private long lastSentHeartbeatTimeout = -1L;
+    private long lastSentDisconnectTimeout = -1L;
+    private final List<ByteBuf> messages = new ArrayList<>();
     private int payloadSize = 0;
 
     public DxLinkWebSocketQTPComposer(DataScheme scheme, Delegates delegates,
         DxLinkJsonMessageFactory messageFactory, HeartbeatProcessor heartbeatProcessor,
-        DxLinkWebSocketApplicationConnectionFactory factory)
+        DxLinkWebSocketApplicationConnectionFactory factory, MessageAdapter adapter)
     {
         super(scheme, true);
         this.messageFactory = messageFactory;
         this.heartbeatProcessor = heartbeatProcessor;
         this.factory = factory;
+        this.adapter = adapter;
         this.delegates = delegates;
         for (QDContract contract : QDContract.values()) {
             processors.put(contract, new ChannelSubscriptionProcessor(contract));
@@ -97,9 +104,20 @@ class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
 
     @Override
     protected void abortMessageAndRethrow(Throwable t) {
+        releaseAndClearMessages();
+        if (currentSubscriptionProcessor != null) {
+            currentSubscriptionProcessor.releaseHeldBuffers();
+            currentSubscriptionProcessor = null;
+        }
+        super.abortMessageAndRethrow(t);
+    }
+
+    private void releaseAndClearMessages() {
+        for (ByteBuf b : messages) {
+            b.release();
+        }
         messages.clear();
         payloadSize = 0;
-        super.abortMessageAndRethrow(t);
     }
 
     @Override
@@ -131,9 +149,19 @@ class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
 
     @Override
     public void resetSession() {
-        currentSubscriptionProcessor = null;
-        messages.clear();
-        payloadSize = 0;
+        if (currentSubscriptionProcessor != null) {
+            currentSubscriptionProcessor.releaseHeldBuffers();
+            currentSubscriptionProcessor = null;
+        }
+        initialSetupSent = false;
+        lastSentHeartbeatTimeout = -1L;
+        lastSentDisconnectTimeout = -1L;
+        releaseAndClearMessages();
+        for (ChannelSubscriptionProcessor proc : processors.values()) {
+            proc.channelIsOpened = false;
+            proc.lastSentRequestedAggregationPeriod = null;
+            proc.releaseHeldBuffers();
+        }
         super.resetSession();
     }
 
@@ -145,7 +173,11 @@ class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
     @Override
     protected void finishComposingMessage(BufferedOutput out) {
         if (currentSubscriptionProcessor != null) {
-            currentSubscriptionProcessor.end();
+            try {
+                currentSubscriptionProcessor.end();
+            } catch (IOException e) {
+                throw new RuntimeQTPException(e);
+            }
             currentSubscriptionProcessor = null;
         }
     }
@@ -159,13 +191,42 @@ class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
             ByteBuf auth = messageFactory.createAuth(MAIN_CHANNEL, clearToken);
             payloadSize += auth.readableBytes();
             messages.add(auth);
-        } else {
+            return;
+        }
+        long heartbeat = heartbeatProcessor.getHeartbeatTimeout();
+        long disconnect = heartbeatProcessor.getDisconnectTimeout();
+        if (!initialSetupSent || heartbeat != lastSentHeartbeatTimeout || disconnect != lastSentDisconnectTimeout) {
             ByteBuf setup = messageFactory.createSetup(MAIN_CHANNEL, PROTOCOL_VERSION,
-                heartbeatProcessor.getHeartbeatTimeout(), heartbeatProcessor.getDisconnectTimeout(),
-                factory.getAgentInfo());
+                heartbeat, disconnect, factory.getAgentInfo());
             payloadSize += setup.readableBytes();
             messages.add(setup);
+            initialSetupSent = true;
+            lastSentHeartbeatTimeout = heartbeat;
+            lastSentDisconnectTimeout = disconnect;
         }
+        composeRequestedAggregationPeriod();
+    }
+
+    private void composeRequestedAggregationPeriod() throws IOException {
+        TimePeriod period = getEffectiveRequestedAggregationPeriod();
+        for (ChannelSubscriptionProcessor proc : processors.values()) {
+            if (proc.channelIsOpened &&
+                !Objects.equals(period, proc.lastSentRequestedAggregationPeriod))
+            {
+                ByteBuf feedSetup = messageFactory.createFeedSetup(proc.channel,
+                    period != null ? period.getTime() : null);
+                payloadSize += feedSetup.readableBytes();
+                messages.add(feedSetup);
+                proc.lastSentRequestedAggregationPeriod = period;
+            }
+        }
+    }
+
+    private TimePeriod getEffectiveRequestedAggregationPeriod() {
+        String requested = adapter.getRequestedAggregationPeriod();
+        if (requested == null || "undefined".equalsIgnoreCase(requested))
+            return null;
+        return TimePeriod.valueOf(requested);
     }
 
     @Override
@@ -177,14 +238,16 @@ class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
 
     @Override
     protected long getMessagePayloadSize() {
-        return payloadSize;
+        throw new UnsupportedOperationException(
+            "getMessagePayloadSize() is not supported, use 'hasCapacity'");
     }
 
     public List<ByteBuf> retrieveMessages() {
-        List<ByteBuf> m = this.messages;
-        messages = new ArrayList<>();
+        assert currentSubscriptionProcessor == null;
+        List<ByteBuf> snapshot = new ArrayList<>(messages);
+        messages.clear();
         payloadSize = 0;
-        return m;
+        return snapshot;
     }
 
     @Override
@@ -209,14 +272,24 @@ class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
         private final QDContract contract;
         private final int channel;
         private final Map<String, List<String>> fieldsByType;
-        private final List<DxLinkSubscription> subscriptions = new ArrayList<>();
-        private final Map<String, Collection<String>> fieldsByTypeToSend = new HashMap<>();
         private final DxLinkSubscriptionFactory subscriptionFactory = new DxLinkSubscriptionFactory();
         private boolean isRemove;
         private boolean channelIsOpened = false;
+        // Last aggregation period (ms) sent in a FEED_SETUP for this channel; null until first emission.
+        // Used to skip redundant FEED_SETUPs on unrelated DESCRIBE_PROTOCOL triggers.
+        private TimePeriod lastSentRequestedAggregationPeriod = null;
+        // channelRequest is built in add() and held until end() transfers it to the outer messages
+        // list. Abort/reset paths must release this buffer if it has not been transferred yet.
         private ByteBuf channelRequest;
-        private ByteBuf feedSetup;
-        private ByteBuf feedSubscription;
+        // FEED_SETUP and FEED_SUBSCRIPTION are streamed into a single buffer as records arrive
+        // in add(); end() closes them and transfers ownership to the outer messages list.
+        // Abort/reset paths call abort() on whichever is still open.
+        private FeedSetupJsonMessage feedSetup;
+        private FeedSubscriptionJsonMessage feedSubscription;
+        // TimePeriod snapshotted at first field-bearing add() and written into the FEED_SETUP
+        // prologue. Reused in end() to update lastSentRequestedAggregationPeriod so that snapshot
+        // value matches the on-wire output even if the property changes mid-batch.
+        private TimePeriod pendingRequestedAggregationPeriod = null;
 
         private ChannelSubscriptionProcessor(QDContract contract) {
             this.contract = contract;
@@ -237,54 +310,101 @@ class DxLinkWebSocketQTPComposer extends AbstractQTPComposer {
         }
 
         public void begin(boolean isRemove) {
+            clear();
             this.isRemove = isRemove;
-            subscriptions.clear();
-            fieldsByTypeToSend.clear();
+        }
+
+        private void clear() {
+            // After a successful end(), buffers have already been handed off to the outer messages
+            // list (channelRequest directly, feedSetup/feedSubscription via close()). Just drop
+            // local references. Abort/reset paths use releaseHeldBuffers() instead.
             channelRequest = null;
             feedSetup = null;
             feedSubscription = null;
+            pendingRequestedAggregationPeriod = null;
+        }
+
+        // Release any pooled buffers held only by this processor (i.e. not yet handed off to the
+        // outer messages list). Called from abortMessageAndRethrow / resetSession so we never leak
+        // a pooled buffer that was created in add() but never reached end().
+        private void releaseHeldBuffers() {
+            if (channelRequest != null) {
+                channelRequest.release();
+                channelRequest = null;
+            }
+            if (feedSetup != null) {
+                feedSetup.abort();
+                feedSetup = null;
+            }
+            if (feedSubscription != null) {
+                feedSubscription.abort();
+                feedSubscription = null;
+            }
+            pendingRequestedAggregationPeriod = null;
         }
 
         public void add(DataRecord record, int cipher, String symbol, long time) throws IOException {
             DxLinkSubscription subscription =
                 subscriptionFactory.createSubscription(contract, record, cipher, symbol, time);
-            if (subscription != null) {
-                if (!channelIsOpened) {
-                    channelRequest =
-                        messageFactory.createChannelRequest(channel, SERVICE_NAME, this.contract.name());
-                    channelIsOpened = true;
-                }
-                if (!fieldsByType.isEmpty()) {
-                    List<String> fields = fieldsByType.remove(subscription.type);
-                    if (fields != null) {
-                        List<String> acceptedFields = factory.getAcceptedEventFieldsByType(subscription.type);
-                        if (!acceptedFields.isEmpty())
-                            fields.removeIf(field -> !"eventSymbol".equals(field) && !acceptedFields.contains(field));
-                        if (DxLinkJsonMessageParser.FULL.equals(ACCEPT_DATA_FORMAT))
-                            fields.add(0, "eventType");
-                        fieldsByTypeToSend.put(subscription.type, fields);
-                        // TODO stop regenerating feedSetup for every new feedType
-                        feedSetup = messageFactory.createFeedSetup(channel, factory.getAcceptAggregationPeriod().getTime(),
-                            ACCEPT_DATA_FORMAT, fieldsByTypeToSend);
-                    }
-                }
-                subscriptions.add(subscription);
-                feedSubscription = messageFactory.createFeedSubscription(channel,
-                    isRemove ? Collections.emptyList() : subscriptions,
-                    isRemove ? subscriptions : Collections.emptyList(), false);
+            if (subscription == null)
+                return;
+            if (!channelIsOpened) {
+                channelRequest =
+                    messageFactory.createChannelRequest(channel, SERVICE_NAME, this.contract.name());
+                channelIsOpened = true;
             }
+            if (!fieldsByType.isEmpty()) {
+                List<String> fields = fieldsByType.remove(subscription.type);
+                if (fields != null) {
+                    List<String> acceptedFields = factory.getAcceptedEventFieldsByType(subscription.type);
+                    if (!acceptedFields.isEmpty())
+                        fields.removeIf(field -> !"eventSymbol".equals(field) && !acceptedFields.contains(field));
+                    if (DxLinkJsonMessageParser.FULL.equals(ACCEPT_DATA_FORMAT))
+                        fields.add(0, "eventType");
+                    if (feedSetup == null) {
+                        // Snapshot the requested aggregation period exactly once so the value
+                        // written into the FEED_SETUP prologue is the same one we assign to
+                        // lastSentRequestedAggregationPeriod in end().
+                        pendingRequestedAggregationPeriod = getEffectiveRequestedAggregationPeriod();
+                        Long ms = pendingRequestedAggregationPeriod != null ?
+                            pendingRequestedAggregationPeriod.getTime() : null;
+                        feedSetup = messageFactory.openFeedSetupWithFields(channel, ms, ACCEPT_DATA_FORMAT);
+                    }
+                    feedSetup.appendAcceptEventFields(subscription.type, fields);
+                }
+            }
+            if (feedSubscription == null) {
+                feedSubscription = messageFactory.openFeedSubscription(channel, isRemove);
+            }
+            feedSubscription.appendSubscription(subscription);
         }
 
-        public void end() {
-            if (channelRequest != null)
+        public void end() throws IOException {
+            int batchSize = 0;
+            if (channelRequest != null) {
+                batchSize += channelRequest.readableBytes();
                 messages.add(channelRequest);
-            if (feedSetup != null)
-                messages.add(feedSetup);
-            if (feedSubscription != null)
-                messages.add(feedSubscription);
-            payloadSize += payloadSize();
+                channelRequest = null;
+            }
+            if (feedSetup != null) {
+                ByteBuf buf = feedSetup.close();
+                batchSize += buf.readableBytes();
+                messages.add(buf);
+                feedSetup = null;
+                lastSentRequestedAggregationPeriod = pendingRequestedAggregationPeriod;
+            }
+            if (feedSubscription != null) {
+                ByteBuf buf = feedSubscription.close();
+                batchSize += buf.readableBytes();
+                messages.add(buf);
+                feedSubscription = null;
+            }
+            payloadSize += batchSize;
+            clear();
         }
 
+        // Trailing tokens ('}' / ']}') are not yet written into the buffer — payloadSize() under-counts
+        // by <= 2 bytes per held JsonMessage. Harmless vs COMPOSER_THRESHOLD = 8 KB.
         public int payloadSize() {
             int size = 0;
             if (channelRequest != null)

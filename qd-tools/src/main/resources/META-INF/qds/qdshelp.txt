@@ -529,9 +529,6 @@ Corresponding ".time" files are also used in that case (if they exist).
 @article ClientSocket
 @messageconnector-summary
 @# -----------------------------------------------------------------------------
-@article NioServer
-@messageconnector-summary
-@# -----------------------------------------------------------------------------
 @article OnDemand
 @messageconnector-summary
 @# -----------------------------------------------------------------------------

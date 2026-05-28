@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -213,9 +213,6 @@ public class CollectorManagementImplOneContract extends CollectorManagementImplB
 
     public void setStickySubscriptionLogInterval(String interval) {
         TimePeriod timePeriod = TimePeriod.valueOf(interval);
-        if (timePeriod.getTime() < 0) {
-            throw new IllegalArgumentException("stickyLogInterval must be positive");
-        }
         if (!timePeriod.equals(stickyLogInterval)) {
             logSet("stickyLogInterval", timePeriod);
             this.stickyLogInterval = timePeriod;

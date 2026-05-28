@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -63,7 +63,8 @@ public class RandomRecordsProvider extends AbstractRecordProvider {
     private int sequence;
     private int randomIndex = 0;
 
-    { // pre-generate a list of random decimals to generate data fast (the methods #compose and #composeWide are slow)
+    // pre-generate a list of random decimals to generate data fast (the methods #compose and #composeWide are slow)
+    {
         for (int i = 0; i < SIZE; i++) {
             randomDecimals[i] = Decimal.compose(nextInt(1000) / 100.0);
             randomWideDecimals[i] = Decimal.tinyToWide(randomDecimals[i]);

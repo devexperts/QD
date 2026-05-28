@@ -184,10 +184,10 @@ public final class OrderSource extends IndexedEventSource {
 
     /**
      * NASDAQ Total View.
-     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * {@link Order} and {@link OrderImbalance} events are {@link #isPublishable(Class) publishable} on this
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
      */
-    public static final OrderSource NTV = new OrderSource("NTV", PUB_ORDER | FULL_ORDER_BOOK);
+    public static final OrderSource NTV = new OrderSource("NTV", PUB_ORDER | FULL_ORDER_BOOK | PUB_ORDER_IMBALANCE);
 
     /**
      * NASDAQ Total View. Record for price level book.
@@ -438,10 +438,10 @@ public final class OrderSource extends IndexedEventSource {
 
     /**
      * NYSE Arca traded securities.
-     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * {@link Order} and {@link OrderImbalance} events are {@link #isPublishable(Class) publishable} on this
      * source and the corresponding subscription can be observed via {@link DXPublisher}.
      */
-    public static final OrderSource ARCA = new OrderSource("ARCA", PUB_ORDER);
+    public static final OrderSource ARCA = new OrderSource("ARCA", PUB_ORDER | PUB_ORDER_IMBALANCE);
 
     /**
      * NYSE Arca traded securities. Record for price level book.

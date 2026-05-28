@@ -36,6 +36,7 @@ import com.devexperts.qd.util.RecordProcessor;
 import com.devexperts.util.IndexedSet;
 import com.devexperts.util.IndexerFunction;
 import com.devexperts.util.TimePeriod;
+import com.devexperts.util.TimePeriodInfo;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.DXFeed;
 import com.dxfeed.api.DXFeedSubscription;
@@ -523,6 +524,7 @@ public class DXFeedImpl extends DXFeed {
                 List<? extends EventDelegate<?>> delegates;
                 Object eventSymbol;
                 long fromTime = 0;
+                // Mirror DXFeedFilterImpl.findSubscriptionCategory: TSS before IES (TSS extends IES).
                 if (subSymbol instanceof TimeSeriesSubscriptionSymbol<?>) {
                     TimeSeriesSubscriptionSymbol<?> tss = (TimeSeriesSubscriptionSymbol<?>) subSymbol;
                     fromTime = tss.getFromTime();
@@ -754,6 +756,7 @@ public class DXFeedImpl extends DXFeed {
             for (ChannelShaper shaper : processor.shapers) {
                 shaper.setAggregationPeriod(maxPeriod);
             }
+            processor.calculateAggregationPeriodInfo();
         }
 
         public DXFeedImpl feed() {
@@ -797,6 +800,7 @@ public class DXFeedImpl extends DXFeed {
         // Events cache
         List<E> events;
         long totalDroppedEvents;
+        private TimePeriodInfo aggregationPeriodInfo;
 
         EventProcessor(DXFeedSubscription<E> subscription) {
             this.subscription = subscription;
@@ -810,6 +814,7 @@ public class DXFeedImpl extends DXFeed {
                 return channelShaper;
             }).collect(Collectors.toList());
             channels = new AgentChannels(this, shapers);
+            calculateAggregationPeriodInfo();
         }
 
         @Override
@@ -946,6 +951,13 @@ public class DXFeedImpl extends DXFeed {
             }
         }
 
+        private void calculateAggregationPeriodInfo() {
+            aggregationPeriodInfo = TimePeriodInfo.UNKNOWN;
+            for (ChannelShaper shaper : shapers) {
+                aggregationPeriodInfo = aggregationPeriodInfo.add(shaper.getAggregationPeriod());
+            }
+        }
+
         @SuppressWarnings("unchecked")
         protected void process(RecordSource source) {
             events = new ArrayList<>();
@@ -955,7 +967,10 @@ public class DXFeedImpl extends DXFeed {
                     EVENT_PROCESSOR_ATTACHMENT_STRATEGY.processEach(cursor, this); // will invoke processEvent
                 if (events.isEmpty())
                     return;
-                processEvents(subscription, events, totalDroppedEvents);
+                // TODO: breaks when a subscription is attached to more than one DXEndpoint —
+                //  totalDroppedEvents and aggregationPeriodInfo from the last processing endpoint
+                //  overwrite the values from the others.
+                processEvents(subscription, events, totalDroppedEvents, aggregationPeriodInfo);
             } finally {
                 events = null;
             }

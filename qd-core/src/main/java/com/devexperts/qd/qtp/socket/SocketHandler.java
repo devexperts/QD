@@ -85,6 +85,11 @@ class SocketHandler extends AbstractTransportConnection implements AbstractMessa
         return stripeFilter;
     }
 
+    // Package-private getter for threadData, used by ServerSocketConnector and ClientSocketConnector
+    ThreadData getThreadData() {
+        return threadData; // volatile read
+    }
+
     public String getHost() {
         ThreadData threadData = this.threadData; // atomic read
         return threadData != null ? threadData.getAddress().host : "";

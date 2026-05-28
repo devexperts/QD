@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,10 +22,13 @@ import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimeFormat;
 import com.devexperts.util.TimePeriod;
 import com.devexperts.util.TimeUtil;
+import com.sun.management.GcInfo;
 
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryPoolMXBean;
+import java.lang.management.MemoryType;
 import java.lang.management.MemoryUsage;
 import java.lang.management.RuntimeMXBean;
 import java.lang.management.ThreadMXBean;
@@ -34,6 +37,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TimeZone;
 
@@ -101,6 +105,10 @@ public class JVMSelfMonitoring implements MARSPlugin, Runnable, JVMSelfMonitorin
     private final MARSNode gcTimeNode;
     private final MARSNode gcRatioNode;
     private final MARSNode gcAverageNode;
+    private final MARSNode gcHeapBeforeGcUsageNode;
+    private final MARSNode gcHeapAfterGcUsageNode;
+
+    private final String[] heapPoolNames;
 
     private static class GCBean {
         private final MARSNode countNode;
@@ -124,8 +132,9 @@ public class JVMSelfMonitoring implements MARSPlugin, Runnable, JVMSelfMonitorin
         }
     }
 
-    private final CpuCounter cpu = new CpuCounter();
-    private final Map<String, GCBean> gcBeans = new HashMap<String, GCBean>();
+    private CpuCounter cpu;
+    private long lastReportedGcTime = -1;
+    private final Map<String, GCBean> gcBeans = new HashMap<>();
     private final long[] lastGCReports = new long[31 * 2]; // data in pairs (collectionTime, reportTime), ascending
     private long lastCollectionTime;
     private long lastReportingTime = System.currentTimeMillis();
@@ -169,6 +178,13 @@ public class JVMSelfMonitoring implements MARSPlugin, Runnable, JVMSelfMonitorin
         gcTimeNode = root.subNode("jvm.GC.time", "Net accumulated paused GC time.");
         gcRatioNode = root.subNode("jvm.GC.ratio", "Net ratio of time spent in paused GCs, %.");
         gcAverageNode = root.subNode("jvm.GC.average_5min", "Net ratio of time spent in paused GCs during last 5 minutes, %.");
+        gcHeapBeforeGcUsageNode = root.subNode("jvm.GC.heap_before_gc_usage", "Used heap right before the last GC as percent of heap max, %.");
+        gcHeapAfterGcUsageNode = root.subNode("jvm.GC.heap_after_gc_usage", "Used heap right after the last GC as percent of heap max, %.");
+
+        heapPoolNames = ManagementFactory.getMemoryPoolMXBeans().stream()
+            .filter(pool -> pool.getType() == MemoryType.HEAP)
+            .map(MemoryPoolMXBean::getName)
+            .toArray(String[]::new);
     }
 
     public synchronized void start() {
@@ -176,6 +192,7 @@ public class JVMSelfMonitoring implements MARSPlugin, Runnable, JVMSelfMonitorin
             return;
         state = STATE_STARTED;
         registration = Management.registerMBean(this, JVMSelfMonitoringMXBean.class, MBEAN_NAME);
+        cpu = new CpuCounter();
         MARSScheduler.schedule(this);
         run(); // report once
         checkThreadDumper();
@@ -239,7 +256,8 @@ public class JVMSelfMonitoring implements MARSPlugin, Runnable, JVMSelfMonitorin
         cpuTimeNode.setValue(timeToString(cpu.getCpuTime() / 1000000000));
         cpuUsageNode.setDoubleValue((long) (cpu.getCpuUsage() * 10000) / 100.0);
 
-        setMemoryUsage(memoryMXBean.getHeapMemoryUsage(), memHeapMaxNode, memHeapSizeNode, memHeapUsedNode, memHeapUsageNode);
+        MemoryUsage heapUsage = memoryMXBean.getHeapMemoryUsage();
+        setMemoryUsage(heapUsage, memHeapMaxNode, memHeapSizeNode, memHeapUsedNode, memHeapUsageNode);
         setMemoryUsage(memoryMXBean.getNonHeapMemoryUsage(), memNonHeapMaxNode, memNonHeapSizeNode, memNonHeapUsedNode, memNonHeapUsageNode);
 
         threadsCurrentNode.setIntValue(threadMXBean.getThreadCount());
@@ -251,14 +269,31 @@ public class JVMSelfMonitoring implements MARSPlugin, Runnable, JVMSelfMonitorin
 
         long delta = 0;
         long interval = currentTime - lastReportingTime;
+        GcInfo latestGcInfo = null;
         for (GarbageCollectorMXBean gc : ManagementFactory.getGarbageCollectorMXBeans()) {
             String gcName = gc.getName();
-            if (CONCURRENT_GCS.contains(gcName)) {
-                // Exclude concurrent GCs from contributing
-                continue;
+            // Pause-time metrics (gcTime/gcRatio) exclude concurrent GCs; memory-state metrics
+            if (!CONCURRENT_GCS.contains(gcName)) {
+                GCBean bean = gcBeans.computeIfAbsent(gcName, k -> new GCBean(gc, root));
+                delta += bean.update(gc, interval);
             }
-            GCBean bean = gcBeans.computeIfAbsent(gcName, k -> new GCBean(gc, root));
-            delta += bean.update(gc, interval);
+            // (before/after) include all GCs since concurrent cycles are where ZGC/Shenandoah actually reclaim memory.
+            if (gc instanceof com.sun.management.GarbageCollectorMXBean) {
+                GcInfo info = ((com.sun.management.GarbageCollectorMXBean) gc).getLastGcInfo();
+                if (info != null && info.getEndTime() > lastReportedGcTime &&
+                    (latestGcInfo == null || info.getEndTime() > latestGcInfo.getEndTime()))
+                {
+                    latestGcInfo = info;
+                }
+            }
+        }
+        if (latestGcInfo != null) {
+            lastReportedGcTime = latestGcInfo.getEndTime();
+            long heapMax = Math.max(heapUsage.getMax(), heapUsage.getCommitted());
+            long heapBeforeGc = sumHeapUsed(latestGcInfo.getMemoryUsageBeforeGc());
+            long heapAfterGc = sumHeapUsed(latestGcInfo.getMemoryUsageAfterGc());
+            gcHeapBeforeGcUsageNode.setDoubleValue(heapBeforeGc * 10000 / heapMax / 100.0);
+            gcHeapAfterGcUsageNode.setDoubleValue(heapAfterGc * 10000 / heapMax / 100.0);
         }
         lastCollectionTime += delta;
         lastReportingTime += interval;
@@ -300,6 +335,14 @@ public class JVMSelfMonitoring implements MARSPlugin, Runnable, JVMSelfMonitorin
         sizeNode.setDoubleValue(memory.getCommitted() >> 10);
         usedNode.setDoubleValue(memory.getUsed() >> 10);
         usageNode.setDoubleValue(getUsage(memory));
+    }
+
+    private long sumHeapUsed(Map<String, MemoryUsage> usagesByPool) {
+        return Arrays.stream(heapPoolNames)
+            .map(usagesByPool::get)
+            .filter(Objects::nonNull)
+            .mapToLong(MemoryUsage::getUsed)
+            .sum();
     }
 
     private static double getUsage(MemoryUsage memory) {
@@ -352,7 +395,9 @@ public class JVMSelfMonitoring implements MARSPlugin, Runnable, JVMSelfMonitorin
 
     public int getThreadDeadlockedCount() {
         try {
-            long[] t = threadMXBean.findMonitorDeadlockedThreads();
+            long[] t = threadMXBean.isSynchronizerUsageSupported() ?
+                threadMXBean.findDeadlockedThreads() :
+                threadMXBean.findMonitorDeadlockedThreads();
             return t == null ? 0 : t.length;
         } catch (Throwable t) {
             // An error will be thrown for unsupported operations,
@@ -383,7 +428,7 @@ public class JVMSelfMonitoring implements MARSPlugin, Runnable, JVMSelfMonitorin
     }
 
     public synchronized void makeThreadDumps(int count, String file, String period, String scheduledAt) {
-        if (period != null && period.length() > 0)
+        if (period != null && !period.isEmpty())
             threadDumpsPeriod = TimePeriod.valueOf(period);
         threadDumpsCount = count;
         threadDumpsFile = file == null ? "" : file;

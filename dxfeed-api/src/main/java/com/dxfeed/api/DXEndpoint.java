@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,6 +14,7 @@ package com.dxfeed.api;
 import com.devexperts.services.Service;
 import com.devexperts.services.Services;
 import com.devexperts.util.TimePeriod;
+import com.devexperts.util.TimePeriodInfo;
 import com.dxfeed.api.osub.WildcardSymbol;
 import com.dxfeed.event.EventType;
 import com.dxfeed.event.market.Quote;
@@ -193,6 +194,35 @@ import java.util.concurrent.Executor;
  * <p>{@link Role#FEED FEED} and {@link Role#PUBLISHER PUBLISHER} automatically establish connection on creation
  * when the corresponding {@link #DXFEED_ADDRESS_PROPERTY} or {@link #DXPUBLISHER_ADDRESS_PROPERTY} is specified.
  *
+ * <h3><a name="aggregationPeriodSection">Aggregation period</a></h3>
+ *
+ * There are three independent mechanisms for controlling data delivery rate, each operating at a different level:
+ *
+ * <ul>
+ *     <li><b>Requested aggregation period</b> ({@link #DXFEED_REQUESTED_AGGREGATION_PERIOD_PROPERTY}) —
+ *         negotiated with the remote server. The server applies this period on its side,
+ *         reducing network traffic and server and client CPU load. The server may adjust the value
+ *         according to its own rules and limits. Use {@link #getAggregationPeriodInfo()} to see the actual period in effect.
+ *         The value must not exceed 24 hours ({@link DXFeedSubscription#AGGREGATION_PERIOD_MAX_VALUE});
+ *         a larger value is rejected with {@link IllegalArgumentException}. Setting {@code null} clears
+ *         the request, so the server falls back to its own default aggregation period.
+ *     </li>
+ *     <li><b>Aggregation period</b> ({@link #DXFEED_AGGREGATION_PERIOD_PROPERTY}) —
+ *         local client-side throttle applied in the event processing pipeline. The client still receives all updates
+ *         from the server at full network rate, but delivers them to listeners less frequently, conflating intermediate
+ *         values. Does not affect the server's transmission rate.
+ *     </li>
+ *     <li><b>Subscription aggregation period</b>
+ *         ({@link DXFeedSubscription#setAggregationPeriod(TimePeriod) DXFeedSubscription.setAggregationPeriod}) —
+ *         per-subscription local throttle. The effective local period is the maximum of subscription-level and
+ *         endpoint-level aggregation periods.
+ *     </li>
+ * </ul>
+ *
+ * <p>These mechanisms are complementary: requested aggregation period reduces load at the source,
+ * while local aggregation period and subscription aggregation period provide client-side rate limiting
+ * that works even with servers that do not support period negotiation.
+ *
  * <h3>Permanent subscription</h3>
  *
  * Endpoint properties can define permanent subscription for specific sets of symbols and event types in
@@ -271,6 +301,12 @@ public abstract class DXEndpoint implements AutoCloseable {
      * Defines data aggregation period an endpoint with role {@link Role#FEED FEED} that
      * limits the rate of data notifications. For example, setting the value of this property
      * to "0.1s" limits notification to once every 100ms (at most 10 per second).
+     *
+     * <p>This is a <b>local, client-side only</b> throttle — it controls how frequently
+     * events are delivered to local listeners but does not affect the server's data transmission rate.
+     *
+     * @see <a href="#aggregationPeriodSection">Aggregation period</a>
+     * @see #DXFEED_REQUESTED_AGGREGATION_PERIOD_PROPERTY
      * @see Builder#withProperty(String, String) Builder.withProperty
      */
     public static final String DXFEED_AGGREGATION_PERIOD_PROPERTY = "dxfeed.aggregationPeriod";
@@ -291,6 +327,24 @@ public abstract class DXEndpoint implements AutoCloseable {
      * Defines a sticky subscription period in format of {@link TimePeriod}
      */
     public static final String DXFEED_STICKY_SUBSCRIPTION_PROPERTY = "dxfeed.stickySubscriptionPeriod";
+
+    /**
+     * Defines requested aggregation period to be negotiated with server.
+     * Server applies its own rules and limits to the request and <b>applies the
+     * resulting period server-side</b> to control data transmission rate
+     * (reduces network traffic and server load).
+     *
+     * <p>Differs from {@link #DXFEED_AGGREGATION_PERIOD_PROPERTY} which is local
+     * client-side only — client throttles locally but server sends at its own rate.
+     *
+     * <p>Format: {@link TimePeriod} string (e.g., "1s", "0.5s", "0" for real-time).
+     * If not specified, server uses its default.
+     *
+     * @see <a href="#aggregationPeriodSection">Aggregation period</a>
+     * @see #DXFEED_AGGREGATION_PERIOD_PROPERTY
+     */
+    public static final String DXFEED_REQUESTED_AGGREGATION_PERIOD_PROPERTY =
+        "dxfeed.requestedAggregationPeriod";
 
     /**
      * Defines path to a file with properties for an endpoint with role {@link Role#PUBLISHER PUBLISHER}.
@@ -783,6 +837,35 @@ public abstract class DXEndpoint implements AutoCloseable {
      * @return the publisher.
      */
     public abstract DXPublisher getPublisher();
+
+    /**
+     * Returns the requested aggregation period previously set on this endpoint, or {@code null}
+     * if none was set.
+     */
+    public abstract TimePeriod getRequestedAggregationPeriod();
+
+    /**
+     * Sets the requested aggregation period to be negotiated with the server.
+     *
+     * <p>Recognised values:
+     * <ul>
+     * <li>{@code null} — clear the request; the server falls back to its default.
+     * <li>{@link TimePeriod#ZERO} — request real-time delivery (no aggregation).
+     * <li>positive period built via {@link TimePeriod#valueOf(long)} or
+     *     {@link TimePeriod#valueOf(String)} — request that specific period.
+     * </ul>
+     *
+     * @param requestedAggregationPeriod requested aggregation period, or {@code null} to clear
+     * @throws IllegalArgumentException if the value exceeds
+     *         {@link DXFeedSubscription#AGGREGATION_PERIOD_MAX_VALUE}
+     */
+    public abstract void setRequestedAggregationPeriod(TimePeriod requestedAggregationPeriod);
+
+    /**
+     * Returns the aggregation period info reported by the server, aggregated across all active
+     * connectors on this endpoint.
+     */
+    public abstract TimePeriodInfo getAggregationPeriodInfo();
 
     /**
      * Builder class for {@link DXEndpoint} that supports additional configuration properties.

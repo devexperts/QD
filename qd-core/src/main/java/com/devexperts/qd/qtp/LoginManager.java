@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -199,6 +199,9 @@ class LoginManager implements PromiseHandler<AuthToken> {
         case END_LOGIN:
             state = LoginState.START_DATA_PREPARING;
             return false;
+        case WAITING_OTHER_SIDE:
+        case COMPLETED:
+            return false;
         default:
             throw new AssertionError();
         }
@@ -241,7 +244,8 @@ class LoginManager implements PromiseHandler<AuthToken> {
         if (!state.loginProcess)
             return false;
         this.accessToken = token;
-        boolean addMask = (state == LoginState.LOGIN && firstProtocolWasPrepared);
+        boolean addMask = (state == LoginState.LOGIN && firstProtocolWasPrepared) ||
+            state == LoginState.LOGIN_AND_FINISH_DATA_PREPARING;
         state = LoginState.END_LOGIN;
         return addMask;
     }

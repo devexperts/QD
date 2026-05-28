@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,11 +14,11 @@ package com.devexperts.qd.sample;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.SymbolList;
+import com.devexperts.qd.monitoring.MonitoringEndpoint;
 import com.devexperts.qd.qtp.AgentAdapter;
 import com.devexperts.qd.qtp.DistributorAdapter;
 import com.devexperts.qd.qtp.MessageConnector;
 import com.devexperts.qd.qtp.MessageConnectors;
-import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.SymbolObjectMap;
 
 import java.io.PrintStream;
@@ -35,48 +35,52 @@ import java.util.Locale;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
-class TestThroughputContext extends SymbolList {
-    private final DateFormat DF = new SimpleDateFormat("yyyyMMdd HHmmss");
+class TestThroughputContext extends SymbolList implements AutoCloseable {
+
+    private final DateFormat dateFormat = new SimpleDateFormat("yyyyMMdd HHmmss");
 
     final TestThroughputConfig config;
     final TestThroughputScheme scheme;
     final SymbolCodec codec;
-
+    final MonitoringEndpoint distEndpoint;
+    final MonitoringEndpoint agentEndpoint;
+    
     int[] ifldmask;
 
-    QDCollector collector_dist;
-    QDCollector[] collector_agent;
+    QDCollector collectorDist;
+    QDCollector[] collectorAgent;
 
-    final AtomicInteger done_dists = new AtomicInteger();
-    final AtomicInteger done_agents = new AtomicInteger();
-    boolean done_all;
+    final AtomicInteger doneDists = new AtomicInteger();
+    final AtomicInteger doneAgents = new AtomicInteger();
+    boolean doneAll;
 
-    Stats total_stats = new Stats();
-    Stats last_stats = new Stats();
-    Stats delta_stats = new Stats();
-    MaxHolder max_sum_rps = new MaxHolder();
-    long last_time;
+    Stats totalStats = new Stats();
+    Stats lastStats = new Stats();
+    Stats deltaStats = new Stats();
+    MaxHolder maxSumRps = new MaxHolder();
+    long lastTime;
 
-    Hist hdist = new Hist();
-    Hist hagent = new Hist();
+    Hist distHist = new Hist();
+    Hist agentHist = new Hist();
 
     int expectedDistSub() {
         return (config.wildcard ? 1 : config.symbols) * config.records;
     }
 
     static class Stats {
-        public long processed_by_dists;
-        public long received_by_agents;
+        public long processedByDists;
+        public long receivedByAgents;
     }
 
     static class Hist {
-        List<Long> values = new ArrayList<Long>();
-        double avg;
+        List<Long> values = new ArrayList<>();
 
         void add(long value) {
             values.add(value);
-            int n = values.size();
-            avg = (avg * (n - 1) + value) / n;
+        }
+
+        void clear() {
+            values.clear();
         }
 
         String report() {
@@ -87,8 +91,36 @@ class TestThroughputContext extends SymbolList {
             long p50 = values.get(n / 2);
             long p75 = values.get(n * 3 / 4);
             long max = values.get(n);
+            long avg = values.stream().mapToLong(Long::longValue).sum() / values.size();
             return new Formatter().format(Locale.US, "%d rps avg; min %d [%d - %d - %d] %d max rps",
-                (int) avg, min, p25, p50, p75, max).toString();
+                avg, min, p25, p50, p75, max).toString();
+        }
+
+        List<Long> applyTukeyFence(double k) {
+            if (values.size() < 16)
+                return Collections.emptyList();
+            Collections.sort(values);
+            int n = values.size() - 1;
+            long p25 = values.get(n / 4);
+            long p75 = values.get(n * 3 / 4);
+            long minB = (long) (p25 - (p75 - p25) * k);
+            long maxB = (long) (p75 + (p75 - p25) * k);
+            int p = 0;
+            List<Long> outliers = new ArrayList<>();
+            for (int i = 0; i < values.size(); i++) {
+                Long v = values.get(i);
+                if (v >= minB && v <= maxB) {
+                    if (p != i)
+                        values.set(p, v);
+                    p++;
+                } else {
+                    outliers.add(v);
+                }
+            }
+            for (int i = values.size(); p < i; ) {
+                values.remove(--i);
+            }
+            return outliers;
         }
     }
 
@@ -101,79 +133,108 @@ class TestThroughputContext extends SymbolList {
         this.config = config;
         this.scheme = new TestThroughputScheme(config);
         this.codec = scheme.getCodec();
-        // prepare mask for intfield generator
+
+        // Prepare mask for int field generator
         ifldmask = new int[config.ifields];
-        for (int k = 0; k < config.ifields; k++)
+        for (int k = 0; k < config.ifields; k++) {
             ifldmask[k] =
                 k == 0 ? (int) (config.timemask >> 32) :
-                k == 1 ? (int) config.timemask :
-                config.ivalmask;
+                k == 1 ? (int) config.timemask : config.ivalmask;
+        }
+
         // Generate a list of symbols
         int n = config.symbols;
+        int symlen = config.symlength;
         SymbolObjectMap<Boolean> map = SymbolObjectMap.createInstance();
         Random r = new Random(1);
         int i = 0;
-        int uncoded_symbols = 0;
+        int unencodedSymbols = 0;
         while (i < n) {
-            String s = nextSymbol(r);
-            int cipher = codec.encode(s);
-            String symbol = cipher == 0 ? s : null;
+            String symbol = nextSymbol(r, symlen);
+            int cipher = codec.encode(symbol);
+
             if (map.put(cipher, symbol, true) == null) {
                 ciphers[i] = cipher;
                 symbols[i] = symbol;
                 i++;
                 if (cipher == 0)
-                    uncoded_symbols++;
+                    unencodedSymbols++;
             }
         }
-        System.out.println("Created " + uncoded_symbols + " uncoded symbols out of " + config.symbols + " total symbols.");
+        System.out.println("Created " + unencodedSymbols + " unencoded symbols out of " +
+            config.symbols + " total symbols.");
+
         // Create collectors
-        collector_dist = config.collector.createCollector(config, scheme);
-        collector_agent = new QDCollector[config.agents];
+        distEndpoint = MonitoringEndpoint.newBuilder()
+            .withProperties(System.getProperties())
+            .withProperty(MonitoringEndpoint.NAME_PROPERTY, "server")
+            .acquire();
+        agentEndpoint = MonitoringEndpoint.newBuilder()
+            .withProperties(System.getProperties())
+            .withProperty(MonitoringEndpoint.NAME_PROPERTY, "client")
+            .acquire();
+
+        collectorDist = config.collector.createCollector(config, scheme, distEndpoint.getRootStats());
+        collectorAgent = new QDCollector[config.agents];
         int collectors = 1;
         if (config.network || config.nio) {
             System.out.println("Configuring network loopback connection via port "  + config.port + " ...");
 
             // Configure and start server
             List<MessageConnector> server = MessageConnectors.createMessageConnectors(
-                new AgentAdapter.Factory(collector_dist),
-                (config.tls ? "tls+" : "") + (config.nio ? "nio" : "") + ":" + config.port, QDStats.VOID);
+                new AgentAdapter.Factory(collectorDist),
+                (config.tls ? "tls+" : "") + (config.nio ? "nio" : "") + ":" + config.port,
+                distEndpoint.getRootStats());
             MessageConnectors.setThreadPriority(server, Thread.MAX_PRIORITY);
             MessageConnectors.startMessageConnectors(server);
             Thread.sleep(2000); // wait to start them
 
             // Configure and start client
             if (config.multi) {
-                for (int j = 0; j < config.agents; j++)
-                    collector_agent[j] = createClient(config);
+                for (int j = 0; j < config.agents; j++) {
+                    collectorAgent[j] = createClient(config);
+                }
                 collectors += config.agents;
             } else {
-                Arrays.fill(collector_agent, createClient(config));
+                Arrays.fill(collectorAgent, createClient(config));
                 collectors++;
             }
             Thread.sleep(2000); // wait to start them
         } else {
-            Arrays.fill(collector_agent, collector_dist);
+            Arrays.fill(collectorAgent, collectorDist);
         }
         System.out.println("Created " + collectors + " collectors.");
     }
 
+    public void close() {
+        collectorDist.close();
+        if (config.multi) {
+            for (QDCollector qdCollector : collectorAgent) {
+                qdCollector.close();
+            }
+        } else {
+            collectorAgent[0].close();
+        }
+        distEndpoint.release();
+        agentEndpoint.release();
+    }
+
     private QDCollector createClient(TestThroughputConfig config) {
-        QDCollector collector = config.collector.createCollector(config, scheme);
+        QDCollector collector = config.collector.createCollector(config, scheme, agentEndpoint.getRootStats());
         List<MessageConnector> client = MessageConnectors.createMessageConnectors(
             new DistributorAdapter.Factory(collector),
-            (config.tls ? "tls+" : "") + "127.0.0.1:" + config.port, QDStats.VOID);
+            (config.tls ? "tls+" : "") + "127.0.0.1:" + config.port, agentEndpoint.getRootStats());
         MessageConnectors.setThreadPriority(client, Thread.MAX_PRIORITY);
         MessageConnectors.startMessageConnectors(client);
         return collector;
     }
 
     synchronized void processedByDists(int cnt) {
-        total_stats.processed_by_dists += cnt;
+        totalStats.processedByDists += cnt;
     }
 
     synchronized void receivedByAgents(int cnt) {
-        total_stats.received_by_agents += cnt;
+        totalStats.receivedByAgents += cnt;
     }
 
     boolean dumpStats() {
@@ -181,54 +242,78 @@ class TestThroughputContext extends SymbolList {
         try {
             synchronized (this) {
                 for (Field f : fields) {
-                    Long total = (Long) f.get(total_stats);
-                    Long last = (Long) f.get(last_stats);
-                    f.set(delta_stats, total - last);
-                    f.set(last_stats, total);
+                    long total = f.getLong(totalStats);
+                    long last = f.getLong(lastStats);
+                    f.setLong(deltaStats, total - last);
+                    f.setLong(lastStats, total);
                 }
             }
         } catch (IllegalAccessException e) {
-            e.printStackTrace();
+            throw new IllegalStateException(e);
         }
-        long cur_time = System.currentTimeMillis();
-        long delta_time = cur_time - last_time;
-        boolean report = done_all;
+        long now = System.currentTimeMillis();
+        long delta = now - lastTime;
+        boolean report = doneAll;
         if (report) {
             System.out.println(time() + " " +
-                "DIST: " + perf(delta_stats.processed_by_dists, delta_time, null, hdist) + "; " +
-                "AGENT: " + perf(delta_stats.received_by_agents, delta_time, null, hagent));
+                "DIST: " + perf(deltaStats.processedByDists, delta, null, distHist) + "; " +
+                "AGENT: " + perf(deltaStats.receivedByAgents, delta, null, agentHist));
         }
-        last_time = cur_time;
-        done_all = done_dists.get() >= config.dists && done_agents.get() >= config.agents;
+        lastTime = now;
+        doneAll = isInitialized();
         return report;
     }
 
-    void dumpReport(PrintStream out) {
-        out.println(" DIST: " + hdist.report());
-        out.println("AGENT: " + hagent.report());
+    void resetStats() {
+        Field[] fields = Stats.class.getFields();
+        try {
+            synchronized (this) {
+                for (Field f : fields) {
+                    f.setLong(totalStats, 0);
+                    f.setLong(deltaStats, 0);
+                    f.setLong(lastStats, 0);
+                }
+                lastTime = System.currentTimeMillis();
+                distHist.clear();
+                agentHist.clear();
+            }
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
-    private String perf(long value, long delta_time, MaxHolder max_holder, Hist hist) {
-        long rps = 1000 * value / delta_time;
-        boolean is_max = max_holder != null && rps > max_holder.max;
-        if (is_max)
-            max_holder.max = rps;
+    /** Check if both agents and distributors are initialized and ready for testing. */
+    boolean isInitialized() {
+        return doneDists.get() >= config.dists && doneAgents.get() >= config.agents;
+    }
+
+    void dumpReport(PrintStream out) {
+        out.println(" DIST: " + distHist.report());
+        out.println("AGENT: " + agentHist.report());
+    }
+
+    private String perf(long value, long deltaTime, MaxHolder maxHolder, Hist hist) {
+        long rps = 1000 * value / deltaTime;
+        boolean isMax = maxHolder != null && rps > maxHolder.max;
+        if (isMax)
+            maxHolder.max = rps;
         hist.add(rps);
-        return value + " (" + rps + " rps" + (max_holder == null ? "" : is_max ? " * " : "   ") +")";
+        return value + " (" + rps + " rps" + (maxHolder == null ? "" : isMax ? " * " : "   ") + ")";
     }
 
     private String time() {
-        return DF.format(new Date());
+        return dateFormat.format(new Date());
     }
 
-    private static String nextSymbol(Random r) {
-        int len = r.nextInt(3) + r.nextInt(4) + 1;
+    private static String nextSymbol(Random rnd, int length) {
+        int len = (length > 0) ? length : rnd.nextInt(3) + rnd.nextInt(4) + 1;
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < len; i++) {
-            if (r.nextInt(50) == 0)
-                sb.append((char) ('0' + r.nextInt(10)));
-            else
-                sb.append((char) ('A' + r.nextInt(26)));
+            if (rnd.nextInt(50) == 0) {
+                sb.append((char) ('0' + rnd.nextInt(10)));
+            } else {
+                sb.append((char) ('A' + rnd.nextInt(26)));
+            }
         }
         return sb.toString();
     }
