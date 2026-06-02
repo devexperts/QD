@@ -1,3 +1,8 @@
+QDS 3.352:
+
+* [QD-1742] Allow describing custom (non-MessageType) message types in ProtocolDescriptor
+  BACKWARD-INCOMPATIBLE CHANGE: ProtocolDescriptor and MessageDescriptor API changed
+
 QDS 3.351:
 
 * [QD-1033] Event flags are stored into a tape file by default

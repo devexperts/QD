@@ -18,7 +18,6 @@ import com.devexperts.io.BufferedOutput;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -28,22 +27,24 @@ import java.util.Map;
 public final class MessageDescriptor {
     private static final int ID_UNKNOWN = -1;
 
-    // Not final because parseFrom()/appendFromTextTokens() set it during deserialization,
-    // but no public setter exists — id is effectively immutable after construction.
-    private int id = ID_UNKNOWN;
-    private String name;
+    private final int id;
+    private final String name;
     private final ProtocolDescriptor parent;
 
     final Map<String, String> properties = new LinkedHashMap<>();
 
-    MessageDescriptor(ProtocolDescriptor parent) {
-        this.parent = parent;
+    MessageDescriptor(ProtocolDescriptor parent, MessageType type) {
+        this(parent, type.getId(), type.name());
     }
 
-    MessageDescriptor(ProtocolDescriptor parent, MessageType type) {
+    MessageDescriptor(ProtocolDescriptor parent, int id, String name) {
         this.parent = parent;
-        this.id = type.getId();
-        this.name = type.name();
+        this.id = id;
+        this.name = name;
+    }
+
+    MessageDescriptor(ProtocolDescriptor parent, String name) {
+        this(parent, idForName(name), name);
     }
 
     /**
@@ -93,29 +94,19 @@ public final class MessageDescriptor {
         out.writeProperties(properties);
     }
 
-    void parseFrom(BufferedInput in) throws IOException {
-        id = in.readCompactInt();
-        name = in.readUTFString();
-        if (id == ID_UNKNOWN) {
-            MessageType messageType = MessageType.findByName(name);
-            if (messageType != null)
-                id = messageType.getId();
-        }
-        in.readProperties(properties);
+    static MessageDescriptor parseFrom(ProtocolDescriptor parent, BufferedInput in) throws IOException {
+        int id = in.readCompactInt();
+        String name = in.readUTFString();
+        if (id == ID_UNKNOWN)
+            id = idForName(name);
+        MessageDescriptor message = new MessageDescriptor(parent, id, name);
+        in.readProperties(message.properties);
+        return message;
     }
 
-    void convertToTextTokens(List<String> tokens, String prefix) {
-        tokens.add(prefix + name);
-        ProtocolDescriptor.convertPropertiesToTextTokens(tokens, properties);
-    }
-
-    int appendFromTextTokens(List<String> tokens, String prefix, int i) {
-        id = ID_UNKNOWN;
-        name = tokens.get(i++).substring(prefix.length());
-        MessageType messageType = MessageType.findByName(name);
-        if (messageType != null)
-            id = messageType.getId();
-        return ProtocolDescriptor.appendPropertiesFromTextTokens(tokens, properties, i);
+    private static int idForName(String name) {
+        MessageType type = MessageType.findByName(name);
+        return type != null ? type.getId() : ID_UNKNOWN;
     }
 
     @Override

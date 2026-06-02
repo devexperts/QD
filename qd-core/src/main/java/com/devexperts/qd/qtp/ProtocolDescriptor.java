@@ -187,12 +187,12 @@ public final class ProtocolDescriptor {
         return result;
     }
 
-    public MessageDescriptor newMessageDescriptor() {
-        return new MessageDescriptor(this);
-    }
-
     public MessageDescriptor newMessageDescriptor(MessageType messageType) {
         return new MessageDescriptor(this, messageType);
+    }
+
+    public MessageDescriptor newMessageDescriptor(int id, String name) {
+        return new MessageDescriptor(this, id, name);
     }
 
     public EndpointId getEndpointId() {
@@ -420,8 +420,7 @@ public final class ProtocolDescriptor {
         if (size < 0)
             throw new IOException("Invalid size: " + size);
         for (int i = 0; i < size; i++) {
-            MessageDescriptor message = newMessageDescriptor();
-            message.parseFrom(in);
+            MessageDescriptor message = MessageDescriptor.parseFrom(this, in);
             mergeOrAdd(messages, message);
         }
     }
@@ -448,16 +447,19 @@ public final class ProtocolDescriptor {
     private void convertMessageListToTextTokens(List<String> tokens, String prefix,
         Collection<MessageDescriptor> messages)
     {
-        for (MessageDescriptor message : messages)
-            message.convertToTextTokens(tokens, prefix);
+        for (MessageDescriptor message : messages) {
+            tokens.add(prefix + message.getName());
+            convertPropertiesToTextTokens(tokens, message.properties);
+        }
     }
 
     private int appendMessageListFromTextTokens(List<String> tokens, String prefix,
         IndexedMap<Integer, MessageDescriptor> messages, int i)
     {
         while (i < tokens.size() && tokens.get(i).startsWith(prefix)) {
-            MessageDescriptor message = newMessageDescriptor();
-            i = message.appendFromTextTokens(tokens, prefix, i);
+            String name = tokens.get(i++).substring(prefix.length());
+            MessageDescriptor message = new MessageDescriptor(this, name);
+            i = appendPropertiesFromTextTokens(tokens, message.properties, i);
             mergeOrAdd(messages, message);
         }
         return i;
