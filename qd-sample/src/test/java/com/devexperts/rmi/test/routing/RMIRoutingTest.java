@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -44,6 +45,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -376,13 +378,12 @@ public class RMIRoutingTest {
             .withSide(RMIEndpoint.Side.CLIENT)
             .build();
 
-        int port = 72;
-        CountDownLatch unavailableLatch = new CountDownLatch(2);
+        ArrayBlockingQueue<RMIServiceDescriptor> notifiedDescriptors = new ArrayBlockingQueue<>(10);
         client.getClient().getService("*").addServiceDescriptorsListener(descriptors -> {
+            log.info("Client received descriptors: " + descriptors);
             descriptors.stream()
                 .filter(descriptor -> descriptor.getDistance() == 20)
-                .forEach(descriptor -> unavailableLatch.countDown());
-            log.info("Client received descriptors: " + descriptors);
+                .forEach(notifiedDescriptors::add);
         });
         int remoteServerPort = NTU.connectServer(remoteServer);
         int muxServerPort = NTU.connectServer(muxServer);
@@ -394,17 +395,25 @@ public class RMIRoutingTest {
         muxServer.getServer().export(muxClientOne.getClient().getService("*"));
         RMIRequest<Double> sum;
         sum = client.getClient().createRequest(null, DifferentServices.CalculatorService.PLUS, 1.231, 2.123);
-        assertRequest(sum, 3.354, Arrays.asList(remoteServer, muxServer),  -1);
+        assertRequest(sum, 3.354, Arrays.asList(remoteServer, muxServer), -1);
+
+        // expected client-1 descriptor
+        assertNotNull("client1 expected",
+            NTU.pollQueueForMatching(notifiedDescriptors, 10_000,
+                descriptor -> descriptor.getIntermediateNodes().contains(muxClientOne.getEndpointId())));
 
         muxServer.getServer().export(muxClientTwo.getClient().getService("*"));
         sum = client.getClient().createRequest(null, DifferentServices.CalculatorService.PLUS, 231d, 124d);
-        assertRequest(sum, 355d, Arrays.asList(remoteServer, muxServer),  -1);
+        assertRequest(sum, 355d, Arrays.asList(remoteServer, muxServer), -1);
 
         muxClientOne.disconnect();
         log.info("------------------------------------------------------");
         sum = client.getClient().createRequest(null, DifferentServices.CalculatorService.PLUS, 1.231, 2.125);
-        assertTrue(unavailableLatch.await(10, TimeUnit.SECONDS));
-        assertRequest(sum, 3.356, Arrays.asList(remoteServer, muxServer),  -1);
+        // expected client-2 descriptor
+        assertNotNull("client2 expected",
+            NTU.pollQueueForMatching(notifiedDescriptors, 10_000,
+                descriptor -> descriptor.getIntermediateNodes().contains(muxClientTwo.getEndpointId())));
+        assertRequest(sum, 3.356, Arrays.asList(remoteServer, muxServer), -1);
     }
 
     //----------------------------------------------------------------

@@ -587,7 +587,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
     ));
 
     private static boolean supportsProperty(String key) {
-        return SUPPORTED_PROPERTIES.contains(key) || key.startsWith(DXSCHEME_ENABLED_PROPERTY_PREFIX);
+        return SUPPORTED_PROPERTIES.contains(key) || SchemeProperties.supportsProperty(key);
     }
 
     @ServiceProvider

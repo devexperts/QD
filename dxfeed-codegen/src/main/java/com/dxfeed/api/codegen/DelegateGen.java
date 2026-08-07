@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -23,6 +23,7 @@ import com.dxfeed.event.IndexedEvent;
 import com.dxfeed.event.IndexedEventSource;
 import com.dxfeed.event.LastingEvent;
 import com.dxfeed.event.TimeSeriesEvent;
+import com.dxfeed.event.market.MarketEvent;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -105,6 +106,13 @@ class DelegateGen {
         if (record.regional)
             throw new AssertionError("Suffixes are not supported for regional records");
         record.suffixesDefault = suffixesDefault;
+        return this;
+    }
+
+    DelegateGen orderSuffixes(Class<? extends MarketEvent> clazz) {
+        if (record.regional)
+            throw new AssertionError("Suffixes are not supported for regional records");
+        record.suffixesOrderClass = clazz.getName();
         return this;
     }
 
@@ -245,11 +253,12 @@ class DelegateGen {
     }
 
     // implies optional
-    DelegateGen onlySuffixes(String suffixesProperty, String suffixesDefault) {
+    DelegateGen onlySuffixes(String suffixesProperty, String oldSuffixesProperty, String suffixesDefault) {
         FieldMapping fm = lastFieldMapping();
-        if (record.suffixesDefault == null)
+        if (record.suffixesDefault == null && record.suffixesOrderClass == null)
             throw new AssertionError("Record should have suffixes");
         fm.field.onlySuffixesProperty = suffixesProperty;
+        fm.field.onlySuffixesOldProperty = oldSuffixesProperty;
         fm.field.onlySuffixesDefault = suffixesDefault;
         fm.field.required = false;
         fm.field.enabled = false;
@@ -279,6 +288,16 @@ class DelegateGen {
 
     DelegateGen compositeOnly() {
         lastFieldMapping().field.isCompositeOnly = true;
+        return this;
+    }
+
+    // implies optional
+    DelegateGen fobEnabled() {
+        RecordField field = lastFieldMapping().field;
+        field.isFobEnabled = true;
+        field.isPhantom = false;
+        field.required = false;
+        field.enabled = false;
         return this;
     }
 

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,6 +13,7 @@ package com.devexperts.qd.impl;
 
 import com.devexperts.qd.DataIterator;
 import com.devexperts.qd.DataRecord;
+import com.devexperts.qd.Deprecation;
 import com.devexperts.qd.QDDistributor;
 import com.devexperts.qd.SubscriptionProvider;
 import com.devexperts.qd.ng.RecordBuffer;
@@ -20,6 +21,9 @@ import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.ng.RecordSource;
 
 public abstract class AbstractDistributor implements QDDistributor {
+
+    private static final Deprecation LEGACY_DATA_ITERATOR =
+        Deprecation.ofImpl(DataIterator.class, "Use RecordBuffer instead.");
 
     @Override
     public final SubscriptionProvider getAddedSubscriptionProvider() {
@@ -37,7 +41,8 @@ public abstract class AbstractDistributor implements QDDistributor {
             process((RecordSource) it);
             return;
         }
-        Deprecation.legacyDataIteratorWarning(it);
+        LEGACY_DATA_ITERATOR.warnClass(it.getClass());
+        
         // will copy data into capacity-limited buffer from pool
         boolean withTimeSequence = getAddedRecordProvider().getMode().hasEventTimeSequence();
         RecordMode bufMode = withTimeSequence ? RecordMode.TIMESTAMPED_DATA : RecordMode.DATA;

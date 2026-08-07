@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -97,7 +97,7 @@ class RMIClientService extends ForwardService {
     public List<RMIServiceDescriptor> getDescriptors() {
         // Note: we must use concurrent iterator to get a snapshot of descriptors (that are being modified),
         // so we use toArray that gives a concurrent snapshot of IndexedSet
-        return Arrays.asList((RMIServiceDescriptor[]) descriptors.toArray(new RMIServiceDescriptor[descriptors.size()]));
+        return Arrays.asList(descriptors.toArray(new RMIServiceDescriptor[0]));
     }
 
     @Override

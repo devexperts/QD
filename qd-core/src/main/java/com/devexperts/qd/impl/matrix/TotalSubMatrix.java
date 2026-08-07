@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -26,7 +26,9 @@ class TotalSubMatrix extends SubMatrix {
 
     @Override
     boolean isSubscribed(int index) {
-        return matrix[index + payloadOffset] > 0;
+        int nextAgent = matrix[index + payloadOffset];
+        // an active subscription and a sticky are valid
+        return nextAgent > 0 || nextAgent == Collector.NO_NEXT_AGENT_STICKY_DELAY;
     }
 
     @Override

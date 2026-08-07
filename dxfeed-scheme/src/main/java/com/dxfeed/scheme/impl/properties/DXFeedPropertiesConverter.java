@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,13 +11,14 @@
  */
 package com.dxfeed.scheme.impl.properties;
 
+import com.devexperts.annotation.Internal;
 import com.devexperts.logging.Logging;
+import com.devexperts.qd.SerialFieldType;
 import com.devexperts.util.GlobListUtil;
-import com.devexperts.util.SystemProperties;
-import com.dxfeed.event.market.MarketEventSymbols;
+import com.dxfeed.api.DXEndpoint;
+import com.dxfeed.api.impl.SchemeProperties;
 import com.dxfeed.scheme.EmbeddedTypes;
 import com.dxfeed.scheme.SchemeException;
-import com.dxfeed.scheme.SchemeLoadingOptions;
 import com.dxfeed.scheme.model.NamedEntity;
 import com.dxfeed.scheme.model.SchemeModel;
 import com.dxfeed.scheme.model.SchemeRecordGenerator;
@@ -29,44 +30,29 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import static com.dxfeed.api.DXEndpoint.DXSCHEME_ENABLED_PROPERTY_PREFIX;
-import static com.dxfeed.api.DXEndpoint.DXSCHEME_NANO_TIME_PROPERTY;
-
+@Internal
 public final class DXFeedPropertiesConverter {
 
     private static final Logging log = Logging.getLogging(DXFeedPropertiesConverter.class);
 
     /**
      * This code must generate type overrides and visibility rules equal to
-     * {@link com.dxfeed.api.impl.SchemeProperties} and
-     * {@link com.dxfeed.api.impl.EventDelegateFactory}.select()
-     * Also it should use all rules from {@link com.dxfeed.event.market.MarketFactoryImpl},
-     * {@link com.dxfeed.event.candle.CandleFactoryImpl}, {@link com.dxfeed.event.misc.MiscFactoryImpl}
-     * and {@link com.dxfeed.event.option.OptionFactoryImpl}.
+     * {@link com.dxfeed.api.impl.SchemeProperties}.
      */
-    public static SchemeModel convertProperties(EmbeddedTypes embeddedTypes, Properties dxFeedProps,
-        SchemeLoadingOptions options)
-    {
-        if (!options.shouldUseSystemProperties() && !options.shouldUseDXFeedProperties()) {
-            return null;
-        }
+    public static SchemeModel convertProperties(EmbeddedTypes embeddedTypes, Properties properties) {
         try {
+            SchemeProperties schemeProperties = new SchemeProperties(properties);
             SchemeModel file = SchemeModel.newBuilder()
                 .withTypes(embeddedTypes)
                 .withName("<dxfeed-properties>")
                 .build();
 
-            if (options.shouldUseSystemProperties()) {
-                loadTypeOverrides(file);
-                loadRegionalsVisibility(file);
-                loadOrderFieldsVisibility(file);
-                loadGenerators(file);
-            }
-            // Only this code uses passed properties, all other
-            // settings depends on system properties
-            if (options.shouldUseDXFeedProperties()) {
-                loadGenericFieldsVisibility(file, dxFeedProps);
-            }
+            loadTypeOverrides(file, schemeProperties);
+            loadRegionalsVisibility(file, schemeProperties);
+            loadOrderFieldsVisibility(file, schemeProperties);
+            loadGenerators(file, schemeProperties);
+            loadGenericFieldsVisibility(file, schemeProperties);
+
             return file.isEmpty() ? null : file;
         } catch (Throwable t) {
             log.error("Cannot convert properties to scheme configuration: " + t.getMessage());
@@ -77,32 +63,34 @@ public final class DXFeedPropertiesConverter {
     /**
      * Disable all disabled regionals, as XML doesn't support changing list of regional letters
      */
-    private static void loadRegionalsVisibility(SchemeModel file) {
-        loadRegionalRecordVisibility(file, "Quote");
-        loadRegionalRecordVisibility(file, "Trade");
-        loadRegionalRecordVisibility(file, "TradeETH");
-        loadRegionalRecordVisibility(file, "Summary");
-        loadRegionalRecordVisibility(file, "Fundamental");
-        loadRegionalRecordVisibility(file, "TimeAndSale");
-        loadRegionalRecordVisibility(file, "Book");
+    private static void loadRegionalsVisibility(SchemeModel file, SchemeProperties properties) {
+        loadRegionalRecordVisibility(file, properties, "Quote", null);
+        loadRegionalRecordVisibility(file, properties, "Trade", null);
+        loadRegionalRecordVisibility(file, properties, "TradeETH", null);
+        loadRegionalRecordVisibility(file, properties, "Summary", null);
+        loadRegionalRecordVisibility(file, properties, "Fundamental", null);
+        loadRegionalRecordVisibility(file, properties, "TimeAndSale", null);
+        loadRegionalRecordVisibility(file, properties, "Book", "I");
     }
 
-    private static void loadRegionalRecordVisibility(SchemeModel file, String rec) {
-        // No property — use default (all letters), do nothing here
-        String toEnable = getExchanges(rec);
-        if (toEnable == null) {
-            return;
-        }
+    private static void loadRegionalRecordVisibility(SchemeModel file, SchemeProperties properties,
+        String rec, String defaultExchanges)
+    {
+        //FIXME NuamTrade and NuamTradeAndSale are not covered by the current code!
+        String oldName = "com.dxfeed.event.market.impl." + rec + ".exchanges";
+        String toEnable = new String(properties.getExchanges(rec, oldName, defaultExchanges));
 
-        // Disable all which is not mentioned explicitly
-        StringBuilder toDisable = new StringBuilder();
-        for (char exchange : MarketEventSymbols.SUPPORTED_EXCHANGES.toCharArray()) {
-            if (toEnable.indexOf(exchange) == -1) {
-                toDisable.append(exchange);
-            }
-        }
-        // Create visibility rule to disable all not-found characters and enable all found explicitly
-        if (toEnable.length() > 0) {
+        // Disable all
+        file.addVisibilityRule(new VisibilityRule(
+            Pattern.compile(rec + "&."),
+            false,
+            null,
+            false,
+            file.getName()
+        ));
+
+        // Enable only specified ones
+        if (!toEnable.isEmpty()) {
             file.addVisibilityRule(new VisibilityRule(
                 Pattern.compile(rec + "&[" + toEnable + "]"),
                 false,
@@ -111,58 +99,61 @@ public final class DXFeedPropertiesConverter {
                 file.getName()
             ));
         }
-        if (toDisable.length() > 0) {
+    }
+
+    private static void loadOrderFieldsVisibility(SchemeModel file, SchemeProperties properties) {
+        enableOrderField(file, properties, "Order", "Count", null);
+        enableOrderField(file, properties, "AnalyticOrder", "Count", null);
+        enableOrderField(file, properties, "OtcMarketsOrder", "Count", null);
+        enableOrderField(file, properties, "NuamOrder", "Count", null);
+        enableOrderField(file, properties, "SpreadOrder", "Count", null);
+
+        // Enable MMID
+        enableOrderField(file, properties, "Order", "MarketMaker", "mmid");
+        enableOrderField(file, properties, "AnalyticOrder", "MarketMaker", "mmid");
+        enableOrderField(file, properties, "OtcMarketsOrder", "MarketMaker", "mmid");
+
+        // Global FOB flag, default to false
+        if (properties.isFob()) {
+            // List of suffixes to enable FOB for
+            String fobSuffixes = properties.getFobSuffixes();
+            enableFOB(file, fobSuffixes, "Order");
+            enableFOB(file, fobSuffixes, "AnalyticOrder");
+            enableFOB(file, fobSuffixes, "OtcMarketsOrder");
+            enableFOB(file, fobSuffixes, "NuamOrder");
+            enableFOB(file, fobSuffixes, "SpreadOrder");
+        }
+    }
+
+    private static void enableOrderField(SchemeModel file, SchemeProperties properties,
+        String rec, String field, String oldField)
+    {
+        //FIXME NuamOrder is not covered by the current code!
+        String propertyName = SchemeProperties.DXSCHEME_SUFFIXES_PROPERTY + "." + rec + "." + field.toLowerCase();
+        String oldPropertyName = "com.dxfeed.event.order.impl." + rec + ".suffixes." +
+            ((oldField != null) ? oldField : field.toLowerCase());
+
+        String suffixes = properties.getSuffixesExplicit(propertyName, oldPropertyName);
+        String suffixesExt = properties.getSuffixesExtExplicit(propertyName);
+        if (suffixes == null && suffixesExt == null) {
+            return;
+        }
+
+        if (suffixes != null) {
+            // Disable all counts to be sure, that we override XML defaults
             file.addVisibilityRule(new VisibilityRule(
-                Pattern.compile(rec + "&[" + toDisable + "]"),
+                Pattern.compile(rec + "(|#.+)"),
                 false,
-                null,
+                Pattern.compile(field),
                 false,
                 file.getName()
             ));
         }
-    }
 
-    private static void loadOrderFieldsVisibility(SchemeModel file) {
-        // Enable/disable Count fields
-        enableOrderField(file, "Order", "Count");
-        enableOrderField(file, "AnalyticOrder", "Count");
-        enableOrderField(file, "OtcMarketsOrder", "Count");
-        enableOrderField(file, "NuamOrder", "Count");
-        enableOrderField(file, "SpreadOrder", "Count");
-        // Enable MMID
-        enableOrderField(file, "Order", "MarketMaker");
-        enableOrderField(file, "AnalyticOrder", "MarketMaker");
-        enableOrderField(file, "OtcMarketsOrder", "MarketMaker");
-        // Global FOB flag, default to false
-        if (SystemProperties.getBooleanProperty("dxscheme.fob", false)) {
-            // List of suffixes to enable FOB for
-            String suffixes = SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes",
-                "|#NTV|#NUAM");
-            enableFOB(file, suffixes, "Order");
-            enableFOB(file, suffixes, "AnalyticOrder");
-            enableFOB(file, suffixes, "OtcMarketsOrder");
-            enableFOB(file, suffixes, "NuamOrder");
-            enableFOB(file, suffixes, "SpreadOrder");
-        }
-    }
-
-    private static void enableOrderField(SchemeModel file, String rec, String field) {
-        String prop = "com.dxfeed.event.order.impl." + rec + ".suffixes." + field.toLowerCase();
-        String suffixes = SystemProperties.getProperty(prop, null);
-        if (suffixes == null) {
-            return;
-        }
-        // Disable all counts to be sure, that we override XML defaults
-        file.addVisibilityRule(new VisibilityRule(
-            Pattern.compile(rec + "(|#.+)"),
-            false,
-            Pattern.compile(field),
-            false,
-            file.getName()
         // Enable explicitly
-        ));
+        String combinedSuffixes = SchemeProperties.combineSuffixes(suffixes, suffixesExt);
         file.addVisibilityRule(new VisibilityRule(
-            Pattern.compile(rec + (suffixes.isEmpty() ? "" : "(" + suffixes + ")")),
+            Pattern.compile(rec + (combinedSuffixes.isEmpty() ? "" : "(" + combinedSuffixes + ")")),
             false,
             Pattern.compile(field),
             true,
@@ -183,30 +174,57 @@ public final class DXFeedPropertiesConverter {
         file.addVisibilityRule(vr);
     }
 
-    private static void loadGenerators(SchemeModel file) {
-        loadGenerator(file, "market.impl.Order", "Order", "#");
-        loadGenerator(file, "market.impl.AnalyticOrder", "AnalyticOrder", "#");
-        loadGenerator(file, "market.impl.OtcMarketsOrder", "OtcMarketsOrder", "#");
-        loadGenerator(file, "custom.impl.NuamOrder", "NuamOrder", "#");
-        loadGenerator(file, "market.impl.SpreadOrder", "SpreadOrder", "#");
-        loadGenerator(file, "market.impl.OrderImbalance", "OrderImbalance", "#");
-        loadGenerator(file, "candle.impl.Candle", "Candle", "");
-        loadGenerator(file, "candle.impl.Trade", "OldStyleCandle", "");
+    private static void loadGenerators(SchemeModel file, SchemeProperties properties) {
+        loadGenerator(file, properties, "market.impl.Order", "Order", "#");
+        loadGenerator(file, properties, "market.impl.AnalyticOrder", "AnalyticOrder", "#");
+        loadGenerator(file, properties, "market.impl.OtcMarketsOrder", "OtcMarketsOrder", "#");
+        loadGenerator(file, properties, "custom.impl.NuamOrder", "NuamOrder", "#");
+        loadGenerator(file, properties, "market.impl.SpreadOrder", "SpreadOrder", "#");
+        loadGenerator(file, properties, "market.impl.OrderImbalance", "OrderImbalance", "#");
+        loadGenerator(file, properties, "candle.impl.Candle", "Candle", "");
+        loadGenerator(file, properties, "candle.impl.Trade", "OldStyleCandle", "");
     }
 
-    private static void loadGenerator(SchemeModel file, String propName, String genName, String delimiter) {
-        String prop = "com.dxfeed.event." + propName + ".suffixes";
-        String suffixes = SystemProperties.getProperty(prop, null);
+    private static void loadGenerator(SchemeModel file, SchemeProperties properties,
+        String propName, String genName, String delimiter)
+    {
         // Do nothing if property is not set, default is in XML file
-        if (suffixes == null) {
+        String recordName = propName.substring(propName.lastIndexOf(".") + 1);
+        String propertyName = SchemeProperties.DXSCHEME_SUFFIXES_PROPERTY + "." + recordName;
+        String oldPropertyName = "com.dxfeed.event." + propName + ".suffixes";
+
+        String suffixes = properties.getSuffixesExplicit(propertyName, oldPropertyName);
+        String suffixesExt = properties.getSuffixesExtExplicit(propertyName);
+        if (suffixes == null && suffixesExt == null) {
             return;
         }
-        SchemeRecordGenerator gen = new SchemeRecordGenerator(genName,
-            NamedEntity.Mode.UPDATE,
-            "Automatically created from environment, using property " + prop,
-            file.getName());
-        // Create iterator
-        gen.setIteratorMode(SchemeRecordGenerator.IteratorMode.REPLACE);
+
+        try {
+            // Replace existing suffixes
+            if (suffixes != null) {
+                SchemeRecordGenerator replaceGenerator = new SchemeRecordGenerator(genName, NamedEntity.Mode.UPDATE,
+                    "Automatically created from environment, using property " + propertyName,
+                    file.getName());
+                replaceGenerator.setIteratorMode(SchemeRecordGenerator.IteratorMode.REPLACE);
+                iterateSuffixes(replaceGenerator, delimiter, suffixes);
+                file.addGenerator(replaceGenerator);
+            }
+
+            // Add suffixes to the existing ones
+            if (suffixesExt != null) {
+                SchemeRecordGenerator appendGenerator = new SchemeRecordGenerator(genName, NamedEntity.Mode.UPDATE,
+                    "Automatically created from environment, using property " + propertyName,
+                    file.getName());
+                appendGenerator.setIteratorMode(SchemeRecordGenerator.IteratorMode.APPEND);
+                iterateSuffixes(appendGenerator, delimiter, suffixesExt);
+                file.addGenerator(appendGenerator);
+            }
+        } catch (SchemeException e) {
+            log.error("Cannot create set of suffixes from " + propertyName + ": " + e.getMessage());
+        }
+    }
+
+    private static void iterateSuffixes(SchemeRecordGenerator gen, String delimiter, String suffixes) {
         for (String s : suffixes.split("\\|")) {
             // Remove delimiter
             if (!delimiter.isEmpty() && s.startsWith(delimiter)) {
@@ -214,32 +232,23 @@ public final class DXFeedPropertiesConverter {
             }
             gen.addIteratorValue(s);
         }
-        try {
-            file.addGenerator(gen);
-        } catch (SchemeException e) {
-            log.error("Cannot create set of suffixes from " + prop + ": " + e.getMessage());
-        }
     }
 
-    /**
-     * This code adds visibility rules with same logic as
-     * which is used by {@link com.dxfeed.api.impl.SchemeProperties}
-     */
-    private static void loadGenericFieldsVisibility(SchemeModel file, Properties props) {
+    private static void loadGenericFieldsVisibility(SchemeModel file, SchemeProperties properties) {
         Set<String> seenPropNames = new HashSet<>();
-        props.forEach((objKey, objValue) -> {
-            String key = (String) objKey;
-            if (key.startsWith(DXSCHEME_ENABLED_PROPERTY_PREFIX)) {
-                String propertyName = key.substring(DXSCHEME_ENABLED_PROPERTY_PREFIX.length());
+
+        properties.getProperties().forEach((key, value) -> {
+            if (key.startsWith(DXEndpoint.DXSCHEME_ENABLED_PROPERTY_PREFIX)) {
+                String propertyName = key.substring(DXEndpoint.DXSCHEME_ENABLED_PROPERTY_PREFIX.length());
                 if (seenPropNames.add(propertyName)) {
                     file.addVisibilityRule(
-                        new VisibilityRule(GlobListUtil.compile((String) objValue), true,
+                        new VisibilityRule(GlobListUtil.compile(value), true,
                             Pattern.compile(Pattern.quote(propertyName)), true, file.getName())
                     );
                 }
             }
         });
-        if (Boolean.parseBoolean(props.getProperty(DXSCHEME_NANO_TIME_PROPERTY))) {
+        if (properties.getBooleanProperty(DXEndpoint.DXSCHEME_NANO_TIME_PROPERTY, false)) {
             if (seenPropNames.add("Sequence")) {
                 file.addVisibilityRule(
                     new VisibilityRule(Pattern.compile(".*"), true, Pattern.compile(Pattern.quote("Sequence")), true,
@@ -255,98 +264,64 @@ public final class DXFeedPropertiesConverter {
         }
     }
 
-    /**
-     * This code re-defines several types based on same properties
-     * which is used by {@link com.dxfeed.api.impl.EventDelegateFactory}.select()
-     */
-    private static void loadTypeOverrides(SchemeModel file) throws SchemeException {
+    private static void loadTypeOverrides(SchemeModel file, SchemeProperties properties) throws SchemeException {
         // Keep in sync with dynamic type definitions in com.dxfeed.api.codegen.FieldType
-        overrideOneType(file, "price", "decimal", "dxscheme.price");
-        overrideOneType(file, "size", "compact_int", "dxscheme.size");
-        overrideOneType(file, "volume", "decimal", "dxscheme.volume", "dxscheme.size");
-        overrideOneType(file, "turnover", "decimal", "dxscheme.turnover", "dxscheme.size");
+        overrideOneType(file, properties, "price", "decimal", "dxscheme.price");
+        overrideOneType(file, properties, "size", "compact_int", "dxscheme.size");
+        overrideOneType(file, properties, "volume", "decimal", "dxscheme.volume", "dxscheme.size");
+        overrideOneType(file, properties, "turnover", "decimal", "dxscheme.turnover", "dxscheme.size");
         // open_interest is simple int_or_decimal
-        overrideOneType(file, "oi", "decimal", "dxscheme.oi");
+        overrideOneType(file, properties, "oi", "decimal", "dxscheme.oi");
         // Convert "decimal" into "wide_decimal" or "tiny_decimal"
-        overrideOneType(file, "decimal", "tiny_decimal");
+        overrideOneType(file, properties, "decimal", "tiny_decimal");
         // Convert "int_or_decimal" to "wide_decimal" or "compact_int"
-        overrideOneType(file, "int_or_decimal", "compact_int");
+        overrideOneType(file, properties, "int_or_decimal", "compact_int");
 
         // Convert "bid_ask_time" (default "time_seconds")
-        overrideTimeType(file, "bid_ask_time", "time_seconds", "dxscheme.bat");
+        overrideTimeType(file, properties, "bid_ask_time", "time_seconds", "dxscheme.bat");
     }
 
-    private static void overrideOneType(SchemeModel file, String name, String defaultType, String... typeSelectors)
+    private static void overrideOneType(SchemeModel file, SchemeProperties properties,
+        String name, String defaultType, String... typeSelectors)
         throws SchemeException
     {
-        String targetType = defaultType;
-        String reason = null;
+        // Select types based on dxscheme.wide only if explicitly set
+        Boolean isWide = properties.isWideExplicit();
+        String targetType =
+            (isWide == Boolean.TRUE) ? "wide_decimal" :
+            (isWide == Boolean.FALSE) ? defaultType :
+            null;
 
-        if (SystemProperties.getBooleanProperty("dxscheme.wide", true)) {
+        SerialFieldType fieldType = properties.selectDecimalExplicit(typeSelectors);
+        if (fieldType == SerialFieldType.WIDE_DECIMAL) {
             targetType = "wide_decimal";
-            reason = "dxscheme.wide=true or default";
+        } else if (fieldType == SerialFieldType.DECIMAL) {
+            targetType = "tiny_decimal";
+        } else if (fieldType == SerialFieldType.COMPACT_INT) {
+            targetType = "compact_int";
         }
 
-        // This code was copied from EventDelegateFactory.select() and replicates its backward looping.
-        for (int i = typeSelectors.length; --i >= 0;) {
-            String selector = System.getProperty(typeSelectors[i]);
-            if ("wide".equalsIgnoreCase(selector)) {
-                targetType = "wide_decimal";
-                reason = typeSelectors[i] + "=" + selector;
-            }
-            if ("tiny".equalsIgnoreCase(selector) || "decimal".equalsIgnoreCase(selector)) {
-                targetType = "tiny_decimal";
-                reason = typeSelectors[i] + "=" + selector;
-            }
-            if ("int".equalsIgnoreCase(selector)) {
-                targetType = "compact_int";
-                reason = typeSelectors[i] + "=" + selector;
-            }
-        }
         if (targetType != null) {
             file.addType(new SchemeType(name, NamedEntity.Mode.UPDATE, targetType,
-                "Automatically created from environment, using property " + reason, file.getName()));
+                "Automatically created from environment properties", file.getName()));
         }
     }
 
-    private static void overrideTimeType(SchemeModel file, String name, String defaultType, String... typeSelectors)
-        throws SchemeException
+    private static void overrideTimeType(SchemeModel file, SchemeProperties properties,
+        String name, String defaultType, String... typeSelectors) throws SchemeException
     {
         String targetType = defaultType;
-        String reason = null;
 
-        // This code was copied from EventDelegateFactory.selectTime() and replicates its backward looping.
-        for (int i = typeSelectors.length; --i >= 0;) {
-            String selector = System.getProperty(typeSelectors[i]);
-            if ("millis".equalsIgnoreCase(selector)) {
-                targetType = "time_millis";
-                reason = typeSelectors[i] + "=" + selector;
-            }
-            if ("seconds".equalsIgnoreCase(selector)) {
-                targetType = "time_seconds";
-                reason = typeSelectors[i] + "=" + selector;
-            }
-            // FIXME: Doesn't work in DXFeed API
-            // if ("none".equalsIgnoreCase(selector)) {
-            //     targetType = "void";
-            //     reason = typeSelectors[i] + "=" + selector;
-            // }
+        SerialFieldType fieldType = properties.selectTimeExplicit(typeSelectors);
+        if (fieldType == SerialFieldType.TIME_MILLIS) {
+            targetType = "time_millis";
+        } else if (fieldType == SerialFieldType.TIME_SECONDS) {
+            targetType = "time_seconds";
         }
+
         if (targetType != null) {
             file.addType(new SchemeType(name, NamedEntity.Mode.UPDATE, targetType,
-                "Automatically created from environment, using property " + reason, file.getName()));
+                "Automatically created from environment properties", file.getName()));
         }
-    }
-
-    /**
-     * Code of this method must be consistent with {@link com.dxfeed.api.impl.EventDelegateFactory}.getExchanges(String)
-     */
-    private static String getExchanges(String rec) {
-        String defaultPattern = null;
-        if (!rec.equals("Book"))
-            defaultPattern = SystemProperties.getProperty("dxscheme.exchanges", null);
-        String prop = "com.dxfeed.event.market.impl." + rec + ".exchanges";
-        String pattern = SystemProperties.getProperty(prop, defaultPattern);
-        return pattern != null ? MarketEventSymbols.getExchangesByPattern(pattern) : null;
     }
 }

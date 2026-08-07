@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -28,6 +28,7 @@ import java.io.OutputStream;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
@@ -260,17 +261,22 @@ public class XmlSchemeModelWriter extends XmlSchemeModelFormat implements Scheme
             vr = doc.createElementNS(SCHEMA_NS, EL_VIS_DISABLE);
         }
         vr.setAttribute(ATT_VIS_RECORD, data.getRecord().pattern());
+
         if (data.getType() == VisibilityRule.Type.FIELD) {
-            vr.setAttribute(ATT_VIS_FIELD, data.getField().pattern());
+            Pattern fieldPattern = data.getField();
+            if (fieldPattern != null)
+                vr.setAttribute(ATT_VIS_FIELD, fieldPattern.pattern());
         }
         if (data.useEventName()) {
             vr.setAttribute(ATT_VIS_USE_EVENT_NAME, "true");
         }
         addSources(vr, null, data);
 
-        // Add tags
-        visibilityRuleTagsSerializer(doc, vr, EL_VIS_TAGINC, data.getIncludedTags());
-        visibilityRuleTagsSerializer(doc, vr, EL_VIS_TAGEXC, data.getExcludedTags());
+        if (data.getType() == VisibilityRule.Type.FIELD) {
+            // Add tags
+            visibilityRuleTagsSerializer(doc, vr, EL_VIS_TAGINC, data.getIncludedTags());
+            visibilityRuleTagsSerializer(doc, vr, EL_VIS_TAGEXC, data.getExcludedTags());
+        }
 
         return vr;
     }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,6 +13,7 @@ package com.devexperts.qd.logger;
 
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.Deprecation;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.SubscriptionConsumer;
 import com.devexperts.qd.SubscriptionIterator;
@@ -26,6 +27,11 @@ import com.devexperts.qd.stats.QDStats;
 import com.devexperts.qd.util.LegacyAdapter;
 
 public class LoggedAgent extends LoggedRecordProvider implements QDAgent {
+
+    private static final Deprecation ADD_SUB = Deprecation.ofUse("getAddingSubscriptionConsumer()");
+    private static final Deprecation REMOVE_SUB = Deprecation.ofUse("getRemovingSubscriptionConsumer()");
+    private static final Deprecation BUF_OVERFLOW_STRATEGY = Deprecation.ofUse("setBufferOverflowStrategy()");
+
     private final QDAgent delegate;
     private final DataScheme scheme;
     private volatile LoggedRecordProvider snapshotProvider;
@@ -52,13 +58,15 @@ public class LoggedAgent extends LoggedRecordProvider implements QDAgent {
 
     @Override
     public SubscriptionConsumer getAddingSubscriptionConsumer() {
-        log.debug("USING DEPRECATED getAddingSubscriptionConsumer");
+        ADD_SUB.warn();
+        log.debug("getAddingSubscriptionConsumer()");
         return delegate.getAddingSubscriptionConsumer();
     }
 
     @Override
     public SubscriptionConsumer getRemovingSubscriptionConsumer() {
-        log.debug("USING DEPRECATED getRemovingSubscriptionConsumer");
+        REMOVE_SUB.warn();
+        log.debug("getRemovingSubscriptionConsumer()");
         return delegate.getRemovingSubscriptionConsumer();
     }
 
@@ -187,14 +195,15 @@ public class LoggedAgent extends LoggedRecordProvider implements QDAgent {
     }
 
     @Override
-    public void setStreamOverflowStrategy(int max_buffer_size, boolean drop_oldest, boolean log_overflow) {
-        setBufferOverflowStrategy(max_buffer_size, drop_oldest, log_overflow);
+    public void setStreamOverflowStrategy(int maxBufferSize, boolean dropOldest, boolean logOverflow) {
+        setBufferOverflowStrategy(maxBufferSize, dropOldest, logOverflow);
     }
 
     @Override
-    public void setBufferOverflowStrategy(int max_buffer_size, boolean drop_oldest, boolean log_overflow) {
-        log.debug("[DEPRECATED] setBufferOverflowStrategy(" + max_buffer_size + ", " + drop_oldest + ", " + log_overflow + ")");
-        delegate.setBufferOverflowStrategy(max_buffer_size, drop_oldest, log_overflow);
+    public void setBufferOverflowStrategy(int maxBufferSize, boolean dropOldest, boolean logOverflow) {
+        BUF_OVERFLOW_STRATEGY.warn();
+        log.debug("setBufferOverflowStrategy(" + maxBufferSize + ", " + dropOldest + ", " + logOverflow + ")");
+        delegate.setBufferOverflowStrategy(maxBufferSize, dropOldest, logOverflow);
     }
 
     @Override

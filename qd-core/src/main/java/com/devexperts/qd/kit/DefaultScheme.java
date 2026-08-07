@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,6 +16,7 @@ import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataField;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.Deprecation;
 import com.devexperts.qd.SerialFieldType;
 import com.devexperts.qd.SymbolCodec;
 import com.devexperts.qd.spi.DataSchemeService;
@@ -39,6 +40,9 @@ import static com.devexperts.util.Base64.URLSAFE_UNPADDED;
  */
 public class DefaultScheme implements DataScheme {
 
+    private static final Deprecation CUSTOM_CODEC =
+        Deprecation.ofImpl(SymbolCodec.class, "Do not create custom codecs.");
+
     protected final Logging log = Logging.getLogging(getClass());
 
     protected final SymbolCodec codec;
@@ -57,7 +61,7 @@ public class DefaultScheme implements DataScheme {
         if (codec == null)
             throw new NullPointerException("SymbolCodec is null.");
         if (codec.getClass() != PentaCodec.class) {
-            log.warn("WARNING: DEPRECATED use of custom SymbolCodec implementation " + codec.getClass().getName());
+            CUSTOM_CODEC.warnClass(codec.getClass());
         }
         this.codec = codec;
 

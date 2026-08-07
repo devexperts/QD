@@ -17,6 +17,7 @@ import com.devexperts.connector.proto.Configurable;
 import com.devexperts.connector.proto.ConfigurationKey;
 import com.devexperts.connector.proto.TransportConnection;
 import com.devexperts.logging.Logging;
+import com.devexperts.qd.Deprecation;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.dxlink.websocket.transport.DxLinkLoginHandlerFactory;
 import com.devexperts.qd.dxlink.websocket.transport.TokenDxLinkLoginHandlerFactory;
@@ -64,6 +65,9 @@ public class DxLinkWebSocketApplicationConnectionFactory extends ApplicationConn
         "com.devexperts.qd.dxlink.feedService.requestedAggregationPeriod";
     private static final String LEGACY_ACCEPT_AGGREGATION_PERIOD_PROPERTY =
         "com.devexperts.qd.dxlink.feedService.acceptAggregationPeriod";
+    private static final Deprecation LEGACY_AGGREGATION_PERIOD =
+        Deprecation.ofProperty(LEGACY_ACCEPT_AGGREGATION_PERIOD_PROPERTY, REQUESTED_AGGREGATION_PERIOD_PROPERTY);
+
     private static final TimePeriod REQUESTED_AGGREGATION_PERIOD = readRequestedAggregationPeriodProperty();
 
     private TimePeriod heartbeatTimeout = DEFAULT_HEARTBEAT_TIMEOUT;
@@ -203,8 +207,7 @@ public class DxLinkWebSocketApplicationConnectionFactory extends ApplicationConn
             return TimePeriod.valueOf(requested);
         String legacy = SystemProperties.getProperty(LEGACY_ACCEPT_AGGREGATION_PERIOD_PROPERTY, null);
         if (legacy != null) {
-            log.warn("System property '" + LEGACY_ACCEPT_AGGREGATION_PERIOD_PROPERTY +
-                "' is deprecated; use '" + REQUESTED_AGGREGATION_PERIOD_PROPERTY + "' instead");
+            LEGACY_AGGREGATION_PERIOD.warn();
             return TimePeriod.valueOf(legacy);
         }
         return null;

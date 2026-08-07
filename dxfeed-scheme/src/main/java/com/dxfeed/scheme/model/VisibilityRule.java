@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
+import javax.annotation.Nullable;
 
 /**
  * Description of one {@link SchemeRecord record} or {@link SchemeRecord.Field field} visibility rule.
@@ -95,6 +96,7 @@ public final class VisibilityRule extends SchemeEntity {
      * Returns type of this rule.
      */
     public Type getType() {
+        // tags could be specified without a field-pattern and that assumes matching any field with proper tags.
         return field != null || !incTags.isEmpty() || !excTags.isEmpty() ? Type.FIELD : Type.RECORD;
     }
 
@@ -116,10 +118,8 @@ public final class VisibilityRule extends SchemeEntity {
     /**
      * Returns field pattern of this rule. Can be called only for rules with type {@link Type#FIELD FIELD}.
      */
+    @Nullable
     public Pattern getField() {
-        if (getType() != Type.FIELD) {
-            throw new IllegalStateException("Cannot provide field pattern for record-type rule");
-        }
         return field;
     }
 
@@ -135,9 +135,6 @@ public final class VisibilityRule extends SchemeEntity {
      * type {@link Type#FIELD FIELD}.
      */
     public void addIncludedTag(String tag) {
-        if (getType() != Type.FIELD) {
-            throw new IllegalStateException("Cannot add tag to record-type rule");
-        }
         incTags.add(tag);
     }
 
@@ -146,9 +143,6 @@ public final class VisibilityRule extends SchemeEntity {
      * This method is only valid for rules with type {@link Type#FIELD FIELD}.
      */
     public Set<String> getIncludedTags() {
-        if (getType() != Type.FIELD) {
-            throw new IllegalStateException("Cannot return tags for record-type rule");
-        }
         return Collections.unmodifiableSet(incTags);
     }
 
@@ -157,9 +151,6 @@ public final class VisibilityRule extends SchemeEntity {
      * type {@link Type#FIELD FIELD}.
      */
     public void addExcludedTag(String tag) {
-        if (getType() != Type.FIELD) {
-            throw new IllegalStateException("Cannot add tag to record-type rule");
-        }
         excTags.add(tag);
     }
 
@@ -168,9 +159,6 @@ public final class VisibilityRule extends SchemeEntity {
      * This method is only valid for rules with type {@link Type#FIELD FIELD}.
      */
     public Set<String> getExcludedTags() {
-        if (getType() != Type.FIELD) {
-            throw new IllegalStateException("Cannot return tags for record-type rule");
-        }
         return Collections.unmodifiableSet(excTags);
     }
 
@@ -231,8 +219,8 @@ public final class VisibilityRule extends SchemeEntity {
             (field != null ? ", field='" + field + '\'' : "") +
             ", enable=" + enable +
             ", useEventName=" + useEventName +
-            (incTags.isEmpty() ? "" : ", incTags='" + incTags.toString() + '\'') +
-            (excTags.isEmpty() ? "" : ", excTags='" + excTags.toString() + '\'') +
+            (incTags.isEmpty() ? "" : ", incTags='" + incTags + '\'') +
+            (excTags.isEmpty() ? "" : ", excTags='" + excTags + '\'') +
             '}';
     }
 }

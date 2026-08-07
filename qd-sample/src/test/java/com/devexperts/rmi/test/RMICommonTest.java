@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -51,18 +51,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.AbstractExecutorService;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nonnull;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -780,6 +781,7 @@ public class RMICommonTest {
 
     @Test
     public void testServiceDescriptorUpdates() throws InterruptedException {
+        log.info("==== testServiceDescriptorUpdates: start");
         String serviceName = RMIService.getServiceName(Counter.class);
         Map<String, String> originProps = Collections.singletonMap("x", "y");
         RMILocalService<?> serviceImpl = new RMILocalService<Integer>(serviceName, originProps) {
@@ -798,22 +800,32 @@ public class RMICommonTest {
         assertEquals(1, descriptors.size());
         assertEquals(originProps, descriptors.get(0).getProperties());
 
-        Semaphore notifies = new Semaphore(-1); // first notify will happen immediately
-        remoteCounterService.addServiceDescriptorsListener(descriptor -> notifies.release());
-        doTestServiceDescriptorUpdate(serviceImpl, notifies, remoteCounterService, Collections.singletonMap("x", "z"));
-        doTestServiceDescriptorUpdate(serviceImpl, notifies, remoteCounterService, Collections.emptyMap());
+        ArrayBlockingQueue<List<RMIServiceDescriptor>> notified = new ArrayBlockingQueue<>(10);
+        remoteCounterService.addServiceDescriptorsListener(e -> {
+            log.debug("listener.descriptorsUpdated(" + e + ")");
+            notified.add(e);
+        });
+        doTestServiceDescriptorUpdate(serviceImpl, notified, remoteCounterService, Collections.singletonMap("x", "z"));
+        doTestServiceDescriptorUpdate(serviceImpl, notified, remoteCounterService, Collections.emptyMap());
         Map<String, String> props = new HashMap<>();
         props.put("x1", "a");
         props.put("x2", "b");
-        doTestServiceDescriptorUpdate(serviceImpl, notifies, remoteCounterService, props);
+        doTestServiceDescriptorUpdate(serviceImpl, notified, remoteCounterService, props);
+        log.info("==== testServiceDescriptorUpdates: end");
     }
 
-    private static void doTestServiceDescriptorUpdate(RMILocalService<?> serverSideService, Semaphore notifies,
+    private static void doTestServiceDescriptorUpdate(RMILocalService<?> serverSideService,
+        ArrayBlockingQueue<List<RMIServiceDescriptor>> notified,
         RMIService<?> clientSideService, Map<String, String> newProps) throws InterruptedException
     {
-        notifies.drainPermits();
+        notified.clear(); // clear stale updates if any
+        // NOTE: service descriptor update listener may witness an outdated descriptor value due to async notification
+        // processing.
+        // Client code can even witness reordering between delayed notifications and direct updates in
+        // service.getDescriptors().
         serverSideService.changeProperties(newProps);
-        assertTrue(notifies.tryAcquire(10, TimeUnit.SECONDS));
+        assertNotNull(NTU.pollQueueForMatching(notified, 10_000,
+            (descriptors) -> (descriptors.size() == 1 && newProps.equals(descriptors.get(0).getProperties()))));
         // expect an updated descriptor with new property values
         List<RMIServiceDescriptor> descriptors = clientSideService.getDescriptors();
         assertEquals(1, descriptors.size());

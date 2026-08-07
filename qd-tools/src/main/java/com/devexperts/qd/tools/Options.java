@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,6 +12,7 @@
 package com.devexperts.qd.tools;
 
 import com.devexperts.logging.Logging;
+import com.devexperts.qd.Deprecation;
 import com.devexperts.qd.qtp.QDEndpoint;
 
 import java.util.ArrayList;
@@ -72,8 +73,9 @@ public class Options {
         for (Option opt : options) {
             if (opt.isSet()) {
                 opt.init();
-                if (opt.getDeprecated() != null)
-                    log.warn("DEPRECATED option " + opt + " is used. " + opt.getDeprecated());
+                if (opt.getDeprecated() != null) {
+                    Deprecation.ofUse("option " + opt + ". " + opt.getDeprecated()).warn();
+                }
             }
         }
         // apply endpoint options

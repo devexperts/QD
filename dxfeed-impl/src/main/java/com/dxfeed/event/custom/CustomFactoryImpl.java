@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -41,60 +41,60 @@ public final class CustomFactoryImpl extends EventDelegateFactory implements Rec
         builder.addOptionalField("NuamTrade", "Last.TimeNanoPart", SerialFieldType.COMPACT_INT, "NuamTrade", "TimeNanoPart", false);
         builder.addOptionalField("NuamTrade", "Last.Exchange", SerialFieldType.UTF_CHAR, "NuamTrade", "ExchangeCode", true);
         builder.addOptionalField("NuamTrade", "TradeId", SerialFieldType.LONG, "NuamTrade", "TradeId", true);
-        builder.addRequiredField("NuamTrade", "Last.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("NuamTrade", "Last.Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+        builder.addRequiredField("NuamTrade", "Last.Price", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("NuamTrade", "Last.Size", builder.selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
         builder.addOptionalField("NuamTrade", "Last.Tick", SerialFieldType.COMPACT_INT, "NuamTrade", "Tick", true);
-        builder.addOptionalField("NuamTrade", "Last.Change", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "NuamTrade", "Change", true);
+        builder.addOptionalField("NuamTrade", "Last.Change", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "NuamTrade", "Change", true);
         builder.addOptionalField("NuamTrade", "DayId", SerialFieldType.DATE, "NuamTrade", "DayId", true);
-        builder.addOptionalField("NuamTrade", "Volume", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "NuamTrade", "DayVolume", true);
-        builder.addOptionalField("NuamTrade", "DayTurnover", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "NuamTrade", "DayTurnover", true);
+        builder.addOptionalField("NuamTrade", "Volume", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "NuamTrade", "DayVolume", true);
+        builder.addOptionalField("NuamTrade", "DayTurnover", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "NuamTrade", "DayTurnover", true);
         builder.addOptionalField("NuamTrade", "Last.Flags", SerialFieldType.COMPACT_INT, "NuamTrade", "Flags", true);
         builder.addOptionalField("NuamTrade", "Date", SerialFieldType.COMPACT_INT, "NuamTrade", "Date", SystemProperties.getBooleanProperty("reuters.phantom", false));
         builder.addOptionalField("NuamTrade", "Operation", SerialFieldType.COMPACT_INT, "NuamTrade", "Operation", SystemProperties.getBooleanProperty("reuters.phantom", false));
         builder.addRequiredField("NuamTrade", "TradeStatTime", SerialFieldType.TIME_MILLIS);
-        builder.addRequiredField("NuamTrade", "LastSignificantPrice", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("NuamTrade", "LastPriceForAll", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("NuamTrade", "LastSignificantPrice", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("NuamTrade", "LastPriceForAll", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
         builder.addRequiredField("NuamTrade", "NumberOfTrades", SerialFieldType.COMPACT_INT);
-        builder.addRequiredField("NuamTrade", "VWAP", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
-        for (char exchange : getExchanges("com.dxfeed.event.custom.impl.NuamTrade.exchanges")) {
+        builder.addRequiredField("NuamTrade", "VWAP", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        for (char exchange : builder.getExchanges("NuamTrade", "com.dxfeed.event.custom.impl.NuamTrade.exchanges", null)) {
             String recordName = "NuamTrade&" + exchange;
             builder.addOptionalField(recordName, "Last.Time", SerialFieldType.TIME_SECONDS, "NuamTrade", "Time", true);
             builder.addOptionalField(recordName, "Last.Sequence", SerialFieldType.SEQUENCE, "NuamTrade", "Sequence", true);
             builder.addOptionalField(recordName, "Last.TimeNanoPart", SerialFieldType.COMPACT_INT, "NuamTrade", "TimeNanoPart", false);
             builder.addOptionalField(recordName, "TradeId", SerialFieldType.LONG, "NuamTrade", "TradeId", true);
-            builder.addRequiredField(recordName, "Last.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Last.Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addRequiredField(recordName, "Last.Price", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Last.Size", builder.selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
             builder.addOptionalField(recordName, "Last.Tick", SerialFieldType.COMPACT_INT, "NuamTrade", "Tick", true);
-            builder.addOptionalField(recordName, "Last.Change", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "NuamTrade", "Change", true);
+            builder.addOptionalField(recordName, "Last.Change", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"), "NuamTrade", "Change", true);
             builder.addOptionalField(recordName, "DayId", SerialFieldType.DATE, "NuamTrade", "DayId", true);
-            builder.addOptionalField(recordName, "Volume", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "NuamTrade", "DayVolume", true);
-            builder.addOptionalField(recordName, "DayTurnover", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "NuamTrade", "DayTurnover", true);
+            builder.addOptionalField(recordName, "Volume", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.volume", "dxscheme.size"), "NuamTrade", "DayVolume", true);
+            builder.addOptionalField(recordName, "DayTurnover", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.turnover", "dxscheme.price"), "NuamTrade", "DayTurnover", true);
             builder.addOptionalField(recordName, "Last.Flags", SerialFieldType.COMPACT_INT, "NuamTrade", "Flags", true);
             builder.addRequiredField(recordName, "TradeStatTime", SerialFieldType.TIME_MILLIS);
-            builder.addRequiredField(recordName, "LastSignificantPrice", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "LastPriceForAll", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "LastSignificantPrice", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "LastPriceForAll", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
             builder.addRequiredField(recordName, "NumberOfTrades", SerialFieldType.COMPACT_INT);
-            builder.addRequiredField(recordName, "VWAP", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "VWAP", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
         }
 
-        for (String suffix : SystemProperties.getProperty("com.dxfeed.event.custom.impl.NuamOrder.suffixes", "|#NUAM|#nuam").split("\\|")) {
+        for (String suffix : builder.getOrderSuffixes("NuamOrder", "com.dxfeed.event.custom.impl.NuamOrder.suffixes", NuamOrder.class).split("\\|")) {
             String recordName = "NuamOrder" + suffix;
             builder.addRequiredField(recordName, "Void", SerialFieldType.VOID, SchemeFieldTime.FIRST_TIME_INT_FIELD);
             builder.addRequiredField(recordName, "Index", SerialFieldType.COMPACT_INT, SchemeFieldTime.SECOND_TIME_INT_FIELD);
             builder.addRequiredField(recordName, "Time", SerialFieldType.TIME_SECONDS);
             builder.addRequiredField(recordName, "Sequence", SerialFieldType.SEQUENCE);
             builder.addOptionalField(recordName, "TimeNanoPart", SerialFieldType.COMPACT_INT, "NuamOrder", "TimeNanoPart", false);
-            builder.addOptionalField(recordName, "ActionTime", SerialFieldType.TIME_MILLIS, "NuamOrder", "ActionTime", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV|#NUAM")));
-            builder.addOptionalField(recordName, "OrderId", SerialFieldType.LONG, "NuamOrder", "OrderId", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV|#NUAM")));
-            builder.addOptionalField(recordName, "AuxOrderId", SerialFieldType.LONG, "NuamOrder", "AuxOrderId", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV|#NUAM")));
-            builder.addRequiredField(recordName, "Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-            builder.addOptionalField(recordName, "ExecutedSize", selectDecimal(SerialFieldType.DECIMAL), "NuamOrder", "ExecutedSize", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV|#NUAM")));
-            builder.addOptionalField(recordName, "Count", selectDecimal(SerialFieldType.COMPACT_INT), "NuamOrder", "Count", suffix.matches(SystemProperties.getProperty("com.dxfeed.event.order.impl.NuamOrder.suffixes.count", "")));
+            builder.addOptionalField(recordName, "ActionTime", SerialFieldType.TIME_MILLIS, "NuamOrder", "ActionTime", builder.isFob(suffix));
+            builder.addOptionalField(recordName, "OrderId", SerialFieldType.LONG, "NuamOrder", "OrderId", builder.isFob(suffix));
+            builder.addOptionalField(recordName, "AuxOrderId", SerialFieldType.LONG, "NuamOrder", "AuxOrderId", builder.isFob(suffix));
+            builder.addRequiredField(recordName, "Price", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Size", builder.selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addOptionalField(recordName, "ExecutedSize", builder.selectDecimal(SerialFieldType.DECIMAL), "NuamOrder", "ExecutedSize", builder.isFob(suffix));
+            builder.addOptionalField(recordName, "Count", builder.selectDecimal(SerialFieldType.COMPACT_INT), "NuamOrder", "Count", builder.isSuffixEnabled(suffix, "dxscheme.suffixes.NuamOrder.count", "com.dxfeed.event.order.impl.NuamOrder.suffixes.count", ""));
             builder.addRequiredField(recordName, "Flags", SerialFieldType.COMPACT_INT);
-            builder.addOptionalField(recordName, "TradeId", SerialFieldType.LONG, "NuamOrder", "TradeId", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV|#NUAM")));
-            builder.addOptionalField(recordName, "TradePrice", selectDecimal(SerialFieldType.DECIMAL), "NuamOrder", "TradePrice", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV|#NUAM")));
-            builder.addOptionalField(recordName, "TradeSize", selectDecimal(SerialFieldType.DECIMAL), "NuamOrder", "TradeSize", SystemProperties.getBooleanProperty("dxscheme.fob", false) && suffix.matches(SystemProperties.getProperty("com.dxfeed.event.market.impl.Order.fob.suffixes", "|#NTV|#NUAM")));
+            builder.addOptionalField(recordName, "TradeId", SerialFieldType.LONG, "NuamOrder", "TradeId", builder.isFob(suffix));
+            builder.addOptionalField(recordName, "TradePrice", builder.selectDecimal(SerialFieldType.DECIMAL), "NuamOrder", "TradePrice", builder.isFob(suffix));
+            builder.addOptionalField(recordName, "TradeSize", builder.selectDecimal(SerialFieldType.DECIMAL), "NuamOrder", "TradeSize", builder.isFob(suffix));
             builder.addRequiredField(recordName, "ActorId", SerialFieldType.COMPACT_INT);
             builder.addRequiredField(recordName, "ParticipantId", SerialFieldType.COMPACT_INT);
             builder.addRequiredField(recordName, "SubmitterId", SerialFieldType.COMPACT_INT);
@@ -105,13 +105,13 @@ public final class CustomFactoryImpl extends EventDelegateFactory implements Rec
             builder.addRequiredField(recordName, "ExchangeInfo", SerialFieldType.UTF_CHAR_ARRAY);
             builder.addRequiredField(recordName, "TimeInForceData", SerialFieldType.COMPACT_INT);
             builder.addRequiredField(recordName, "TriggerOrderBookId", SerialFieldType.COMPACT_INT);
-            builder.addRequiredField(recordName, "TriggerPrice", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "TriggerPrice", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
             builder.addRequiredField(recordName, "TriggerSessionType", SerialFieldType.COMPACT_INT);
-            builder.addRequiredField(recordName, "OrderQuantity", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-            builder.addRequiredField(recordName, "DisplayQuantity", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-            builder.addRequiredField(recordName, "RefreshQuantity", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-            builder.addRequiredField(recordName, "LeavesQuantity", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-            builder.addRequiredField(recordName, "MatchedQuantity", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addRequiredField(recordName, "OrderQuantity", builder.selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addRequiredField(recordName, "DisplayQuantity", builder.selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addRequiredField(recordName, "RefreshQuantity", builder.selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addRequiredField(recordName, "LeavesQuantity", builder.selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addRequiredField(recordName, "MatchedQuantity", builder.selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
             builder.addRequiredField(recordName, "NuamFlags", SerialFieldType.COMPACT_INT);
         }
 
@@ -120,26 +120,26 @@ public final class CustomFactoryImpl extends EventDelegateFactory implements Rec
         builder.addOptionalField("NuamTimeAndSale", "TimeNanoPart", SerialFieldType.COMPACT_INT, "NuamTimeAndSale", "TimeNanoPart", false);
         builder.addRequiredField("NuamTimeAndSale", "Exchange", SerialFieldType.UTF_CHAR);
         builder.addRequiredField("NuamTimeAndSale", "TradeId", SerialFieldType.LONG);
-        builder.addRequiredField("NuamTimeAndSale", "Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("NuamTimeAndSale", "Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-        builder.addRequiredField("NuamTimeAndSale", "Bid.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
-        builder.addRequiredField("NuamTimeAndSale", "Ask.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("NuamTimeAndSale", "Price", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("NuamTimeAndSale", "Size", builder.selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+        builder.addRequiredField("NuamTimeAndSale", "Bid.Price", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+        builder.addRequiredField("NuamTimeAndSale", "Ask.Price", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
         builder.addRequiredField("NuamTimeAndSale", "ExchangeSaleConditions", SerialFieldType.SHORT_STRING);
         builder.addRequiredField("NuamTimeAndSale", "Flags", SerialFieldType.COMPACT_INT);
         builder.addOptionalField("NuamTimeAndSale", "Buyer", SerialFieldType.UTF_CHAR_ARRAY, "NuamTimeAndSale", "Buyer", false);
         builder.addOptionalField("NuamTimeAndSale", "Seller", SerialFieldType.UTF_CHAR_ARRAY, "NuamTimeAndSale", "Seller", false);
         builder.addRequiredField("NuamTimeAndSale", "MatchId", SerialFieldType.LONG);
-        for (char exchange : getExchanges("com.dxfeed.event.custom.impl.NuamTimeAndSale.exchanges")) {
+        for (char exchange : builder.getExchanges("NuamTimeAndSale", "com.dxfeed.event.custom.impl.NuamTimeAndSale.exchanges", null)) {
             String recordName = "NuamTimeAndSale&" + exchange;
             builder.addRequiredField(recordName, "Time", SerialFieldType.TIME_SECONDS, SchemeFieldTime.FIRST_TIME_INT_FIELD);
             builder.addRequiredField(recordName, "Sequence", SerialFieldType.SEQUENCE, SchemeFieldTime.SECOND_TIME_INT_FIELD);
             builder.addOptionalField(recordName, "TimeNanoPart", SerialFieldType.COMPACT_INT, "NuamTimeAndSale", "TimeNanoPart", false);
             builder.addRequiredField(recordName, "Exchange", SerialFieldType.UTF_CHAR);
             builder.addRequiredField(recordName, "TradeId", SerialFieldType.LONG);
-            builder.addRequiredField(recordName, "Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Size", selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
-            builder.addRequiredField(recordName, "Bid.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
-            builder.addRequiredField(recordName, "Ask.Price", selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Price", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Size", builder.selectDecimal(SerialFieldType.COMPACT_INT, "dxscheme.size"));
+            builder.addRequiredField(recordName, "Bid.Price", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
+            builder.addRequiredField(recordName, "Ask.Price", builder.selectDecimal(SerialFieldType.DECIMAL, "dxscheme.price"));
             builder.addRequiredField(recordName, "ExchangeSaleConditions", SerialFieldType.SHORT_STRING);
             builder.addRequiredField(recordName, "Flags", SerialFieldType.COMPACT_INT);
             builder.addOptionalField(recordName, "Buyer", SerialFieldType.UTF_CHAR_ARRAY, "NuamTimeAndSale", "Buyer", false);

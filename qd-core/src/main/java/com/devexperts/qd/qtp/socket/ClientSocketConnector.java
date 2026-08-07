@@ -15,6 +15,7 @@ import com.devexperts.connector.codec.CodecConnectionFactory;
 import com.devexperts.connector.codec.CodecFactory;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.Deprecation;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDFactory;
 import com.devexperts.qd.QDFilter;
@@ -65,6 +66,13 @@ public class ClientSocketConnector extends AbstractMessageConnector
     implements SocketHandler.CloseListener, ClientSocketConnectorMBean
 {
     private static final String AUTO_STRIPE_CONFIG = "auto";
+
+    private static final Deprecation TLS = Deprecation.ofUse(
+        "setTls() method from program or 'tls' property from address string. " +
+        "Use tls or ssl codec in address string. For example tls+<address>");
+    private static final Deprecation TRUST_MANAGER = Deprecation.ofUse(
+        "setTrustManager() method on ClientSocketConnector. " +
+        "Use this method on SSL codec or in address string. For example tls+<address>");
 
     protected String address;
     protected List<SocketAddress> socketAddresses;
@@ -372,6 +380,7 @@ public class ClientSocketConnector extends AbstractMessageConnector
     )
     @Deprecated
     public synchronized void setTls(boolean useTls) {
+        TLS.warn();
         if (this.useTls != useTls) {
             if (useTls) {
                 CodecFactory sslCodecFactory = Services.createService(CodecFactory.class, null,
@@ -393,8 +402,6 @@ public class ClientSocketConnector extends AbstractMessageConnector
             log.info("Setting useTls=" + useTls);
             reconfigure();
         }
-        log.warn("WARNING: DEPRECATED use \"setTls()\" method from program or \"tls\" property from address string. " +
-            "Use tls or ssl codec in address string. For example tls+<address>");
     }
 
     @Deprecated
@@ -410,8 +417,7 @@ public class ClientSocketConnector extends AbstractMessageConnector
      */
     @Deprecated
     public void setTrustManager(TrustManager trustManager) {
-        log.warn("WARNING: DEPRECATED use \"setTrustManager()\" method on ClientSocketConnector. " +
-            "Use this method on SSL codec or in address string. For example tls+<address>");
+        TRUST_MANAGER.warn();
         ApplicationConnectionFactory factory = getFactory();
         if (factory instanceof CodecConnectionFactory) {
             factory = factory.clone();

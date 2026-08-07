@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -44,7 +44,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.time.Year;
-import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -67,7 +66,7 @@ public class CustomSchemeCompatibilityTest {
     @Before
     public void setUp() {
         // prevent Candle to be sent as Trade records
-        System.setProperty("com.dxfeed.event.candle.impl.Trade.suffixes", "");
+        System.setProperty("dxscheme.suffixes.Trade", "");
     }
 
     @Test
@@ -336,7 +335,7 @@ public class CustomSchemeCompatibilityTest {
     }
 
     private DefaultScheme buildDefaultScheme() {
-        SchemeBuilder builder = new SchemeBuilder(new SchemeProperties(new Properties()));
+        SchemeBuilder builder = new SchemeBuilder(new SchemeProperties(System.getProperties()));
         for (EventDelegateFactory factory : Services.createServices(EventDelegateFactory.class, null)) {
             if (!factory.getClass().getName().equals(EVENT_FACTORY_IMPL))
                 factory.buildScheme(builder);

@@ -5,6 +5,7 @@
 *.iws
 atlassian-ide-plugin.xml
 out/
+.run/
 
 # java
 *.class

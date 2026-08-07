@@ -15,6 +15,7 @@ import com.devexperts.connector.codec.CodecConnectionFactory;
 import com.devexperts.connector.codec.CodecFactory;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.connector.proto.ConfigurationKey;
+import com.devexperts.qd.Deprecation;
 import com.devexperts.qd.qtp.AbstractServerConnector;
 import com.devexperts.qd.qtp.MessageAdapter;
 import com.devexperts.qd.qtp.MessageConnector;
@@ -43,6 +44,10 @@ import java.util.Set;
     addressFormat = ":<port>"
 )
 public class ServerSocketConnector extends AbstractServerConnector implements ServerSocketConnectorMBean {
+
+    private static final Deprecation TLS = Deprecation.ofUse(
+        "setTls() method from program or 'tls' property from address string. " +
+        "Use tls or ssl codec in address string. For example tls+<address>");
 
     protected volatile boolean useTls;
 
@@ -87,7 +92,9 @@ public class ServerSocketConnector extends AbstractServerConnector implements Se
         value = "Use SSLConnectionFactory",
         deprecated = "Use tls or ssl codec in address string. For example tls+<address>"
     )
+    @Deprecated
     public synchronized void setTls(boolean useTls) {
+        TLS.warn();
         if (this.useTls != useTls) {
             if (useTls) {
                 CodecFactory sslCodecFactory = Services.createService(
@@ -111,8 +118,6 @@ public class ServerSocketConnector extends AbstractServerConnector implements Se
             this.useTls = useTls;
             reconfigure();
         }
-        log.warn("WARNING: DEPRECATED use \"setTls()\" method from program or \"tls\" property from address string. " +
-            "Use tls or ssl codec in address string. For example tls+<address>");
     }
 
     /**

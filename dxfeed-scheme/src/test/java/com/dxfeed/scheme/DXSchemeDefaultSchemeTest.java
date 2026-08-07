@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -54,7 +54,25 @@ public class DXSchemeDefaultSchemeTest {
             "dxscheme.wide=false", // scheme-wide control
             "dxscheme.volume=int", // individual type example
             "dxscheme.bat=seconds", // bid/ask seconds precision (default)
-            "dxscheme.bat=millis" // bid/ask millis precision
+            "dxscheme.bat=millis", // bid/ask millis precision
+
+            "dxscheme.fob.suffixes=#BATE", // fob suffixes override
+            "dxscheme.fob.suffixesExt=#BATE", // fob suffixes extension
+            "dxscheme.suffixes.Order=#BATE", // suffixes for record
+            "dxscheme.suffixes.Order.count=#BATE", // fields visibility
+            "dxscheme.suffixes.Order.marketmaker=#BATE", // fields visibility
+            "dxscheme.exchanges.Quote=ABCDEF", // custom exchanges
+            "dxscheme.exchanges.Trade=A-F", // custom exchanges
+            "dxscheme.exchanges.Book=[A-F]", // custom exchanges
+            "dxscheme.suffixes.Order=#BATE|#BATE|#BATE", // duplicate suffixes
+
+            // Deprecated, backward-compatibility check
+            "com.dxfeed.event.market.impl.Order.fob.suffixes=#BATE",
+            "com.dxfeed.event.market.impl.Order.suffixes=#BATE",
+            "com.dxfeed.event.order.impl.Order.suffixes.count=#BATE",
+            "com.dxfeed.event.market.impl.Quote.exchanges=ABCDEF",
+            "com.dxfeed.event.market.impl.Trade.exchanges=A-F",
+            "com.dxfeed.event.market.impl.Book.exchanges=[A-F]",
         };
     }
 

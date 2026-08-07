@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,25 +13,30 @@ package com.dxfeed.api.codegen;
 
 class RecordDesc {
     final String name;
-    final boolean regional;
+    final String plainName;
     final String basePackageName;
+    final boolean regional;
 
-    String exchangesProperty; // used only when "regional" is true
-    String exchangesDefault; // used only when "regional" is true
     boolean regionalOnly; // used only when "regional" is true
+    @Deprecated
+    String exchangesOldProperty; // used only when "regional" is true
+    String exchangesDefault; // used only when "regional" is true
 
-    String suffixesProperty;
+    @Deprecated
+    String suffixesOldProperty;
     String suffixesDefault;
+    String suffixesOrderClass;
+
     String phantomProperty;
 
     RecordDesc(String basePackageName, String recordName) {
         this.basePackageName = basePackageName;
         this.regional = recordName.endsWith("&");
         this.name = regional ? recordName.substring(0, recordName.length() - 1) : recordName;
-        String plainName = name.replace(".", "");
-        exchangesProperty = basePackageName + ".impl." + plainName + ".exchanges";
-        exchangesDefault = null;
-        suffixesProperty = basePackageName + ".impl." + plainName + ".suffixes";
+        this.plainName = name.replace(".", "");
+
+        exchangesOldProperty = basePackageName + ".impl." + plainName + ".exchanges";
+        suffixesOldProperty = basePackageName + ".impl." + plainName + ".suffixes";
     }
 
     @Override

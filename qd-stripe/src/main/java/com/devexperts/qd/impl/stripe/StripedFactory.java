@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,6 +13,7 @@ package com.devexperts.qd.impl.stripe;
 
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.Deprecation;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
@@ -36,10 +37,8 @@ public class StripedFactory extends QDFactory {
     private static final Logging log = Logging.getLogging(StripedFactory.class);
 
     static {
-        if (SystemProperties.getProperty(STRIPE_PROPERTY, null) != null) {
-            log.warn("WARNING: DEPRECATED use of \"" + STRIPE_PROPERTY + "\" property, use \"" +
-                QDEndpoint.DXFEED_STRIPE_PROPERTY + "=byhash<N>\" instead!");
-        }
+        if (SystemProperties.getProperty(STRIPE_PROPERTY, null) != null)
+            Deprecation.ofProperty(STRIPE_PROPERTY, QDEndpoint.DXFEED_STRIPE_PROPERTY + "=byhash<N>").warn();
     }
 
     private final QDFactory base = new MatrixFactory();

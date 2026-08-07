@@ -416,7 +416,7 @@ public abstract class DXEndpoint implements AutoCloseable {
     public static final String DXSCHEME_NANO_TIME_PROPERTY = "dxscheme.nanoTime";
 
     /**
-     * Defines whether a specified field from the scheme should be enabled instead of it's default behaviour.
+     * Defines whether a specified field from the scheme should be enabled instead of its default behaviour.
      * Use it according to following format:
      *
      * <p>{@code dxscheme.enabled.<field_property_name>=<event_name_mask_glob>}

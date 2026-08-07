@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -19,12 +19,14 @@ import com.devexperts.qd.SerialFieldType;
 import com.devexperts.qd.kit.DefaultRecord;
 import com.devexperts.qd.kit.DefaultScheme;
 import com.devexperts.qd.kit.PentaCodec;
+import com.devexperts.util.SystemProperties;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.impl.ConfigurableDataScheme;
 import com.dxfeed.api.impl.VersionedRecord;
 import com.dxfeed.event.market.MarketEventSymbols;
 import com.dxfeed.scheme.impl.SchemeModelLoader;
 import com.dxfeed.scheme.impl.properties.DXFeedPropertiesConverter;
+import com.dxfeed.scheme.impl.xml.XmlSchemeModelWriter;
 import com.dxfeed.scheme.model.SchemeModel;
 import com.dxfeed.scheme.model.SchemeRecord;
 import com.dxfeed.scheme.model.SchemeRecordGenerator;
@@ -43,15 +45,15 @@ import java.util.Properties;
  * Implementation of {@link DataScheme} which creates all records from
  * external scheme model.
  * <p>
- * This scheme hasn't any pre-defined records in it. All records
- * must be loaded from external files.
+ * This scheme has no pre-defined records in it. All records must be loaded from external files.
  * <p>
  * To load data scheme use {@link DXScheme.Loader}.
  */
 public class DXScheme extends DefaultScheme implements ConfigurableDataScheme {
     private static final boolean[] REGIONAL_RECORDS_BUILD_ORDER = new boolean[] { false, true };
 
-    private static final Properties DEFAULT_PROPERTIES = System.getProperties();
+    // dump effective scheme model after applying specified properties and internal rules (for tests)
+    private static final String DUMP_SCHEME_MODEL_PROP = "com.dxfeed.scheme.DXScheme.dumpSchemeModel";
 
     private final SchemeModel model;
     private final SchemeLoadingOptions options;
@@ -86,28 +88,7 @@ public class DXScheme extends DefaultScheme implements ConfigurableDataScheme {
     private static DataRecord[] loadRecords(SchemeModel model, SchemeLoadingOptions options, Properties properties)
         throws SchemeException
     {
-        SchemeModel merged = model;
-        // We need to load properties if they are not default OR options is enabled
-        if (properties == null) {
-            properties = DEFAULT_PROPERTIES;
-        }
-        SchemeModel propsModel =
-            DXFeedPropertiesConverter.convertProperties(model.getEmbeddedTypes(), properties, options);
-        if (propsModel != null) {
-            merged = SchemeModel.newBuilder()
-                .withName("<with-props>")
-                .withTypes(model.getEmbeddedTypes())
-                .build();
-            merged.override(model);
-            merged.override(propsModel);
-            // Perform validation of merged model to re-resolve types
-            List<SchemeException> errors = merged.validateState();
-            // Check errors and bail out
-            if (!errors.isEmpty()) {
-                // Throw wrapping exception
-                throw new SchemeException(errors, merged.getSources());
-            }
-        }
+        SchemeModel merged = configureSchemeModel(model, options, properties);
 
         List<DataRecord> result = new ArrayList<>();
         // Enumerate all record sources, build non-regional first, regional second
@@ -131,6 +112,61 @@ public class DXScheme extends DefaultScheme implements ConfigurableDataScheme {
         }
 
         return result.toArray(new DataRecord[0]);
+    }
+
+    /**
+     * Build a SchemeModel from a base template model configured according to provided configuration parameters
+     */
+    private static SchemeModel configureSchemeModel(SchemeModel model, SchemeLoadingOptions options,
+        Properties properties) throws SchemeException
+    {
+        SchemeModel merged = model;
+
+        Properties mergedProperties = mergeProperties(properties, options);
+        if (mergedProperties != null) {
+            SchemeModel propertiesModel =
+                DXFeedPropertiesConverter.convertProperties(model.getEmbeddedTypes(), mergedProperties);
+            if (propertiesModel != null) {
+                merged = SchemeModel.newBuilder()
+                    .withName("<with-props>")
+                    .withTypes(model.getEmbeddedTypes())
+                    .build();
+                merged.override(model);
+                merged.override(propertiesModel);
+
+                // Perform validation of merged model to re-resolve types
+                List<SchemeException> errors = merged.validateState();
+                // Check errors and bail out
+                if (!errors.isEmpty()) {
+                    // Throw wrapping exception
+                    throw new SchemeException(errors, merged.getSources());
+                }
+            }
+        }
+
+        if (SystemProperties.getBooleanProperty(DUMP_SCHEME_MODEL_PROP, false))
+            dumpScheme(merged);
+        return merged;
+    }
+
+    private static Properties mergeProperties(Properties properties, SchemeLoadingOptions options) {
+        Properties result = new Properties();
+        if (options.shouldUseSystemProperties()) {
+            Properties sysProperties = System.getProperties();
+            for (String key : sysProperties.stringPropertyNames()) {
+                String value = sysProperties.getProperty(key);
+                if (value != null)
+                    result.setProperty(key, value);
+            }
+        }
+        if (options.shouldUseDXFeedProperties() && properties != null) {
+            for (String key : properties.stringPropertyNames()) {
+                String value = properties.getProperty(key);
+                if (value != null)
+                    result.setProperty(key, value);
+            }
+        }
+        return result.isEmpty() ? null : result;
     }
 
     private static void buildRecord(List<DataRecord> result, SchemeModel scheme, SchemeRecord r, String recordName,
@@ -275,6 +311,18 @@ public class DXScheme extends DefaultScheme implements ConfigurableDataScheme {
             scheme.isRecordFieldEnabled(actualRecordName, field);
     }
 
+    private static void dumpScheme(SchemeModel merged) {
+        try {
+            System.err.println("****** DXScheme loaded ******");
+            // new Exception("Stack trace:").printStackTrace(System.err);
+            XmlSchemeModelWriter writer = new XmlSchemeModelWriter();
+            writer.writeModel(System.err, merged);
+        } catch (IOException e) {
+            System.err.println("Error emitting scheme model dump:");
+            e.printStackTrace(System.err);
+        }
+    }
+
     /**
      * Builder class for {@link DXScheme} that supports additional configuration properties.
      */
@@ -412,8 +460,7 @@ public class DXScheme extends DefaultScheme implements ConfigurableDataScheme {
          *
          * @param specification specification string.
          * @return {@code this} scheme loader.
-         * @throws IOException when URL cannot be parsed or {@code resource} URL is resolved to multiple
-         * files.
+         * @throws IOException when URL cannot be parsed or {@code resource} URL is resolved to multiple files.
          */
         public Loader fromSpecification(String specification) throws IOException {
             this.urls.addAll(
@@ -433,7 +480,7 @@ public class DXScheme extends DefaultScheme implements ConfigurableDataScheme {
          * @return Data scheme.
          * @throws IOException if one of URLs cannot be read or contains syntactic errors.
          * @throws SchemeException if one of specified scheme files contains structural errors or files in the resulting
-         * set are incompatible.
+         *     set are incompatible.
          */
         public DXScheme load() throws IOException, SchemeException {
             if (urls.isEmpty()) {

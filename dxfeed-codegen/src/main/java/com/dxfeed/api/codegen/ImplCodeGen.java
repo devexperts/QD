@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,17 +18,15 @@ import com.dxfeed.event.candle.DailyCandle;
 import com.dxfeed.event.candle.impl.CandleEventMapping;
 import com.dxfeed.event.custom.NuamOrder;
 import com.dxfeed.event.custom.NuamTimeAndSale;
+import com.dxfeed.event.custom.NuamTrade;
 import com.dxfeed.event.market.AnalyticOrder;
-import com.dxfeed.event.market.MarketEvent;
 import com.dxfeed.event.market.MarketEventDelegateImpl;
 import com.dxfeed.event.market.MarketMaker;
-import com.dxfeed.event.custom.NuamTrade;
 import com.dxfeed.event.market.OptionSale;
 import com.dxfeed.event.market.Order;
 import com.dxfeed.event.market.OrderBaseDelegateImpl;
 import com.dxfeed.event.market.OrderImbalance;
 import com.dxfeed.event.market.OrderImbalanceDelegateImpl;
-import com.dxfeed.event.market.OrderSource;
 import com.dxfeed.event.market.OtcMarketsOrder;
 import com.dxfeed.event.market.Profile;
 import com.dxfeed.event.market.Quote;
@@ -49,7 +47,6 @@ import com.dxfeed.event.option.TheoPrice;
 import com.dxfeed.event.option.Underlying;
 
 import java.io.IOException;
-import java.util.stream.Collectors;
 
 /**
  * Main class to generate all implementation-related code for dxFeed.
@@ -76,10 +73,6 @@ public class ImplCodeGen {
         "1min|2min|3min|4min|5min|6min|10min|12min|15min|20min|30min|" +
         "1hour|2hour|3hour|4hour|6hour|8hour|12hour|Day|2Day|3Day|4Day|Week|Month|OptExp";
     private static final String BID_ASK_VOLUME_SUFFIXES = ".*[{,]price=(bid|ask|mark|s)[,}].*";
-
-    private static final String DXSCHEME_FOB = "dxscheme.fob";
-    private static final String FOB_SUFFIX_PROPERTY = "com.dxfeed.event.market.impl.Order.fob.suffixes";
-    private static final String FOB_SUFFIX_DEFAULT = getFullOrderBookSuffixes();
 
     public static void main(String[] args) throws IOException {
         new ImplCodeGen("", false).run();
@@ -277,7 +270,7 @@ public class ImplCodeGen {
             publishable();
 
         ctx.delegate("Order", Order.class, "Order").
-            suffixes(getOrderSuffixes(Order.class)).
+            orderSuffixes(Order.class).
             inheritDelegateFrom(ORDER_BASE_DELEGATE).
             inheritMappingFrom(ORDER_BASE_MAPPING).
             source("m.getRecordSource()").
@@ -291,18 +284,21 @@ public class ImplCodeGen {
             ).
             mapTimeAndSequence().
             map("TimeNanoPart", "TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
-            map("ActionTime", "ActionTime", FieldType.TIME_MILLIS).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("OrderId", "OrderId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("AuxOrderId", "AuxOrderId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("ActionTime", "ActionTime", FieldType.TIME_MILLIS).fobEnabled().
+            map("OrderId", "OrderId", FieldType.LONG).fobEnabled().
+            map("AuxOrderId", "AuxOrderId", FieldType.LONG).fobEnabled().
             map("Price", "Price", FieldType.PRICE).
             map("Size", "Size", FieldType.SIZE).
-            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes("com.dxfeed.event.order.impl.Order.suffixes.count", "").
+            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).fobEnabled().
+            map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes(
+                "dxscheme.suffixes.Order.count",
+                "com.dxfeed.event.order.impl.Order.suffixes.count", "").
             map("Flags", "Flags", FieldType.FLAGS).
-            map("TradeId", "TradeId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("TradePrice", "TradePrice", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("TradeSize", "TradeSize", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("TradeId", "TradeId", FieldType.LONG).fobEnabled().
+            map("TradePrice", "TradePrice", FieldType.DECIMAL_AS_DOUBLE).fobEnabled().
+            map("TradeSize", "TradeSize", FieldType.DECIMAL_AS_DOUBLE).fobEnabled().
             map("MarketMaker", "MMID", FieldType.SHORT_STRING).onlySuffixes(
+                "dxscheme.suffixes.Order.marketmaker",
                 "com.dxfeed.event.order.impl.Order.suffixes.mmid", "|#NTV|#BATE|#CHIX|#CEUX|#BXTR|#pink").
             field("IcebergPeakSize", "IcebergPeakSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
             field("IcebergHiddenSize", "IcebergHiddenSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
@@ -319,7 +315,7 @@ public class ImplCodeGen {
             publishable();
 
         ctx.delegate("AnalyticOrder", AnalyticOrder.class, "AnalyticOrder").
-            suffixes(getOrderSuffixes(AnalyticOrder.class)).
+            orderSuffixes(AnalyticOrder.class).
             inheritDelegateFrom(ORDER_BASE_DELEGATE).
             inheritMappingFrom(ORDER_BASE_MAPPING).
             source("m.getRecordSource()").
@@ -333,18 +329,21 @@ public class ImplCodeGen {
             ).
             mapTimeAndSequence().
             map("TimeNanoPart", "TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
-            map("ActionTime", "ActionTime", FieldType.TIME_MILLIS).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("OrderId", "OrderId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("AuxOrderId", "AuxOrderId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("ActionTime", "ActionTime", FieldType.TIME_MILLIS).fobEnabled().
+            map("OrderId", "OrderId", FieldType.LONG).fobEnabled().
+            map("AuxOrderId", "AuxOrderId", FieldType.LONG).fobEnabled().
             map("Price", "Price", FieldType.PRICE).
             map("Size", "Size", FieldType.SIZE).
-            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes("com.dxfeed.event.order.impl.AnalyticOrder.suffixes.count", "").
+            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).fobEnabled().
+            map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes(
+                "dxscheme.suffixes.AnalyticOrder.count",
+                "com.dxfeed.event.order.impl.AnalyticOrder.suffixes.count", "").
             map("Flags", "Flags", FieldType.FLAGS).
-            map("TradeId", "TradeId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("TradePrice", "TradePrice", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("TradeSize", "TradeSize", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("TradeId", "TradeId", FieldType.LONG).fobEnabled().
+            map("TradePrice", "TradePrice", FieldType.DECIMAL_AS_DOUBLE).fobEnabled().
+            map("TradeSize", "TradeSize", FieldType.DECIMAL_AS_DOUBLE).fobEnabled().
             map("MarketMaker", "MMID", FieldType.SHORT_STRING).onlySuffixes(
+                "dxscheme.suffixes.AnalyticOrder.marketmaker",
                 "com.dxfeed.event.order.impl.AnalyticOrder.suffixes.mmid", "|#NTV|#BATE|#CHIX|#CEUX|#BXTR").
             map("IcebergPeakSize", "IcebergPeakSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
             map("IcebergHiddenSize", "IcebergHiddenSize", FieldType.DECIMAL_AS_DOUBLE).optional().disabledByDefault().
@@ -361,7 +360,7 @@ public class ImplCodeGen {
             publishable();
 
         ctx.delegate("OtcMarketsOrder", OtcMarketsOrder.class, "OtcMarketsOrder").
-            suffixes(getOrderSuffixes(OtcMarketsOrder.class)).
+            orderSuffixes(OtcMarketsOrder.class).
             inheritDelegateFrom(ORDER_BASE_DELEGATE).
             inheritMappingFrom(ORDER_BASE_MAPPING).
             source("m.getRecordSource()").
@@ -375,18 +374,21 @@ public class ImplCodeGen {
             ).
             mapTimeAndSequence().
             map("TimeNanoPart", "TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
-            map("ActionTime", "ActionTime", FieldType.TIME_MILLIS).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("OrderId", "OrderId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("AuxOrderId", "AuxOrderId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("ActionTime", "ActionTime", FieldType.TIME_MILLIS).fobEnabled().
+            map("OrderId", "OrderId", FieldType.LONG).fobEnabled().
+            map("AuxOrderId", "AuxOrderId", FieldType.LONG).fobEnabled().
             map("Price", "Price", FieldType.PRICE).
             map("Size", "Size", FieldType.SIZE).
-            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes("com.dxfeed.event.order.impl.OtcMarketsOrder.suffixes.count", "").
+            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).fobEnabled().
+            map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes(
+                "dxscheme.suffixes.OtcMarketsOrder.count",
+                "com.dxfeed.event.order.impl.OtcMarketsOrder.suffixes.count", "").
             map("Flags", "Flags", FieldType.FLAGS).
-            map("TradeId", "TradeId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("TradePrice", "TradePrice", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("TradeSize", "TradeSize", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("TradeId", "TradeId", FieldType.LONG).fobEnabled().
+            map("TradePrice", "TradePrice", FieldType.DECIMAL_AS_DOUBLE).fobEnabled().
+            map("TradeSize", "TradeSize", FieldType.DECIMAL_AS_DOUBLE).fobEnabled().
             map("MarketMaker", "MMID", FieldType.SHORT_STRING).onlySuffixes(
+                "dxscheme.suffixes.OtcMarketsOrder.marketmaker",
                 "com.dxfeed.event.order.impl.OtcMarketsOrder.suffixes.mmid", "|#pink").
             map("QuoteAccessPayment", "QuoteAccessPayment", FieldType.INT).
             map("OtcMarketsFlags", "OtcMarketsFlags", FieldType.FLAGS).
@@ -401,7 +403,7 @@ public class ImplCodeGen {
             publishable();
 
         ctx.delegate("NuamOrder", NuamOrder.class, "NuamOrder").
-            suffixes(getOrderSuffixes(NuamOrder.class)).
+            orderSuffixes(NuamOrder.class).
             inheritDelegateFrom(ORDER_BASE_DELEGATE).
             inheritMappingFrom(ORDER_BASE_MAPPING).
             source("m.getRecordSource()").
@@ -415,17 +417,19 @@ public class ImplCodeGen {
             ).
             mapTimeAndSequence().
             map("TimeNanoPart", "TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
-            map("ActionTime", "ActionTime", FieldType.TIME_MILLIS).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("OrderId", "OrderId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("AuxOrderId", "AuxOrderId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("ActionTime", "ActionTime", FieldType.TIME_MILLIS).fobEnabled().
+            map("OrderId", "OrderId", FieldType.LONG).fobEnabled().
+            map("AuxOrderId", "AuxOrderId", FieldType.LONG).fobEnabled().
             map("Price", "Price", FieldType.PRICE).
             map("Size", "Size", FieldType.SIZE).
-            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes("com.dxfeed.event.order.impl.NuamOrder.suffixes.count", "").
+            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).fobEnabled().
+            map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes(
+                "dxscheme.suffixes.NuamOrder.count",
+                "com.dxfeed.event.order.impl.NuamOrder.suffixes.count", "").
             map("Flags", "Flags", FieldType.FLAGS).
-            map("TradeId", "TradeId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("TradePrice", "TradePrice", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("TradeSize", "TradeSize", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("TradeId", "TradeId", FieldType.LONG).fobEnabled().
+            map("TradePrice", "TradePrice", FieldType.DECIMAL_AS_DOUBLE).fobEnabled().
+            map("TradeSize", "TradeSize", FieldType.DECIMAL_AS_DOUBLE).fobEnabled().
             map("ActorId", "ActorId", FieldType.INT).
             map("ParticipantId", "ParticipantId", FieldType.INT).
             map("SubmitterId", "SubmitterId", FieldType.INT).
@@ -455,7 +459,7 @@ public class ImplCodeGen {
             publishable();
 
         ctx.delegate("SpreadOrder", SpreadOrder.class, "SpreadOrder").
-            suffixes(getOrderSuffixes(SpreadOrder.class)).
+            orderSuffixes(SpreadOrder.class).
             inheritDelegateFrom(ORDER_BASE_DELEGATE).
             inheritMappingFrom(ORDER_BASE_MAPPING).
             source("m.getRecordSource()").
@@ -469,17 +473,19 @@ public class ImplCodeGen {
             ).
             mapTimeAndSequence().
             map("TimeNanoPart", "TimeNanoPart", FieldType.TIME_NANO_PART).optional().disabledByDefault().
-            map("ActionTime", "ActionTime", FieldType.TIME_MILLIS).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("OrderId", "OrderId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("AuxOrderId", "AuxOrderId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("ActionTime", "ActionTime", FieldType.TIME_MILLIS).fobEnabled().
+            map("OrderId", "OrderId", FieldType.LONG).fobEnabled().
+            map("AuxOrderId", "AuxOrderId", FieldType.LONG).fobEnabled().
             map("Price", "Price", FieldType.PRICE).
             map("Size", "Size", FieldType.SIZE).
-            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes("com.dxfeed.event.order.impl.SpreadOrder.suffixes.count", "").
+            map("ExecutedSize", "ExecutedSize", FieldType.DECIMAL_AS_DOUBLE).fobEnabled().
+            map("Count", "Count", FieldType.INT_DECIMAL).onlySuffixes(
+                "dxscheme.suffixes.SpreadOrder.count",
+                "com.dxfeed.event.order.impl.SpreadOrder.suffixes.count", "").
             map("Flags", "Flags", FieldType.FLAGS).
-            map("TradeId", "TradeId", FieldType.LONG).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("TradePrice", "TradePrice", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
-            map("TradeSize", "TradeSize", FieldType.DECIMAL_AS_DOUBLE).onlyIf(DXSCHEME_FOB).onlySuffixes(FOB_SUFFIX_PROPERTY, FOB_SUFFIX_DEFAULT).
+            map("TradeId", "TradeId", FieldType.LONG).fobEnabled().
+            map("TradePrice", "TradePrice", FieldType.DECIMAL_AS_DOUBLE).fobEnabled().
+            map("TradeSize", "TradeSize", FieldType.DECIMAL_AS_DOUBLE).fobEnabled().
             map("SpreadSymbol", "SpreadSymbol", FieldType.STRING).
             injectPutEventCode(
                 "if (index < 0)",
@@ -723,7 +729,7 @@ public class ImplCodeGen {
             publishable();
 
         ctx.delegate("OrderImbalance", OrderImbalance.class, "OrderImbalance").
-            suffixes(getOrderSuffixes(OrderImbalance.class)).
+            orderSuffixes(OrderImbalance.class).
             inheritDelegateFrom(ORDER_IMBALANCE_DELEGATE).
             inheritMappingFrom(MARKET_EVENT_MAPPING).
             subContract(QDContract.TICKER).
@@ -884,29 +890,5 @@ public class ImplCodeGen {
             publishable();
 
         ctx.generateSources();
-    }
-
-    /**
-     * Get record suffixes for publishable order sources of specified type as a string delimited by '|' (pipe) symbol.
-     *
-     * @param eventType eventType with possible values <code>{@link Order}.<b>class</b></code>,
-     *     <code>{@link AnalyticOrder}.<b>class</b></code>, <code>{@link OtcMarketsOrder}.<b>class</b></code>
-     *     <code>{@link SpreadOrder}.<b>class</b></code>, <code>{@link NuamOrder}.<b>class</b></code> or
-     *     <code>{@link OrderImbalance}.<b>class</b></code>.
-     * @return a list of publishable record suffixes delimited by '|' symbol.
-     * @see OrderSource#publishable(Class)
-     */
-    private String getOrderSuffixes(Class<? extends MarketEvent> eventType) {
-        return OrderSource.publishable(eventType).stream().
-            filter(os -> !OrderSource.DEFAULT.equals(os) && !OrderSource.isSpecialSourceId(os.id())).
-            map(orderSource -> "|#" + orderSource.name()).
-            collect(Collectors.joining());
-    }
-
-    private static String getFullOrderBookSuffixes() {
-        return OrderSource.fullOrderBook().stream().
-            filter(os -> !OrderSource.DEFAULT.equals(os) && !OrderSource.isSpecialSourceId(os.id())).
-            map(orderSource -> "|#" + orderSource.name()).
-            collect(Collectors.joining());
     }
 }

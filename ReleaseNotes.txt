@@ -1,3 +1,30 @@
+QDS 3.353:
+
+* [QD-1168] Flaky test: RMIRoutingTest.testExportOneServiceManyTimes
+* [QD-1727] Allow to specify extra Order suffixes in addition to the default list
+  - New properties append to defaults without replacing them:
+    - dxscheme.fob.suffixesExt=#ABCD — add #ABCD as FOB Order source
+    - dxscheme.suffixesExt.Order=#ABCD — add #ABCD to default Order records
+    - Same suffixesExt pattern applies to other dxscheme.suffixes.* keys
+  - DEPRECATION NOTE: Scheme tuning properties are renamed
+    (old names DEPRECATED, still accepted, but will be REMOVED in the future):
+    - com.dxfeed.event.market.impl.Order.fob.suffixes -> dxscheme.fob.suffixes
+    - com.dxfeed.event.market.impl.<Record>.exchanges -> dxscheme.exchanges.<Record>
+    - com.dxfeed.event.candle.impl.Candle.suffixes -> dxscheme.suffixes.Candle
+    - com.dxfeed.event.candle.impl.Trade.suffixes -> dxscheme.suffixes.Trade (for legacy Trade.Day records)
+    - com.dxfeed.event.custom.impl.NuamOrder.suffixes -> dxscheme.suffixes.NuamOrder
+    - com.dxfeed.event.market.impl.<Order>.suffixes -> dxscheme.suffixes.<Order>
+    - com.dxfeed.event.order.impl.<Order>.suffixes.count -> dxscheme.suffixes.<Order>.count
+    - com.dxfeed.event.order.impl.<Order>.suffixes.mmid -> dxscheme.suffixes.<Order>.marketmaker
+        (Order, AnalyticOrder, OtcMarketsOrder, SpreadOrder, OrderImbalance)
+    - reuters.phantom is deprecated without replacement
+  - BACKWARD-INCOMPATIBLE CHANGE: scheme tuning properties (dxscheme.* and deprecated aliases)
+    are accepted from the endpoint properties file;
+    values from the file override JVM -D system properties when both are set.
+* [QD-1743] Flaky test: com.devexperts.rmi.test.RMICommonTest.testServiceDescriptorUpdates
+* [QD-1747] Property "dxscheme.fob" doesn't work with the external scheme
+* [QD-1753] Sticky subscription lost upstream on distributor reconnect
+
 QDS 3.352:
 
 * [QD-1742] Allow describing custom (non-MessageType) message types in ProtocolDescriptor

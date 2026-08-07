@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -157,15 +157,20 @@ public abstract class RMIService<T> implements RMIObservableServiceDescriptors, 
      * Adds a {@link RMIServiceDescriptorsListener service descriptor listener} for this service.
      * When a listener is added it is immediately notified with all the descriptors that are known currently.
      *
-     * The listener is notified whenever a descriptor of a service implementation appears or disappears in the network.
-     * For server-side services this obviously never happens.
+     * <p>The listener is notified whenever a descriptor of a service changes, including appearing or disappearing in
+     * the network.
      *
-     * <b>Impl. note: notification happens while holding monitor on this {@code RMIService} object.</b>
+     * <p>NOTE: service descriptor listener may witness an outdated descriptor due to async notification processing.
+     * Client code can even witness reordering between delayed notifications and a value acquired from
+     * {@link #getDescriptors()}.
+     *
+     * <p><b>Impl. note: notification happens while holding monitor on this {@code RMIService} object.</b>
      * @param listener listener to add
      * @see #removeServiceDescriptorsListener(RMIServiceDescriptorsListener)
      */
     @Override
     public synchronized void addServiceDescriptorsListener(RMIServiceDescriptorsListener listener) {
+        // TODO: fix delayed notifications noted in Javadoc above.
         List<RMIServiceDescriptor> descriptors = getDescriptors();
         if (!descriptors.isEmpty())
             listener.descriptorsUpdated(descriptors);

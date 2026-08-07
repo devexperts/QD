@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,6 +17,7 @@ import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.SerialFieldType;
 import com.devexperts.qd.kit.DefaultRecord;
 import com.devexperts.qd.kit.VoidIntField;
+import com.dxfeed.event.market.MarketEvent;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -62,17 +63,22 @@ public class SchemeBuilder {
         addRequiredField(recordName, fieldName, type, SchemeFieldTime.COMMON_FIELD);
     }
 
-    public void addOptionalField(String recordName, String fieldName, SerialFieldType type, String eventName, String propertyName, boolean enabledByDefault, SchemeFieldTime time) {
+    public void addOptionalField(String recordName, String fieldName, SerialFieldType type,
+        String eventName, String propertyName, boolean enabledByDefault)
+    {
+        addOptionalField(recordName, fieldName, type, eventName, propertyName, enabledByDefault,
+            SchemeFieldTime.COMMON_FIELD);
+    }
+
+    public void addOptionalField(String recordName, String fieldName, SerialFieldType type,
+        String eventName, String propertyName, boolean enabledByDefault, SchemeFieldTime time)
+    {
         Boolean enabledInProperties = schemeProperties.isEventPropertyEnabled(propertyName, eventName);
         if (enabledInProperties != null)
             enabledByDefault = enabledInProperties;
         if (!enabledByDefault)
             return;
         addFieldInternal(recordName, fieldName, type, time);
-    }
-
-    public void addOptionalField(String recordName, String fieldName, SerialFieldType type, String eventName, String propertyName, boolean enabledByDefault) {
-        addOptionalField(recordName, fieldName, type, eventName, propertyName, enabledByDefault, SchemeFieldTime.COMMON_FIELD);
     }
 
     private void addFieldInternal(String recordName, String fieldName, SerialFieldType type, SchemeFieldTime time) {
@@ -86,14 +92,52 @@ public class SchemeBuilder {
     public DataRecord[] buildRecords() {
         DataRecord[] result = new DataRecord[records.size()];
         int id = 0;
-        for (int regional = 0; regional < 2; regional++)
-            for (RecordInfo info : records.values())
-                if ((regional != 0) == (info.recordName.length() > 2 && info.recordName.charAt(info.recordName.length() - 2) == '&')) {
+        for (int regional = 0; regional < 2; regional++) {
+            for (RecordInfo info : records.values()) {
+                if ((regional != 0) ==
+                    (info.recordName.length() > 2 && info.recordName.charAt(info.recordName.length() - 2) == '&'))
+                {
                     result[id] = info.createRecord(id);
                     id++;
                 }
+            }
+        }
         return result;
     }
+
+    // Scheme properties related methods
+
+    // isSuffixEnabled
+    public boolean isSuffixEnabled(String suffix, String propertyName, String oldPropertyName, String defaultSuffix) {
+        return schemeProperties.isSuffixEnabled(suffix, propertyName, oldPropertyName, defaultSuffix);
+    }
+
+    public boolean isFob(String suffix) {
+        return schemeProperties.isFob() && schemeProperties.isFobEnabled(suffix);
+    }
+
+    public String getOrderSuffixes(String orderRecordName, String oldName, Class<? extends MarketEvent> orderClass) {
+        return schemeProperties.getOrderSuffixes(orderRecordName, oldName, orderClass);
+    }
+
+    public String getSuffixes(String recordName, String oldName, String defaultSuffixes) {
+        String name = SchemeProperties.DXSCHEME_SUFFIXES_PROPERTY + "." + recordName;
+        return schemeProperties.getSuffixes(name, oldName, defaultSuffixes);
+    }
+
+    public char[] getExchanges(String recordName, String oldName, String defaultExchanges) {
+        return schemeProperties.getExchanges(recordName, oldName, defaultExchanges);
+    }
+
+    public SerialFieldType selectDecimal(SerialFieldType type, String... typeSelectors) {
+        return schemeProperties.selectDecimal(type, typeSelectors);
+    }
+
+    public SerialFieldType selectTime(SerialFieldType type, String... typeSelectors) {
+        return schemeProperties.selectTime(type, typeSelectors);
+    }
+
+    // Utility method
 
     private static class RecordInfo {
         final String recordName;
@@ -108,27 +152,36 @@ public class SchemeBuilder {
 
         void addField(String fieldName, SerialFieldType type, SchemeFieldTime time) {
             if (time != SchemeFieldTime.COMMON_FIELD) {
-                if (type.isObject())
-                    throw new IllegalArgumentException("Failed to create default data-scheme: " + fieldName + " time-field must have integer type");
+                if (type.isObject()) {
+                    throw new IllegalArgumentException(
+                        "Failed to create default data-scheme: " + fieldName + " time-field must have integer type");
+                }
                 int timeFieldIndex = time == SchemeFieldTime.FIRST_TIME_INT_FIELD ? 0 : 1;
-                if (timeFields[timeFieldIndex] == null)
+                if (timeFields[timeFieldIndex] == null) {
                     timeFields[timeFieldIndex] = fieldName;
-                else
-                    if (!timeFields[timeFieldIndex].equals(fieldName))
-                        throw new IllegalArgumentException("Failed to create default data-scheme: different time-fields proposed for " + recordName + " record");
+                } else {
+                    if (!timeFields[timeFieldIndex].equals(fieldName)) {
+                        throw new IllegalArgumentException("Failed to create default data-scheme: " +
+                            "different time-fields proposed for " + recordName + " record");
+                    }
+                }
             }
             SerialFieldType oldType = fields.get(fieldName);
             if (oldType == null) {
-                if (type.isObject())
+                if (type.isObject()) {
                     objFieldsCount++;
-                else if (type.isLong())
+                } else if (type.isLong()) {
                     intFieldsCount += 2;
-                else
+                } else {
                     intFieldsCount++;
+                }
                 fields.put(fieldName, type);
-            } else
-                if (oldType != type)
-                    throw new IllegalArgumentException("Failed to create default data-scheme: " + fieldName + " field has several different types");
+            } else {
+                if (oldType != type) {
+                    throw new IllegalArgumentException(
+                        "Failed to create default data-scheme: " + fieldName + " field has several different types");
+                }
+            }
         }
 
         public DataRecord createRecord(int id) {
@@ -136,10 +189,12 @@ public class SchemeBuilder {
             int objIndex = 0;
             boolean hasTime = (timeFields[0] != null || timeFields[1] != null);
             if (hasTime) {
-                for (int i = 0; i < 2; i++)
-                    if (timeFields[i] == null)
+                for (int i = 0; i < 2; i++) {
+                    if (timeFields[i] == null) {
                         addField(recordName + ".$VoidTimeField", SerialFieldType.VOID, i == 0 ?
                             SchemeFieldTime.FIRST_TIME_INT_FIELD : SchemeFieldTime.SECOND_TIME_INT_FIELD);
+                    }
+                }
                 intIndex = 2;
             }
             DataIntField[] intFields = new DataIntField[intFieldsCount];
@@ -155,19 +210,22 @@ public class SchemeBuilder {
                     objIndex++;
                 } else {
                     int index;
-                    if (hasTime && fieldName.equals(timeFields[0]))
+                    if (hasTime && fieldName.equals(timeFields[0])) {
                         index = 0;
-                    else if (hasTime && fieldName.equals(timeFields[1]))
+                    } else if (hasTime && fieldName.equals(timeFields[1])) {
                         index = 1;
-                    else
+                    } else {
                         index = intIndex++;
+                    }
                     DataIntField field = type.createDefaultIntInstance(index, fieldName);
                     if (field == null)
                         throw new IllegalArgumentException("Cannot construct field " + fieldName + " of type " + type);
                     intFields[index] = field;
                     if (type.isLong()) {
-                        if (index + 1 != intIndex)
-                            throw new IllegalArgumentException("Cannot add void tail for " + fieldName + " of type " + type + " at index " + index);
+                        if (index + 1 != intIndex) {
+                            throw new IllegalArgumentException(
+                                "Cannot add void tail for " + fieldName + " of type " + type + " at index " + index);
+                        }
                         intFields[intIndex] = new VoidIntField(intIndex, fieldName + "$VoidTail");
                         intIndex++;
                     }

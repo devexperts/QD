@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -87,25 +87,34 @@ class FactoryImplGen {
                 //FIXME regionalOnly and exchangesDefault are used only for Book&I
                 if (!record.regionalOnly)
                     generateFieldCode(cg, recordEntry.getValue(), "\"" + record + "\"", false); // Composite
-                cg.addImport(new ClassName(SystemProperties.class));
+
                 //FIXME regionalOnly and exchangesDefault are used only for Book&I
-                if (record.exchangesDefault != null) {
-                    cg.code("for (char exchange : SystemProperties.getProperty(" +
-                        "\"" + record.exchangesProperty + "\", \"" + record.exchangesDefault + "\")"
-                        + ".toCharArray()) {");
-                } else {
-                    cg.code("for (char exchange : getExchanges(\"" + record.exchangesProperty + "\")) {");
-                }
+                String defaultValue = (record.exchangesDefault != null) ?
+                    "\"" + record.exchangesDefault + "\"" : "null";
+                cg.code("for (char exchange : builder.getExchanges(" +
+                    "\"" + record.plainName + "\", \"" + record.exchangesOldProperty + "\", " + defaultValue + ")) {");
+
                 cg.indent();
                 cg.code("String recordName = \"" + record + "&\" + exchange;");
                 generateFieldCode(cg, recordEntry.getValue(), "recordName", true);
                 cg.unindent();
                 cg.code("}");
-            } else if (record.suffixesDefault != null) { // Multiple records with different suffixes
-                cg.addImport(new ClassName(SystemProperties.class));
-                cg.code("for (String suffix : SystemProperties.getProperty(" +
-                    "\"" + record.suffixesProperty + "\", " +
-                    "\"" + record.suffixesDefault + "\").split(\"\\\\|\")) {");
+            } else if (record.suffixesDefault != null || record.suffixesOrderClass != null) {
+                // Multiple records with different suffixes
+                if (record.suffixesDefault != null) {
+                    // Default suffixes are specified manually
+                    //TODO Can be simplified once deprecated properties are removed
+                    cg.code("for (String suffix : builder.getSuffixes(" +
+                        "\"" + record.plainName + "\", \"" + record.suffixesOldProperty + "\", " +
+                        "\"" + record.suffixesDefault + "\").split(\"\\\\|\")) {");
+                } else {
+                    // Default suffixes are read from OrderSource for the specified class
+                    ClassName name = new ClassName(record.suffixesOrderClass);
+                    cg.addImport(name);
+                    cg.code("for (String suffix : builder.getOrderSuffixes(" +
+                        "\"" + record.plainName + "\", \"" + record.suffixesOldProperty + "\", " +
+                        name.getSimpleName() + ".class).split(\"\\\\|\")) {");
+                }
                 cg.indent();
                 cg.code("String recordName = \"" + record + "\" + suffix;");
                 generateFieldCode(cg, recordEntry.getValue(), "recordName", false);
@@ -137,7 +146,7 @@ class FactoryImplGen {
                 String typeExpr = "SerialFieldType." + field.serialType;
                 if (field.adaptiveType || field.typeSelectors.length != 0) {
                     String selectMethod = field.serialType.isTime() ? "selectTime" : "selectDecimal";
-                    typeExpr = selectMethod + "(" + typeExpr;
+                    typeExpr = "builder." + selectMethod + "(" + typeExpr;
                     for (String typeSelector : field.typeSelectors) {
                         typeExpr += ", \"" + typeSelector + "\"";
                     }
@@ -173,21 +182,27 @@ class FactoryImplGen {
             cg.addImport(new ClassName(SystemProperties.class));
             enabledCondition += "SystemProperties.getBooleanProperty(\"" + f.conditionalProperty + "\", false)";
         }
+        if (f.isFobEnabled) {
+            if (!enabledCondition.isEmpty()) {
+                enabledCondition += " && ";
+            }
+            // Field is enabled if suffix matches pattern
+            enabledCondition += "builder.isFob(suffix)";
+        }
         if (f.onlySuffixesDefault != null) {
             if (!enabledCondition.isEmpty()) {
                 enabledCondition += " && ";
             }
             // Field is enabled if suffix matches pattern
-            enabledCondition += "suffix.matches(" + (f.onlySuffixesProperty != null ?
-                "SystemProperties.getProperty(\"" + f.onlySuffixesProperty + "\", \"" + f.onlySuffixesDefault + "\")" :
-                "\"" + f.onlySuffixesDefault + "\"") + ")";
-
+            enabledCondition += "builder.isSuffixEnabled(suffix, \"" + f.onlySuffixesProperty + "\", " +
+                "\"" + f.onlySuffixesOldProperty + "\", \"" + f.onlySuffixesDefault + "\")";
         }
         if (f.exceptSuffixes != null) {
             if (!enabledCondition.isEmpty()) {
                 enabledCondition += " && ";
             }
             // Field is enabled if not suffix matches pattern
+            //TODO Introduce property names for override if needed
             enabledCondition += "!suffix.matches(\"" + f.exceptSuffixes + "\")";
         }
         return (enabledCondition.isEmpty()) ? "false" : enabledCondition;

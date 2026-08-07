@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,6 +14,7 @@ package com.devexperts.qd.qtp.file;
 import com.devexperts.connector.proto.ApplicationConnectionFactory;
 import com.devexperts.io.StreamCompression;
 import com.devexperts.monitoring.Monitored;
+import com.devexperts.qd.Deprecation;
 import com.devexperts.qd.qtp.AbstractConnectionHandler;
 import com.devexperts.qd.qtp.AbstractMessageConnector;
 import com.devexperts.qd.qtp.MessageConnector;
@@ -44,6 +45,8 @@ import java.util.Date;
 )
 public class FileConnector extends AbstractMessageConnector implements FileConnectorMBean, FileReaderParams {
     static final long NA_TIME = Long.MIN_VALUE;
+
+    private static final Deprecation SET_IGNORE_TIME = Deprecation.ofUse("setIgnoreTime()");
 
     private String address;
     private StreamCompression compression;
@@ -322,9 +325,10 @@ public class FileConnector extends AbstractMessageConnector implements FileConne
     @Override
     @MessageConnectorProperty("Ignores \".time\" files even if they present")
     public synchronized void setIgnoreTime(boolean ignore) {
+        SET_IGNORE_TIME.warn();
         if (ignoreTime != ignore) {
             checkTimeAndIgnoreTime(time, ignore);
-            log.warn("SETTING DEPRECATED ignoreTime=" + ignore + ". Set speed=max to replay as fast as possible.");
+            log.warn("Setting ignoreTime=" + ignore + ". Set speed=max to replay as fast as possible.");
             ignoreTime = ignore;
             reconfigure();
         }

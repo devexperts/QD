@@ -31,10 +31,12 @@ import com.dxfeed.promise.Promise;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -78,7 +80,7 @@ public class NTU {
     public static int connectServer(RMIEndpoint endpoint, String prefix, String opts) {
         String name = UUID.randomUUID().toString();
         Promise<Integer> portPromise = ServerSocketTestHelper.createPortPromise(name);
-        String address = (isEmpty(prefix) ? "" : prefix) + ":0[name=" + name +
+        String address = (isEmpty(prefix) ? "" : prefix) + ":0[name=" + name + ",bindAddr=" + LOCAL_HOST +
             (isEmpty(opts) ? "" : "," + opts) + "]";
         endpoint.connect(address);
         int localPort = portPromise.await(10_000, TimeUnit.MILLISECONDS);
@@ -112,6 +114,30 @@ public class NTU {
                 return condition.getAsBoolean();
         }
         return true;
+    }
+
+    /**
+     * Polls a concurrent queue for an element matching provided criteria.
+     *
+     * @param <T> the type of elements in the queue
+     * @param queue queue to be polled
+     * @param timeout total waiting timeout (millis)
+     * @param predicate element matching criteria
+     * @return matched element or {@code null} if no matching element was acquired
+     * @throws InterruptedException if poll operation is interrupted
+     */
+    public static <T> T pollQueueForMatching(BlockingQueue<T> queue, long timeout, Predicate<T> predicate)
+        throws InterruptedException
+    {
+        long deadline = System.currentTimeMillis() + timeout;
+        while (true) {
+            long remaining = deadline - System.currentTimeMillis();
+            if (remaining <= 0)
+                return null;
+            T item = queue.poll(remaining, TimeUnit.MILLISECONDS);
+            if (item != null && predicate.test(item))
+                return item;
+        }
     }
 
     private static void waitConnected(QDEndpoint qdEndpoint) {
