@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -159,6 +159,7 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
     @SuppressWarnings("unchecked")
     void open(RMIConnection connection) {
         List<ServerRequestInfo> preOpenIncomingRequests;
+        List<RMIRequestImpl<?>> rejectedOutgoingRequests = null;
         synchronized (this) {
             if (state == RMIChannelState.CLOSED)
                 return;
@@ -170,20 +171,36 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
                 registerChannel(connection);
             }
             if (state == RMIChannelState.CANCELLING) {
-                if (preOpenOutgoingRequests != null && !preOpenOutgoingRequests.isEmpty())
-                    connection.requestsManager.addOutgoingRequest(preOpenOutgoingRequests.get(0));
-                preOpenOutgoingRequests = null;
+                if (preOpenOutgoingRequests != null) {
+                    for (RMIRequestImpl<?> request : preOpenOutgoingRequests) {
+                        if (RMIRequestImpl.isCancelOperation(request.getOperation())) {
+                            connection.requestsManager.addOutgoingRequest(request);
+                        } else {
+                            if (rejectedOutgoingRequests == null)
+                                rejectedOutgoingRequests = new ArrayList<>();
+                            rejectedOutgoingRequests.add(request);
+                        }
+                    }
+                    preOpenOutgoingRequests = null;
+                }
                 this.preOpenIncomingRequests = null;
-                return;
+                preOpenIncomingRequests = null;
+            } else {
+                state = RMIChannelState.OPEN;
+                if (preOpenOutgoingRequests != null) {
+                    preOpenOutgoingRequests.forEach(connection.requestsManager::addOutgoingRequest);
+                    preOpenOutgoingRequests = null;
+                }
+                // must submit incoming requests outside of lock
+                preOpenIncomingRequests = this.preOpenIncomingRequests;
+                this.preOpenIncomingRequests = null;
             }
-            state = RMIChannelState.OPEN;
-            if (preOpenOutgoingRequests != null) {
-                preOpenOutgoingRequests.forEach(connection.requestsManager::addOutgoingRequest);
-                preOpenOutgoingRequests = null;
+        }
+        // must update requests outside the channel lock (see lock hierarchy in RMIRequestImpl)
+        if (rejectedOutgoingRequests != null) {
+            for (RMIRequestImpl<?> request : rejectedOutgoingRequests) {
+                request.setFailedState(RMIExceptionType.CHANNEL_CLOSED, null);
             }
-            // must submit incoming requests outside of lock
-            preOpenIncomingRequests = this.preOpenIncomingRequests;
-            this.preOpenIncomingRequests = null;
         }
         if (preOpenIncomingRequests != null) {
             for (ServerRequestInfo requestInfo : preOpenIncomingRequests) {
@@ -192,17 +209,27 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
         }
     }
 
-    synchronized void close() {
-        if (state == RMIChannelState.CLOSED)
-            return;
-        if (state == RMIChannelState.NEW) {
-            preOpenOutgoingRequests = null;
-            preOpenIncomingRequests = null;
+    void close() {
+        List<RMIRequestImpl<?>> rejectedOutgoingRequests = null;
+        synchronized (this) {
+            if (state == RMIChannelState.CLOSED)
+                return;
+            if (state == RMIChannelState.NEW || state == RMIChannelState.CANCELLING) {
+                rejectedOutgoingRequests = preOpenOutgoingRequests;
+                preOpenOutgoingRequests = null;
+                preOpenIncomingRequests = null;
+            }
+            state = RMIChannelState.CLOSED;
+            if (connection != null) {
+                connection.channelsManager.removeChannel(channelId, type);
+                connection.tasksManager.notifyTaskCompleted(owner, channelId);
+            }
         }
-        state = RMIChannelState.CLOSED;
-        if (connection != null) {
-            connection.channelsManager.removeChannel(channelId, type);
-            connection.tasksManager.notifyTaskCompleted(owner, channelId);
+        // must update requests outside the channel lock (see lock hierarchy in RMIRequestImpl)
+        if (rejectedOutgoingRequests != null) {
+            for (RMIRequestImpl<?> request : rejectedOutgoingRequests) {
+                request.setFailedState(RMIExceptionType.CHANNEL_CLOSED, null);
+            }
         }
     }
 
@@ -324,7 +351,7 @@ class RMIChannelImpl extends RMIClientPortImpl implements RMIChannel {
         do {
             assert executionTask.submitNextNow();
             synchronized (this) {
-                if (executionTasks.peekFirst() != executionTask)
+                if (executionTasks == null || executionTasks.peekFirst() != executionTask)
                     return; // not a first task -- bail out
                 executionTasks.removeFirst();
                 // look at next task to execute

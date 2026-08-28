@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -56,7 +56,9 @@ class RunningTask {
     synchronized void remove(RMIChannelOwner owner, long channelId) {
         IndexedSet<Long, RMITaskImpl<?>> set = getMap(owner.getChannelType()).get(channelId);
         if (set != null && !set.isEmpty()) {
-            for (RMITaskImpl<?> runTask : set)
+            //task.cancel invokes runningTask.remove(task), so we need to avoid ConcurrentModificationException
+            RMITaskImpl<?>[] nestedTasks = set.toArray(new RMITaskImpl[0]);
+            for (RMITaskImpl<?> runTask : nestedTasks)
                 runTask.completeExceptionally(RMIExceptionType.CHANNEL_CLOSED, null);
         }
         if (owner.getChannelType() == RMIChannelType.SERVER_CHANNEL) {
@@ -87,22 +89,31 @@ class RunningTask {
     synchronized void close() {
         //task.cancel invokes runningTask.remove(task), so we need to avoid ConcurrentModificationException
         for (RMIChannelType type : RMIChannelType.values()) {
-            IndexedSet<Long, RMITaskImpl<?>>[] mapNestedTasksArray =
-                getMap(type).values().toArray(new IndexedSet[getMap(type).size()]);
+            IndexedSet<Long, RMITaskImpl<?>>[] mapNestedTasksArray = getMap(type).values().toArray(new IndexedSet[0]);
             for (IndexedSet<Long, RMITaskImpl<?>> nestedTasks : mapNestedTasksArray) {
-                RMITaskImpl<?>[] nestedTasksArray = nestedTasks.toArray(new RMITaskImpl[nestedTasks.size()]);
+                RMITaskImpl<?>[] nestedTasksArray = nestedTasks.toArray(new RMITaskImpl[0]);
                 for (RMITaskImpl<?> task : nestedTasksArray)
                     task.cancel(RMIExceptionType.DISCONNECTION);
             }
         }
 
-        RMITaskImpl<?>[] channelTasksArray = serverChannelTasks.toArray(new RMITaskImpl[serverChannelTasks.size()]);
+        RMITaskImpl<?>[] channelTasksArray = serverChannelTasks.toArray(new RMITaskImpl[0]);
         for (RMITaskImpl<?> task : channelTasksArray)
             task.cancel(RMIExceptionType.DISCONNECTION);
     }
 
     boolean hasServerChannelTask() {
         return !serverChannelTasks.isEmpty(); // volatile read
+    }
+
+    synchronized boolean hasNestedTasks() {
+        for (Map<Long, IndexedSet<Long, RMITaskImpl<?>>> nestedTasksByChannelId : mapNestedTask.values()) {
+            for (IndexedSet<Long, RMITaskImpl<?>> nestedTasksByRequestId : nestedTasksByChannelId.values()) {
+                if (!nestedTasksByRequestId.isEmpty())
+                    return true;
+            }
+        }
+        return false;
     }
 
     private  Map<Long, IndexedSet<Long, RMITaskImpl<?>>> getMap(RMIChannelType type) {

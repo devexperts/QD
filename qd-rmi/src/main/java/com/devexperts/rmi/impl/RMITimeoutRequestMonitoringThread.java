@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -65,7 +65,6 @@ class RMITimeoutRequestMonitoringThread implements Runnable {
 
     @Override
     public void run() {
-        RMIRequestImpl<?>[] requests = new RMIRequestImpl<?>[0];
         while (true) {
             RMIEndpointImpl endpoint = endpointReference.get();
             if (endpoint == null) // endpoint was lost without proper shutdown - stop ourselves
@@ -79,14 +78,17 @@ class RMITimeoutRequestMonitoringThread implements Runnable {
             AtomicBoolean hasActiveRequests = new AtomicBoolean();
             long currentTime = System.currentTimeMillis();
 
+            RMIRequestImpl<?>[] requests = new RMIRequestImpl<?>[0];
             for (Iterator<RMIConnection> it = endpoint.concurrentConnectionsIterator(); it.hasNext();) {
                 RMIConnection connection = it.next();
                 requests = connection.requestsManager.getSentRequests(requests);
                 for (int j = 0; j < requests.length; j++) {
                     RMIRequestImpl<?> request = requests[j];
-                    if (request == null || request.isNestedRequest())
+                    if (request == null)
                         break;
                     requests[j] = null;
+                    if (request.isNestedRequest())
+                        continue;
                     if (currentTime - request.getRunningStartTime() > requestRunningTimeout)
                         request.abortOnTimeout(RMIRequestState.SENT);
                     else
@@ -95,9 +97,11 @@ class RMITimeoutRequestMonitoringThread implements Runnable {
                 requests = connection.requestsManager.getOutgoingRequests(requests);
                 for (int j = 0; j < requests.length; j++) {
                     RMIRequestImpl<?> request = requests[j];
-                    if (request == null || request.isNestedRequest())
+                    if (request == null)
                         break;
                     requests[j] = null;
+                    if (request.isNestedRequest())
+                        continue;
                     if (currentTime - request.getSendTime() > requestSendingTimeout) {
                         request.abortOnTimeout(RMIRequestState.WAITING_TO_SEND);
                         connection.requestsManager.removeOutgoingRequest(request);

@@ -122,6 +122,11 @@ public abstract class MessageAdapter extends MessageConsumerAdapter implements M
             return clone;
         }
 
+        @Deprecated
+        protected ConfigurableFactory getDelegate() {
+            return null;
+        }
+
         /**
          * Returns description of this factory for management and logging purposes.
          */

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -150,14 +150,18 @@ class MessageComposer {
                     MessageQueueState state = retrieveMessageImpl(visitor, queues.get(RMIQueueType.DESCRIBE));
                     if (state == MessageQueueState.NO_MORE_MESSAGES)
                         break;
-                    if (state == MessageQueueState.VISITOR_FULL)
+                    if (state == MessageQueueState.VISITOR_FULL) {
+                        queue.addFirst(message);
                         return state;
+                    }
                 }
             }
         } while (!canSendMessage(message, queue));
 
-        if (sendRetrievedMessage(visitor, message, queue))
+        if (sendRetrievedMessage(visitor, message)) {
+            queue.addFirst(message);
             return MessageQueueState.VISITOR_FULL;
+        }
 
         if (message.isEmpty()) {
             messageSentCompletely(message);
@@ -181,16 +185,16 @@ class MessageComposer {
 
     // @return <tt>true</tt> if the whole message was not processed because the visitor is full
     //         and <tt>false</tt> if the message was successfully processed.
-    private boolean sendRetrievedMessage(MessageVisitor visitor, ComposedMessage message, ComposedMessageQueue queue) {
+    private boolean sendRetrievedMessage(MessageVisitor visitor, ComposedMessage message) {
         Chunk chunk = message.firstChunk();
         if (visitor.visitOtherMessage(message.type(), chunk.getBytes(), chunk.getOffset(), chunk.getLength())) {
-            queue.addFirst(message);
             return true; // visitor was full... retry it next time
         }
         message.chunkTransmitted();
         return false;
     }
 
+    //FIXME: clarify the contract of this method: false encodes two distinct cases, has complex side-effects
     private boolean canSendMessage(ComposedMessage message, ComposedMessageQueue queue) {
         RMIMessageKind type = message.kind();
         if (!type.isRequest())
@@ -204,13 +208,13 @@ class MessageComposer {
                 request.setFailedState(RMIExceptionType.REQUEST_SENDING_TIMEOUT, null);
             }
             if (request.getState() != RMIRequestState.SENDING) {
-                if (abortRequest(message))
+                if (abortRequest(request, message))
                     return false;
             }
         }
         // handle cancelled requests
         if (request.getState() == RMIRequestState.CANCELLING || request.getState() == RMIRequestState.FAILED) {
-            if (abortRequest(message))
+            if (abortRequest(request, message))
                 return false;
         }
         if (message.startedTransmission())
@@ -243,9 +247,14 @@ class MessageComposer {
     }
 
     // returns true if request message transmission has not been started yet
-    private boolean abortRequest(ComposedMessage message) {
-        ((RMIRequestImpl<?>) message.getObject()).setFailedState(RMIExceptionType.CANCELLED_BEFORE_EXECUTION, null);
+    private boolean abortRequest(RMIRequestImpl<?> request, ComposedMessage message) {
+        // the other side will never respond to this request: either not transmitted or will be discarded
+        long channelId = request.getKind().hasChannel() ? request.getChannelId() : 0;
+        connection.requestsManager.removeSentRequest(channelId, request.getId(), request.getKind());
+        request.setFailedState(RMIExceptionType.CANCELLED_BEFORE_EXECUTION, null);
         if (!message.startedTransmission()) {
+            if (channelId == 0)
+                ((RMIChannelImpl) request.getChannel()).close();
             ComposedMessage.releaseComposedMessage(message);
             return true;
         }

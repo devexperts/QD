@@ -139,6 +139,25 @@ public class MessageConnectors {
     }
 
     /**
+     * Extracts the innermost {@link MessageAdapter.ConfigurableFactory} from an {@link ApplicationConnectionFactory},
+     * unwrapping codec wrappers and delegating adapter factories, or {@code null}.
+     */
+    static MessageAdapter.ConfigurableFactory extractMessageAdapterFactory(ApplicationConnectionFactory factory) {
+        while (factory instanceof CodecConnectionFactory) {
+            factory = ((CodecConnectionFactory) factory).getDelegate();
+        }
+        if (!(factory instanceof MessageAdapterConnectionFactory))
+            return null;
+        // FIXME The adapter factory hierarchy needs a refactoring; this delegate walk works around it.
+        MessageAdapter.ConfigurableFactory adapterFactory =
+            ((MessageAdapterConnectionFactory) factory).getMessageAdapterFactory();
+        while (adapterFactory != null && adapterFactory.getDelegate() != null) {
+            adapterFactory = adapterFactory.getDelegate();
+        }
+        return adapterFactory;
+    }
+
+    /**
      * Extracts the {@link MessageAdapter} from an {@link ApplicationConnection},
      * if it is a QTP message adapter connection. Unwraps any {@link CodecConnection}
      * wrappers (tls, zlib, xor, etc.) before checking the inner connection type,

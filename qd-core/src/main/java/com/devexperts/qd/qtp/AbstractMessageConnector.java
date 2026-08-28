@@ -19,6 +19,7 @@ import com.devexperts.qd.qtp.help.MessageConnectorProperty;
 import com.devexperts.qd.stats.QDStats;
 import com.devexperts.transport.stats.ConnectionStats;
 import com.devexperts.transport.stats.EndpointStats;
+import com.devexperts.util.LogUtil;
 import com.devexperts.util.TimePeriod;
 import com.devexperts.util.TimePeriodInfo;
 
@@ -193,6 +194,33 @@ public abstract class AbstractMessageConnector implements MessageConnector {
             factory.setConfiguration(MessageConnectors.FIELD_REPLACER_CONFIGURATION_KEY, fieldReplacer);
             reconfigure();
         }
+    }
+
+    @Override
+    public synchronized String getDisplayFilter() {
+        MessageAdapter.ConfigurableFactory adapterFactory = MessageConnectors.extractMessageAdapterFactory(factory);
+        if (!(adapterFactory instanceof MessageAdapter.AbstractFactory))
+            return null;
+        return LogUtil.hideCredentials(((MessageAdapter.AbstractFactory) adapterFactory).getFilter());
+    }
+
+    @Override
+    public synchronized String getDisplayChannels() {
+        MessageAdapter.ConfigurableFactory adapterFactory = MessageConnectors.extractMessageAdapterFactory(factory);
+        if (!(adapterFactory instanceof AgentAdapter.Factory))
+            return null;
+        // a channel filter can be an IPF specification, so it is obfuscated
+        return LogUtil.hideCredentials(((AgentAdapter.Factory) adapterFactory).getChannels());
+    }
+
+    @Override
+    public synchronized String getRole() {
+        MessageAdapter.ConfigurableFactory adapterFactory = MessageConnectors.extractMessageAdapterFactory(factory);
+        if (adapterFactory instanceof AgentAdapter.Factory)
+            return "Downlink";
+        if (adapterFactory instanceof DistributorAdapter.Factory)
+            return "Uplink";
+        return null;
     }
 
     @Override

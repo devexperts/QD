@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -44,6 +44,11 @@ public class LogUtilTest {
         doHide("address=((feed,chartdata)&ipf[https://ABC:ABC@tools.dxfeed.com/ipf?user=ABC&user=ABC&password=ABC,update=1h]@mux-retail:7800)");
         doHide("address=((feed,chartdata)&ipf[https://ABC@ABC@tools.dxfeed.com/ipf?user=ABC&user=ABC&password=ABC,update=1h]@mux-retail:7800)");
         doHide("address=((feed,chartdata)&ipf[https://ABC@ABC:ABC@tools.dxfeed.com/ipf?user=ABC&user=ABC&password=ABC,update=1h]@mux-retail:7800)");
+        // double URL chain
+        doHide("(ipf[https://tools.dxfeed.com/ipf]&ipf[https://ABC:ABC@tools.dxfeed.com/ipf,update=1h])@mux-retail:7800");
+        // "false-positive" cases validation
+        doHide("ipf[https://tools.dxfeed.com]@mux-retail:7800");
+        doHide("(ipf[https://a.host/i]&ipf[https://b.host/i])@mux:7800");
     }
 
     private static void doHide(String s) {

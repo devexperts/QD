@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -405,9 +405,9 @@ class MessageProcessor {
                 requestInfo.channelId, requestInfo.kind.hasClient() ? RMIChannelType.CLIENT_CHANNEL : RMIChannelType.SERVER_CHANNEL);
             boolean ok = channel != null && channel.addIncomingRequest(requestInfo);
             if (!ok) {
-                RMILog.logFailedTask(RMIExceptionType.CHANNEL_CLOSED,
-                    ". The channel number " + requestInfo.channelId + " has already been closed or never existed",
-                    connection, requestInfo.reqId, requestInfo.channelId, requestInfo.message.getRequestType());
+                String reason = "The channel number " + requestInfo.channelId + " has already been closed or never existed";
+                signalFailure(RMIExceptionType.CHANNEL_CLOSED, reason,
+                    requestInfo.kind, requestInfo.message.getRequestType(), requestInfo.channelId, requestInfo.reqId);
             }
         } else {
             createAndSubmitTask(null, requestInfo);

@@ -169,6 +169,23 @@ public interface MessageConnectorMBean {
      */
     public void setFieldReplacer(String fieldReplacer);
 
+    // ========== Connector Configuration Introspection ==========
+
+    /**
+     * @return the filter specification with credentials obfuscated, or {@code null}.
+     */
+    public default String getDisplayFilter() { return null; }
+
+    /**
+     * @return the channels specification with credentials obfuscated, or {@code null}.
+     */
+    public default String getDisplayChannels() { return null; }
+
+    /**
+     * @return the connector role: {@code "Uplink"}, {@code "Downlink"}, or {@code null}.
+     */
+    public default String getRole() { return null; }
+
     // ========== Aggregation Period Management ==========
     // See <a href="../../../../com/dxfeed/api/DXEndpoint.html#aggregationPeriodSection">DXEndpoint, "Aggregation period"</a>
     // for the overview of three aggregation period mechanisms and their interactions.

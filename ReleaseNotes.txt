@@ -1,3 +1,14 @@
+QDS 3.354:
+
+* [QD-1750] BUG FIX: [RMI] Nested requests are not canceled during RMI channel close
+* [QD-1752] Expose the connector filter, channels and role in JMX
+  - Added Connector JMX attributes:
+    - 'DisplayFilter' — the filter specification with credentials obfuscated
+    - 'DisplayChannels' — the agent channels specification with credentials obfuscated
+    - 'Role' — the connector role (Uplink, Downlink)
+* [QD-1774] [Build] Bump jsch dependency to 0.1.72 for jgitflow plugin
+* [QD-1781] BUG FIX: [RMI] Closing a channel that never opened silently drops the queued requests
+
 QDS 3.353:
 
 * [QD-1168] Flaky test: RMIRoutingTest.testExportOneServiceManyTimes
