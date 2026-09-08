@@ -1,11 +1,9 @@
-* JMX tools
+* JMX tools [optional dependency]
 
 JMX tools is licensed under "Oracle Binary Code License Agreement for Java SE and JavaFX Technologies"
 (see https://www.oracle.com/downloads/licenses/java-se-archive-license.html) and can be downloaded manually as
 a part of the "Java Management Extensions 1.2 Reference Implementation" software from
 https://www.oracle.com/java/technologies/java-archive-downloads-java-plat-downloads.html
-
-Java archive 'jmxtools.jar' should be then placed into the repository as the artifact named 'com.sun.jdmk:jmxtools:1.2.8'.
 
 * Dual-license dependencies
 

@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.354</version>
+    <version>3.355</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -78,6 +78,7 @@
         <module>dxfeed-webservice-impl</module>
         <module>benchmarks</module>
         <module>dxlib-jcstress</module>
+        <module>jmxtools-stub</module>
     </modules>
 
     <dependencies>
@@ -276,6 +277,7 @@
                                 <exclude>**/*.form</exclude>
                                 <exclude>**/*.log</exclude>
                                 <exclude>**/*.install4j</exclude>
+                                <exclude>jmxtools-stub/src/main/java/</exclude>
                             </excludes>
                         </configuration>
                         <inherited>false</inherited>
@@ -660,9 +662,9 @@
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
-            <id>dxfeed-open</id>
-            <name>dxfeed-open</name>
-            <url>https://dxfeed.jfrog.io/artifactory/maven-open</url>
+            <id>qd-open</id>
+            <name>qd-open</name>
+            <url>https://repo.devexperts.com/repository/qd-maven</url>
         </repository>
     </repositories>
 
@@ -671,9 +673,9 @@
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
-            <id>dxfeed-open</id>
-            <name>dxfeed-open</name>
-            <url>https://dxfeed.jfrog.io/artifactory/maven-open</url>
+            <id>qd-open</id>
+            <name>qd-open</name>
+            <url>https://repo.devexperts.com/repository/qd-maven</url>
         </pluginRepository>
     </pluginRepositories>
 

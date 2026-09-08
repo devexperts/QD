@@ -1,3 +1,12 @@
+QDS 3.355:
+
+* [QD-1787] [Build] New distribution repo at repo.devexperts.com
+  New public repo for the project: https://repo.devexperts.com/repository/qd-maven
+* [QD-1788] New Order sources for CBOE NEO gate: NEO, neo
+* [QD-1789] [Build] Get rid of jmxtools dependency for project build
+  - QD does not reference jmxtools as a Maven dependency anymore.
+    If your delivery packaging depends on it, add jmxtools dependency explicitly.
+
 QDS 3.354:
 
 * [QD-1750] BUG FIX: [RMI] Nested requests are not canceled during RMI channel close

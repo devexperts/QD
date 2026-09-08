@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -18,6 +18,7 @@ import com.devexperts.qd.monitoring.JMXEndpoint;
 import com.devexperts.rmi.RMIEndpoint;
 import com.devexperts.test.ThreadCleanCheck;
 import com.devexperts.util.SynchronizedIndexedSet;
+import com.devexperts.util.SystemProperties;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -44,7 +45,9 @@ import static org.junit.Assert.assertTrue;
 
 public class RMIMonitoringTest {
 
-    @Rule public Timeout globalTimeout= new Timeout(60, TimeUnit.SECONDS);
+    static final boolean JMXTOOLS_AVAILABLE = SystemProperties.getBooleanProperty("build.jmxtools.available", false);
+
+    @Rule public Timeout globalTimeout = new Timeout(60, TimeUnit.SECONDS);
 
     public static final int PORT_00 = (100 + ThreadLocalRandom.current().nextInt(300)) * 100;
 
@@ -155,21 +158,23 @@ public class RMIMonitoringTest {
         Set<String> initialBeans = getBeans();
         Set<String> initialThreads = getThreadNames();
 
-        server = RMIEndpoint.newBuilder()
+        RMIEndpoint.Builder builder = RMIEndpoint.newBuilder()
             .withName("server")
-            .withProperty(JMXEndpoint.JMX_HTML_PORT_PROPERTY, "11192")
             .withProperty(JMXEndpoint.JMX_RMI_PORT_PROPERTY, "11193")
             .withProperty(MARSNode.MARS_ROOT_PROPERTY, "testClientRoot")
-            .withProperty(MARSNode.MARS_ADDRESS_PROPERTY, ":11194")
-            .build();
+            .withProperty(MARSNode.MARS_ADDRESS_PROPERTY, ":11194");
+        if (JMXTOOLS_AVAILABLE)
+            builder.withProperty(JMXEndpoint.JMX_HTML_PORT_PROPERTY, "11192");
+        server = builder.build();
 
         // we just need a connector to test
-        client = RMIEndpoint.newBuilder()
+        builder = RMIEndpoint.newBuilder()
             .withName("client")
-            .withProperty(JMXEndpoint.JMX_HTML_PORT_PROPERTY, "11195")
             .withProperty(JMXEndpoint.JMX_RMI_PORT_PROPERTY, "11196")
-            .withProperty(MARSNode.MARS_ROOT_PROPERTY, "testServerRoot")
-            .build();
+            .withProperty(MARSNode.MARS_ROOT_PROPERTY, "testServerRoot");
+        if (JMXTOOLS_AVAILABLE)
+            builder.withProperty(JMXEndpoint.JMX_HTML_PORT_PROPERTY, "11195");
+        client = builder.build();
         client.getClient().setRequestSendingTimeout(3000L);
 
         for (int attempt = 1; attempt <= 2; attempt++) {
@@ -183,10 +188,13 @@ public class RMIMonitoringTest {
             Set<String> createdThreads = getCreatedThreads(initialThreads);
 
             // adaptors
-            assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=11192"));
             assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=RmiServer,port=11193"));
-            assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=11195"));
             assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=RmiServer,port=11196"));
+            if (JMXTOOLS_AVAILABLE) {
+                assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=11192"));
+                assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=11195"));
+            }
+
             // root stats
             assertTrue(createdBeans.contains("com.devexperts.qd.stats:name=server,c=Any,id=!AnyStats"));
             assertTrue(createdBeans.contains("com.devexperts.qd.stats:name=client,c=Any,id=!AnyStats"));
@@ -203,8 +211,10 @@ public class RMIMonitoringTest {
             assertTrue(createdThreads.contains("ServerSocket-RMI-:" + port + "-Acceptor"));
             assertTrue(createdThreads.contains("localhost:" + port + "-Reader"));
             assertTrue(createdThreads.contains("localhost:" + port + "-Writer"));
-            assertTrue(createdThreads.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=11192"));
-            assertTrue(createdThreads.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=11195"));
+            if (JMXTOOLS_AVAILABLE) {
+                assertTrue(createdThreads.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=11192"));
+                assertTrue(createdThreads.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=11195"));
+            }
 
             server.getServer().export(new SimpleStartService(), StartService.class);
             server.getServer().export(new SimpleUpdateService(), UpdateService.class);

@@ -3,7 +3,7 @@
   !++
   QDS - Quick Data Signalling Library
   !-
-  Copyright (C) 2002 - 2022 Devexperts LLC
+  Copyright (C) 2002 - 2026 Devexperts LLC
   !-
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
   If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.354</version>
+        <version>3.355</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -28,6 +28,78 @@
         <deploy.skip>false</deploy.skip>
     </properties>
 
+    <!--
+        By default, module compiled and tested against jmxtools-stub (limited API-only surrogate of jmxtools).
+        To use full jmxtools for a build, the `-Dwith.jmxtools` shall be specified on maven invocation.
+        See jmxtools-stub/README.md for more information.
+    -->
+    <profiles>
+        <profile>
+            <id>with-jmxtools-stub</id>
+            <activation>
+                <property>
+                    <name>!with.jmxtools</name>
+                </property>
+            </activation>
+            <dependencies>
+                <!-- compile-only stub for jmxtools from jDMK -->
+                <dependency>
+                    <groupId>com.devexperts.qd</groupId>
+                    <artifactId>jmxtools-stub</artifactId>
+                    <version>${project.version}</version>
+                    <scope>provided</scope>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-jar-plugin</artifactId>
+                        <configuration>
+                            <archive>
+                                <manifestEntries>
+                                    <!-- manually add jmxtools.jar to class path, so it would be used if available -->
+                                    <Class-Path>jmxtools.jar</Class-Path>
+                                </manifestEntries>
+                            </archive>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>with-jmxtools</id>
+            <activation>
+                <property>
+                    <name>with.jmxtools</name>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>com.sun.jdmk</groupId>
+                    <artifactId>jmxtools</artifactId>
+                    <version>${jmxtools.version}</version>
+                    <optional>true</optional>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <forkCount>1</forkCount>
+                            <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                            <systemPropertyVariables>
+                                <!-- activate using jmxtools in tests -->
+                                <build.jmxtools.available>true</build.jmxtools.available>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
     <dependencies>
         <dependency>
             <groupId>com.devexperts.qd</groupId>
@@ -39,12 +111,6 @@
             <artifactId>qds</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.sun.jdmk</groupId>
-            <artifactId>jmxtools</artifactId>
-            <version>${jmxtools.version}</version>
-            <optional>true</optional>
-        </dependency>
         <!-- Utility classes for testing -->
         <dependency>
             <groupId>com.devexperts.qd</groupId>
@@ -54,5 +120,4 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
 </project>

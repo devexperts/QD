@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,6 +16,7 @@ import com.devexperts.mars.common.MARSNode;
 import com.devexperts.qd.monitoring.JMXEndpoint;
 import com.devexperts.qd.monitoring.MonitoringEndpoint;
 import com.devexperts.test.ThreadCleanCheck;
+import com.devexperts.util.SystemProperties;
 import com.dxfeed.api.DXEndpoint;
 import com.dxfeed.api.DXFeedSubscription;
 import com.dxfeed.event.market.Trade;
@@ -35,6 +36,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class DXFeedMonitoringTest {
+
+    static final boolean JMXTOOLS_AVAILABLE = SystemProperties.getBooleanProperty("build.jmxtools.available", false);
 
     private static final String TEST_SYMBOL = "TEST";
 
@@ -56,13 +59,15 @@ public class DXFeedMonitoringTest {
         String jmxRmiPort = String.valueOf(getPort(93));
         String jmxHtmlPort = String.valueOf(getPort(92));
         String marsAddressPort = ":" + getPort(94);
-        DXEndpoint endpoint = DXEndpoint.newBuilder()
+
+        DXEndpoint.Builder builder = DXEndpoint.newBuilder()
             .withProperty(MonitoringEndpoint.NAME_PROPERTY, "testCleanup")
-            .withProperty(JMXEndpoint.JMX_HTML_PORT_PROPERTY, jmxHtmlPort)
             .withProperty(JMXEndpoint.JMX_RMI_PORT_PROPERTY, jmxRmiPort)
             .withProperty(MARSNode.MARS_ROOT_PROPERTY, "testCleanupRoot")
-            .withProperty(MARSNode.MARS_ADDRESS_PROPERTY, marsAddressPort)
-            .build();
+            .withProperty(MARSNode.MARS_ADDRESS_PROPERTY, marsAddressPort);
+        if (JMXTOOLS_AVAILABLE)
+            builder.withProperty(JMXEndpoint.JMX_HTML_PORT_PROPERTY, jmxHtmlPort);
+        DXEndpoint endpoint = builder.build();
 
         // we need to publish and process one event to get processing threads created
         DXFeedSubscription<Trade> sub = endpoint.getFeed().createSubscription(Trade.class);
@@ -90,9 +95,12 @@ public class DXFeedMonitoringTest {
             assertTrue(createdBeans.contains("com.devexperts.qd.impl.matrix:name=testCleanup,scheme=DXFeed,c=Ticker"));
             assertTrue(createdBeans.contains("com.devexperts.qd.impl.matrix:name=testCleanup,scheme=DXFeed,c=Stream"));
             assertTrue(createdBeans.contains("com.devexperts.qd.impl.matrix:name=testCleanup,scheme=DXFeed,c=History"));
+
             // adaptors
-            assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=" + jmxHtmlPort));
             assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=RmiServer,port=" + jmxRmiPort));
+            if (JMXTOOLS_AVAILABLE)
+                assertTrue(createdBeans.contains("com.devexperts.qd.monitoring:type=HtmlAdaptor,port=" + jmxHtmlPort));
+
             // root stats
             assertTrue(createdBeans.contains("com.devexperts.qd.stats:name=testCleanup,c=Any,id=!AnyStats"));
             // named connector

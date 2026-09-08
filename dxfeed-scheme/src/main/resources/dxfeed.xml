@@ -334,6 +334,8 @@
                 <value>otcm</value>
                 <value>BOSS</value>
                 <value>boss</value>
+                <value>NEO</value>
+                <value>neo</value>
             </iterator>
             <!-- Simple copy from "OrderBase" -->
             <record name="Order" copyFrom="OrderIcebergBase"/>

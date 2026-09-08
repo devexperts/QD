@@ -1,5 +1,5 @@
-artifactory:
-  maven-open:
+nexus:
+  qd-maven:
     artifacts:
       - com.devexperts.qd:dxfeed-api
       - com.devexperts.qd:dxfeed-bin

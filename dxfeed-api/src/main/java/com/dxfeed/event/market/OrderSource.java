@@ -549,6 +549,20 @@ public final class OrderSource extends IndexedEventSource {
      */
     public static final OrderSource boss = new OrderSource("boss", PUB_ORDER);
 
+    /**
+     * CBOE NEO book.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource NEO = new OrderSource("NEO", PUB_ORDER);
+
+    /**
+     * CBOE NEO book. Record for price level book.
+     * {@link Order} events are {@link #isPublishable(Class) publishable} on this
+     * source and the corresponding subscription can be observed via {@link DXPublisher}.
+     */
+    public static final OrderSource neo = new OrderSource("neo", PUB_ORDER);
+
     // ATTENTION: Every time a custom OrderSource constant is added run com.dxfeed.api.codegen.ImplCodeGen
     // and commit updated implementation classes.
 
