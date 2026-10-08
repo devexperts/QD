@@ -19,6 +19,7 @@ nexus:
       - com.devexperts.qd:QD
       - com.devexperts.qd:qd-core
       - com.devexperts.qd:qd-dataextractor
+      - com.devexperts.qd:qd-hub
       - com.devexperts.qd:qds
       - com.devexperts.qd:qds-file
       - com.devexperts.qd:qds-monitoring

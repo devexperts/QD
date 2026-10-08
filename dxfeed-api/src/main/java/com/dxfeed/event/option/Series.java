@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -23,6 +23,7 @@ import com.dxfeed.model.AbstractIndexedEventModel;
 import com.dxfeed.model.IndexedEventModel;
 
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlSchemaType;
 import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlType;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
@@ -203,6 +204,7 @@ public class Series extends MarketEvent implements IndexedEvent<String> {
      * @return time of this series.
      */
     @XmlJavaTypeAdapter(type=long.class, value=XmlTimeAdapter.class)
+    @XmlSchemaType(name="dateTime")
     public long getTime() {
         return (timeSequence >> 32) * 1000 + ((timeSequence >> 22) & 0x3ff);
     }

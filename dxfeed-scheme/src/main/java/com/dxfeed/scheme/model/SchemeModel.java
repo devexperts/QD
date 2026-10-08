@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -409,13 +409,13 @@ public final class SchemeModel {
      */
     public void override(SchemeModel other) throws SchemeException {
         sources.addAll(other.getSources());
-        imports.addAll(other.imports);
+        other.imports.forEach(i -> imports.add(i.copy()));
         overrideEntityCollection(types, other.types);
         overrideEntityCollection(enums, other.enums);
         overrideEntityCollection(records, other.records);
         overrideEntityCollection(generators, other.generators);
         overrideEntityCollection(mappings, other.mappings);
-        vrules.addAll(other.vrules);
+        other.vrules.forEach(vrule -> vrules.add(vrule.copy()));
 
         Set<RecordSource> go = new HashSet<>(generationOrder);
         for (RecordSource rs : other.generationOrder) {
@@ -527,7 +527,9 @@ public final class SchemeModel {
         for (T t : their.values()) {
             T o = our.get(t.getName());
             if (o == null) {
-                our.put(t.getName(), t);
+                // Deep copy value instead of adding a reference (which can later change)
+                //noinspection unchecked
+                our.put(t.getName(), (T) t.copy());
             } else {
                 o.override(t);
             }

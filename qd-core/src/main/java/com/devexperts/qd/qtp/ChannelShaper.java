@@ -429,4 +429,12 @@ public class ChannelShaper implements Cloneable {
         if (channel != null)
             channel.owner.synchronizeAggregationPeriods();
     }
+
+    @Override
+    public String toString() {
+        return "Channel{contract=" + contract +
+            ", filter=" + subscriptionFilter +
+            ", ap=" + aggregationPeriod +
+            "}";
+    }
 }

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  !++
+  QDS - Quick Data Signalling Library
+  !-
+  Copyright (C) 2002 - 2026 Devexperts LLC
+  !-
+  This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+  If a copy of the MPL was not distributed with this file, You can obtain one at
+  http://mozilla.org/MPL/2.0/.
+  !__
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>QD</artifactId>
+        <groupId>com.devexperts.qd</groupId>
+        <version>3.356</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>qd-hub</artifactId>
+    <packaging>jar</packaging>
+
+    <properties>
+        <deploy.skip>false</deploy.skip>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <!-- EXPERIMENTAL: required while Launcher is in experimental state -->
+                        <dxfeed.experimental.launcher.enable>true</dxfeed.experimental.launcher.enable>
+                        <!-- EXPERIMENTAL: required while Hub is in experimental state -->
+                        <dxfeed.experimental.hub.enable>true</dxfeed.experimental.hub.enable>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.devexperts.qd</groupId>
+            <artifactId>dxlib</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.devexperts.qd</groupId>
+            <artifactId>dxlib-qd-sandbox</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.devexperts.qd</groupId>
+            <artifactId>qd-tools</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>${awaitility.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest</artifactId>
+            <version>${hamcrest.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

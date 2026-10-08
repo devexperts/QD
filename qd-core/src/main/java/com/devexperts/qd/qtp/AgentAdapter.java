@@ -11,6 +11,7 @@
  */
 package com.devexperts.qd.qtp;
 
+import com.devexperts.annotation.Experimental;
 import com.devexperts.annotation.Internal;
 import com.devexperts.auth.AuthSession;
 import com.devexperts.connector.proto.Configurable;
@@ -254,12 +255,19 @@ public class AgentAdapter extends MessageAdapter {
             rebuildChannels();
         }
 
-        synchronized Executor getOrCreateSubscriptionExecutor() {
+        protected synchronized Executor getOrCreateSubscriptionExecutor() {
             if (subscriptionExecutor != null)
                 return subscriptionExecutor;
             if (subscriptionThreads > 0)
                 subscriptionExecutor = new LoggedThreadPoolExecutor(subscriptionThreads, this + "-Subscription", log);
             return subscriptionExecutor;
+        }
+
+        // a built-in "implementation" of ChannelShapersFactory
+        @Experimental
+        @Internal
+        protected ChannelShaper[] createChannelShapers(AgentAdapter agentAdapter, AuthSession session) {
+            return getAgentAdapterChannels().getNewShapers();
         }
 
         @Nonnull
@@ -281,8 +289,7 @@ public class AgentAdapter extends MessageAdapter {
 
         @Override
         public MessageAdapter createAdapter(QDStats stats) {
-            AgentAdapter adapter = new AgentAdapter(endpoint,
-                getCommonScheme(ticker, stream, history), getFilter(), getStripe(), stats);
+            AgentAdapter adapter = new AgentAdapter(endpoint, getScheme(), getFilter(), getStripe(), stats);
             adapter.setAgentFactory(this);
             return adapter;
         }
@@ -825,7 +832,7 @@ public class AgentAdapter extends MessageAdapter {
             if (hasAuthRealm())
                 return;
             if (channels == null)
-                initialize(factory.getAgentAdapterChannels().getNewShapers());
+                initialize(factory.createChannelShapers(this, session));
             return;
         }
         ChannelShaper[] shapers = null;

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.qd.tools.launcher;
 
+import com.devexperts.annotation.Internal;
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.tools.module.EventLog;
 import com.devexperts.qd.tools.module.LogEntry;
@@ -36,7 +37,8 @@ import javax.annotation.Nonnull;
  * Collected events may be retrieved later in different ways for the sake of reporting.
  */
 @SuppressWarnings("WeakerAccess")
-class DefaultEventLog implements EventLog {
+@Internal
+public class DefaultEventLog implements EventLog {
     private final Logging log;
     private final String moduleName;
     private final Queue<LogEntry> logEntries = new ArrayDeque<>();

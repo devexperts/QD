@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -12,6 +12,7 @@
 package com.devexperts.qd.tools.launcher;
 
 import com.devexperts.annotation.Experimental;
+import com.devexperts.annotation.Internal;
 import com.devexperts.io.URLInputStream;
 import com.devexperts.management.Management;
 import com.devexperts.mars.common.MARSEndpoint;
@@ -181,6 +182,11 @@ public class Launcher extends AbstractTool implements LauncherMXBean, Closeable 
     }
 
     @Override
+    public String toString() {
+        return this.getClass().getSimpleName() + "(" + configUrl + ")";
+    }
+
+    @Override
     protected void executeImpl(String[] args) {
         if (args.length == 0)
             noArguments();
@@ -218,6 +224,7 @@ public class Launcher extends AbstractTool implements LauncherMXBean, Closeable 
         }
     }
 
+
     /**
      * Initialize and run modules as specified by the launcher config.
      * @throws RuntimeException if some module initialization failed.
@@ -231,8 +238,12 @@ public class Launcher extends AbstractTool implements LauncherMXBean, Closeable 
             throw new RuntimeException("Failed to start any module at startup, exit");
         }
         if (enableWatcher) {
-            watcher = new Watcher();
-            watcher.start();
+            if (configUrl == null) {
+                log.warn("No configuration URL provided, watching disabled");
+            } else {
+                watcher = new Watcher();
+                watcher.start();
+            }
         }
     }
 
@@ -323,6 +334,14 @@ public class Launcher extends AbstractTool implements LauncherMXBean, Closeable 
         if (watcher != null)
             watcher.stop();
         log.info("Launcher closed");
+    }
+
+    @Internal
+    public static Launcher startTestLauncher(Config config, boolean activateMonitoring) {
+        // FIXME: configuring launcher from a raw config is not convenient for tests.
+        Launcher launcher = new Launcher(config, activateMonitoring);
+        launcher.start();
+        return launcher;
     }
 
     // ========== Launcher private implementation ==========

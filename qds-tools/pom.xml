@@ -3,7 +3,7 @@
   !++
   QDS - Quick Data Signalling Library
   !-
-  Copyright (C) 2002 - 2022 Devexperts LLC
+  Copyright (C) 2002 - 2026 Devexperts LLC
   !-
   This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
   If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.355</version>
+        <version>3.356</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -47,7 +47,7 @@
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <manifestEntries>
                                         <Main-Class>com.devexperts.qd.tools.Tools</Main-Class>
-                                        <Class-Path>qds.jar qds-file.jar qds-monitoring.jar dxlink-websocket.jar config.jar</Class-Path>
+                                        <Class-Path>qds.jar qds-file.jar qds-monitoring.jar dxlink-websocket.jar config.jar qd-hub.jar</Class-Path>
                                     </manifestEntries>
                                 </transformer>
                                 <!-- Merge QDS help fragments, if any -->

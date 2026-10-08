@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -63,11 +63,11 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  * <li>{@link #getVWAP() vwap} - volume-weighted average price (VWAP) in this candle;
  * <li>{@link #getBidVolume() bidVolume} - bid volume in this candle;
  * <li>{@link #getBidVolumeAsDouble() bidVolumeAsDouble} - bid volume in this candle as floating number with fractions;
- * <li>{@link #getAskVolume() askVolume} - bid volume in this candle;
- * <li>{@link #getAskVolumeAsDouble() askVolumeAsDouble} - bid volume in this candle as floating number with fractions;
+ * <li>{@link #getAskVolume() askVolume} - ask volume in this candle;
+ * <li>{@link #getAskVolumeAsDouble() askVolumeAsDouble} - ask volume in this candle as floating number with fractions;
  * <li>{@link #getImpVolatility() impVolatility} - implied volatility;
  * <li>{@link #getOpenInterest() openInterest} - open interest;
- * <li>{@link #getOpenInterestAsDouble()} () openInterestAsDouble} - open interest as floating number with fractions;
+ * <li>{@link #getOpenInterestAsDouble() openInterestAsDouble} - open interest as floating number with fractions;
  * </ul>
  *
  * <h3><a name="eventFlagsSection">Event flags, transactions and snapshots</a></h3>

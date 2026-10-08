@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,5 +22,15 @@ package com.dxfeed.scheme.model;
 public final class SchemeMapping extends NamedEntity<SchemeMapping> {
     SchemeMapping(String name, Mode mode, String doc, String file) {
         super(name, mode, doc, file);
+    }
+
+    // Deep copy ctor
+    private SchemeMapping(SchemeMapping that) {
+        super(that);
+    }
+
+    @Override
+    SchemeMapping copy() {
+        return new SchemeMapping(this);
     }
 }

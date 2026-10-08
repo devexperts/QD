@@ -92,6 +92,17 @@ public final class VisibilityRule extends SchemeEntity {
         this.enable = enable;
     }
 
+    // Deep copy ctor
+    private VisibilityRule(VisibilityRule that) {
+        super(that);
+        record = that.record;
+        useEventName = that.useEventName;
+        field = that.field;
+        enable = that.enable;
+        incTags.addAll(that.incTags);
+        excTags.addAll(that.excTags);
+    }
+
     /**
      * Returns type of this rule.
      */
@@ -209,6 +220,11 @@ public final class VisibilityRule extends SchemeEntity {
         }
 
         return tagMatch;
+    }
+
+    @Override
+    VisibilityRule copy() {
+        return new VisibilityRule(this);
     }
 
     @Override

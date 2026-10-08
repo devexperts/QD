@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -23,9 +23,9 @@ public class TapeConnectorFactory implements MessageConnectorFactory {
     public MessageConnector createMessageConnector(ApplicationConnectionFactory applicationConnectionFactory,
         String address) throws InvalidFormatException
     {
-        if (address.startsWith(TAPE_PREFIX))
-            address = address.substring(TAPE_PREFIX.length());
-        return address.indexOf(':') < 0 ? new TapeConnector(applicationConnectionFactory, address) : null;
+        if (!address.startsWith(TAPE_PREFIX))
+            return null;
+        return new TapeConnector(applicationConnectionFactory, address.substring(TAPE_PREFIX.length()));
     }
 
     @Override

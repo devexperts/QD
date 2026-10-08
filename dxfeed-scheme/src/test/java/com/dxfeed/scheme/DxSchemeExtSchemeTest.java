@@ -15,14 +15,20 @@ import com.devexperts.qd.DataField;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.SerialFieldType;
 import com.dxfeed.api.impl.SchemeProperties;
+import com.dxfeed.scheme.model.NamedEntity;
+import com.dxfeed.scheme.model.SchemeModel;
+import com.dxfeed.scheme.model.SchemeRecord;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class DxSchemeExtSchemeTest {
@@ -168,6 +174,84 @@ public class DxSchemeExtSchemeTest {
         assertEquals(
             expected.findRecordByName("Quote").findFieldByName("Bid.Price").getSerialType(),
             scheme.findRecordByName("Quote").findFieldByName("Bid.Price").getSerialType());
+    }
+
+
+    @Test
+    public void testSubSchemesWithDifferentTypes() throws IOException, SchemeException {
+        // Base scheme with WIDE_DECIMAL as default
+        DXScheme base = DXScheme.newLoader().fromSpecification(SCHEME_SPEC).load();
+        assertEquals(SerialFieldType.WIDE_DECIMAL,
+            base.findRecordByName("Quote").findFieldByName("BidPrice").getSerialType());
+
+        // New scheme with forced DECIMAL type (via properties)
+        Properties props = new Properties();
+        props.setProperty("dxscheme.wide", "false");
+        DXScheme tinyScheme = base.withProperties(props);
+        assertEquals(SerialFieldType.WIDE_DECIMAL,
+            base.findRecordByName("Quote").findFieldByName("BidPrice").getSerialType());
+        assertEquals(SerialFieldType.DECIMAL,
+            tinyScheme.findRecordByName("Quote").findFieldByName("BidPrice").getSerialType());
+
+        // New scheme from the base scheme should be WIDE_DECIMAL
+        DXScheme subScheme = base.withProperties(new Properties());
+        assertEquals(SerialFieldType.WIDE_DECIMAL,
+            base.findRecordByName("Quote").findFieldByName("BidPrice").getSerialType());
+        assertEquals(SerialFieldType.DECIMAL,
+            tinyScheme.findRecordByName("Quote").findFieldByName("BidPrice").getSerialType());
+        assertEquals(SerialFieldType.WIDE_DECIMAL,
+            subScheme.findRecordByName("Quote").findFieldByName("BidPrice").getSerialType());
+    }
+
+    @Test
+    public void testSubSchemesWithDifferentRecords() throws SchemeException {
+        // Base model with the "Quote" record with the "Time" field
+        SchemeModel base = SchemeModel.newBuilder().withName("<base>").withDefaultTypes().build();
+        SchemeRecord quote = new SchemeRecord("Quote", NamedEntity.Mode.NEW, false, "", "<base>");
+        quote.addField("Time", NamedEntity.Mode.NEW, false, "compact_int", false, false, null);
+        base.addRecord(quote);
+
+        // Submodel that disables the "Time" field
+        SchemeModel sub = SchemeModel.newBuilder().withName("<sub>").withDefaultTypes().build();
+        SchemeRecord quoteWithoutTime = new SchemeRecord("Quote", NamedEntity.Mode.UPDATE, null, null, "<sub>");
+        quoteWithoutTime.addField("Time", NamedEntity.Mode.UPDATE, true, null, false, false, null);
+        sub.addRecord(quoteWithoutTime);
+
+        // Result scheme of base + sub should have "Quote" with disabled "Time"
+        SchemeModel result1 = SchemeModel.newBuilder().withName("<result1>").withDefaultTypes().build();
+        result1.override(base);
+        result1.override(sub);
+        List<SchemeException> errors1 = result1.validateState();
+        assertTrue(errors1.isEmpty());
+        assertTrue("Quote.Time must be disabled", result1.getRecords().get("Quote").getField("Time").isDisabled());
+
+        // New models devised from base should have the "Quote" record with the enabled "Time" field
+        SchemeModel result2 = SchemeModel.newBuilder().withName("<result2>").withDefaultTypes().build();
+        result2.override(base);
+        List<SchemeException> errors2 = result2.validateState();
+        assertTrue(errors2.isEmpty());
+        assertFalse("Quote.Time must be enabled", result2.getRecords().get("Quote").getField("Time").isDisabled());
+    }
+
+    @Test
+    public void testSchemesWithCopyRecord() throws SchemeException {
+        // Base model with the "Quote" record with the "Time" field
+        SchemeModel base = SchemeModel.newBuilder().withName("<base>").withDefaultTypes().build();
+        SchemeRecord quote = new SchemeRecord("Quote", NamedEntity.Mode.NEW, false, "", "<base>");
+        quote.addField("Time", NamedEntity.Mode.NEW, false, "compact_int", false, false, null);
+        base.addRecord(quote);
+
+        SchemeRecord myQuote = quote.copyFrom(null, "MyQuote", NamedEntity.Mode.NEW, "<base>");
+        base.addRecord(myQuote);
+
+        quote.setDisabled(true);
+        base.validateState();
+
+        assertNotNull(base.getRecords().get("Quote"));
+        assertTrue(base.getRecords().get("Quote").isDisabled());
+
+        assertNotNull(base.getRecords().get("MyQuote"));
+        assertFalse(base.getRecords().get("MyQuote").isDisabled());
     }
 
     // Utility methods

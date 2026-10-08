@@ -16,7 +16,7 @@
     <groupId>com.devexperts.qd</groupId>
     <artifactId>QD</artifactId>
     <packaging>pom</packaging>
-    <version>3.355</version>
+    <version>3.356</version>
 
     <inceptionYear>2002</inceptionYear>
     <organization>
@@ -40,6 +40,7 @@
         <module>dxfeed-bin</module>
         <module>dxfeed-webservice</module>
         <module>dxfeed-plotter</module>
+        <module>qd-hub</module>
 
         <!-- additional modules with deliverable JavaDocs (shaded into qds.jar) -->
         <module>qd-core</module>

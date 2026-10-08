@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -21,13 +21,16 @@ import com.dxfeed.event.IndexedEventSource;
 import com.dxfeed.event.TimeSeriesEvent;
 import com.dxfeed.event.impl.EventUtil;
 import com.dxfeed.event.impl.TimeNanosUtil;
+import com.dxfeed.impl.XmlTimeAdapter;
 import com.dxfeed.model.AbstractIndexedEventModel;
 import com.dxfeed.model.TimeSeriesEventModel;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlSchemaType;
 import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 /**
  * Time and Sale represents a trade or other market event with price, like market open/close price, etc.
@@ -240,6 +243,8 @@ public class TimeAndSale extends MarketEvent implements TimeSeriesEvent<String> 
      * Time is measured in milliseconds between the current time and midnight, January 1, 1970 UTC.
      * @return timestamp of the original event.
      */
+    @XmlJavaTypeAdapter(type=long.class, value=XmlTimeAdapter.class)
+    @XmlSchemaType(name="dateTime")
     @Override
     public long getTime() {
         return (index >> 32) * 1000 + ((index >> 22) & 0x3ff);

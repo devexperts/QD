@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2022 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,7 +17,9 @@ import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
@@ -47,32 +49,64 @@ public class MarketDataReplayTest {
 
     @Test
     public void testGetResolvedAddresses() throws Exception {
+        // test host preservation for hosts with single IP and single host configured
+        assertEquals(Collections.singletonList("http://host1/MarketDataReplay"),
+            resolve("http://host1/MarketDataReplay", "host1=127.0.0.1"));
+        assertEquals(Collections.singletonList("https://host1/MarketDataReplay"),
+            resolve("https://host1/MarketDataReplay", "host1=127.0.0.1"));
+
+        // test host preservation for hosts with single IP and several hosts configured
+        assertEquals(Arrays.asList(
+                "http://host1/MarketDataReplay",
+                "http://host2/MarketDataReplay"),
+            resolve("http://host1/MarketDataReplay,http://host2/MarketDataReplay",
+                "host1=127.0.0.1", "host2=127.0.0.2"));
+        assertEquals(Arrays.asList(
+                "https://host1/MarketDataReplay",
+                "https://host2/MarketDataReplay"),
+            resolve("https://host1/MarketDataReplay,https://host2/MarketDataReplay",
+                "host1=127.0.0.1", "host2=127.0.0.2"));
+
+        // test host for 2 IPs - http shall use both IPs in 2 URLs, https shall use original host in 1 URL
+        assertEquals(Arrays.asList(
+                "http://127.0.0.1/MarketDataReplay",
+                "http://127.0.0.2/MarketDataReplay"),
+            resolve("http://host/MarketDataReplay", "host=127.0.0.1,127.0.0.2"));
+        assertEquals(Arrays.asList(
+                "https://host/MarketDataReplay"),
+            resolve("https://host/MarketDataReplay", "host=127.0.0.1,127.0.0.2"));
+
+        // an original complex test that includes: URL expansion to full form,
+        // host preservation for hosts with single IP, IP sorting within single host resolving,
+        // IP deduplication when several hosts route to same IP with all other URL parts being identical
+        List<String> actual = resolve("host1:8080,host2,host3:8080",
+            "host1=127.0.0.2,127.0.0.1", "host2=127.0.0.2", "host3=127.0.0.1,::1");
+        List<String> expected = Arrays.asList(
+            "http://127.0.0.1:8080/MarketDataReplay",
+            "http://127.0.0.2:8080/MarketDataReplay",
+            "http://host2/MarketDataReplay",
+            "http://[0:0:0:0:0:0:0:1]:8080/MarketDataReplay");
+        assertEquals(expected, actual);
+    }
+
+    // DNS is: "host=ip" or "host=ip,ip,ip" etc
+    private static List<String> resolve(String address, String... dns) {
         MarketDataReplay mock = new MarketDataReplay() {
             @Override
             InetAddress[] getAllByName(String host) throws UnknownHostException {
-                switch (host) {
-                    case "host1":
-                        return new InetAddress[] {InetAddress.getByName("127.0.0.1"), InetAddress.getByName("::1")};
-                    case "host2":
-                        return new InetAddress[] {InetAddress.getByName("127.0.0.2")};
-                    case "host3":
-                        return new InetAddress[] {InetAddress.getByName("127.0.0.3")};
-                    case "host4":
-                        // duplicates host1 and host2 IPs. Shall be eliminated if other parts are identical
-                        return new InetAddress[] {InetAddress.getByName("127.0.0.1"),
-                            InetAddress.getByName("127.0.0.2")};
+                for (String s : dns) {
+                    if (s.startsWith(host + "=")) {
+                        String[] ips = s.substring(host.length() + 1).split(",");
+                        InetAddress[] result = new InetAddress[ips.length];
+                        for (int i = 0; i < result.length; i++) {
+                            result[i] = InetAddress.getByName(ips[i]);
+                        }
+                        return result;
+                    }
                 }
                 throw new UnknownHostException("Unknown host: " + host);
             }
         };
-        ArrayList<String> addresses =
-            mock.getResolvedAddresses("https://host3/MarketDataReplay,host4:8080,host2,host1:8080");
-        assertEquals(5, addresses.size());
-        //System.out.println("addresses = " + addresses);
-        assertEquals("https://127.0.0.3/MarketDataReplay", addresses.get(0));
-        assertEquals("http://127.0.0.1:8080/MarketDataReplay", addresses.get(1));
-        assertEquals("http://127.0.0.2:8080/MarketDataReplay", addresses.get(2));
-        assertEquals("http://127.0.0.2/MarketDataReplay", addresses.get(3));
-        assertEquals("http://[0:0:0:0:0:0:0:1]:8080/MarketDataReplay", addresses.get(4));
+        return mock.getResolvedAddresses(address);
     }
 }

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -47,6 +47,19 @@ public final class SchemeEnum extends NamedEntity<SchemeEnum> {
      */
     public SchemeEnum(String name, Mode mode, String doc, String file) {
         super(name, mode, doc, file);
+    }
+
+    // Deep copy ctor
+    private SchemeEnum(SchemeEnum that) {
+        super(that);
+        for (Value value : that.valuesByName.values()) {
+            Value copy = value.copy();
+            copy.setParent(this);
+            valuesByName.put(copy.getName(), copy);
+            if (copy.hasValidOrd()) {
+                valuesByOrd.put(copy.getOrd(), copy);
+            }
+        }
     }
 
     /**
@@ -137,6 +150,11 @@ public final class SchemeEnum extends NamedEntity<SchemeEnum> {
     }
 
     @Override
+    SchemeEnum copy() {
+        return new SchemeEnum(this);
+    }
+
+    @Override
     public String toString() {
         return "SchemeEnum{" +
             "from=" + getFrom() +
@@ -160,6 +178,12 @@ public final class SchemeEnum extends NamedEntity<SchemeEnum> {
             this.ord = ord;
         }
 
+        // Deep copy ctor
+        private Value(Value that) {
+            super(that);
+            this.ord = that.ord;
+        }
+
         /**
          * Returns value's ordinal number.
          */
@@ -178,6 +202,11 @@ public final class SchemeEnum extends NamedEntity<SchemeEnum> {
                 throw new SchemeException(SchemeException.formatConflictMessage(this, newInstance.getLastFile(),
                     "Ordinal number cannot be changed from " + ord + " to " + newInstance.ord), getFilesList());
             }
+        }
+
+        @Override
+        Value copy() {
+            return new Value(this);
         }
 
         @Override

@@ -19,6 +19,7 @@ import com.dxfeed.event.impl.EventUtil;
 import com.dxfeed.impl.XmlTimeAdapter;
 
 import java.util.Collection;
+import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlSchemaType;
 import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlType;
@@ -98,6 +99,7 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  * <li><b>millis</b> - transfer the fields with milliseconds precision
  * </ul>
  */
+@XmlRootElement(name = "MarketMaker")
 @XmlType(propOrder = {
     "eventFlags", "index", "exchangeCode", "marketMaker", "bidTime", "bidPrice", "bidSize", "bidCount", "askTime",
     "askPrice", "askSize", "askCount"

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,6 +13,8 @@ package com.devexperts.qd.tools.module;
 
 import com.devexperts.annotation.Experimental;
 import com.devexperts.qd.config.Required;
+
+import java.util.Objects;
 
 /**
  * Convenient base for the root configuration bean of a {@link Module}
@@ -35,7 +37,7 @@ public abstract class AbstractModuleConfig {
 
     public void setType(String type) {
         // Module type is defined by the creator and fixed.
-        // Config management environment might try to fill it, and it shall pass if the actual value match expected.
+        // Config management environment might try to fill it, and it shall pass if the actual value matches expected.
         if (!this.type.equalsIgnoreCase(type))
             throw new IllegalArgumentException("Illegal type " + type);
     }
@@ -46,6 +48,29 @@ public abstract class AbstractModuleConfig {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    // builder methods
+
+    public AbstractModuleConfig withName(String name) {
+        setName(name);
+        return this;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (!(o instanceof AbstractModuleConfig))
+            return false;
+        AbstractModuleConfig that = (AbstractModuleConfig) o;
+        return Objects.equals(type, that.type) &&
+            Objects.equals(name, that.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(type, name);
     }
 
     @Override

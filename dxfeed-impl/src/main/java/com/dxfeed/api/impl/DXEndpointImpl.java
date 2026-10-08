@@ -15,6 +15,7 @@ import com.devexperts.io.URLInputStream;
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataRecord;
 import com.devexperts.qd.DataScheme;
+import com.devexperts.qd.Deprecation;
 import com.devexperts.qd.QDAgent;
 import com.devexperts.qd.QDCollector;
 import com.devexperts.qd.QDContract;
@@ -77,6 +78,9 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
     private static final ExecutorProvider DEFAULT_EXECUTOR_PROVIDER =
         new ExecutorProvider("DXEndpoint-DXExecutorThread", log);
 
+    private static final Deprecation EXECUTOR = Deprecation.ofUse(
+        "executor() method. Set executor in the DXEndpoint.Builder");
+
     private final Role role;
     private final QDEndpoint qdEndpoint;
     private final Properties props;
@@ -136,6 +140,11 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
 
     // Must call initConnectivity after this constructor
     protected DXEndpointImpl(Role role, QDEndpoint qdEndpoint, Properties props) {
+        this(role, qdEndpoint, props, null);
+    }
+
+    // Must call initConnectivity after this constructor
+    protected DXEndpointImpl(Role role, QDEndpoint qdEndpoint, Properties props, Executor executor) {
         this.role = role;
         this.qdEndpoint = qdEndpoint;
         this.lock = qdEndpoint.getLock();
@@ -143,12 +152,16 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
         this.scheme = qdEndpoint.getScheme();
         this.codec = scheme.getCodec();
         // Configures executor provide (either common built-in or custom)
-        if (hasProperty(DXFEED_THREAD_POOL_SIZE_PROPERTY)) {
+        if (executor != null) {
+            executorProvider = new ExecutorProvider(executor);
+        } else if (hasProperty(DXFEED_THREAD_POOL_SIZE_PROPERTY)) {
             executorProvider = new ExecutorProvider(Integer.decode(getProperty(DXFEED_THREAD_POOL_SIZE_PROPERTY)),
                 "DXEndpoint-" + qdEndpoint.getName() +  "-DXExecutorThread", log);
-        } else
+        } else {
             executorProvider = DEFAULT_EXECUTOR_PROVIDER;
+        }
         executorReference = executorProvider.newReference();
+
         // configures requested aggregation period to be negotiated with the remote side
         if (hasProperty(DXFEED_REQUESTED_AGGREGATION_PERIOD_PROPERTY)) {
             qdEndpoint.setRequestedAggregationPeriod(
@@ -290,6 +303,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
 
     @Override
     public DXEndpoint executor(Executor executor) {
+        EXECUTOR.warn();
         executorReference.setExecutor(executor);
         return this;
     }
@@ -703,7 +717,7 @@ public class DXEndpointImpl extends ExtensibleDXEndpoint implements MessageConne
                 }
             }
             // create DXEndpoint
-            DXEndpointImpl dxEndpoint = new DXEndpointImpl(role, qdEndpoint, props);
+            DXEndpointImpl dxEndpoint = new DXEndpointImpl(role, qdEndpoint, props, executor);
             dxEndpoint.initConnectivity();
             return dxEndpoint;
         }

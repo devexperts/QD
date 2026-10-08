@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -46,7 +46,7 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  * <li>{@link #getSequence() sequence} - sequence number of this event to distinguish events that have the same {@link #getTime() time};
  * <li>{@link #getVolatility() volatility} - 30-day implied volatility for this underlying based on VIX methodology;
  * <li>{@link #getFrontVolatility() frontVolatility} - front month implied volatility for this underlying based on VIX methodology;
- * <li>{@link #getBackVolatility() backVolatility} - 3back month implied volatility for this underlying based on VIX methodology;
+ * <li>{@link #getBackVolatility() backVolatility} - back month implied volatility for this underlying based on VIX methodology;
  * <li>{@link #getCallVolume() callVolume} - call options traded volume for a day;
  * <li>{@link #getPutVolume() putVolume} - put options traded volume for a day;
  * <li>{@link #getOptionVolume() optionVolume} - options traded volume  for a day;

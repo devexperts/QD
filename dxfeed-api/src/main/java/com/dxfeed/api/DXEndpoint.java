@@ -673,7 +673,9 @@ public abstract class DXEndpoint implements AutoCloseable {
      * @param executor the executor.
      * @return this {@code DXEndpoint}.
      * @throws NullPointerException if executor is null.
+     * @deprecated Use {@link Builder#withExecutor(Executor)} instead
      */
+    @Deprecated
     public abstract DXEndpoint executor(Executor executor);
 
     /**
@@ -879,6 +881,11 @@ public abstract class DXEndpoint implements AutoCloseable {
         protected Role role = Role.FEED;
 
         /**
+         * Executor to be used, {@code null} - for default executor.
+         */
+        protected Executor executor;
+
+        /**
          * Protected constructor for implementations of {@link Builder}.
          */
         protected Builder() {}
@@ -903,6 +910,30 @@ public abstract class DXEndpoint implements AutoCloseable {
             if (role == null)
                 throw new NullPointerException();
             this.role = role;
+            return this;
+        }
+
+        /**
+         * Sets an executor which is used for all asynchronous interaction with user code, such as event processing,
+         * RMI request processing, state changes, etc.
+         *
+         * <p>By default, the thread pool with the size equal to the number of available processors is used.
+         * The number of threads in the default pool can be configured using
+         * {@link #DXFEED_THREAD_POOL_SIZE_PROPERTY DXFEED_THREAD_POOL_SIZE_PROPERTY}
+         * for endpoints with role
+         * {@link Role#FEED FEED} and {@link Role#ON_DEMAND_FEED ON_DEMAND_FEED} and
+         * with {@link #DXPUBLISHER_THREAD_POOL_SIZE_PROPERTY DXPUBLISHER_THREAD_POOL_SIZE_PROPERTY}
+         * for endpoints with role
+         * {@link Role#PUBLISHER PUBLISHER}.
+         * See also <a href="#defaultPropertiesSection">default properties section</a>.
+         *
+         * <p>NOTE: Provided executor may not reject the submitted tasks.
+         *
+         * @param executor executor to be used, or {@code null} to use default executor.
+         * @return {@code this} endpoint builder.
+         */
+        public Builder withExecutor(Executor executor) {
+            this.executor = executor;
             return this;
         }
 

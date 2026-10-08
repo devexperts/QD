@@ -14,7 +14,7 @@
     <parent>
         <artifactId>QD</artifactId>
         <groupId>com.devexperts.qd</groupId>
-        <version>3.355</version>
+        <version>3.356</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -93,6 +93,11 @@
             <artifactId>dxlink-websocket</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- FIXME: qd-hub is experimental -->
+        <dependency>
+            <groupId>com.devexperts.qd</groupId>
+            <artifactId>qd-hub</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
-
 </project>

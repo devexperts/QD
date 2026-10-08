@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -22,6 +22,7 @@ import com.dxfeed.model.AbstractIndexedEventModel;
 import com.dxfeed.model.IndexedEventModel;
 
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlSchemaType;
 import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlType;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
@@ -72,7 +73,7 @@ import static com.dxfeed.event.market.TimeAndSale.VALID_TICK;
  *      - underlying price at the time when this option sale event had occurred;
  * <li>{@link #getVolatility() volatility} - Black-Scholes implied volatility of the event's option;
  * <li>{@link #getDelta() delta} - the event's option delta;
- * <li>{@link #getOptionSymbol()}  optionSymbol} - option symbol of this event's option.
+ * <li>{@link #getOptionSymbol() optionSymbol} - option symbol of this event's option.
  * </ul>
  *
  * <p>See <a href="package-summary.html#model">the model section</a> for a mathematical background on
@@ -225,6 +226,7 @@ public class OptionSale extends MarketEvent implements IndexedEvent<String> {
      * @return time of this option sale event.
      */
     @XmlJavaTypeAdapter(type=long.class, value= XmlTimeAdapter.class)
+    @XmlSchemaType(name="dateTime")
     public long getTime() {
         return (timeSequence >> 32) * 1000 + ((timeSequence >> 22) & 0x3ff);
     }
@@ -370,7 +372,7 @@ public class OptionSale extends MarketEvent implements IndexedEvent<String> {
 
     /**
      * Changes the current ask price on the market when this option sale event had occurred.
-     * @param askPrice the current ask price on the market when option and sale event had occurred.
+     * @param askPrice the current ask price on the market when this option sale event had occurred.
      */
     public void setAskPrice(double askPrice) {
         this.askPrice = askPrice;

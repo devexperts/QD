@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -39,11 +39,22 @@ public final class SchemeImport extends SchemeEntity {
         this.url = Objects.requireNonNull(url, "url");
     }
 
+    // Deep copy ctor
+    private SchemeImport(SchemeImport that) {
+        super(that);
+        url = that.url;
+    }
+
     /**
      * Returns URL to import.
      */
     public String getUrl() {
         return url;
+    }
+
+    @Override
+    SchemeImport copy() {
+        return new SchemeImport(this);
     }
 
     @Override

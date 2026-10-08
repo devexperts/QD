@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -78,6 +78,7 @@ public final class SchemeRecord extends NamedEntity<SchemeRecord> {
         this(name, mode, null, null, hasRegionals, doc, file);
     }
 
+    // copyFrom ctor
     private SchemeRecord(String name, Mode mode, String parentGenerator, String base, Boolean hasRegionals, String doc,
         String file)
     {
@@ -86,6 +87,23 @@ public final class SchemeRecord extends NamedEntity<SchemeRecord> {
         this.parentGenerator = parentGenerator;
         this.hasRegionals = hasRegionals;
         this.disabled = null;
+    }
+
+    // Deep copy ctor
+    private SchemeRecord(SchemeRecord that) {
+        super(that);
+        base = that.base;
+        parentGenerator = that.parentGenerator;
+        hasRegionals = that.hasRegionals;
+        disabled = that.disabled;
+        index1 = that.index1;
+        index2 = that.index2;
+
+        for (Field field : that.fields.values()) {
+            Field copy = field.copy();
+            copy.setParent(this);
+            fields.put(copy.getName(), copy);
+        }
     }
 
     /**
@@ -260,8 +278,7 @@ public final class SchemeRecord extends NamedEntity<SchemeRecord> {
     public SchemeRecord copyFrom(String parentGenerator, String to, Mode mode, String file) throws SchemeException {
         if (getMode() != Mode.NEW) {
             throw new SchemeException(
-                "Base record \"" + getName() + "\" for record \"" + to + "\" is update, not new record",
-                file);
+                "Base record \"" + getName() + "\" for record \"" + to + "\" is update, not new record", file);
         }
         // Clone has this record as base!
         SchemeRecord clone = new SchemeRecord(to, mode, parentGenerator, getName(), hasRegionals, getDoc(), file);
@@ -361,6 +378,11 @@ public final class SchemeRecord extends NamedEntity<SchemeRecord> {
         }
     }
 
+    @Override
+    SchemeRecord copy() {
+        return new SchemeRecord(this);
+    }
+
     /**
      * Description of one field of {@link SchemeRecord record}.
      */
@@ -403,6 +425,25 @@ public final class SchemeRecord extends NamedEntity<SchemeRecord> {
             this.type = type;
             this.hasBitfields = hasBitfields;
             this.compositeOnly = compositeOnly;
+        }
+
+        // Deep copy ctor
+        private Field(Field that) {
+            super(that);
+            type = that.type;
+            hasBitfields = that.hasBitfields;
+            disabled = that.disabled;
+            compositeOnly = that.compositeOnly;
+            aliases.addAll(that.aliases);
+            aliasesAsAdded.addAll(that.aliasesAsAdded);
+            mainAlias = that.mainAlias;
+            tags.addAll(that.tags);
+            for (Bitfield field : that.bitFields.values()) {
+                Bitfield copy = field.copy();
+                copy.setParent(this);
+                bitFields.put(copy.getName(), copy);
+            }
+            eventName = that.eventName;
         }
 
         /**
@@ -726,6 +767,11 @@ public final class SchemeRecord extends NamedEntity<SchemeRecord> {
             }
         }
 
+        @Override
+        Field copy() {
+            return new Field(this);
+        }
+
         /**
          * Description of one bitfield.
          * <p>
@@ -754,6 +800,13 @@ public final class SchemeRecord extends NamedEntity<SchemeRecord> {
                 this.size = size;
             }
 
+            // Deep copy ctor
+            private Bitfield(Bitfield that) {
+                super(that);
+                offset = that.offset;
+                size = that.size;
+            }
+
             /**
              * Returns offset of bitfield in bits. Could return -1 if scheme model was not checked for consistency yet.
              */
@@ -779,9 +832,14 @@ public final class SchemeRecord extends NamedEntity<SchemeRecord> {
                 try {
                     return new Bitfield(target, getName(), getMode(), offset, size, getDoc(), file);
                 } catch (SchemeException e) {
-                    // Cannot be here
-                    return null;
+                    // Cannot happen
+                    throw new IllegalStateException();
                 }
+            }
+
+            @Override
+            Bitfield copy() {
+                return new Bitfield(this);
             }
 
             @Override

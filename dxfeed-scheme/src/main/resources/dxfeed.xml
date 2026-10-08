@@ -59,6 +59,18 @@
             <value name="SELL" ord="2"/>
         </enum>
 
+        <enum name="OrderAction">
+            <value name="UNDEFINED" ord="0"/>
+            <value name="NEW" ord="1"/>
+            <value name="REPLACE" ord="2"/>
+            <value name="MODIFY" ord="3"/>
+            <value name="DELETE" ord="4"/>
+            <value name="PARTIAL" ord="5"/>
+            <value name="EXECUTE" ord="6"/>
+            <value name="TRADE" ord="7"/>
+            <value name="BUST" ord="8"/>
+        </enum>
+
         <enum name="IcebergType">
             <value name="UNDEFINED" ord="0"/>
             <value name="NATIVE" ord="1"/>
@@ -69,6 +81,12 @@
             <value name="UNPRICED" ord="0"/>
             <value name="ACTUAL" ord="1"/>
             <value name="WANTED" ord="2"/>
+        </enum>
+
+        <enum name="TimeAndSaleType">
+            <value name="NEW" ord="0"/>
+            <value name="CORRECTION" ord="1"/>
+            <value name="CANCEL" ord="2"/>
         </enum>
 
         <enum name="NuamOrderType">
@@ -257,6 +275,7 @@
                     <field name="Scope" offset="0" size="2"/>
                     <field name="Side" offset="2" size="2"/>
                     <field name="Exchange" offset="4" size="7"/>
+                    <field name="Action" offset="11" size="4"/>
                 </bitfields>
             </field>
             <field name="TradeId" type="long" disabled="true"><tag name="fob"/></field>
@@ -419,7 +438,7 @@
                     <field name="ETH" offset="3" size="1"/>
                     <field name="SpreadLeg" offset="4" size="1"/>
                     <field name="Side" offset="5" size="2"/>
-                    <field name="TradeThroughExempt" offset="8" size="7"/>
+                    <field name="TradeThroughExempt" offset="8" size="8"/>
                 </bitfields>
             </field>
             <field name="Buyer" type="string" disabled="true"/>
@@ -447,7 +466,7 @@
                     <field name="ETH" offset="3" size="1"/>
                     <field name="SpreadLeg" offset="4" size="1"/>
                     <field name="Side" offset="5" size="2"/>
-                    <field name="TradeThroughExempt" offset="8" size="7"/>
+                    <field name="TradeThroughExempt" offset="8" size="8"/>
                 </bitfields>
             </field>
             <field name="UnderlyingPrice" type="price"/>

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -20,14 +20,14 @@ import java.util.stream.Collectors;
 /**
  * Base class for all scheme model entities.
  * <p>
- * Each model entity has a list of files (sources) from which it has been created. Some entities can have
- * only one source, and some can be merged from different sources.
+ * Each model entity has a list of files (sources) from which it has been created.
+ * Some entities can have only one source, and some can be merged from different sources.
  *
  * @deprecated Will be improved in near future.
  */
 @Deprecated
-public class SchemeEntity {
-    private final List<String> files;
+public abstract class SchemeEntity {
+    private final List<String> files; // Never empty
 
     /**
      * Creates new entity, with initial source file.
@@ -37,12 +37,17 @@ public class SchemeEntity {
     public SchemeEntity(String file) {
         Objects.requireNonNull(file, "file");
         this.files = new ArrayList<>();
-        addNewFile(file);
+        this.files.add(file);
+    }
+
+    // Deep copy ctor
+    protected SchemeEntity(SchemeEntity that) {
+        files = new ArrayList<>(that.files);
     }
 
     protected void addNewFile(String newFile) {
         Objects.requireNonNull(newFile, "newFile");
-        if (files.size() == 0 || !files.get(files.size() - 1).equals(newFile)) {
+        if (!getLastFile().equals(newFile)) {
             files.add(newFile);
         }
     }
@@ -64,4 +69,7 @@ public class SchemeEntity {
     protected String getFrom() {
         return files.stream().map(s -> "\"" + s + "\"").collect(Collectors.joining(", "));
     }
+
+    // Returns a deep copy of itself
+    abstract SchemeEntity copy();
 }

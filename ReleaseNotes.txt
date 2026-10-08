@@ -1,3 +1,20 @@
+QDS 3.356:
+
+* [QD-1111] [EXPERIMENTAL] [Spaces] Integrate Hub Module
+  See 'qd-hub/README.md' and 'qd-hub/docs' folder for more details.
+* [QD-1793] OnDemand connector shall use specified host names for proper SSL handshake
+* [QD-1794] BUG FIX: Fix exception in concurrent DXEndpoint.create() with the ext scheme
+* [QD-1795] DXEndpoint.executor() after getFeed() breaks getLastEventPromise
+* [QD-1796] BUG FIX: Fix exception on connecting TapeConnector to absolute Windows path
+* [QD-1797] [Javadoc] Fix wrong descriptions, typos and broken links in event classes
+* [QD-1798] dxFeed API: Write TimeAndSale time as dateTime in XML
+  - BACKWARD-INCOMPATIBLE CHANGE: TimeAndSale 'time' in XML is an ISO 8601 date and time such as
+    2025-10-02T09:00:00.000Z, as in other events; a client that reads it as milliseconds has to parse dateTime
+  - The dxfeed-event.xsd schema types 'time' and 'actionTime' of Order events and 'time' of OptionSale and Series
+    events as xs:dateTime
+* [QD-1799] BUG FIX: dxFeed API: MarketMaker event cannot be written to XML
+* [QD-1800] BUG FIX: dxFeed scheme: Flag bitfields and enums in dxfeed.xml differ from the event classes
+
 QDS 3.355:
 
 * [QD-1787] [Build] New distribution repo at repo.devexperts.com

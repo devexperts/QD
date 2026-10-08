@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -32,7 +32,7 @@ import java.util.Objects;
  * @deprecated Will be improved in near future.
  */
 @Deprecated
-public class NamedEntity<T extends NamedEntity<T>> extends SchemeEntity {
+public abstract class NamedEntity<T extends NamedEntity<T>> extends SchemeEntity {
     /**
      * Mode of creation of named entity.
      */
@@ -64,6 +64,14 @@ public class NamedEntity<T extends NamedEntity<T>> extends SchemeEntity {
         this.name = Objects.requireNonNull(name, "name");
         this.mode = Objects.requireNonNull(mode, "mode");
         this.doc = doc;
+    }
+
+    // Deep copy ctor
+    protected NamedEntity(NamedEntity<T> that) {
+        super(that);
+        name = that.name;
+        mode = that.mode;
+        doc = that.doc;
     }
 
     /**

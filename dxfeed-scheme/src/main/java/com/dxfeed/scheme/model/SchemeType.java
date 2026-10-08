@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -41,6 +41,13 @@ public final class SchemeType extends NamedEntity<SchemeType> {
         Objects.requireNonNull(base, "base");
         this.base = base;
         this.resolved = null;
+    }
+
+    // Deep copy ctor
+    private SchemeType(SchemeType that) {
+        super(that);
+        base = that.base;
+        resolved = that.resolved;
     }
 
     /**
@@ -101,6 +108,11 @@ public final class SchemeType extends NamedEntity<SchemeType> {
         super.override(newInstance);
         base = newInstance.base;
         resolved = null;
+    }
+
+    @Override
+    SchemeType copy() {
+        return new SchemeType(this);
     }
 
     @Override

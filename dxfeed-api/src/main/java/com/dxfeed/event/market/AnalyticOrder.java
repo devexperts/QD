@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -33,7 +33,7 @@ import javax.xml.bind.annotation.XmlType;
  *                              that is being continually refilled until the order is fully traded or cancelled;
  *     <li>{@link #icebergHiddenSize} - the prediction of current hidden size of the iceberg, as inferred by the model;
  *     <li>{@link #icebergExecutedSize} - the executed size of the iceberg order. For {@link IcebergType#SYNTHETIC} type
- *                             represents total executed size of all orders сomposing current iceberg;
+ *                             represents total executed size of all orders composing current iceberg;
  *     <li>{@link #getIcebergType()} - type of the iceberg, either native (exchange-managed) or synthetic (managed outside of the exchange).
  * </ul>
  *

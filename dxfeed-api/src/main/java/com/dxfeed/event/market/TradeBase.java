@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -390,7 +390,7 @@ public abstract class TradeBase extends MarketEvent implements LastingEvent<Stri
 
     /**
      * Changes change of the last trade.
-     * @param change price of the last trade.
+     * @param change change of the last trade.
      */
     public void setChange(double change) {
         this.change = change;
