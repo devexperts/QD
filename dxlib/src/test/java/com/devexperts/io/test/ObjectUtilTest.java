@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -218,6 +218,28 @@ public class ObjectUtilTest {
     }
 
     // ============================================================
+
+    @Test
+    public void testObjectSerializationMarkerRefusesFirstBytesOfCompressedAndTypedForms() throws IOException {
+        char[] chars = new char[16 * 1024];
+        Arrays.fill(chars, 'x');
+        byte[] compressed = compressedBytes(new String(chars));
+        byte[] typed = Marshalled.forObject(new Object[] {"text"}, Marshaller.forClasses(String.class)).getBytes();
+
+        assertThrows(IllegalArgumentException.class, () -> IOUtil.checkObjectSerializationMarker(compressed[0]));
+        assertThrows(IllegalArgumentException.class, () -> IOUtil.checkObjectSerializationMarker(typed[0]));
+        IOUtil.checkObjectSerializationMarker(IOUtil.objectToBytes("text")[0]);
+    }
+
+    private static byte[] compressedBytes(Object object) throws IOException {
+        boolean compression = IOUtil.isCompressionEnabled();
+        IOUtil.setCompressionEnabled(true);
+        try {
+            return IOUtil.objectToBytes(object);
+        } finally {
+            IOUtil.setCompressionEnabled(compression);
+        }
+    }
 
     @Test
     public void testCompression() throws Exception {

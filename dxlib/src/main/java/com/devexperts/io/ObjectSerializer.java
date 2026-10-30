@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -17,32 +17,43 @@ import com.devexperts.util.SystemProperties;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.NotSerializableException;
-import java.io.ObjectOutputStream;
 
 /**
- * The utility class that provides methods for object serialization.
- * It uses pooling of {@link ObjectOutputStream} for better efficiency.
+ * The utility class that writes the body of one object, or the bodies of several objects with their declared types,
+ * and compresses the result as appropriate.
+ * It uses pooling for better efficiency.
  */
 class ObjectSerializer {
     // ========== pooling implementation ==========
 
-    private static final int MAX_POOLED_BUFFER =
+    static final int MAX_POOLED_BUFFER =
         SystemProperties.getIntProperty(ObjectSerializer.class, "maxPooledBuffer", 16384);
 
-    private static final LockFreePool<ObjectSerializer> POOL =
+    static final LockFreePool<ObjectSerializer> POOL =
         new LockFreePool<>(ObjectSerializer.class.getName(), 16);
 
     private static ObjectSerializer allocate() throws IOException {
         ObjectSerializer os = POOL.poll();
-        return os != null ? os : new ObjectSerializer();
+        ObjectSerializationWriterFactory factory = ObjectSerializationFactories.instance().getDefault();
+        if (os == null || os.factory != factory) {
+            os = new ObjectSerializer(factory);
+        }
+        return os;
     }
 
-    private static void release(ObjectSerializer os) throws IOException {
+    private static void release(ObjectSerializer os) {
         // if serialized object was too large then drop OOS cause it has large hash-tables inside.
         if (os.bao.getPosition() > MAX_POOLED_BUFFER)
             return;
+        // try to reset the writer before releasing to pool
+        try {
+            if (!os.writer.reset())
+                return;
+        } catch (RuntimeException e) {
+            return;
+        }
         // return to pool
-        os.reset();
+        os.bao.clear();
         POOL.offer(os);
     }
 
@@ -125,25 +136,19 @@ class ObjectSerializer {
     // ========== Instance Implementation ==========
 
     private final ByteArrayOutput bao; // pooled buffer is allocated inside this object
-    private final ObjectOutputStream oos;
+    private final ObjectSerializationWriterFactory factory;
+    private final ObjectSerializationWriter writer;
 
-    private ObjectSerializer() throws IOException {
+    private ObjectSerializer(ObjectSerializationWriterFactory factory) throws IOException {
         bao = new ByteArrayOutput(MAX_POOLED_BUFFER);
-        oos = new ObjectOutputStream(bao);
-        // Note: OOS constructor writes stream header, reset it
-        bao.clear();
-    }
-
-    private void reset() throws IOException {
-        oos.reset();
-        oos.flush();
-        bao.clear(); // Reset position and limit.
+        this.factory = factory;
+        writer = factory.createWriter(bao);
     }
 
     private byte[] toBytesImpl(Object object) throws IOException {
-        bao.write(ObjectIOImplUtil.STREAM_HEADER);
-        oos.writeObject(object);
-        oos.flush();
+        writer.start();
+        writer.write(object);
+        writer.flush();
         return compressResultToBytes();
     }
 
@@ -165,9 +170,9 @@ class ObjectSerializer {
 
     // writes compact int size and object body
     private void writeCompactImpl(DataOutput out, Object object) throws IOException {
-        bao.write(ObjectIOImplUtil.STREAM_HEADER);
-        oos.writeObject(object);
-        oos.flush();
+        writer.start();
+        writer.write(object);
+        writer.flush();
         if (Compression.shallCompress(bao.getBuffer(), 0, bao.getPosition())) {
             if (tryCompressWithSize(out))
                 return;
@@ -192,9 +197,9 @@ class ObjectSerializer {
 
     // writes object body only
     private void writeBodyImpl(BufferedOutput out, Object object) throws IOException {
-        bao.write(ObjectIOImplUtil.STREAM_HEADER);
-        oos.writeObject(object);
-        oos.flush();
+        writer.start();
+        writer.write(object);
+        writer.flush();
         compressAndWriteResult(out);
     }
 
@@ -202,27 +207,31 @@ class ObjectSerializer {
     private void writeBodiesWithTypesImpl(BufferedOutput out, Class<?>[] types, Object[] objects) throws IOException {
         bao.writeInt(ObjectIOImplUtil.getDeclaredTypesSignature(types));
         boolean objectsPresent = false;
-        for (int i = 0; i < types.length; i++)
-            if (CompactSerializer.isCompact(types[i]))
+        for (int i = 0; i < types.length; i++) {
+            if (CompactSerializer.isCompact(types[i])) {
                 CompactSerializer.writeCompact(bao, types[i], objects[i]);
-            else
+            } else {
                 objectsPresent = true;
+            }
+        }
         if (objectsPresent) {
-            bao.write(ObjectIOImplUtil.STREAM_HEADER);
-            for (int i = 0; i < types.length; i++)
+            writer.start();
+            for (int i = 0; i < types.length; i++) {
                 if (!CompactSerializer.isCompact(types[i])) {
                     Object object = objects[i];
-                    if (object instanceof Marshalled)
+                    if (object instanceof Marshalled) {
                         try {
                             object = ((Marshalled<?>) object).getObject();
                         } catch (MarshallingException e) {
                             throw e.getCause();
                         }
+                    }
                     if (object != null && !types[i].isInstance(object))
                         throw new IOException("Invalid type " + object.getClass().getName() + ", expected " + types[i]);
-                    oos.writeObject(object);
+                    writer.write(object);
                 }
-            oos.flush();
+            }
+            writer.flush();
         }
         compressAndWriteResult(out);
     }

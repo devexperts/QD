@@ -29,8 +29,10 @@ import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.ng.RecordSink;
 import com.devexperts.qd.util.Decimal;
 import com.devexperts.qd.util.TimeMarkUtil;
+import com.devexperts.util.SystemProperties;
 import com.devexperts.util.TimeUtil;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -42,6 +44,13 @@ import java.util.function.IntSupplier;
 public class RandomRecordsProvider extends AbstractRecordProvider {
     private static final int SIZE = 1 << 16;
     private static final int MILLIS_SHIFT = 22;
+
+    // false leaves serial object fields empty
+    private static final boolean GENERATE_OBJECTS =
+        SystemProperties.getBooleanProperty(RandomRecordsProvider.class, "generateObjects", true);
+
+    private static final int ATTACHMENTS = 1 << 10;
+    private static final int ATTACHMENT_TAGS = 4;
     private static final int MAX_SEQUENCE = (1 << MILLIS_SHIFT) - 1;
 
     private static DataRecord[] getRecords(DataScheme scheme) {
@@ -57,6 +66,7 @@ public class RandomRecordsProvider extends AbstractRecordProvider {
     private final int[] randomDecimals = new int[SIZE];
     private final long[] randomWideDecimals = new long[SIZE];
     private final String[] randomStrings = new String[SIZE];
+    private final Attachment[] randomAttachments = new Attachment[ATTACHMENTS];
     private final IntSupplier countRecords;
     private long timeMillis;
     private int timeMark;
@@ -69,6 +79,13 @@ public class RandomRecordsProvider extends AbstractRecordProvider {
             randomDecimals[i] = Decimal.compose(nextInt(1000) / 100.0);
             randomWideDecimals[i] = Decimal.tinyToWide(randomDecimals[i]);
             randomStrings[i] = "X" + (100 + nextInt(900));
+        }
+        for (int i = 0; i < ATTACHMENTS; i++) {
+            String[] tags = new String[ATTACHMENT_TAGS];
+            for (int j = 0; j < tags.length; j++) {
+                tags[j] = "tag" + nextInt(1000);
+            }
+            randomAttachments[i] = new Attachment("S" + nextInt(10000), i, nextInt(100000) / 100.0, tags);
         }
     }
 
@@ -183,7 +200,31 @@ public class RandomRecordsProvider extends AbstractRecordProvider {
         final int index = field.getIndex();
         if (field instanceof StringField)
             return cursor -> cursor.setObj(index, randomStrings[randomIndex++ & (SIZE - 1)]);
-        return cursor -> cursor.setObj(index, null);
+        if (!GENERATE_OBJECTS)
+            return cursor -> cursor.setObj(index, null);
+        return cursor -> cursor.setObj(index, randomAttachments[randomIndex++ & (ATTACHMENTS - 1)]);
+    }
+
+    private static class Attachment implements Serializable {
+        private static final long serialVersionUID = 0;
+
+        private final String symbol;
+        private final long sequence;
+        private final double price;
+        private final String[] tags;
+
+        Attachment(String symbol, long sequence, double price, String[] tags) {
+            this.symbol = symbol;
+            this.sequence = sequence;
+            this.price = price;
+            this.tags = tags;
+        }
+
+        @Override
+        public String toString() {
+            return "Attachment{" + symbol + ", seq=" + sequence + ", price=" + price +
+                ", tags=" + tags.length + "}";
+        }
     }
 
     // Supper fast pseudo-random number generator

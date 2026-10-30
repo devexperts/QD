@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2024 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,6 +13,7 @@ package com.devexperts.util;
 
 import com.devexperts.logging.Logging;
 
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -38,7 +39,7 @@ public class LoggedThreadPoolExecutor extends ScheduledThreadPoolExecutor {
      */
     public LoggedThreadPoolExecutor(int corePoolSize, String name, Logging log) {
         super(corePoolSize, new PoolThreadFactory(name));
-        this.log = log;
+        this.log = Objects.requireNonNull(log, "log");
     }
 
     @Override
@@ -70,7 +71,7 @@ public class LoggedThreadPoolExecutor extends ScheduledThreadPoolExecutor {
         }
 
         PoolThreadFactory(String name) {
-            this.name = name;
+            this.name = Objects.requireNonNull(name, "name");
         }
 
         @Override

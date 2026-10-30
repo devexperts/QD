@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -23,10 +23,11 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * The <code>MarshalledObjField</code> represents an object field with plain Java serialized form.
+ * The <code>MarshalledObjField</code> represents an object field with serialized form as specified in
+ * the <a href="IOUtil.html#object">object serialization</a>.
  * After reading from {@link DataInput} the object is stored in {@link Marshalled} class,
- * so that [slow] deseralization can be perfromed only when needed.
- * It uses standard Java object serialization. Note that this serialization is highly
+ * so that [slow] deserialization can be performed only when needed.
+ * Note that the default Java object serialization is highly
  * ineffective and shall be substituted with more effective specialized version.
  * It is recommended to use {@link ByteArrayField} with custom serialization whenever possible.
  *

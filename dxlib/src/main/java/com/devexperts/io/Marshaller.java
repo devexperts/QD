@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,7 +13,6 @@ package com.devexperts.io;
 
 import java.io.IOException;
 import java.io.InvalidClassException;
-import java.io.ObjectOutputStream;
 
 /**
  * A strategy that defines how an object is represented in a byte array inside of a
@@ -24,10 +23,10 @@ import java.io.ObjectOutputStream;
  *
  * <p>There is a number of built-in marshallers provided:
  * <ul>
- * <li>{@link #SERIALIZATION} marshaller uses Java Object Serialization to convert object to/from bytes.
+ * <li>{@link #SERIALIZATION} marshaller converts object to/from bytes as specified in the
+ * <a href="IOUtil.html#object">object serialization</a>.
  * Its type-safe version that also performs run-time type check is available via
- * {@link #serialization(Class)} method. The corresponding byte array always starts with two bytes
- * 0xAC and 0xED or with ZLIB compression header.
+ * {@link #serialization(Class)} method.
  * <li>Typed marshaller that uses compact serialization of primitive data types and arrays is
  * available via {@link #forClasses(Class[])} and {@link #forTypes(String)} methods.
  * The corresponding byte array always starts with 0xE8 byte or with ZLIB compression header.
@@ -40,7 +39,8 @@ public abstract class Marshaller<T> {
     private volatile Marshalled<T> nullBytesMarshalled;  // created on first need
 
     /**
-     * Converts object to/from bytes using Java Object Serialization.
+     * Returns marshaller that converts object to/from bytes as specified in the
+     * <a href="IOUtil.html#object">object serialization</a>.
      * The marshaller works via
      * {@link IOUtil#objectToBytes(Object) IOUtil.objectToBytes} and
      * {@link IOUtil#bytesToObject(byte[], ClassLoader) IOUtil.bytesToObject}
@@ -54,7 +54,8 @@ public abstract class Marshaller<T> {
     }
 
     /**
-     * Returns marshaller that converts object to/from bytes using Java Object Serialization.
+     * Returns marshaller that converts object to/from bytes as specified in the
+     * <a href="IOUtil.html#object">object serialization</a>.
      * The marshaller works via
      * {@link IOUtil#objectToBytes(Object) IOUtil.objectToBytes} and
      * {@link IOUtil#bytesToObject(byte[], ClassLoader) IOUtil.bytesToObject}
@@ -62,7 +63,6 @@ public abstract class Marshaller<T> {
      * Serialization marshallers with different types produce the same byte arrays which are binary compatible.
      *
      * @param clazz the type of the object to serialize and to expect after deserialization.
-     * @return marshaller that converts object to bytes using Java Object Serialization.
      */
     @SuppressWarnings("unchecked")
     public static <T> Marshaller<T> serialization(Class<T> clazz) {
@@ -70,15 +70,14 @@ public abstract class Marshaller<T> {
     }
 
     /**
-     * Returns marshaller that converts object to/from bytes using Java Object Serialization.
+     * Returns marshaller that converts object to/from bytes as specified in the
+     * <a href="IOUtil.html#object">object serialization</a>.
      * The marshaller works via
      * {@link IOUtil#objectToBytes(Object) IOUtil.objectToBytes},
      * {@link IOUtil#bytesToObject(byte[], ClassLoader) IOUtil.bytesToObject} and
      * {@link IOUtil#bytesToObject(byte[], SerialClassContext) IOUtil.bytesToObject}
      * methods. It performs run-time check that serialized and deserialized object is of a specified type.
      * Serialization marshallers with different types produce the same byte arrays which are binary compatible.
-     *
-     * @return marshaller that converts object to bytes using Java Object Serialization.
      */
     @SuppressWarnings("unchecked")
     public static Marshaller<Object> serialization() {
@@ -90,7 +89,7 @@ public abstract class Marshaller<T> {
      * Returns typed marshaller for the given class.
      * If the class corresponds to primitive type
      * or array, then the object is converted to byte array in the compact form described in {@link IOUtil}.
-     * Otherwise, Java Object Serialization is used.
+     * Otherwise, <a href="IOUtil.html#object">object serialization</a> is used.
      * Unlike {@link #serialization(Class)} serialization} marshallers, typed marshallers for different
      * types are not the same and are not compatible on a byte-array level even if the actual serialized objects
      * are the same. The same exact marshaller shall be used for writing and for reading.
@@ -106,7 +105,7 @@ public abstract class Marshaller<T> {
      * Returns typed marshaller for the given array of classes.
      * If the class corresponds to primitive type
      * or array, then the object is converted to byte array in the compact form described in {@link IOUtil}.
-     * Otherwise, Java Object Serialization is used.
+     * Otherwise, the <a href="IOUtil.html#object">object serialization</a> is used.
      * Unlike {@link #serialization(Class)} serialization} marshallers, typed marshallers for different
      * types are not the same and are not compatible on a byte-array level even if the actual serialized objects
      * are the same. The same exact marshaller shall be used for writing and for reading.
@@ -123,7 +122,7 @@ public abstract class Marshaller<T> {
      * Returns typed marshaller for the given type name.
      * If the type corresponds to primitive type
      * or array, then the object is converted to byte array in the compact form described in {@link IOUtil}.
-     * Otherwise, Java Object Serialization is used.
+     * Otherwise, the <a href="IOUtil.html#object">object serialization</a> is used.
      * Unlike {@link #serialization(Class)} serialization} marshallers, typed marshallers for different
      * types are not the same and are not compatible on a byte-array level even if the actual serialized objects
      * are the same. The same exact marshaller shall be used for writing and for reading.
@@ -139,7 +138,7 @@ public abstract class Marshaller<T> {
      * Returns typed marshaller for the given comma-separated list of type names.
      * If the type corresponds to primitive type
      * or array, then the object is converted to byte array in the compact form described in {@link IOUtil}.
-     * Otherwise, Java Object Serialization is used.
+     * Otherwise, the <a href="IOUtil.html#object">object serialization</a> is used.
      * Unlike {@link #serialization(Class)} serialization} marshallers, typed marshallers for different
      * types are not the same and are not compatible on a byte-array level even if the actual serialized objects
      * are the same. The same exact marshaller shall be used for writing and for reading.
@@ -310,8 +309,9 @@ public abstract class Marshaller<T> {
      * for a single type.
      * <p/>
      * <p>The serial form of typed marshaller uses efficient serialization of primitive data
-     * (individual and arrays) and single {@link ObjectOutputStream} for remaining non-primitive data.
-     * Unlike {@link #serialization(Class)} serialization} marshallers, typed marshallers for different
+     * (individual and arrays) and one session of the
+     * <a href="IOUtil.html#object">object serialization</a> for remaining non-primitive data.
+     * Unlike {@link #serialization(Class) serialization} marshallers, typed marshallers for different
      * types are not the same and are not compatible on a byte-array level even if the actual serialized objects
      * are the same. The same exact marshaller shall be used for writing and for reading.
      *

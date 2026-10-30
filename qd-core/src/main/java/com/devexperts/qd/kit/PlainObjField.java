@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -21,8 +21,9 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * The <code>PlainObjField</code> represents an object field with plain serialized form.
- * It uses standard Java object serialization. Note that this serialization is highly
+ * The <code>PlainObjField</code> represents an object field with serialized form as specified in
+ * the <a href="IOUtil.html#object">object serialization</a>.
+ * Note that the default Java object serialization is highly
  * ineffective and shall be substituted with more effective specialized version if possible.
  *
  * @deprecated  Use {@link ByteArrayField} with custom serialization whenever possible,

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -16,6 +16,9 @@ import com.dxfeed.api.DXEndpoint;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class DXEndpointTest {
 
@@ -33,5 +36,16 @@ public class DXEndpointTest {
     public void testCloseNotConnected() {
         DXEndpoint endpoint = DXEndpoint.create();
         endpoint.close();
+    }
+
+    @Test
+    public void testCloseWithExecutor() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            DXEndpoint endpoint = DXEndpoint.newBuilder().withExecutor(executor).build();
+            endpoint.close();
+        } finally {
+            executor.shutdown();
+        }
     }
 }

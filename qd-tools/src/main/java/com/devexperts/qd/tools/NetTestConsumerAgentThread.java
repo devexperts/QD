@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2025 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -11,6 +11,7 @@
  */
 package com.devexperts.qd.tools;
 
+import com.devexperts.io.Marshalled;
 import com.devexperts.logging.Logging;
 import com.devexperts.qd.DataIntField;
 import com.devexperts.qd.QDAgent;
@@ -21,6 +22,7 @@ import com.devexperts.qd.ng.RecordCursor;
 import com.devexperts.qd.ng.RecordListener;
 import com.devexperts.qd.ng.RecordMode;
 import com.devexperts.qd.qtp.QDEndpoint;
+import com.devexperts.util.SystemProperties;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
@@ -38,6 +40,10 @@ class NetTestConsumerAgentThread extends NetTestWorkingThread {
 
     private static final Logging log = Logging.getLogging(NetTestConsumerAgentThread.class);
     private static final int MILLIS_SHIFT = 22;
+
+    // resolve every object field, so that decoding is measured too
+    private static final boolean UNWRAP_OBJECTS =
+        SystemProperties.getBooleanProperty(NetTest.class, "unwrapObjects", true);
 
     public interface LatencyFunction {
         long getLatency(RecordCursor cursor, long currentTimeMillis);
@@ -96,6 +102,11 @@ class NetTestConsumerAgentThread extends NetTestWorkingThread {
             public void append(RecordCursor cursor) {
                 currentRecords++;
                 currentLatency += latencyFunc.getLatency(cursor, currentTimeMillis);
+                if (UNWRAP_OBJECTS) {
+                    for (int i = 0; i < cursor.getObjCount(); i++) {
+                        Marshalled.unwrap(cursor.getObj(i));
+                    }
+                }
             }
 
             @Override

@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -25,6 +25,8 @@ import com.dxfeed.ipf.impl.InstrumentProfileParser;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.io.EOFException;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -247,11 +249,11 @@ public class InstrumentProfileConnection {
     public synchronized void close() {
         if (state == State.CLOSED)
             return;
-        if (state != State.NOT_CONNECTED) {
+        setStateAndFireChangeEvent(State.CLOSED);
+        if (handlerThread != null) {
             handlerThread.interrupt();
             handlerThread = null;
         }
-        setStateAndFireChangeEvent(State.CLOSED);
     }
 
     /**
@@ -369,6 +371,9 @@ public class InstrumentProfileConnection {
                 } catch (InterruptedException ignored) {
                     return; // closed
                 } catch (Throwable t) {
+                    if (state == InstrumentProfileConnection.State.CLOSED) {
+                        return;
+                    }
                     log.error("Exception while reading instrument profiles", t);
                     try {
                         Thread.sleep(retryPeriod);
@@ -391,7 +396,7 @@ public class InstrumentProfileConnection {
                 if (((HttpURLConnection) connection).getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED)
                     return; // not modified
             }
-            try (InputStream in = connection.getInputStream()) {
+            try (InputStream in = new CloseInputStream(connection.getInputStream())) {
                 URLInputStream.checkConnectionResponseCode(connection);
                 long time = connection.getLastModified();
                 if (time != 0 && time == lastModified)
@@ -440,8 +445,9 @@ public class InstrumentProfileConnection {
         }
 
         void flush() {
-            if (instrumentProfiles.isEmpty())
+            if (instrumentProfiles.isEmpty() || state == InstrumentProfileConnection.State.CLOSED) {
                 return;
+            }
             if (newGeneration == null)
                 newGeneration = new Object(); // allocate fresh generation marker for everything received in here
             collector.updateInstrumentProfiles(instrumentProfiles, newGeneration);
@@ -449,11 +455,44 @@ public class InstrumentProfileConnection {
         }
 
         void complete() {
+            if (state == InstrumentProfileConnection.State.CLOSED) {
+                return;
+            }
             flush();
             // drop old generations
             collector.removeGenerations(oldGenerations);
             oldGenerations.clear();
             makeComplete();
+        }
+    }
+
+    private class CloseInputStream extends FilterInputStream {
+        CloseInputStream(InputStream in) {
+            super(in);
+        }
+
+        @Override
+        public int read() throws IOException {
+            checkClosed();
+            return super.read();
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            checkClosed();
+            return super.read(b, off, len);
+        }
+
+        @Override
+        public long skip(long n) throws IOException {
+            checkClosed();
+            return super.skip(n);
+        }
+
+        private void checkClosed() throws IOException {
+            if (state == State.CLOSED) {
+                throw new EOFException("Instrument profile connection is closed");
+            }
         }
     }
 }

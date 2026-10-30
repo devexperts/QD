@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2023 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -14,7 +14,6 @@ package com.devexperts.io;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.io.UTFDataFormatException;
 import java.util.zip.DataFormatException;
 
@@ -67,12 +66,27 @@ import java.util.zip.DataFormatException;
  * <a href="DataInput.html#modified-utf-8">modified UTF-8</a> format. This results with several
  * APIs that seemingly work with same UTF-8 encoding, yet they differ in encoding and encapsulation.
  *
- * <h3><a name="object">Object</a></h3>
+ * <h3><a name="object">Object Serialization</a></h3>
  *
- * The <b>Object</b> API helps to serialize and deserialize objects.
- * The serial form of individual object is defined as a byte array those content is a result of independent
- * serialization of that object by new instance of {@link ObjectOutputStream}. When this byte array is written
- * to the output it uses compact encapsulation.
+ * The <b>Object Serialization</b> API helps to serialize and deserialize objects.
+ * The serial form of an individual object is a byte array, which is also its {@link Marshalled} form
+ * with the {@link Marshaller#SERIALIZATION serialization} marshaller.
+ * When this byte array is written to the output it uses <a href="#compact-encapsulation">compact encapsulation</a>.
+ * <p>
+ * The serial form starts with the marker byte of the object serialization that wrote it,
+ * so reading detects the object serialization.
+ * A <a href="#compression">compressed</a> serial form starts with the marker once decompressed.
+ * Markers below {@code 0x80} and writer factory names starting with {@code DX.} are reserved for object
+ * serializations QD may add, and a custom object serialization takes a marker from {@code 0x80} to {@code 0xFF}.
+ * The reservation is a convention: a factory that takes a reserved marker or name replaces its owner,
+ * and the log reports the replacement.
+ * {@link #checkObjectSerializationMarker(byte)} rejects the markers that no factory can take.
+ * <p>
+ * {@link ObjectSerializationReaderFactory Reader factories} and
+ * {@link ObjectSerializationWriterFactory writer factories} of object serializations are registered as services.
+ * QD provides factories for Java Object Serialization.
+ * The system property {@link #OBJECT_SERIALIZATION_PROPERTY} selects the writer factory by name.
+ * Reading accepts the serial form of every registered reader factory, whichever factory writes.
  *
  * <h3><a name="compression">Compression</a></h3>
  *
@@ -84,6 +98,12 @@ import java.util.zip.DataFormatException;
  * It can be used arbitrarily and it is also intended to be used transparently by serialization API.
  */
 public class IOUtil {
+
+    /**
+     * Name of the system property that selects the writer factory of
+     * <a href="#object">Object Serialization</a> by its {@link ObjectSerializationWriterFactory#getName() name}.
+     */
+    public static final String OBJECT_SERIALIZATION_PROPERTY = "com.devexperts.io.objectSerialization";
 
     private IOUtil() {} // Prevents unintentional instantiation.
 
@@ -542,7 +562,7 @@ public class IOUtil {
     // ---------- Object API ----------
 
     /**
-     * Serializes an object to an array of bytes with Java Serialization.
+     * Serializes an object to an array of bytes.
      * This method understands non-serializable {@link Marshalled} objects with
      * {@link Marshaller#SERIALIZATION serialization}  marshaller as a special case and
      * returns the result of its {@link Marshalled#getBytes} method.
@@ -556,7 +576,7 @@ public class IOUtil {
     }
 
     /**
-     * Deserializes an array of bytes into object with Java Serialization.
+     * Deserializes an array of bytes into object.
      * This methods loads classes using a context class loader
      * (see {@link Thread#getContextClassLoader() Thread.getContextClassLoader}) or
      * using the same classloader that loaded classes for this {@code com.devexperts.io} package when
@@ -566,14 +586,14 @@ public class IOUtil {
      *
      * @param bytes the byte array to be deserialized
      * @return the deserialized object
-     * @throws IOException if object cannot be deserialized of bytes into object with Java Serialization.
+     * @throws IOException if object cannot be deserialized
      */
     public static Object bytesToObject(byte[] bytes) throws IOException {
         return ObjectDeserializer.toObject(bytes, SerialClassContext.getDefaultSerialContext(null));
     }
 
     /**
-     * Deserializes an array of bytes into object with Java Serialization.
+     * Deserializes an array of bytes into object.
      * This is a shortcut for
      * <code>{@link #bytesToObject(byte[], SerialClassContext) bytesToObject(bytes, SerialClassContext.getDefaultSerialContext(cl))}</code>.
      *
@@ -588,7 +608,7 @@ public class IOUtil {
     }
 
     /**
-     * Deserializes an array of bytes into object with Java Serialization in a given {@link SerialClassContext}.
+     * Deserializes an array of bytes into object in a given {@link SerialClassContext}.
      *
      * @param bytes the byte array to be deserialized
      * @param serialContext the serial class context
@@ -602,9 +622,10 @@ public class IOUtil {
     }
 
     /**
-     * Writes an object to the data output as a Java-serialized byte array with compact encapsulation.
+     * Writes an object to the data output as a serialized byte array with compact encapsulation.
+     * The selected {@link ObjectSerializationWriterFactory writer factory} produces the serial form.
      * This method understands non-serializable {@link Marshalled} objects with
-     * {@link Marshaller#SERIALIZATION serilization} marshaller as a special case and
+     * {@link Marshaller#SERIALIZATION serialization} marshaller as a special case and
      * writes the result of its {@link Marshalled#getBytes} method with
      * {@link #writeByteArray(DataOutput, byte[]) writeByteArray}.
      *
@@ -617,7 +638,8 @@ public class IOUtil {
     }
 
     /**
-     * Reads an object from the data input as a Java-serialized byte array with compact encapsulation.
+     * Reads an object from the data input as a serialized byte array with compact encapsulation.
+     * The {@link ObjectSerializationReaderFactory reader factory} whose marker starts the serial form reads it.
      * This method loads classes using a context class loader
      * (see {@link Thread#getContextClassLoader() Thread.getContextClassLoader}) or
      * using the same classloader that loaded classes for this {@code com.devexperts.io} package when
@@ -634,7 +656,7 @@ public class IOUtil {
     }
 
     /**
-     * Reads an object from the data input as a Java-serialized byte array with compact encapsulation.
+     * Reads an object from the data input as a serialized byte array with compact encapsulation.
      * This is a shortcut for
      * {@link #readObject(DataInput, SerialClassContext) readObject(in, SerialClassContext.getDefaultSerialContext(null))}.
      *
@@ -649,7 +671,7 @@ public class IOUtil {
     }
 
     /**
-     * Reads an object from the data input as a Java-serialized byte array with compact encapsulation
+     * Reads an object from the data input as a serialized byte array with compact encapsulation
      * in a given {@link SerialClassContext}.
      *
      * @param in the source to read from
@@ -661,6 +683,20 @@ public class IOUtil {
         if (serialContext == null)
             throw new NullPointerException();
         return ObjectDeserializer.readCompact(in, serialContext);
+    }
+
+    /**
+     * Checks that a reader factory can take the specified marker as the first byte of its serial form.
+     * The markers that <a href="#object">Object Serialization</a> reserves for QD pass this check.
+     *
+     * @throws IllegalArgumentException if no reader factory can take the marker.
+     */
+    public static void checkObjectSerializationMarker(byte marker) {
+        int value = marker & 0xFF;
+        if ((value & 0x0F) == 0x08 && value <= 0x78) // the condition of Compression#isCompressed on the first byte
+            throw new IllegalArgumentException(String.format("The marker 0x%02X is reserved for zlib", value));
+        if (value == 0xE8) // the high byte of ObjectIOImplUtil#getDeclaredTypesSignature
+            throw new IllegalArgumentException("The marker 0xE8 is reserved for the declared types signature");
     }
 
     /**

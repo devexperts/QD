@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -24,7 +24,8 @@ import java.util.Arrays;
  * Conversions from byte array to object and from object to byte array are performed lazily and
  * results of conversions are cached. The strategy the defines how the object is represented
  * in a byte array is specified by {@link Marshaller}. There is a built-in
- * {@link Marshaller#SERIALIZATION serialization} marshaller that uses Java Object Serialization.
+ * {@link Marshaller#SERIALIZATION serialization} marshaller that uses the selected
+ * {@link ObjectSerializationWriterFactory object serialization}.
  * It is used by default. See {@link Marshaller} class for more details.
  * <p/>
  * <p>{@code null} object is always represented by {@code null} byte array and vice versa.

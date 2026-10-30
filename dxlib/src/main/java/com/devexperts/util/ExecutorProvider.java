@@ -2,7 +2,7 @@
  * !++
  * QDS - Quick Data Signalling Library
  * !-
- * Copyright (C) 2002 - 2021 Devexperts LLC
+ * Copyright (C) 2002 - 2026 Devexperts LLC
  * !-
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at
@@ -13,6 +13,7 @@ package com.devexperts.util;
 
 import com.devexperts.logging.Logging;
 
+import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 
@@ -46,9 +47,9 @@ public class ExecutorProvider {
      * The executor is shut down when there are no {@link Reference references} that are using it.
      */
     public ExecutorProvider(String name, Logging log) {
-        this.log = log;
-        nThreads = AUTO_THREADS;
-        this.name = name;
+        this.nThreads = AUTO_THREADS;
+        this.name = Objects.requireNonNull(name, "name");
+        this.log = Objects.requireNonNull(log, "log");
     }
 
     /**
@@ -58,18 +59,18 @@ public class ExecutorProvider {
      */
     public ExecutorProvider(int nThreads, String name, Logging log) {
         this.nThreads = Math.max(MIN_THREADS, nThreads);
-        this.name = name;
-        this.log = log;
+        this.name = Objects.requireNonNull(name, "name");
+        this.log = Objects.requireNonNull(log, "log");
     }
 
     /**
      * Creates executor provider that wraps a given (specified) executor that never shuts it down.
      */
     public ExecutorProvider(Executor executor) {
-        nThreads = FIXED_EXECUTOR_THREADS;
-        name = null;
-        log = null;
-        createdExecutor = executor;
+        this.nThreads = FIXED_EXECUTOR_THREADS;
+        this.name = null;
+        this.log = null;
+        createdExecutor = Objects.requireNonNull(executor, "executor");
     }
 
     public Reference newReference() {
@@ -78,14 +79,14 @@ public class ExecutorProvider {
 
     private synchronized Executor useReference() {
         if (refCount++ == 0 && nThreads != FIXED_EXECUTOR_THREADS) {
-            int nThreads = this.nThreads == AUTO_THREADS ? Math.max(MIN_THREADS, Runtime.getRuntime().availableProcessors()) : this.nThreads;
+            int nThreads = this.nThreads == AUTO_THREADS ?
+                Math.max(MIN_THREADS, Runtime.getRuntime().availableProcessors()) : this.nThreads;
             createdExecutor = new LoggedThreadPoolExecutor(nThreads, name, log);
         }
         return createdExecutor;
     }
 
     private synchronized void releaseReference(Executor executor) {
-        log.trace("Release reference for " + executor + ". CreatedExecutor = " + createdExecutor + ", refCount = " + refCount);
         if (executor == null || executor != createdExecutor)
             return;
         assert refCount > 0;

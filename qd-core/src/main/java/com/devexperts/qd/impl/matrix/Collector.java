@@ -1442,8 +1442,7 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
         Notification notif = null;
         boolean make_more_pass;
         do {
-            // Initialize distribution
-            dist.start(agents, management.getDistributionBucket());
+            // Distribution will be initialized under a global lock
             try {
                 // Phase 1: process input, build distribution.
                 make_more_pass = processRecordSource(distributor, dist, source);
@@ -1482,6 +1481,9 @@ public abstract class Collector extends AbstractCollector implements RecordsCont
     private boolean processRecordSource(Distributor distributor, Distribution dist, RecordSource source) {
         globalLock.lock(CollectorOperation.PROCESS_DATA);
         try {
+            // Initialize distribution
+            dist.start(agents, management.getDistributionBucket());
+
             return processRecordSourceGLocked(distributor, dist, source);
         } finally {
             globalLock.unlock();

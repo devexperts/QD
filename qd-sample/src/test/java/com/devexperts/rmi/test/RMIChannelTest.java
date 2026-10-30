@@ -892,7 +892,7 @@ public class RMIChannelTest {
         @Override
         public void finishChannel() {
             RMITask.current().complete(null);
-            task.complete(null);
+            ((RMITask<?>) RMITask.current().getChannel().getOwner()).complete(null);
         }
 
         @Override

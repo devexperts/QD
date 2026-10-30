@@ -399,7 +399,7 @@ connects them to specified address via MessageConnector.
 
 When using NetTest as producer-side special generator thread is created
 for every collector and it feeds the collector with randomly-generated
-'Quote' records (and collector then gives them outside via connector). When using
+'TimeAndSale' records (and collector then gives them outside via connector). When using
 as consumer-side each collector receives records from connector.
 
 In both cases the number of generated/received records is counted
@@ -421,6 +421,15 @@ of symbols which was single consumer entity subscribed to (see examples below).
 The frequency of dumping throughput to a screen can be set using --stat option
 (every 10 seconds by default).
 
+The record to generate is set by the JVM option "com.devexperts.qd.tools.NetTest.record"
+('TimeAndSale' by default) and must be the same on both sides. A record with a serial object
+field, such as 'Message' or 'Configuration', carries a generated object in it: a random string,
+a long, a double and four random tags, serialized together, so switching the record to
+'Message' is enough to measure an object serialization; the JVM option
+"com.devexperts.qd.tools.RandomRecordsProvider.generateObjects=false" leaves the field empty.
+The consumer deserializes every object; the JVM option
+"com.devexperts.qd.tools.NetTest.unwrapObjects=false" counts records without deserializing them.
+
 Examples:
 
 To start producer side on some server 'samplehost' at port 5555 one can run:
@@ -429,9 +438,19 @@ To start producer side on some server 'samplehost' at port 5555 one can run:
 
 Then one can run consumer side on some other machine:
     nettest c samplehost:5555 -C 100 -S 100000/100
-@br;This will create 100 connections. Each of them will subscribe to 'Quote'
+@br;This will create 100 connections. Each of them will subscribe to 'TimeAndSale'
 record about roughly 100 symbols of 100000 randomly generated. Now one can
 track the number of records received by these connections per second.
+
+To compare object serializations, run both sides over the 'Message' record with the 'stream'
+collector, name the serialization that writes by -Dcom.devexperts.io.objectSerialization=NAME on
+the producer, and put the serialization jar on the class path of both sides:
+    java -Dcom.devexperts.qd.tools.NetTest.record=Message -Dcom.devexperts.io.objectSerialization=NAME
+        -cp qds-tools.jar:SERIALIZATION.jar com.devexperts.qd.tools.Tools NetTest p :7777 -c stream -s 5
+    java -Dcom.devexperts.qd.tools.NetTest.record=Message
+        -cp qds-tools.jar:SERIALIZATION.jar com.devexperts.qd.tools.Tools NetTest c samplehost:7777 -c stream -s 5
+@br;The consumer log reports bytes and records per second, so the payload per record is compared
+between object serializations.
 
 Note, that it is possible to connect multiple producers and multiple consumers with
 each other via multiplexor. To do this one can start multiplexor on some server

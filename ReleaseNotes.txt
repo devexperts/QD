@@ -1,3 +1,18 @@
+QDS 3.357:
+
+* [QD-1145] Flaky test: RMIChannelTest.testChannelSendBeforeRequest
+* [QD-1792] Support custom object serialization in IOUtil, RMI and message attachments
+  - SPI: 'ObjectSerializationReaderFactory' and 'ObjectSerializationWriterFactory' discovered via service
+    facility for custom object serializations
+  - New system property 'com.devexperts.io.objectSerialization' selects the object serialization method for writing.
+    By default, the first available method is selected. Format: com.devexperts.io.objectSerialization=<name>
+    The property affects writing only; a reader detects the serialization method automatically if supported.
+  - NetTest fills the serial object fields of a generated record, such as 'Message', with generated objects
+    and deserializes them on the consumer side. See "help NetTest" for more details.
+* [QD-1801] BUG FIX: Fix NullPointerException in DXEndpoint.close() for an endpoint built with executor
+* [QD-1802] BUG FIX: InstrumentProfileConnection.close() leaves the live IPF stream open
+* [QD-1804] BUG FIX: Fix AIOBE exception in Distribution with concurrent subscription
+
 QDS 3.356:
 
 * [QD-1111] [EXPERIMENTAL] [Spaces] Integrate Hub Module
